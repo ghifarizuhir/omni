@@ -1,0 +1,71 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Brand Colors */
+  --color-ois-primary: #1F4FD4;
+  --color-ois-primary-hover: #1A42B5;
+  --color-ois-primary-pale: #EEF2FF;
+
+  /* Surface Colors */
+  --color-ois-bg: #F7F8FA;
+  --color-ois-surface: #FFFFFF;
+  --color-ois-surface-muted: #F1F3F7;
+  --color-ois-border: #E4E7EC;
+  --color-ois-border-strong: #D0D5DD;
+
+  /* Text Colors */
+  --color-ois-text: #101828;
+  --color-ois-text-muted: #475467;
+  --color-ois-text-subtle: #98A2B3;
+
+  /* Semantic Colors */
+  --color-ois-success: #12B76A;
+  --color-ois-success-pale: #ECFDF3;
+  --color-ois-warning: #F79009;
+  --color-ois-warning-pale: #FFFAEB;
+  --color-ois-danger: #F04438;
+  --color-ois-danger-pale: #FEF3F2;
+  --color-ois-info: #0BA5EC;
+  --color-ois-info-pale: #F0F9FF;
+
+  /* Severity Colors */
+  --color-ois-sev-p1: #B42318;
+  --color-ois-sev-p2: #DC6803;
+  --color-ois-sev-p3: #DC6803;
+  --color-ois-sev-p4: #027A48;
+
+  /* Sidebar Colors */
+  --color-ois-sidebar-bg: #FFFFFF;
+  --color-ois-sidebar-border: #E4E7EC;
+  --color-ois-sidebar-item: #475467;
+  --color-ois-sidebar-item-hover-bg: #F1F3F7;
+  --color-ois-sidebar-item-active-bg: #EEF2FF;
+  --color-ois-sidebar-item-active-text: #1F4FD4;
+  --color-ois-sidebar-section-label: #98A2B3;
+
+  --shadow-ois-card: 0 1px 2px rgba(16,24,40,0.05);
+  --shadow-ois-card-hover: 0 1px 3px rgba(16,24,40,0.1), 0 1px 2px rgba(16,24,40,0.06);
+  --shadow-ois-dropdown: 0 12px 16px -4px rgba(16,24,40,0.08), 0 4px 6px -2px rgba(16,24,40,0.03);
+  --shadow-ois-modal: 0 20px 24px -4px rgba(16,24,40,0.08), 0 8px 8px -4px rgba(16,24,40,0.03);
+
+  --radius-ois-card: 8px;
+  --radius-ois-btn: 6px;
+  --radius-ois-badge: 4px;
+  --radius-ois-modal: 12px;
+}
+
+@layer base {
+  body {
+    @apply font-sans text-[14px] leading-[1.5] bg-ois-bg text-ois-text antialiased;
+  }
+}
+
+@layer utilities {
+  .font-mono {
+    @apply font-mono;
+  }
+}
