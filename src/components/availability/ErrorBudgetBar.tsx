@@ -46,8 +46,8 @@ export function ErrorBudgetBar({
           {consumed.toFixed(1)} of {total.toFixed(1)} min consumed
           {' · '}
           {isExhausted
-            ? `${Math.abs(remaining).toFixed(1)} min overrun`
-            : `${remaining.toFixed(1)} min remaining`}
+            ? `${Math.abs(remaining).toFixed(1)} min overrun (${Math.abs(remainingPercent).toFixed(0)}% over)`
+            : `${remaining.toFixed(1)} min remaining (${remainingPercent.toFixed(0)}%)`}
         </p>
       )}
     </div>

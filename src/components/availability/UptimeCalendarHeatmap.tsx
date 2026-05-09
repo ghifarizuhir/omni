@@ -78,22 +78,7 @@ export function UptimeCalendarHeatmap({
   const cellW = compact ? 8 : 12;
   const cellGap = 2;
 
-  function handleHover(health: DailyServiceHealth | null, serviceName: string, _e: React.MouseEvent<HTMLElement>) {
-    if (!health) {
-      setTooltip(null);
-      return;
-    }
-    const rect = containerRef.current?.getBoundingClientRect();
-    const eRect = (_e.target as HTMLElement).getBoundingClientRect();
-    setTooltip({
-      health,
-      serviceName,
-      x: eRect.left - (rect?.left ?? 0) + cellW / 2,
-      y: eRect.top - (rect?.top ?? 0),
-    });
-  }
-
-  return (
+return (
     <div ref={containerRef} className="relative w-full overflow-x-auto">
       {/* Month labels row */}
       <div className="flex pl-36 mb-1">
