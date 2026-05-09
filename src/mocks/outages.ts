@@ -54,6 +54,27 @@ export const mockOutages: Outage[] = [
     updatedAt: '2026-05-08T09:00:00Z',
   },
 
+  // OUT-2026-00039: Auth Service brief P3 (resolved 1 day ago)
+  {
+    id: 'out-2026-00039',
+    publicId: 'OUT-2026-00039',
+    type: 'unplanned',
+    serviceId: 'svc-002',
+    serviceName: 'Authentication Service',
+    affectedCIIds: ['ci-app-auth-001'],
+    affectedCIPublicIds: ['CI-APP-AUTH-001'],
+    startedAt: '2026-05-07T03:12:00Z',
+    endedAt: '2026-05-07T03:27:00Z',
+    durationMinutes: 15,
+    severity: 'P3',
+    customerFacing: true,
+    affectedUsersEstimate: 800,
+    rootCauseSummary: 'Token validation service momentarily overwhelmed by retry storms',
+    preventiveActions: ['Implement exponential backoff on auth retries'],
+    createdAt: '2026-05-07T03:12:00Z',
+    updatedAt: '2026-05-07T04:00:00Z',
+  },
+
   // === RESOLVED — SHOWCASE ===
   {
     id: 'out-2026-00038',
