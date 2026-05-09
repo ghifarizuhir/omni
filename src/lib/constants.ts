@@ -1,9 +1,14 @@
-import { CIType, RelationshipType, CIStatus, CIAuditEntry } from '../types/ci';
+import { CIType, RelationshipType, CIStatus, CIAuditEntry, Environment } from '../types/ci';
 import { EventType, EventStatus, EventSource, MonitoringRuleType, AlertChannel } from '../types/monitoring';
 import { IncidentStatus, SLAStatus, IncidentEventKind, IncidentPriority } from '../types/incident';
 import { ProblemStatus, ProblemSource, RCATechnique } from '../types/problem';
 import { RequestStatus, CatalogCategory, WorkflowStepStatus } from '../types/request';
 import { KBStatus, KBContentType } from '../types/knowledge';
+import { ChangeType, ChangeStatus, RiskLevel, CABVote } from '../types/change';
+import { ReleaseStatus, ReleaseType, ReleaseStage } from '../types/release';
+import { DeploymentStatus, DeploymentStrategy, DeploymentTrigger, DeploymentStageStatus, LogLevel } from '../types/deployment';
+import { TestRunStatus, TestStepResultStatus, TestCasePriority, SignOffStatus, SignOffType } from '../types/testing';
+import { AvailabilitySLAStatus, OutageType, SLAMetric, CapacityResourceType, CapacityThresholdSeverity, ScalingRecommendation } from '../types';
 
 export const ciTypeMeta: Record<CIType, { label: string; icon: string; color: string; bg: string }> = {
   server:        { label: 'Server',        icon: 'Server',       color: '#067647', bg: '#ECFDF3' },
@@ -204,4 +209,218 @@ export const kbContentTypeMeta: Record<KBContentType, { label: string; icon: str
   reference:           { label: 'Reference',       icon: 'FileText' },
   faq:                 { label: 'FAQ',             icon: 'HelpCircle' },
   incident_postmortem: { label: 'Postmortem',      icon: 'Microscope' },
+};
+
+// ── Change Management ─────────────────────────────────────────────────────────
+
+export const changeTypeMeta: Record<ChangeType, { label: string; description: string; color: string; bg: string; icon: string }> = {
+  standard:  { label: 'Standard',  description: 'Pre-approved low-risk',     color: '#067647', bg: '#ECFDF3', icon: 'CheckCircle' },
+  normal:    { label: 'Normal',    description: 'Full CAB review required',  color: '#0BA5EC', bg: '#F0F9FF', icon: 'FileText' },
+  emergency: { label: 'Emergency', description: 'Urgent expedited approval', color: '#B42318', bg: '#FEF3F2', icon: 'AlertTriangle' },
+};
+
+export const changeStatusMeta: Record<ChangeStatus, { label: string; color: string; bg: string; dot: string }> = {
+  draft:             { label: 'Draft',            color: '#475467', bg: '#F1F3F7', dot: '#98A2B3' },
+  submitted:         { label: 'Submitted',        color: '#0BA5EC', bg: '#F0F9FF', dot: '#0BA5EC' },
+  in_review:         { label: 'In Review',        color: '#DC6803', bg: '#FFFAEB', dot: '#F79009' },
+  approved:          { label: 'Approved',         color: '#067647', bg: '#ECFDF3', dot: '#12B76A' },
+  scheduled:         { label: 'Scheduled',        color: '#6941C6', bg: '#F4F3FF', dot: '#9E77ED' },
+  implementing:      { label: 'Implementing',     color: '#0BA5EC', bg: '#F0F9FF', dot: '#0BA5EC' },
+  implemented:       { label: 'Implemented',      color: '#067647', bg: '#ECFDF3', dot: '#12B76A' },
+  closed_successful: { label: 'Closed (success)', color: '#067647', bg: '#ECFDF3', dot: '#12B76A' },
+  closed_failed:     { label: 'Closed (failed)',  color: '#B42318', bg: '#FEF3F2', dot: '#F04438' },
+  rejected:          { label: 'Rejected',         color: '#B42318', bg: '#FEF3F2', dot: '#F04438' },
+  cancelled:         { label: 'Cancelled',        color: '#475467', bg: '#F1F3F7', dot: '#98A2B3' },
+};
+
+export const riskMeta: Record<RiskLevel, { label: string; color: string; bg: string; min: number; max: number }> = {
+  low:      { label: 'Low',      color: '#067647', bg: '#ECFDF3', min: 0,  max: 30 },
+  medium:   { label: 'Medium',   color: '#DC6803', bg: '#FFFAEB', min: 31, max: 65 },
+  high:     { label: 'High',     color: '#B42318', bg: '#FEF3F2', min: 66, max: 90 },
+  critical: { label: 'Critical', color: '#B42318', bg: '#FEF3F2', min: 91, max: 100 },
+};
+
+export const cabVoteMeta: Record<CABVote, { label: string; color: string; icon: string }> = {
+  approve:                 { label: 'Approve',                 color: '#12B76A', icon: 'Check' },
+  approve_with_conditions: { label: 'Approve with conditions', color: '#F79009', icon: 'CheckCircle' },
+  reject:                  { label: 'Reject',                  color: '#F04438', icon: 'X' },
+  abstain:                 { label: 'Abstain',                 color: '#98A2B3', icon: 'Minus' },
+};
+
+// ── Release Management ────────────────────────────────────────────────────────
+
+export const releaseStatusMeta: Record<ReleaseStatus, { label: string; color: string; bg: string; dot: string }> = {
+  planning:           { label: 'Planning',           color: '#475467', bg: '#F1F3F7', dot: '#98A2B3' },
+  locked:             { label: 'Locked',             color: '#0BA5EC', bg: '#F0F9FF', dot: '#0BA5EC' },
+  in_validation:      { label: 'In Validation',      color: '#DC6803', bg: '#FFFAEB', dot: '#F79009' },
+  ready:              { label: 'Ready',              color: '#067647', bg: '#ECFDF3', dot: '#12B76A' },
+  deploying:          { label: 'Deploying',          color: '#0BA5EC', bg: '#F0F9FF', dot: '#0BA5EC' },
+  released:           { label: 'Released',           color: '#067647', bg: '#ECFDF3', dot: '#12B76A' },
+  partially_released: { label: 'Partially Released', color: '#DC6803', bg: '#FFFAEB', dot: '#F79009' },
+  rolled_back:        { label: 'Rolled Back',        color: '#B42318', bg: '#FEF3F2', dot: '#F04438' },
+  cancelled:          { label: 'Cancelled',          color: '#475467', bg: '#F1F3F7', dot: '#98A2B3' },
+};
+
+export const releaseTypeMeta: Record<ReleaseType, { label: string; description: string; color: string }> = {
+  major:  { label: 'Major',  description: 'Breaking changes', color: '#B42318' },
+  minor:  { label: 'Minor',  description: 'New features',     color: '#0BA5EC' },
+  patch:  { label: 'Patch',  description: 'Bug fixes',        color: '#067647' },
+  hotfix: { label: 'Hotfix', description: 'Emergency patch',  color: '#DC6803' },
+};
+
+export const stageStatusMeta: Record<ReleaseStage['status'], { label: string; color: string; icon: string; nodeStyle: string }> = {
+  pending:     { label: 'Pending',     color: '#98A2B3', icon: 'Circle',       nodeStyle: 'pending' },
+  in_progress: { label: 'In Progress', color: '#0BA5EC', icon: 'Loader2',      nodeStyle: 'active' },
+  success:     { label: 'Success',     color: '#12B76A', icon: 'CheckCircle2', nodeStyle: 'completed' },
+  failed:      { label: 'Failed',      color: '#F04438', icon: 'XCircle',      nodeStyle: 'failed' },
+  rolled_back: { label: 'Rolled Back', color: '#DC6803', icon: 'Undo2',        nodeStyle: 'rollback' },
+  skipped:     { label: 'Skipped',     color: '#98A2B3', icon: 'MinusCircle',  nodeStyle: 'skipped' },
+};
+
+// ── Deployment & Validation ───────────────────────────────────────────────────
+
+export const deploymentStatusMeta: Record<DeploymentStatus, { label: string; color: string; bg: string; dot: string; animated: boolean }> = {
+  pending:       { label: 'Pending',       color: '#475467', bg: '#F1F3F7', dot: '#98A2B3', animated: false },
+  running:       { label: 'Running',       color: '#0BA5EC', bg: '#F0F9FF', dot: '#0BA5EC', animated: true  },
+  success:       { label: 'Success',       color: '#067647', bg: '#ECFDF3', dot: '#12B76A', animated: false },
+  failed:        { label: 'Failed',        color: '#B42318', bg: '#FEF3F2', dot: '#F04438', animated: false },
+  rolled_back:   { label: 'Rolled Back',   color: '#DC6803', bg: '#FFFAEB', dot: '#F79009', animated: false },
+  cancelled:     { label: 'Cancelled',     color: '#475467', bg: '#F1F3F7', dot: '#98A2B3', animated: false },
+  rolling_back:  { label: 'Rolling Back',  color: '#DC6803', bg: '#FFFAEB', dot: '#F79009', animated: true  },
+};
+
+export const environmentMeta: Record<Environment, { label: string; color: string; bg: string; shortLabel: string }> = {
+  development: { label: 'Development', color: '#475467', bg: '#F1F3F7', shortLabel: 'dev'  },
+  staging:     { label: 'Staging',     color: '#0BA5EC', bg: '#F0F9FF', shortLabel: 'stg'  },
+  production:  { label: 'Production',  color: '#B42318', bg: '#FEF3F2', shortLabel: 'prod' },
+  test:        { label: 'Test',        color: '#6941C6', bg: '#F4F3FF', shortLabel: 'test' },
+};
+
+export const deploymentStrategyMeta: Record<DeploymentStrategy, { label: string; description: string; icon: string }> = {
+  rolling:    { label: 'Rolling',    description: 'Gradual replacement', icon: 'RefreshCw'  },
+  blue_green: { label: 'Blue-Green', description: 'Switch at the end',   icon: 'GitBranch'  },
+  canary:     { label: 'Canary',     description: 'Small % first',       icon: 'Bird'       },
+  big_bang:   { label: 'Big Bang',   description: 'All at once',         icon: 'Zap'        },
+  phased:     { label: 'Phased',     description: 'Manual gates',        icon: 'Layers'     },
+};
+
+export const deploymentTriggerMeta: Record<DeploymentTrigger, { label: string; icon: string; color: string }> = {
+  manual:         { label: 'Manual',       icon: 'User',       color: '#475467' },
+  cicd_pipeline:  { label: 'CI/CD',        icon: 'GitBranch',  color: '#0BA5EC' },
+  scheduled:      { label: 'Scheduled',    icon: 'Clock',      color: '#6941C6' },
+  auto_promotion: { label: 'Auto-Promote', icon: 'TrendingUp', color: '#067647' },
+};
+
+export const stageStatusMeta_dep: Record<DeploymentStageStatus, { color: string; icon: string; nodeStyle: string }> = {
+  pending: { color: '#98A2B3', icon: 'Circle',       nodeStyle: 'pending'   },
+  running: { color: '#0BA5EC', icon: 'Loader2',      nodeStyle: 'active'    },
+  success: { color: '#12B76A', icon: 'CheckCircle2', nodeStyle: 'completed' },
+  failed:  { color: '#F04438', icon: 'XCircle',      nodeStyle: 'failed'    },
+  skipped: { color: '#98A2B3', icon: 'MinusCircle',  nodeStyle: 'skipped'   },
+};
+
+export const logLevelMeta: Record<LogLevel, { label: string; color: string; bg: string }> = {
+  debug: { label: 'DEBUG', color: '#475467', bg: '#F1F3F7' },
+  info:  { label: 'INFO',  color: '#0BA5EC', bg: '#F0F9FF' },
+  warn:  { label: 'WARN',  color: '#DC6803', bg: '#FFFAEB' },
+  error: { label: 'ERROR', color: '#B42318', bg: '#FEF3F2' },
+  fatal: { label: 'FATAL', color: '#FFFFFF', bg: '#B42318' },
+};
+
+export const testRunStatusMeta: Record<TestRunStatus, { label: string; color: string; bg: string; dot: string }> = {
+  pending:   { label: 'Pending',   color: '#475467', bg: '#F1F3F7', dot: '#98A2B3' },
+  running:   { label: 'Running',   color: '#0BA5EC', bg: '#F0F9FF', dot: '#0BA5EC' },
+  passed:    { label: 'Passed',    color: '#067647', bg: '#ECFDF3', dot: '#12B76A' },
+  failed:    { label: 'Failed',    color: '#B42318', bg: '#FEF3F2', dot: '#F04438' },
+  partial:   { label: 'Partial',   color: '#DC6803', bg: '#FFFAEB', dot: '#F79009' },
+  cancelled: { label: 'Cancelled', color: '#475467', bg: '#F1F3F7', dot: '#98A2B3' },
+  timed_out: { label: 'Timed Out', color: '#B42318', bg: '#FEF3F2', dot: '#F04438' },
+};
+
+export const testStepResultMeta: Record<TestStepResultStatus, { label: string; color: string; icon: string }> = {
+  pending: { label: 'Pending', color: '#98A2B3', icon: 'Circle'       },
+  running: { label: 'Running', color: '#0BA5EC', icon: 'Loader2'      },
+  passed:  { label: 'Passed',  color: '#12B76A', icon: 'CheckCircle2' },
+  failed:  { label: 'Failed',  color: '#F04438', icon: 'XCircle'      },
+  skipped: { label: 'Skipped', color: '#98A2B3', icon: 'MinusCircle'  },
+};
+
+export const testCasePriorityMeta: Record<TestCasePriority, { label: string; color: string; bg: string }> = {
+  p0: { label: 'P0', color: '#B42318', bg: '#FEF3F2' },
+  p1: { label: 'P1', color: '#DC6803', bg: '#FFFAEB' },
+  p2: { label: 'P2', color: '#0BA5EC', bg: '#F0F9FF' },
+  p3: { label: 'P3', color: '#475467', bg: '#F1F3F7' },
+};
+
+export const signOffStatusMeta: Record<SignOffStatus, { label: string; color: string; bg: string }> = {
+  pending:  { label: 'Pending',  color: '#DC6803', bg: '#FFFAEB' },
+  approved: { label: 'Approved', color: '#067647', bg: '#ECFDF3' },
+  rejected: { label: 'Rejected', color: '#B42318', bg: '#FEF3F2' },
+  expired:  { label: 'Expired',  color: '#475467', bg: '#F1F3F7' },
+};
+
+export const signOffTypeMeta: Record<SignOffType, { label: string; icon: string }> = {
+  release_validation: { label: 'Release validation', icon: 'Package'     },
+  change_validation:  { label: 'Change validation',  icon: 'Wrench'      },
+  security_scan:      { label: 'Security scan',      icon: 'Shield'      },
+  compliance_check:   { label: 'Compliance check',   icon: 'ShieldCheck' },
+};
+
+// ── Availability Management ───────────────────────────────────────────────────
+
+export const slaStatusMeta_avail: Record<AvailabilitySLAStatus, { label: string; color: string; bg: string; icon: string }> = {
+  meeting:  { label: 'Meeting',  color: '#067647', bg: '#ECFDF3', icon: 'CheckCircle' },
+  at_risk:  { label: 'At Risk',  color: '#DC6803', bg: '#FFFAEB', icon: 'AlertTriangle' },
+  breached: { label: 'Breached', color: '#B42318', bg: '#FEF3F2', icon: 'AlertOctagon' },
+};
+
+export const outageTypeMeta: Record<OutageType, { label: string; color: string; bg: string; icon: string }> = {
+  unplanned:     { label: 'Unplanned',     color: '#B42318', bg: '#FEF3F2', icon: 'AlertOctagon' },
+  planned:       { label: 'Planned',       color: '#0BA5EC', bg: '#F0F9FF', icon: 'Calendar' },
+  partial:       { label: 'Partial',       color: '#DC6803', bg: '#FFFAEB', icon: 'AlertTriangle' },
+  detected_only: { label: 'Detected only', color: '#475467', bg: '#F1F3F7', icon: 'Eye' },
+};
+
+export const dailyHealthColors: Record<string, string> = {
+  operational:    '#12B76A',
+  degraded:       '#F79009',
+  partial_outage: '#FB923C',
+  major_outage:   '#F04438',
+  maintenance:    '#0BA5EC',
+};
+
+export const slaMetricMeta: Record<SLAMetric, { label: string; description: string; unit: string }> = {
+  availability:       { label: 'Availability',  description: 'Uptime percentage',         unit: '%' },
+  mttr:               { label: 'MTTR',          description: 'Mean Time To Resolve',       unit: 'minutes' },
+  mtbf:               { label: 'MTBF',          description: 'Mean Time Between Failures', unit: 'days' },
+  mtrs:               { label: 'MTRS',          description: 'Mean Time to Restore',       unit: 'minutes' },
+  response_time:      { label: 'Response Time', description: 'First response SLA',         unit: 'minutes' },
+  first_byte_latency: { label: 'p95 Latency',   description: 'p95 first-byte latency',     unit: 'ms' },
+};
+
+// ── Capacity Management ───────────────────────────────────────────────────────
+
+export const capacityResourceTypeMeta: Record<CapacityResourceType, { label: string; icon: string; defaultUnit: string }> = {
+  cpu:                 { label: 'CPU',              icon: 'Cpu',         defaultUnit: '%' },
+  memory:              { label: 'Memory',           icon: 'MemoryStick', defaultUnit: '%' },
+  disk:                { label: 'Disk',             icon: 'HardDrive',   defaultUnit: '%' },
+  network_bandwidth:   { label: 'Network',          icon: 'Network',     defaultUnit: 'Gbps' },
+  db_connections:      { label: 'DB Connections',   icon: 'Database',    defaultUnit: 'connections' },
+  queue_depth:         { label: 'Queue Depth',      icon: 'Layers',      defaultUnit: 'messages' },
+  requests_per_second: { label: 'RPS',              icon: 'Activity',    defaultUnit: 'RPS' },
+  storage_iops:        { label: 'Storage IOPS',     icon: 'HardDrive',   defaultUnit: 'IOPS' },
+  concurrent_users:    { label: 'Concurrent Users', icon: 'Users',       defaultUnit: 'users' },
+};
+
+export const capacityThresholdSeverityMeta: Record<CapacityThresholdSeverity, { label: string; color: string; bg: string }> = {
+  info:     { label: 'Info',     color: '#0BA5EC', bg: '#F0F9FF' },
+  warning:  { label: 'Warning',  color: '#DC6803', bg: '#FFFAEB' },
+  critical: { label: 'Critical', color: '#B42318', bg: '#FEF3F2' },
+};
+
+export const recommendationPriorityMeta: Record<ScalingRecommendation['priority'], { label: string; color: string; bg: string }> = {
+  low:    { label: 'Low',    color: '#475467', bg: '#F1F3F7' },
+  medium: { label: 'Medium', color: '#0BA5EC', bg: '#F0F9FF' },
+  high:   { label: 'High',   color: '#DC6803', bg: '#FFFAEB' },
+  urgent: { label: 'Urgent', color: '#B42318', bg: '#FEF3F2' },
 };
