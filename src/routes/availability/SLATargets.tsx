@@ -1,0 +1,167 @@
+import React, { useState, useMemo } from 'react';
+import { Search, Plus, X } from 'lucide-react';
+import { cn } from '@/src/lib/utils';
+import { mockSLATargets } from '@/src/mocks/slaTargets';
+import { mockSLABreaches } from '@/src/mocks/slaBreaches';
+import { mockServices } from '@/src/mocks/services';
+import { SLACard as SLACardBase } from '@/src/components/availability/SLACard';
+import { Button } from '@/src/components/ui/Button';
+import { AvailabilitySLAStatus, SLATarget, SLABreach } from '@/src/types';
+
+const SLACard: React.FC<{ sla: SLATarget; breach?: SLABreach }> = (props) => (
+  <SLACardBase {...props} />
+);
+
+type StatusFilter = 'all' | AvailabilitySLAStatus;
+
+const STATUS_TABS: Array<{ label: string; value: StatusFilter; count: number }> = [
+  { label: 'All', value: 'all', count: 8 },
+  { label: 'Meeting', value: 'meeting', count: 6 },
+  { label: 'At Risk', value: 'at_risk', count: 0 },
+  { label: 'Breached', value: 'breached', count: 2 },
+];
+
+export const SLATargets: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [serviceFilter, setServiceFilter] = useState('all');
+
+  const serviceOptions = useMemo(
+    () => [{ id: 'all', name: 'All Services' }, ...mockServices.map((s) => ({ id: s.id, name: s.name }))],
+    [],
+  );
+
+  const filteredSLAs = useMemo(() => {
+    return mockSLATargets.filter((sla) => {
+      const matchesSearch =
+        !searchQuery ||
+        sla.serviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sla.publicId.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || sla.status === statusFilter;
+      const matchesService = serviceFilter === 'all' || sla.serviceId === serviceFilter;
+      return matchesSearch && matchesStatus && matchesService;
+    });
+  }, [searchQuery, statusFilter, serviceFilter]);
+
+  const getBreachForSLA = (slaId: string) =>
+    mockSLABreaches.find((b) => b.slaId === slaId && b.status === 'active');
+
+  const handleReset = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setServiceFilter('all');
+  };
+
+  const hasFilters = searchQuery || statusFilter !== 'all' || serviceFilter !== 'all';
+
+  return (
+    <div className="flex flex-col gap-6 p-6">
+      {/* Page Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-ois-text">SLA Targets</h1>
+          <p className="mt-0.5 text-sm text-ois-text-subtle">
+            8 SLAs across 8 services · 6 meeting · 2 breached · Avg compliance: 75%
+          </p>
+        </div>
+        <Button variant="primary" size="sm">
+          <Plus size={14} className="mr-1" />
+          New SLA Target
+        </Button>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 rounded-md border border-gray-200 bg-white pl-8 pr-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+        </div>
+
+        <select
+          value={serviceFilter}
+          onChange={(e) => setServiceFilter(e.target.value)}
+          className="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
+        >
+          {serviceOptions.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          className="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
+        >
+          <option value="all">All Statuses</option>
+          <option value="meeting">Meeting</option>
+          <option value="at_risk">At Risk</option>
+          <option value="breached">Breached</option>
+        </select>
+
+        {hasFilters && (
+          <button
+            onClick={handleReset}
+            className="flex h-8 items-center gap-1 rounded-md border border-gray-200 px-2.5 text-sm text-gray-500 hover:bg-gray-50"
+          >
+            <X size={13} />
+            Reset
+          </button>
+        )}
+      </div>
+
+      {/* Stats Strip */}
+      <div className="flex flex-wrap gap-2">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setStatusFilter(tab.value)}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+              statusFilter === tab.value
+                ? 'border-primary-300 bg-primary-50 text-primary-700'
+                : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
+            )}
+          >
+            {tab.label}
+            <span
+              className={cn(
+                'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                statusFilter === tab.value ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500',
+              )}
+            >
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* SLA Cards */}
+      {filteredSLAs.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredSLAs.map((sla) => {
+            const breach = getBreachForSLA(sla.id);
+            return <SLACard key={sla.id} sla={sla} breach={breach} />;
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 py-16 text-center">
+          <p className="text-sm text-gray-500">No SLAs match your filters.</p>
+          <button
+            onClick={handleReset}
+            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            Reset filters
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
