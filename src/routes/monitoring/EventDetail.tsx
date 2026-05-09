@@ -458,7 +458,7 @@ export const EventDetail: React.FC = () => {
                 </h3>
              </CardHeader>
              <CardBody className="p-6">
-                <EventTimeline events={timelineEvents} />
+                <EventTimeline entries={timelineEvents} />
 
                 <form onSubmit={handleAddComment} className="mt-8 pt-6 border-t border-ois-border">
                    <div className="relative">

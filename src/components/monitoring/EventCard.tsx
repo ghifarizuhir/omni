@@ -46,7 +46,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, className }) => {
           <div className="flex items-center gap-2 text-xs font-mono font-bold text-ois-text-subtle">
             <span className="hover:text-ois-primary transition-colors" onClick={stopProp}>{event.publicId}</span>
             <span>•</span>
-            <span className="flex items-center gap-1"><Clock size={12} /> {formatDistanceToNow(new Date(event.timestamp))} ago</span>
+            <span className="flex items-center gap-1"><Clock size={12} /> {formatDistanceToNow(new Date(event.firedAt))} ago</span>
           </div>
           
           <h3 className="text-sm font-bold text-ois-text group-hover:text-ois-primary transition-colors truncate">
