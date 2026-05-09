@@ -9,7 +9,6 @@ export * from './knowledge';
 export * from './platform';
 export * from './improvement';
 export * from './request';
-export * from './change';
 export * from './release';
 export * from './deployment';
 export * from './testing';
