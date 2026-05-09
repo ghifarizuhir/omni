@@ -62,7 +62,8 @@ export function OutageVolumeBarChart({ outages }: OutageVolumeBarChartProps) {
       (w) => w.weekStart.getTime() === weekStart.getTime(),
     );
     if (bucket && outage.severity in bucket) {
-      (bucket[outage.severity as keyof WeekBucket] as number)++;
+      const key = outage.severity as 'P1' | 'P2' | 'P3' | 'P4';
+      bucket[key] = bucket[key] + 1;
     }
   }
 
