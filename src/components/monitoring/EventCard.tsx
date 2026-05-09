@@ -64,9 +64,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, className }) => {
               </div>
             )}
             
-            {event.incidentId && (
+            {event.linkedIncidentId && (
               <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-ois-danger-pale text-ois-danger text-[10px] font-bold">
-                <ExternalLink size={10} /> {event.incidentId}
+                <ExternalLink size={10} /> {event.linkedIncidentId}
               </div>
             )}
           </div>

@@ -57,55 +57,49 @@ export const EventDetail: React.FC = () => {
 
   // Timeline Events
   const timelineEvents = useMemo(() => {
-    const items = [
-      { 
-        id: 'fired', 
-        type: 'fired', 
-        title: 'Event fired', 
-        time: event.firedAt, 
-        details: [`Threshold breach: ${event.payload?.metric_value || '0.024'} > ${event.payload?.threshold || '0.01'}`, `Source: ${event.source} · job=${event.payload?.job || 'unknown'}`] 
+    const items: Array<{ timestamp: string; type: 'log' | 'status_change' | 'comment' | 'action' | 'system'; user?: string; message: string; payload?: Record<string, unknown> }> = [
+      {
+        type: 'log',
+        message: 'Event fired',
+        timestamp: event.firedAt,
+        payload: { breach: `${event.payload?.metric_value ?? '0.024'} > ${event.payload?.threshold ?? '0.01'}`, source: `${event.source} · job=${event.payload?.job ?? 'unknown'}` }
       },
-      { 
-        id: 'routed', 
-        type: 'system', 
-        title: 'Notification routed', 
-        time: event.firedAt, 
-        details: ['Routed via ROUTE-CRITICAL-PROD', 'Channels: SMS, Slack, Email · Recipients: 3'] 
+      {
+        type: 'system',
+        message: 'Notification routed',
+        timestamp: event.firedAt,
+        payload: { route: 'ROUTE-CRITICAL-PROD', channels: 'SMS, Slack, Email', recipients: 3 }
       }
     ];
 
     if (event.linkedIncidentId) {
       items.push({
-        id: 'incident',
-        type: 'link',
-        title: 'Linked to incident',
-        time: event.firedAt, // Usually fired at similar time in auto-creation
-        details: [`Auto-created ${event.linkedIncidentId} from this event`]
+        type: 'log',
+        message: `Linked to incident ${event.linkedIncidentId}`,
+        timestamp: event.firedAt,
+        payload: { action: 'auto-created from this event' }
       });
     }
 
     if (event.status === 'acknowledged' || event.status === 'resolved') {
       items.push({
-        id: 'ack',
-        type: 'status',
-        title: 'Status: Acknowledged',
-        time: event.acknowledgedAt || event.firedAt,
-        details: [`${ackUser?.name || 'A user'} acknowledged the event`]
+        type: 'status_change',
+        message: 'Status: Acknowledged',
+        timestamp: event.acknowledgedAt || event.firedAt,
+        user: ackUser?.name || 'A user',
       });
     }
 
-    // Add comments
     comments.forEach(c => {
       items.push({
-        id: c.id,
         type: 'comment',
-        title: `Comment by ${c.user}`,
-        time: c.date,
-        details: [c.text]
+        message: c.text,
+        timestamp: c.date,
+        user: c.user,
       });
     });
 
-    return items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+    return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [event, ackUser, comments]);
 
   // Handlers
