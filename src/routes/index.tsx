@@ -14,6 +14,14 @@ import { MonitoringRules } from './monitoring/MonitoringRules';
 import { AlertRouting } from './monitoring/AlertRouting';
 import { CoverageReport } from './monitoring/CoverageReport';
 import { NotFound } from './NotFound';
+import { IncidentQueue } from './incidents/IncidentQueue';
+import { IncidentDetail } from './incidents/IncidentDetail';
+import { MajorIncidentWarRoom } from './incidents/MajorIncidentWarRoom';
+import { IncidentAnalytics } from './incidents/IncidentAnalytics';
+import { ProblemList } from './problems/ProblemList';
+import { ProblemDetail } from './problems/ProblemDetail';
+import { RCAWorkspace } from './problems/RCAWorkspace';
+import { KEDB } from './problems/KEDB';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
@@ -34,14 +42,14 @@ export const routes: RouteObject[] = [
       { path: 'monitoring/routing',             element: <AlertRouting /> },
       { path: 'monitoring/coverage',            element: <CoverageReport /> },
       // Doc 3 — Operational Response
-      { path: 'incidents',                      element: <Placeholder module="Incidents" doc="Doc 3" /> },
-      { path: 'incidents/:id',                  element: <Placeholder module="Incident Detail" doc="Doc 3" /> },
-      { path: 'incidents/major/:id',            element: <Placeholder module="Major Incident" doc="Doc 3" /> },
-      { path: 'incidents/analytics',            element: <Placeholder module="Incident Analytics" doc="Doc 3" /> },
-      { path: 'problems',                       element: <Placeholder module="Problems" doc="Doc 3" /> },
-      { path: 'problems/:id',                   element: <Placeholder module="Problem Detail" doc="Doc 3" /> },
-      { path: 'problems/:id/rca',               element: <Placeholder module="RCA" doc="Doc 3" /> },
-      { path: 'kedb',                           element: <Placeholder module="KEDB" doc="Doc 3" /> },
+      { path: 'incidents',                         element: <IncidentQueue /> },
+      { path: 'incidents/analytics',               element: <IncidentAnalytics /> },
+      { path: 'incidents/major/:incidentId',          element: <MajorIncidentWarRoom /> },
+      { path: 'incidents/:incidentId',              element: <IncidentDetail /> },
+      { path: 'problems',                       element: <ProblemList /> },
+      { path: 'problems/:problemId/rca',         element: <RCAWorkspace /> },
+      { path: 'problems/:problemId',             element: <ProblemDetail /> },
+      { path: 'kedb',                           element: <KEDB /> },
       { path: 'requests',                       element: <Placeholder module="Service Requests" doc="Doc 3" /> },
       { path: 'portal',                         element: <Placeholder module="Self-Service Portal" doc="Doc 3" /> },
       { path: 'kb',                             element: <Placeholder module="Knowledge Base" doc="Doc 3" /> },

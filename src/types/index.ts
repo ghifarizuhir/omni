@@ -1,6 +1,7 @@
 export * from './common';
 export * from './ci';
 export * from './incident';
+export * from './problem';
 export * from './change';
 export * from './monitoring';
 export * from './service';

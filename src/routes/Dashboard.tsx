@@ -7,26 +7,28 @@ import { Badge } from '../components/ui/Badge';
 import { StatusBadge, SeverityBadge } from '../components/ui/StatusSeverityBadges';
 import { Avatar } from '../components/ui/Avatar';
 import { cn } from '@/src/lib/utils';
-import { 
-  AlertCircle, Activity, Clock, ArrowRight, CheckCircle2, 
+import {
+  AlertCircle, Activity, Clock, ArrowRight, CheckCircle2,
   ExternalLink, Calendar, RefreshCw, ChevronDown,
   AlertTriangle, CheckCircle, Info, Heart, Zap, Lock,
-  MoreVertical, ShieldCheck, TrendingUp
+  MoreVertical, ShieldCheck, TrendingUp, Siren,
 } from 'lucide-react';
-import { 
-  mockServices, 
-  mockIncidents, 
-  mockUsers, 
-  mockInboxItems, 
+import {
+  mockServices,
+  mockIncidents,
+  mockUsers,
+  mockInboxItems,
   mockChanges,
   mockTeams
 } from '@/src/mocks';
+import { getMajorIncidents, getActiveIncidents } from '@/src/mocks/incidents';
 import { formatRelative, formatDate } from '@/src/lib/format';
 import { ServiceHealthStatus, Severity } from '../types';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const activeIncidents = mockIncidents.filter(i => i.status !== 'resolved');
+  const activeIncidents = getActiveIncidents();
+  const majorIncidents = getMajorIncidents().filter(i => !['resolved', 'closed'].includes(i.status));
   
   // Section A Logic
   const getStatusColor = (status: ServiceHealthStatus) => {
@@ -167,6 +169,29 @@ export const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Section C - Left: Active Incidents Feed (60%) */}
+        {/* Major incident banner */}
+        {majorIncidents.length > 0 && (
+          <div className="lg:col-span-3 rounded-xl border-2 border-red-300 bg-red-50 px-5 py-3 flex items-center gap-4">
+            <Siren size={20} className="text-ois-danger animate-pulse shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold uppercase tracking-widest text-ois-danger mb-0.5">Major Incident in Progress</p>
+              <p className="text-sm font-semibold text-ois-text truncate">
+                <span className="font-mono mr-2">{majorIncidents[0].publicId}</span>
+                {majorIncidents[0].title}
+              </p>
+              <p className="text-xs text-ois-text-muted mt-0.5">
+                IC: {mockUsers.find(u => u.id === majorIncidents[0].incidentCommander)?.name ?? '—'} · Started {formatRelative(majorIncidents[0].createdAt)}
+              </p>
+            </div>
+            <Link
+              to={`/incidents/major/${majorIncidents[0].publicId}`}
+              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-ois-danger text-white text-xs font-bold hover:bg-red-700 transition-colors"
+            >
+              Open war room →
+            </Link>
+          </div>
+        )}
+
         <Card className="lg:col-span-3">
           <CardHeader className="flex items-center justify-between border-b border-ois-border">
             <div className="flex items-center gap-2 font-bold text-ois-text">
@@ -183,14 +208,14 @@ export const Dashboard: React.FC = () => {
             {activeIncidents.slice(0, 5).map(incident => (
               <div 
                 key={incident.id} 
-                onClick={() => navigate(`/incidents/${incident.id}`)}
+                onClick={() => navigate(`/incidents/${incident.publicId}`)}
                 className="p-4 hover:bg-ois-surface-muted transition-colors cursor-pointer group"
               >
                 <div className="flex items-start gap-3">
                   <SeverityBadge severity={incident.severity} className="mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-mono font-bold text-ois-text-subtle">{incident.id}</span>
+                      <span className="text-xs font-mono font-bold text-ois-text-subtle">{incident.publicId}</span>
                       <span className="text-sm font-semibold text-ois-text truncate group-hover:text-ois-primary transition-colors">
                         {incident.title}
                       </span>
@@ -205,7 +230,7 @@ export const Dashboard: React.FC = () => {
                          <div className="w-1 h-1 rounded-full bg-ois-border-strong" />
                          {formatRelative(incident.createdAt)}
                       </span>
-                      {incident.slaBreached && (
+                      {(incident.slaResponseStatus === 'breached' || incident.slaResolveStatus === 'breached') && (
                         <span className="flex items-center gap-1 text-ois-danger font-bold">
                           <AlertTriangle size={12} />
                           SLA

@@ -16,7 +16,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const urgentInboxCount = mockInboxItems.filter(i => i.priority === 'urgent').length;
-  const openIncidentCount = mockIncidents.filter(i => i.status !== 'resolved').length;
+  const openIncidentCount = mockIncidents.filter(i => !['resolved', 'closed'].includes(i.status)).length;
 
   return (
     <aside 

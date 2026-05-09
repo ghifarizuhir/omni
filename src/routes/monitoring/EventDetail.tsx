@@ -373,7 +373,7 @@ export const EventDetail: React.FC = () => {
                            </div>
                         </div>
                      </div>
-                     <Link to={`/incidents/${incident.id}`}>
+                     <Link to={`/incidents/${incident.publicId}`}>
                         <Button variant="primary" className="h-10 px-6 font-bold gap-2">
                            Open incident <ExternalLink size={16} />
                         </Button>

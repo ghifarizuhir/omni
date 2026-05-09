@@ -1,17 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { 
   ArrowLeft, Edit2, MoreHorizontal, Globe, 
   ExternalLink, FileJson, Zap, BookOpen, Bug, 
   Clock, Activity, ShieldCheck, AlertCircle, Heart, Radio
 } from 'lucide-react';
-import { 
-  mockCIs, 
-  mockCIRelationships, 
-  mockServices, 
+import {
+  mockCIs,
+  mockCIRelationships,
+  mockServices,
   mockCIAuditEntries,
   mockMonitoringRules
 } from '@/src/mocks';
+import { getIncidentsByCI } from '@/src/mocks/incidents';
+import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
 import { MonitoringRule } from '../../types/monitoring';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -208,24 +210,67 @@ export const CMDBDetail: React.FC = () => {
           {showJson && <div className="bg-gray-900 rounded-xl p-6 overflow-x-auto"><pre className="text-[11px] text-blue-300 leading-relaxed font-mono">{JSON.stringify(ci, null, 2)}</pre></div>}
         </div>
 
-        <div id="linked" className="grid grid-cols-2 gap-6">
-            <Card>
-              <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
-                 Linked Problems <Bug size={14} className="text-ois-warning" />
-              </div>
-              <div className="p-8 text-center text-xs text-ois-text-muted italic">No linked problems</div>
-            </Card>
-            <Card>
+        <div id="linked" className="space-y-4">
+            {/* Open Incidents — real data via getIncidentsByCI */}
+            {(() => {
+              const ciIncidents = getIncidentsByCI(ci.id).concat(getIncidentsByCI(ci.publicId));
+              const unique = [...new Map(ciIncidents.map(i => [i.id, i])).values()];
+              const open = unique.filter(i => !['resolved', 'closed'].includes(i.status));
+              const recent = unique.filter(i => ['resolved', 'closed'].includes(i.status)).slice(0, 3);
+              return (
+                <Card>
+                  <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider">
+                    <span className="flex items-center gap-2 text-ois-text-muted opacity-80">
+                      <AlertCircle size={14} className="text-ois-danger" />
+                      Open Incidents ({open.length})
+                    </span>
+                    <RouterLink to={`/incidents?ci=${ci.publicId}`} className="text-xs text-ois-primary hover:underline font-normal">
+                      View all →
+                    </RouterLink>
+                  </div>
+                  {unique.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-ois-text-muted italic">No incidents linked to this CI</div>
+                  ) : (
+                    <div className="divide-y divide-ois-border">
+                      {[...open, ...recent].slice(0, 6).map(inc => (
+                        <RouterLink
+                          key={inc.id}
+                          to={`/incidents/${inc.publicId}`}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-ois-surface-muted transition-colors"
+                        >
+                          <span className="font-mono text-xs font-semibold text-ois-primary w-36 shrink-0">{inc.publicId}</span>
+                          <span className="text-xs text-ois-text flex-1 truncate">{inc.title}</span>
+                          <IncidentStatusPill status={inc.status} />
+                          <span className="text-xs font-bold shrink-0" style={{ color: inc.priority === 'P1' ? '#B42318' : inc.priority === 'P2' ? '#DC6803' : '#475467' }}>
+                            {inc.priority}
+                          </span>
+                        </RouterLink>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              );
+            })()}
+
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
+                   Linked Problems <Bug size={14} className="text-ois-warning" />
+                </div>
+                <div className="p-8 text-center text-xs text-ois-text-muted italic">No linked problems</div>
+              </Card>
+              <Card>
                 <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
                     Linked KB <BookOpen size={14} className="text-ois-primary" />
                 </div>
                 <div className="p-8 text-center text-xs text-ois-text-muted italic">No linked KB articles</div>
-            </Card>
-            <Card className="col-span-2">
-                <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
-                    Linked Changes <ShieldCheck size={14} className="text-ois-info" />
-                </div>
-                <div className="p-8 text-center text-xs text-ois-text-muted italic">No recent changes linked</div>
+              </Card>
+            </div>
+            <Card>
+              <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
+                  Linked Changes <ShieldCheck size={14} className="text-ois-info" />
+              </div>
+              <div className="p-8 text-center text-xs text-ois-text-muted italic">No recent changes linked</div>
             </Card>
         </div>
 
