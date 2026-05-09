@@ -9,6 +9,7 @@ import {
 import { cn } from '@/src/lib/utils';
 import { formatRelative, formatDate } from '@/src/lib/format';
 import { getIncidentById, getIncidentsByCI, mockIncidents } from '@/src/mocks/incidents';
+import { mockKBArticles } from '@/src/mocks/kbArticles';
 import { getTimelineForIncident } from '@/src/mocks/incidentTimelines';
 import { getCommentsForIncident } from '@/src/mocks/incidentComments';
 import { mockProblems } from '@/src/mocks/problems';
@@ -182,6 +183,13 @@ export const IncidentDetail: React.FC = () => {
     return mockProblems.find(p => p.id === incident.linkedProblemId) ?? null;
   }, [incident]);
 
+  const linkedKBArticles = useMemo(() => {
+    if (!incident) return [];
+    return mockKBArticles.filter(a =>
+      a.linkedIncidentIds.includes(incident.publicId) && a.status === 'published'
+    );
+  }, [incident]);
+
   // Affected CIs
   const affectedCIs = useMemo(() => {
     if (!incident) return [];
@@ -283,13 +291,14 @@ export const IncidentDetail: React.FC = () => {
       <SectionCard title="Quick actions">
         <div className="grid grid-cols-2 gap-2">
           {[
-            { icon: Link2, label: 'Link to existing problem' },
-            { icon: Plus, label: 'Create problem from incident' },
-            { icon: GitMerge, label: 'Link change' },
-            { icon: BookOpen, label: 'Suggest KB article' },
-          ].map(({ icon: Icon, label }) => (
+            { icon: Link2,    label: 'Link to existing problem', to: null },
+            { icon: Plus,     label: 'Create problem from incident', to: null },
+            { icon: GitMerge, label: 'Link change', to: null },
+            { icon: BookOpen, label: 'Suggest KB article', to: `/kb/editor?source=incident&id=${incident?.publicId}&title=${encodeURIComponent(incident?.title ?? '')}` },
+          ].map(({ icon: Icon, label, to }) => (
             <button
               key={label}
+              onClick={to ? () => navigate(to) : undefined}
               className="flex items-center gap-2 text-xs text-ois-text-muted border border-ois-border rounded-lg px-3 py-2 hover:bg-ois-surface-muted hover:text-ois-text transition-colors text-left"
             >
               <Icon size={13} className="shrink-0 text-ois-text-subtle" />
@@ -472,10 +481,23 @@ export const IncidentDetail: React.FC = () => {
       </SectionCard>
 
       {/* Linked KB articles */}
-      <SectionCard title="Linked KB articles (0)">
-        <button className="flex items-center gap-2 text-xs text-ois-primary hover:underline">
-          <BookOpen size={12} /> Suggest article
-        </button>
+      <SectionCard title={`Linked KB articles (${linkedKBArticles.length})`}>
+        <div className="space-y-1">
+          {linkedKBArticles.map(art => (
+            <div key={art.id} className="flex items-center justify-between py-1">
+              <span className="font-mono text-xs font-semibold text-ois-primary">{art.publicId}</span>
+              <Link to={`/kb/${art.slug}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+                <ExternalLink size={11} /> {art.title.length > 30 ? art.title.slice(0, 30) + '…' : art.title}
+              </Link>
+            </div>
+          ))}
+          <Link
+            to={`/kb/editor?source=incident&id=${incident?.publicId}&title=${encodeURIComponent(incident?.title ?? '')}`}
+            className="flex items-center gap-2 text-xs text-ois-primary hover:underline mt-1"
+          >
+            <BookOpen size={12} /> Suggest article
+          </Link>
+        </div>
       </SectionCard>
     </div>
   );

@@ -8,3 +8,4 @@ export * from './service';
 export * from './knowledge';
 export * from './platform';
 export * from './improvement';
+export * from './request';

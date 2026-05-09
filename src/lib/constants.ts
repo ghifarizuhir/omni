@@ -2,6 +2,8 @@ import { CIType, RelationshipType, CIStatus, CIAuditEntry } from '../types/ci';
 import { EventType, EventStatus, EventSource, MonitoringRuleType, AlertChannel } from '../types/monitoring';
 import { IncidentStatus, SLAStatus, IncidentEventKind, IncidentPriority } from '../types/incident';
 import { ProblemStatus, ProblemSource, RCATechnique } from '../types/problem';
+import { RequestStatus, CatalogCategory, WorkflowStepStatus } from '../types/request';
+import { KBStatus, KBContentType } from '../types/knowledge';
 
 export const ciTypeMeta: Record<CIType, { label: string; icon: string; color: string; bg: string }> = {
   server:        { label: 'Server',        icon: 'Server',       color: '#067647', bg: '#ECFDF3' },
@@ -152,4 +154,54 @@ export const rcaTechniqueMeta: Record<RCATechnique, { label: string; description
   fault_tree: { label: 'Fault Tree', description: 'Logical tree of contributing failures' },
   timeline:   { label: 'Timeline',   description: 'Chronological reconstruction' },
   narrative:  { label: 'Narrative',  description: 'Free-form prose' },
+};
+
+// ── Service Requests ─────────────────────────────────────────────────────────
+
+export const requestStatusMeta: Record<RequestStatus, { label: string; color: string; bg: string; dot: string }> = {
+  draft:           { label: 'Draft',           color: '#475467', bg: '#F1F3F7', dot: '#98A2B3' },
+  submitted:       { label: 'Submitted',       color: '#0BA5EC', bg: '#F0F9FF', dot: '#0BA5EC' },
+  approved:        { label: 'Approved',        color: '#067647', bg: '#ECFDF3', dot: '#12B76A' },
+  in_fulfillment:  { label: 'In Fulfillment',  color: '#DC6803', bg: '#FFFAEB', dot: '#F79009' },
+  pending_user:    { label: 'Pending User',    color: '#6941C6', bg: '#F4F3FF', dot: '#9E77ED' },
+  fulfilled:       { label: 'Fulfilled',       color: '#067647', bg: '#ECFDF3', dot: '#12B76A' },
+  closed:          { label: 'Closed',          color: '#475467', bg: '#F1F3F7', dot: '#475467' },
+  rejected:        { label: 'Rejected',        color: '#B42318', bg: '#FEF3F2', dot: '#F04438' },
+  cancelled:       { label: 'Cancelled',       color: '#475467', bg: '#F1F3F7', dot: '#98A2B3' },
+};
+
+export const catalogCategoryMeta: Record<CatalogCategory, { label: string; icon: string; color: string }> = {
+  access:        { label: 'Access',        icon: 'Key',         color: '#1F4FD4' },
+  equipment:     { label: 'Equipment',     icon: 'Laptop',      color: '#0BA5EC' },
+  software:      { label: 'Software',      icon: 'Package',     color: '#6941C6' },
+  communication: { label: 'Communication', icon: 'Phone',       color: '#067647' },
+  personnel:     { label: 'Personnel',     icon: 'Users',       color: '#DC6803' },
+  general:       { label: 'General',       icon: 'Folder',      color: '#475467' },
+};
+
+export const workflowStepStatusMeta: Record<WorkflowStepStatus, { label: string; color: string; nodeStyle: 'completed' | 'active' | 'pending' | 'rejected' | 'skipped' }> = {
+  pending:    { label: 'Pending',    color: '#98A2B3', nodeStyle: 'pending' },
+  active:     { label: 'Active',     color: '#1F4FD4', nodeStyle: 'active' },
+  completed:  { label: 'Completed',  color: '#12B76A', nodeStyle: 'completed' },
+  skipped:    { label: 'Skipped',    color: '#98A2B3', nodeStyle: 'skipped' },
+  rejected:   { label: 'Rejected',   color: '#F04438', nodeStyle: 'rejected' },
+};
+
+// ── Knowledge Base ────────────────────────────────────────────────────────────
+
+export const kbStatusMeta: Record<KBStatus, { label: string; color: string; bg: string }> = {
+  draft:      { label: 'Draft',      color: '#475467', bg: '#F1F3F7' },
+  in_review:  { label: 'In Review',  color: '#DC6803', bg: '#FFFAEB' },
+  published:  { label: 'Published',  color: '#067647', bg: '#ECFDF3' },
+  archived:   { label: 'Archived',   color: '#475467', bg: '#F1F3F7' },
+  expired:    { label: 'Expired',    color: '#B42318', bg: '#FEF3F2' },
+};
+
+export const kbContentTypeMeta: Record<KBContentType, { label: string; icon: string }> = {
+  how_to:              { label: 'How-To',          icon: 'ListChecks' },
+  troubleshooting:     { label: 'Troubleshooting', icon: 'Wrench' },
+  runbook:             { label: 'Runbook',         icon: 'BookOpen' },
+  reference:           { label: 'Reference',       icon: 'FileText' },
+  faq:                 { label: 'FAQ',             icon: 'HelpCircle' },
+  incident_postmortem: { label: 'Postmortem',      icon: 'Microscope' },
 };

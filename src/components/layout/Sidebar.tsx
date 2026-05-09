@@ -2,10 +2,10 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/src/lib/utils';
 import { 
-  LayoutDashboard, Inbox, AlertCircle, Bug, ShoppingCart, 
-  BookOpen, Wrench, Package, Rocket, CheckCircle2, 
-  Heart, Zap, Lock, Radio, CircleDot, Bell, Clock, 
-  BarChart3, Lightbulb, Database, Settings, ChevronLeft, ChevronRight 
+  LayoutDashboard, Inbox, AlertCircle, Bug, ShoppingCart,
+  BookOpen, Wrench, Package, Rocket, CheckCircle2, Store,
+  Heart, Zap, Lock, Radio, CircleDot, Bell, Clock,
+  BarChart3, Lightbulb, Database, Settings, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { mockInboxItems, mockIncidents } from '@/src/mocks';
 
@@ -44,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
           <SidebarItem icon={<Inbox size={18} />} label="Inbox" to="/inbox" collapsed={collapsed} badge={urgentInboxCount} badgeVariant="urgent" />
           <SidebarItem icon={<AlertCircle size={18} />} label="Incidents" to="/incidents" collapsed={collapsed} badge={openIncidentCount} />
           <SidebarItem icon={<Bug size={18} />} label="Problems" to="/problems" collapsed={collapsed} />
+          <SidebarItem icon={<Store size={18} />} label="Self-Service Portal" to="/portal" collapsed={collapsed} />
           <SidebarItem icon={<ShoppingCart size={18} />} label="Service Requests" to="/requests" collapsed={collapsed} />
           <SidebarItem icon={<BookOpen size={18} />} label="Knowledge Base" to="/kb" collapsed={collapsed} />
         </SidebarSection>

@@ -9,6 +9,7 @@ import {
 import { cn } from '@/src/lib/utils';
 import { formatDate, formatRelative } from '@/src/lib/format';
 import { getProblemById } from '@/src/mocks/problems';
+import { getArticleById } from '@/src/mocks/kbArticles';
 import { mockIncidents } from '@/src/mocks/incidents';
 import { mockUsers } from '@/src/mocks/users';
 import { mockServices } from '@/src/mocks/services';
@@ -653,20 +654,32 @@ export const ProblemDetail: React.FC = () => {
                     <BookOpen size={14} className="text-ois-text-muted" />
                     <span className="text-xs font-bold text-ois-text uppercase tracking-wider">Linked KB articles</span>
                   </div>
-                  <button className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+                  <Link
+                    to={`/kb/editor?source=problem&id=${problem.publicId}&title=${encodeURIComponent(problem.title)}`}
+                    className="text-xs text-ois-primary hover:underline flex items-center gap-1"
+                  >
                     <Plus size={11} /> Suggest article
-                  </button>
+                  </Link>
                 </div>
                 {problem.linkedKBArticleIds.length > 0 ? (
                   <div className="divide-y divide-ois-border">
-                    {problem.linkedKBArticleIds.map(kbId => (
-                      <div key={kbId} className="px-4 py-3 flex items-center justify-between">
-                        <span className="font-mono text-xs font-semibold text-ois-primary">{kbId}</span>
-                        <a href={`/kb/${kbId}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
-                          <ExternalLink size={11} /> View
-                        </a>
-                      </div>
-                    ))}
+                    {problem.linkedKBArticleIds.map(kbId => {
+                      const art = getArticleById(kbId);
+                      return (
+                        <div key={kbId} className="px-4 py-3 flex items-center justify-between">
+                          <span className="font-mono text-xs font-semibold text-ois-primary">{kbId}</span>
+                          {art ? (
+                            <Link to={`/kb/${art.slug}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+                              <ExternalLink size={11} /> View
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-ois-text-subtle flex items-center gap-1">
+                              <ExternalLink size={11} /> View
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-xs text-ois-text-subtle px-4 py-6 text-center">No KB articles linked yet</p>

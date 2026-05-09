@@ -1,0 +1,108 @@
+import { KBAnalytics } from '../types/knowledge';
+
+export const kbAnalytics: KBAnalytics = {
+  totalViews: 2178,
+  totalSearches: 487,
+  uniqueUsersActive: 64,
+  helpfulRate: 0.91,
+
+  topSearches: [
+    { term: 'payment 5xx',             count: 73, hasMatchingArticle: true,  matchingArticleSlug: 'troubleshooting-payment-api-5xx-errors' },
+    { term: 'pool exhaustion',         count: 41, hasMatchingArticle: true,  matchingArticleSlug: 'payment-api-restart-procedure' },
+    { term: 'pgbouncer migration',     count: 28, hasMatchingArticle: false },
+    { term: 'es cluster yellow',       count: 24, hasMatchingArticle: true,  matchingArticleSlug: 'es-cluster-yellow-recovery' },
+    { term: 'sso eu region',           count: 21, hasMatchingArticle: false },
+    { term: 'oncall handover',         count: 19, hasMatchingArticle: true,  matchingArticleSlug: 'oncall-handover-checklist' },
+    { term: 'aws console access',      count: 18, hasMatchingArticle: true,  matchingArticleSlug: 'db-read-access-best-practices' },
+    { term: 'slack notifications',     count: 16, hasMatchingArticle: true,  matchingArticleSlug: 'troubleshooting-slack-notifications' },
+    { term: 'order checkout latency',  count: 14, hasMatchingArticle: false },
+    { term: 'mongo replica lag',       count: 12, hasMatchingArticle: false },
+  ],
+
+  topViewed: [
+    'troubleshooting-payment-api-5xx-errors',
+    'ssh-access-via-bastion',
+    'payment-api-restart-procedure',
+    'pci-dss-data-handling',
+    'oncall-handover-checklist',
+    'db-read-access-best-practices',
+    'ois-platform-overview',
+    'troubleshooting-slack-notifications',
+    'laptop-onboarding',
+    'es-cluster-yellow-recovery',
+  ],
+
+  topHelpful: [
+    'troubleshooting-payment-api-5xx-errors',
+    'payment-api-restart-procedure',
+    'db-read-access-best-practices',
+    'pci-dss-data-handling',
+    'oncall-handover-checklist',
+    'ssh-access-via-bastion',
+  ],
+
+  needsReview: [
+    'es-cluster-yellow-recovery',
+    'db-read-access-best-practices',
+    'laptop-onboarding',
+  ],
+
+  contentGaps: [
+    {
+      searchTerm: 'pgbouncer migration',
+      count: 28,
+      suggestedAction: 'Create runbook for pgbouncer migration (linked to CHG-2026-00091)',
+      linkedItemId: 'CHG-2026-00091',
+    },
+    {
+      searchTerm: 'sso eu region',
+      count: 21,
+      suggestedAction: 'Document EU region SSO troubleshooting',
+    },
+    {
+      searchTerm: 'order checkout latency',
+      count: 14,
+      suggestedAction: 'Create troubleshooting article (linked to INC-2026-00183)',
+      linkedItemId: 'INC-2026-00183',
+    },
+    {
+      searchTerm: 'mongo replica lag',
+      count: 12,
+      suggestedAction: 'Create runbook for MongoDB replica lag investigation',
+    },
+  ],
+
+  viewsTimeSeries: [
+    { date: '2026-04-08', views: 64 },
+    { date: '2026-04-09', views: 71 },
+    { date: '2026-04-10', views: 58 },
+    { date: '2026-04-11', views: 43 },
+    { date: '2026-04-12', views: 39 },
+    { date: '2026-04-13', views: 52 },
+    { date: '2026-04-14', views: 67 },
+    { date: '2026-04-15', views: 88 },
+    { date: '2026-04-16', views: 94 },
+    { date: '2026-04-17', views: 76 },
+    { date: '2026-04-18', views: 61 },
+    { date: '2026-04-19', views: 45 },
+    { date: '2026-04-20', views: 55 },
+    { date: '2026-04-21', views: 72 },
+    { date: '2026-04-22', views: 81 },
+    { date: '2026-04-23', views: 78 },
+    { date: '2026-04-24', views: 66 },
+    { date: '2026-04-25', views: 59 },
+    { date: '2026-04-26', views: 48 },
+    { date: '2026-04-27', views: 53 },
+    { date: '2026-04-28', views: 69 },
+    { date: '2026-04-29', views: 85 },
+    { date: '2026-04-30', views: 92 },
+    { date: '2026-05-01', views: 74 },
+    { date: '2026-05-02', views: 63 },
+    { date: '2026-05-03', views: 57 },
+    { date: '2026-05-04', views: 49 },
+    { date: '2026-05-05', views: 61 },
+    { date: '2026-05-06', views: 78 },
+    { date: '2026-05-07', views: 97 },
+    { date: '2026-05-08', views: 83 },
+  ],
+};

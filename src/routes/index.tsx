@@ -22,6 +22,16 @@ import { ProblemList } from './problems/ProblemList';
 import { ProblemDetail } from './problems/ProblemDetail';
 import { RCAWorkspace } from './problems/RCAWorkspace';
 import { KEDB } from './problems/KEDB';
+import { PortalHome } from './portal/PortalHome';
+import { Catalog } from './portal/Catalog';
+import { CatalogItemDetail } from './portal/CatalogItemDetail';
+import { MyRequests } from './portal/MyRequests';
+import { RequestQueue } from './requests/RequestQueue';
+import { RequestDetail } from './requests/RequestDetail';
+import { KBBrowse } from './kb/KBBrowse';
+import { ArticleView } from './kb/ArticleView';
+import { KBEditor } from './kb/KBEditor';
+import { KBAnalytics } from './kb/KBAnalytics';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
@@ -50,9 +60,17 @@ export const routes: RouteObject[] = [
       { path: 'problems/:problemId/rca',         element: <RCAWorkspace /> },
       { path: 'problems/:problemId',             element: <ProblemDetail /> },
       { path: 'kedb',                           element: <KEDB /> },
-      { path: 'requests',                       element: <Placeholder module="Service Requests" doc="Doc 3" /> },
-      { path: 'portal',                         element: <Placeholder module="Self-Service Portal" doc="Doc 3" /> },
-      { path: 'kb',                             element: <Placeholder module="Knowledge Base" doc="Doc 3" /> },
+      { path: 'requests',                       element: <RequestQueue /> },
+      { path: 'requests/:requestId',            element: <RequestDetail /> },
+      { path: 'portal',                         element: <PortalHome /> },
+      { path: 'portal/catalog',                 element: <Catalog /> },
+      { path: 'portal/catalog/:itemId',         element: <CatalogItemDetail /> },
+      { path: 'portal/my-requests',             element: <MyRequests /> },
+      { path: 'kb',                             element: <KBBrowse /> },
+      { path: 'kb/analytics',                   element: <KBAnalytics /> },
+      { path: 'kb/editor',                      element: <KBEditor /> },
+      { path: 'kb/editor/:slug',                element: <KBEditor /> },
+      { path: 'kb/:slug',                       element: <ArticleView /> },
       // Doc 4 — Change & Delivery
       { path: 'changes',                        element: <Placeholder module="Changes" doc="Doc 4" /> },
       { path: 'releases',                       element: <Placeholder module="Releases" doc="Doc 4" /> },

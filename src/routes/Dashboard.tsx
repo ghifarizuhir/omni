@@ -25,6 +25,14 @@ import { getMajorIncidents, getActiveIncidents } from '@/src/mocks/incidents';
 import { formatRelative, formatDate } from '@/src/lib/format';
 import { ServiceHealthStatus, Severity } from '../types';
 
+function resolveInboxUrl(sourceModule: string, sourceRef: string): string | null {
+  if (sourceModule === 'request') return `/requests/${sourceRef}`;
+  if (sourceModule === 'incident') return `/incidents/${sourceRef}`;
+  if (sourceModule === 'change') return `/changes/${sourceRef}`;
+  if (sourceModule === 'problem') return `/problems/${sourceRef}`;
+  return null;
+}
+
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const activeIncidents = getActiveIncidents();
@@ -266,7 +274,13 @@ export const Dashboard: React.FC = () => {
                    {item.priority === 'urgent' && (
                      <span className="text-[10px] font-bold text-ois-danger uppercase tracking-tight">Urgent</span>
                    )}
-                   <span className="text-[13px] font-semibold text-ois-text leading-tight">{item.title}</span>
+                   {resolveInboxUrl(item.sourceModule, item.sourceRef) ? (
+                     <Link to={resolveInboxUrl(item.sourceModule, item.sourceRef)!} className="text-[13px] font-semibold text-ois-text leading-tight hover:text-ois-primary hover:underline">
+                       {item.title}
+                     </Link>
+                   ) : (
+                     <span className="text-[13px] font-semibold text-ois-text leading-tight">{item.title}</span>
+                   )}
                 </div>
                 <div className="text-xs font-mono font-bold text-ois-text-subtle mb-3">
                   {item.sourceRef} · <span className={cn(

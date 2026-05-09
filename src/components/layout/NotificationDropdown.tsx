@@ -1,10 +1,25 @@
 import React, { useState } from 'react';
 import { Check, CheckCheck, Bell, User as UserIcon, MessageSquare, AlertCircle, Info, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { cn } from '@/src/lib/utils';
 import { mockNotifications } from '@/src/mocks';
+import { getArticleById } from '@/src/mocks/kbArticles';
 import { formatRelative } from '@/src/lib/format';
 import { motion } from 'motion/react';
+
+function resolveNotificationUrl(sourceModule: string | undefined, sourceRef: string | undefined): string | null {
+  if (!sourceModule || !sourceRef) return null;
+  if (sourceModule === 'kb') {
+    const art = getArticleById(sourceRef);
+    return art ? `/kb/${art.slug}` : null;
+  }
+  if (sourceModule === 'incident') return `/incidents/${sourceRef}`;
+  if (sourceModule === 'problem') return `/problems/${sourceRef}`;
+  if (sourceModule === 'request') return `/requests/${sourceRef}`;
+  if (sourceModule === 'change') return `/changes/${sourceRef}`;
+  return null;
+}
 
 interface NotificationDropdownProps {
   onClose: () => void;
@@ -12,6 +27,7 @@ interface NotificationDropdownProps {
 
 export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) => {
   const [filter, setFilter] = useState<'all' | 'unread' | 'mentions'>('all');
+  const navigate = useNavigate();
 
   const filteredNotifications = mockNotifications.filter(n => {
     if (filter === 'unread') return !n.readAt;
@@ -42,10 +58,15 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
       <div className="flex-1 overflow-y-auto divide-y divide-ois-border">
         {filteredNotifications.length > 0 ? (
           filteredNotifications.map(notification => (
-            <div 
-              key={notification.id} 
+            <div
+              key={notification.id}
+              onClick={() => {
+                const url = resolveNotificationUrl(notification.sourceModule, notification.sourceRef);
+                if (url) { onClose(); navigate(url); }
+              }}
               className={cn(
-                "p-4 hover:bg-ois-surface-muted transition-colors cursor-pointer flex gap-3 relative",
+                "p-4 hover:bg-ois-surface-muted transition-colors flex gap-3 relative",
+                resolveNotificationUrl(notification.sourceModule, notification.sourceRef) ? "cursor-pointer" : "cursor-default",
                 !notification.readAt && "bg-ois-primary-pale/30"
               )}
             >
