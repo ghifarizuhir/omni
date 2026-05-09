@@ -22,6 +22,10 @@ import { Avatar } from '@/src/components/ui/Avatar';
 import { Button } from '@/src/components/ui/Button';
 import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
 import { IncidentPriorityBadge } from '@/src/components/incidents/IncidentPriorityBadge';
+import { getChangeById } from '@/src/mocks/changes';
+import { getOutagesByService } from '@/src/mocks/outages';
+import { ChangeStatusPill } from '@/src/components/changes/ChangeStatusPill';
+import { RiskBadge } from '@/src/components/changes/RiskBadge';
 import { SLATimer } from '@/src/components/incidents/SLATimer';
 import { SLAIndicator } from '@/src/components/incidents/SLAIndicator';
 import { IncidentTimelineEntry } from '@/src/components/incidents/IncidentTimelineEntry';
@@ -472,10 +476,29 @@ export const IncidentDetail: React.FC = () => {
             <Plus size={12} /> Link change
           </button>
         ) : (
-          <div className="space-y-1">
-            {incident.linkedChangeIds!.map(id => (
-              <p key={id} className="text-xs font-mono text-ois-primary">{id}</p>
-            ))}
+          <div className="space-y-2">
+            {incident.linkedChangeIds!.map(id => {
+              const chg = getChangeById(id);
+              return (
+                <div key={id} className="p-2 rounded-lg bg-ois-bg border border-ois-border">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-xs font-bold text-ois-primary">{id}</span>
+                    <Link to={`/changes/${id}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+                      <ExternalLink size={10} /> View
+                    </Link>
+                  </div>
+                  {chg && (
+                    <>
+                      <p className="text-xs text-ois-text leading-snug mb-1 line-clamp-2">{chg.title}</p>
+                      <div className="flex gap-1.5">
+                        <ChangeStatusPill status={chg.status} size="sm" />
+                        <RiskBadge risk={chg.risk} size="sm" />
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </SectionCard>
@@ -499,6 +522,32 @@ export const IncidentDetail: React.FC = () => {
           </Link>
         </div>
       </SectionCard>
+
+      {/* Linked outages */}
+      {(() => {
+        const outages = incident.affectedServiceIds.flatMap(id => getOutagesByService(id))
+          .filter(o => {
+            const oStart = new Date(o.startedAt).getTime();
+            const iStart = new Date(incident.createdAt).getTime();
+            return Math.abs(oStart - iStart) < 3 * 60 * 60 * 1000; // within 3 hours
+          });
+        if (outages.length === 0) return null;
+        return (
+          <SectionCard title={`Linked outages (${outages.length})`}>
+            {outages.map(outage => (
+              <div key={outage.id} className="flex items-center justify-between py-1">
+                <div>
+                  <span className="font-mono text-xs font-semibold text-ois-primary">{outage.publicId}</span>
+                  <span className="ml-2 text-xs text-ois-text-muted capitalize">{outage.type} · {outage.serviceName}</span>
+                </div>
+                <Link to="/availability/outages" className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+                  View <ExternalLink size={12} />
+                </Link>
+              </div>
+            ))}
+          </SectionCard>
+        );
+      })()}
     </div>
   );
 

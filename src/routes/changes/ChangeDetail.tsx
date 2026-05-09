@@ -1,0 +1,554 @@
+import React, { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import {
+  ArrowLeft, MoreVertical, AlertTriangle, CheckCircle2, Clock,
+  ExternalLink, Tag, ClipboardCheck,
+} from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
+import { Card, CardBody } from '../../components/ui/Card';
+import { Tabs } from '../../components/ui/Tabs';
+import { cn } from '../../lib/utils';
+import { getChangeById } from '../../mocks/changes';
+import { mockScalingRecommendations } from '../../mocks/scalingRecommendations';
+import { changeStatusMeta, changeTypeMeta, riskMeta } from '../../lib/constants';
+import { ChangeStatusPill } from '../../components/changes/ChangeStatusPill';
+import { ChangeTypeChip } from '../../components/changes/ChangeTypeChip';
+import { RiskBadge } from '../../components/changes/RiskBadge';
+import { ApprovalMatrix } from '../../components/changes/ApprovalMatrix';
+import { PIRPanel } from '../../components/changes/PIRPanel';
+import { formatDate, formatRelative } from '../../lib/format';
+
+const riskStripe: Record<string, string> = {
+  low: 'bg-emerald-400',
+  medium: 'bg-amber-400',
+  high: 'bg-red-500',
+  critical: 'bg-red-700',
+};
+
+export const ChangeDetail: React.FC = () => {
+  const { changeId } = useParams<{ changeId: string }>();
+  const navigate = useNavigate();
+  const change = getChangeById(changeId ?? '');
+
+  if (!change) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <p className="text-2xl font-bold text-ois-text mb-2">Change not found</p>
+        <p className="text-sm text-ois-text-muted mb-6">{changeId}</p>
+        <Button onClick={() => navigate('/changes')}>← Back to Calendar</Button>
+      </div>
+    );
+  }
+
+  const statusMeta = changeStatusMeta[change.status];
+  const approvedCount = change.approvals.filter((a) => a.decision === 'approve').length;
+  const activeConflicts = change.conflicts.filter((c) => !c.resolvedAt);
+  const resolvedConflicts = change.conflicts.filter((c) => c.resolvedAt);
+  const isImplemented = ['implemented', 'closed_successful', 'closed_failed'].includes(change.status);
+
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'plans', label: 'Plans' },
+    { id: 'approvals', label: `Approvals (${change.approvals.length})` },
+    { id: 'conflicts', label: `Conflicts (${change.conflicts.length})` },
+    { id: 'linked', label: `Linked (${change.linkedProblemIds.length + change.linkedIncidentIds.length + (change.linkedReleaseId ? 1 : 0) + change.linkedKBSlugs.length})` },
+    { id: 'pir', label: 'PIR' },
+    { id: 'history', label: 'History' },
+  ];
+
+  const [activeTab, setActiveTab] = useState('overview');
+
+  return (
+    <div className="flex gap-6 min-h-0">
+      {/* Left sidebar */}
+      <div className="w-64 shrink-0 space-y-3">
+        <Card>
+          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">At a glance</h3>
+          </div>
+          <CardBody className="p-0">
+            <dl className="divide-y divide-ois-border text-xs">
+              {[
+                { label: 'Status', value: <ChangeStatusPill status={change.status} size="sm" /> },
+                { label: 'Type', value: <ChangeTypeChip type={change.type} size="sm" /> },
+                { label: 'Risk', value: <RiskBadge risk={change.risk} score={change.riskScore} size="sm" /> },
+                { label: 'Impact', value: <span className="capitalize font-medium text-ois-text">{change.impact}</span> },
+                { label: 'Owner', value: <span className="text-ois-text">{change.ownerName}</span> },
+                { label: 'Created', value: <span className="text-ois-text-muted">{formatRelative(change.createdAt)}</span> },
+                { label: 'Window', value: <span className="text-ois-text text-[10px]">{change.implementationWindow}</span> },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between px-4 py-2.5">
+                  <dt className="text-ois-text-muted">{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </CardBody>
+        </Card>
+
+        {/* Risk factors */}
+        {change.riskFactors.length > 0 && (
+          <Card>
+            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+              <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Risk Factors</h3>
+            </div>
+            <CardBody>
+              <ul className="space-y-1.5">
+                {change.riskFactors.map((f) => (
+                  <li key={f} className="text-xs text-ois-text flex items-start gap-1.5">
+                    <span className="text-ois-text-subtle mt-0.5">•</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </CardBody>
+          </Card>
+        )}
+
+        {/* Approvals progress */}
+        <Card>
+          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Approvals</h3>
+          </div>
+          <CardBody>
+            <div className="flex gap-1 mb-2">
+              {change.approvals.map((a, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'w-5 h-5 rounded-full flex items-center justify-center',
+                    a.decision === 'approve' ? 'bg-emerald-500' :
+                    a.decision === 'reject' ? 'bg-ois-danger' : 'bg-ois-border',
+                  )}
+                >
+                  {a.decision === 'approve' ? <CheckCircle2 size={11} className="text-white" /> :
+                   a.decision === 'reject' ? <span className="text-white text-[9px] font-bold">✕</span> :
+                   <Clock size={10} className="text-ois-text-subtle" />}
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-ois-text-muted">
+              {approvedCount} of {change.approvals.length} received
+            </p>
+            {change.cabSessionId && (
+              <p className="text-[10px] text-ois-text-subtle mt-1 flex items-center gap-1">
+                <Clock size={9} /> CAB Thu May 9 10:00 UTC
+              </p>
+            )}
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 min-w-0 space-y-4">
+        {/* Top bar */}
+        <div className="flex items-center justify-between">
+          <Link to="/changes" className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text">
+            <ArrowLeft size={16} /> Calendar
+          </Link>
+          <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+            <MoreVertical size={14} /> Actions
+          </Button>
+        </div>
+
+        {/* Header card */}
+        <Card className="overflow-hidden">
+          {/* Risk stripe */}
+          <div className={cn('h-1.5', riskStripe[change.risk])} />
+          <CardBody className="p-5">
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-mono text-sm font-bold text-ois-primary">{change.publicId}</span>
+                  <ChangeTypeChip type={change.type} size="sm" />
+                  <RiskBadge risk={change.risk} score={change.riskScore} size="sm" />
+                </div>
+                <h1 className="text-xl font-bold text-ois-text leading-snug">{change.title}</h1>
+              </div>
+              <ChangeStatusPill status={change.status} />
+            </div>
+
+            {/* Tags */}
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {change.tags.map((t) => (
+                <span key={t} className="inline-flex items-center gap-1 bg-ois-bg border border-ois-border text-[10px] font-medium text-ois-text-muted px-2 py-0.5 rounded-full">
+                  <Tag size={9} />{t}
+                </span>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-4 text-xs text-ois-text-muted">
+              <span className="flex items-center gap-1">
+                <Clock size={11} />
+                {change.implementationWindow}
+              </span>
+              <span>Owner: <span className="font-medium text-ois-text">{change.ownerName}</span></span>
+              <span>Created {formatRelative(change.createdAt)} by {change.requesterName}</span>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Tabs */}
+        <Tabs tabs={tabs} activeTabId={activeTab} onChange={setActiveTab}>
+          {/* Overview */}
+          <div className="space-y-4">
+            <Card>
+              <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+                <h3 className="text-sm font-bold text-ois-text">Description</h3>
+              </div>
+              <CardBody>
+                <p className="text-sm text-ois-text leading-relaxed">{change.description}</p>
+              </CardBody>
+            </Card>
+            <Card>
+              <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+                <h3 className="text-sm font-bold text-ois-text">Justification</h3>
+              </div>
+              <CardBody>
+                <p className="text-sm text-ois-text leading-relaxed">{change.justification}</p>
+              </CardBody>
+            </Card>
+            <Card>
+              <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+                <h3 className="text-sm font-bold text-ois-text">Affected Scope</h3>
+              </div>
+              <CardBody>
+                <div className="flex gap-4 mb-3 text-xs text-ois-text-muted">
+                  <span>{change.affectedCIIds.length} CIs</span>
+                  <span>{change.affectedServiceIds.length} service(s)</span>
+                </div>
+                {change.affectedCIPublicIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {change.affectedCIPublicIds.map((ci) => (
+                      <Link key={ci} to={`/cmdb/${ci}`} className="font-mono text-xs bg-ois-bg border border-ois-border px-2 py-1 rounded-lg text-ois-primary hover:border-ois-primary transition-colors">
+                        {ci}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+            <Card>
+              <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+                <h3 className="text-sm font-bold text-ois-text">Schedule</h3>
+              </div>
+              <CardBody>
+                <div className="space-y-2 text-sm">
+                  <p className="flex items-center gap-2">
+                    <Clock size={14} className="text-ois-text-subtle" />
+                    <span className="font-medium text-ois-text">{change.implementationWindow}</span>
+                  </p>
+                  <p className="text-xs text-ois-text-muted">
+                    Planned: {formatDate(change.plannedStart, 'MMM d, HH:mm')} – {formatDate(change.plannedEnd, 'HH:mm')} UTC
+                  </p>
+                  {change.freezeWindow && (
+                    <p className="text-xs text-amber-600 font-semibold flex items-center gap-1">
+                      <AlertTriangle size={11} /> Within freeze window — exception approved
+                    </p>
+                  )}
+                  <p className="text-xs text-ois-text-muted">
+                    Conflict status:{' '}
+                    {activeConflicts.length === 0
+                      ? <span className="text-ois-success font-semibold">✓ No conflicts</span>
+                      : <span className="text-ois-warning font-semibold">{activeConflicts.length} conflict(s) detected</span>}
+                  </p>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+
+          {/* Plans */}
+          <div className="space-y-4">
+            {[
+              { label: 'Implementation Plan', content: change.implementationPlan },
+              { label: 'Rollback Plan', content: change.rollbackPlan },
+              { label: 'Test Plan', content: change.testPlan },
+            ].map(({ label, content }) => (
+              <Card key={label}>
+                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-ois-text">{label}</h3>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs">Edit</Button>
+                </div>
+                <CardBody>
+                  <pre className="text-xs text-ois-text font-mono whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
+                    {content || <span className="text-ois-text-subtle italic">Not yet provided</span>}
+                  </pre>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+
+          {/* Approvals */}
+          <Card>
+            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg flex items-center justify-between">
+              <h3 className="text-sm font-bold text-ois-text">Required Approvals</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => navigate('/changes/cab')}
+              >
+                Open CAB workspace <ExternalLink size={11} />
+              </Button>
+            </div>
+            <CardBody>
+              <ApprovalMatrix
+                approvals={change.approvals}
+                changeId={change.id}
+                cabSessionDate={change.cabSessionId ? 'Thursday May 9, 10:00 UTC' : undefined}
+              />
+            </CardBody>
+          </Card>
+
+          {/* Conflicts */}
+          <div className="space-y-3">
+            {change.conflicts.length === 0 ? (
+              <Card>
+                <CardBody className="py-10 text-center">
+                  <CheckCircle2 size={32} className="mx-auto text-ois-success mb-3" />
+                  <p className="text-sm font-bold text-ois-text">No conflicts detected</p>
+                  <p className="text-xs text-ois-text-muted mt-1">
+                    This change has been validated against the FSC and freeze windows.
+                  </p>
+                  <p className="text-[10px] text-ois-text-subtle mt-2">Last checked: 4 minutes ago</p>
+                </CardBody>
+              </Card>
+            ) : (
+              <>
+                {activeConflicts.length > 0 && (
+                  <p className="text-sm font-semibold text-ois-warning flex items-center gap-1.5">
+                    <AlertTriangle size={14} /> {activeConflicts.length} active conflict(s)
+                  </p>
+                )}
+                {change.conflicts.map((cf) => (
+                  <Card key={cf.id} className={cf.resolvedAt ? 'opacity-70' : ''}>
+                    <div className={cn(
+                      'px-4 py-3 border-b border-ois-border flex items-center gap-2',
+                      cf.severity === 'blocking' ? 'bg-red-50' : 'bg-amber-50',
+                    )}>
+                      <AlertTriangle size={14} className={cf.severity === 'blocking' ? 'text-ois-danger' : 'text-amber-600'} />
+                      <h3 className="text-sm font-bold text-ois-text capitalize">
+                        {cf.type.replace(/_/g, ' ')} Conflict
+                      </h3>
+                      <Badge variant={cf.severity === 'blocking' ? 'danger' : 'warning'} className="text-[10px] ml-auto">
+                        {cf.severity}
+                      </Badge>
+                      {cf.resolvedAt && <Badge variant="success" className="text-[10px]">Resolved</Badge>}
+                    </div>
+                    <CardBody>
+                      <p className="text-sm text-ois-text mb-3">{cf.description}</p>
+                      {cf.conflictsWith.length > 0 && (
+                        <p className="text-xs text-ois-text-muted mb-2">
+                          Conflicts with: {cf.conflictsWith.map((id) => (
+                            <Link key={id} to={`/changes/${id}`} className="text-ois-primary hover:underline font-mono ml-1">{id}</Link>
+                          ))}
+                        </p>
+                      )}
+                      <div className="text-[11px] text-ois-text-subtle space-y-0.5">
+                        <p>Detected: {formatDate(cf.detectedAt, 'MMM d, HH:mm')} UTC</p>
+                        {cf.resolvedAt && <p>Resolved: {formatDate(cf.resolvedAt, 'MMM d, HH:mm')} UTC</p>}
+                        {cf.resolutionNote && (
+                          <p className="text-ois-text-muted mt-1 italic">"{cf.resolutionNote}"</p>
+                        )}
+                      </div>
+                    </CardBody>
+                  </Card>
+                ))}
+              </>
+            )}
+          </div>
+
+          {/* Linked */}
+          <div className="space-y-3">
+            {change.linkedProblemIds.length > 0 && (
+              <Card>
+                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+                  <h3 className="text-sm font-bold text-ois-text">Problems ({change.linkedProblemIds.length})</h3>
+                </div>
+                <CardBody className="p-0">
+                  {change.linkedProblemIds.map((id) => (
+                    <Link key={id} to={`/problems/${id}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg border-b border-ois-border last:border-0 transition-colors">
+                      <span className="font-mono text-sm font-bold text-ois-primary">{id}</span>
+                      <ExternalLink size={13} className="text-ois-text-subtle" />
+                    </Link>
+                  ))}
+                </CardBody>
+              </Card>
+            )}
+            {change.linkedIncidentIds.length > 0 && (
+              <Card>
+                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+                  <h3 className="text-sm font-bold text-ois-text">Incidents ({change.linkedIncidentIds.length})</h3>
+                </div>
+                <CardBody className="p-0">
+                  {change.linkedIncidentIds.map((id) => (
+                    <Link key={id} to={`/incidents/${id}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg border-b border-ois-border last:border-0 transition-colors">
+                      <span className="font-mono text-sm font-bold text-ois-primary">{id}</span>
+                      <ExternalLink size={13} className="text-ois-text-subtle" />
+                    </Link>
+                  ))}
+                </CardBody>
+              </Card>
+            )}
+            {change.linkedReleasePublicId && (
+              <Card>
+                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+                  <h3 className="text-sm font-bold text-ois-text">Release</h3>
+                </div>
+                <CardBody>
+                  <Link to={`/releases/${change.linkedReleasePublicId}`} className="flex items-center justify-between hover:opacity-80">
+                    <span className="font-mono text-sm font-bold text-ois-primary">{change.linkedReleasePublicId}</span>
+                    <ExternalLink size={13} className="text-ois-text-subtle" />
+                  </Link>
+                </CardBody>
+              </Card>
+            )}
+            {change.linkedKBSlugs.length > 0 && (
+              <Card>
+                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+                  <h3 className="text-sm font-bold text-ois-text">KB Articles</h3>
+                </div>
+                <CardBody className="p-0">
+                  {change.linkedKBSlugs.map((slug) => (
+                    <Link key={slug} to={`/kb/${slug}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg border-b border-ois-border last:border-0 transition-colors">
+                      <span className="font-mono text-xs text-ois-primary">{slug}</span>
+                      <ExternalLink size={13} className="text-ois-text-subtle" />
+                    </Link>
+                  ))}
+                </CardBody>
+              </Card>
+            )}
+
+            {/* Capacity recommendations resolved by this change */}
+            {(() => {
+              const resolved = mockScalingRecommendations.filter(
+                r => r.implementedViaChangeId === change.id ||
+                     r.implementedViaChangeId === change.publicId
+              );
+              if (resolved.length === 0) return null;
+              return (
+                <Card>
+                  <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+                    <h3 className="text-sm font-bold text-ois-text">Capacity Recommendations ({resolved.length})</h3>
+                    <p className="text-xs text-ois-text-muted mt-0.5">This change implements the following capacity actions</p>
+                  </div>
+                  <CardBody className="p-0">
+                    {resolved.map(rec => (
+                      <div key={rec.id} className="flex items-center justify-between px-4 py-3 border-b border-ois-border last:border-0">
+                        <div>
+                          <span className="font-mono text-xs font-bold text-ois-primary">{rec.publicId}</span>
+                          <p className="text-xs text-ois-text mt-0.5">{rec.suggestedAction}</p>
+                          <p className="text-xs text-ois-text-muted">{rec.estimatedImpact}</p>
+                        </div>
+                        <Link to="/capacity" className="text-xs text-ois-primary hover:underline flex items-center gap-1 ml-4">
+                          Capacity <ExternalLink size={12} />
+                        </Link>
+                      </div>
+                    ))}
+                  </CardBody>
+                </Card>
+              );
+            })()}
+          </div>
+
+          {/* PIR */}
+          <Card>
+            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+              <h3 className="text-sm font-bold text-ois-text">Post-Implementation Review</h3>
+            </div>
+            <CardBody>
+              {!isImplemented || !change.pir ? (
+                <div className="py-8 text-center">
+                  <ClipboardCheck size={32} className="mx-auto text-ois-text-subtle mb-3" />
+                  <p className="text-sm font-bold text-ois-text">PIR not yet conducted</p>
+                  <p className="text-xs text-ois-text-muted mt-1">
+                    {isImplemented
+                      ? 'No PIR has been filed for this change.'
+                      : 'This change has not been implemented. PIR will be available after closure.'}
+                  </p>
+                </div>
+              ) : (
+                <PIRPanel pir={change.pir} />
+              )}
+            </CardBody>
+          </Card>
+
+          {/* History */}
+          <Card>
+            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+              <h3 className="text-sm font-bold text-ois-text">Audit History</h3>
+            </div>
+            <CardBody>
+              <div className="space-y-3">
+                {[
+                  { ts: change.updatedAt, actor: change.ownerName, msg: 'Approval received from Tom Bergstrom (Service Owner)' },
+                  { ts: change.createdAt, actor: change.requesterName, msg: 'Change request submitted for review' },
+                ].map((entry, i) => (
+                  <div key={i} className="flex gap-3 text-xs">
+                    <span className="text-ois-text-subtle whitespace-nowrap">{formatDate(entry.ts, 'MMM d HH:mm')}</span>
+                    <span className="font-medium text-ois-text">{entry.actor}</span>
+                    <span className="text-ois-text-muted">{entry.msg}</span>
+                  </div>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
+        </Tabs>
+      </div>
+
+      {/* Right sidebar */}
+      <div className="w-56 shrink-0 space-y-3">
+        <Card>
+          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Quick Actions</h3>
+          </div>
+          <CardBody className="p-0">
+            <div className="divide-y divide-ois-border">
+              {[
+                { label: 'Approve change', primary: true, onClick: () => setActiveTab('approvals') },
+                { label: 'Open CAB workspace', onClick: () => navigate('/changes/cab') },
+                { label: 'Reschedule', onClick: () => {} },
+                { label: 'Cancel change', danger: true, onClick: () => {} },
+              ].map(({ label, primary, danger, onClick }) => (
+                <button
+                  key={label}
+                  onClick={onClick}
+                  className={cn(
+                    'w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors',
+                    primary && 'text-ois-primary',
+                    danger && 'text-ois-danger',
+                    !primary && !danger && 'text-ois-text',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Watchers</h3>
+          </div>
+          <CardBody>
+            <div className="space-y-2">
+              {[change.ownerName, ...change.approvals.map((a) => a.approverName)]
+                .filter((v, i, a) => a.indexOf(v) === i)
+                .slice(0, 5)
+                .map((name) => (
+                  <div key={name} className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-ois-primary/10 text-ois-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                      {name.split(' ').map((n) => n[0]).join('')}
+                    </div>
+                    <span className="text-xs text-ois-text truncate">{name}</span>
+                  </div>
+                ))}
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+    </div>
+  );
+};

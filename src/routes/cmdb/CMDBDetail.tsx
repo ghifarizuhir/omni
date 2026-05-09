@@ -14,6 +14,12 @@ import {
 } from '@/src/mocks';
 import { getIncidentsByCI } from '@/src/mocks/incidents';
 import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
+import { getChangesByCI } from '@/src/mocks/changes';
+import { getMetricsByCI } from '@/src/mocks/capacityMetrics';
+import { UtilizationBar } from '@/src/components/capacity/UtilizationBar';
+import { TrendIndicator } from '@/src/components/capacity/TrendIndicator';
+import { ChangeStatusPill } from '@/src/components/changes/ChangeStatusPill';
+import { RiskBadge } from '@/src/components/changes/RiskBadge';
 import { MonitoringRule } from '../../types/monitoring';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -99,6 +105,7 @@ export const CMDBDetail: React.FC = () => {
         { id: 'linked', label: 'Linked Items' },
         { id: 'history', label: 'History' },
         { id: 'monitoring', label: 'Monitoring' },
+        { id: 'capacity', label: 'Capacity' },
       ]}>
         <div id="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -270,7 +277,29 @@ export const CMDBDetail: React.FC = () => {
               <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
                   Linked Changes <ShieldCheck size={14} className="text-ois-info" />
               </div>
-              <div className="p-8 text-center text-xs text-ois-text-muted italic">No recent changes linked</div>
+              {(() => {
+                const ciChanges = getChangesByCI(ci.id).concat(getChangesByCI(ci.publicId))
+                  .filter((c, i, a) => a.findIndex(x => x.id === c.id) === i)
+                  .slice(0, 5);
+                return ciChanges.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-ois-text-muted italic">No recent changes linked</div>
+                ) : (
+                  <div className="divide-y divide-ois-border">
+                    {ciChanges.map(chg => (
+                      <RouterLink key={chg.id} to={`/changes/${chg.publicId}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg transition-colors">
+                        <div>
+                          <span className="font-mono text-xs font-bold text-ois-primary">{chg.publicId}</span>
+                          <p className="text-xs text-ois-text mt-0.5 line-clamp-1">{chg.title}</p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-3 shrink-0">
+                          <ChangeStatusPill status={chg.status} size="sm" />
+                          <RiskBadge risk={chg.risk} size="sm" />
+                        </div>
+                      </RouterLink>
+                    ))}
+                  </div>
+                );
+              })()}
             </Card>
         </div>
 
@@ -283,22 +312,60 @@ export const CMDBDetail: React.FC = () => {
         <div id="monitoring" className="space-y-4">
            <Card className="overflow-hidden">
              <DataTable columns={[
-               { 
-                 header: 'Rule Name', 
+               {
+                 header: 'Rule Name',
                  accessor: (r: any) => (
-                   <button 
+                   <button
                      onClick={() => navigate(`/monitoring/rules?focus=${r.publicId}`)}
                      className="font-semibold text-sm text-ois-primary hover:underline text-left"
                    >
                      {r.name}
                    </button>
-                 ) 
+                 )
                },
                { header: 'Type', accessor: (r: any) => <Badge variant="neutral" className="capitalize text-[10px]">{r.type}</Badge> },
                { header: 'Severity', accessor: (r: any) => <Badge variant={r.severity === 'P1' ? 'danger' : 'warning'} className="text-[10px] font-bold">{r.severity}</Badge> },
                { header: 'Last Triggered', accessor: (r: any) => <span className="text-xs text-ois-text-muted">{r.lastTriggeredAt || 'Never'}</span> },
              ]} data={ciRules} />
            </Card>
+        </div>
+
+        {/* Capacity tab */}
+        <div id="capacity" className="space-y-3">
+          {(() => {
+            const ciMetrics = getMetricsByCI(ci.id);
+            if (ciMetrics.length === 0) {
+              return (
+                <div className="py-12 text-center text-ois-text-muted">
+                  <p className="text-sm">No capacity metrics tracked for this CI.</p>
+                </div>
+              );
+            }
+            return ciMetrics.map(metric => (
+              <div key={metric.id} className="border border-ois-border rounded-lg p-4 space-y-2 bg-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-mono text-xs text-ois-text-muted">{metric.publicId}</span>
+                    <p className="text-sm font-semibold text-ois-text mt-0.5">{metric.name}</p>
+                  </div>
+                  <TrendIndicator trend={metric.trend7d} changePercent={metric.changePercent7d} size="sm" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <UtilizationBar
+                      value={metric.utilizationPercent}
+                      warningThreshold={metric.warningThreshold}
+                      criticalThreshold={metric.criticalThreshold}
+                      showLabel
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-ois-text-muted">
+                  Current: {metric.currentValue}{metric.unit} of {metric.capacityValue}{metric.unit} · Peak 24h: {metric.peakLast24h}{metric.unit}
+                </p>
+              </div>
+            ));
+          })()}
         </div>
       </Tabs>
     </div>

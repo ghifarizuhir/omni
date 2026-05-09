@@ -32,6 +32,27 @@ import { KBBrowse } from './kb/KBBrowse';
 import { ArticleView } from './kb/ArticleView';
 import { KBEditor } from './kb/KBEditor';
 import { KBAnalytics } from './kb/KBAnalytics';
+import { ChangeCalendar } from './changes/ChangeCalendar';
+import { NewChange } from './changes/NewChange';
+import { ChangeDetail } from './changes/ChangeDetail';
+import { CABWorkspace } from './changes/CABWorkspace';
+import { ReleasesList } from './releases/ReleasesList';
+import { ReleaseDetail } from './releases/ReleaseDetail';
+import { ReleasePipeline } from './releases/ReleasePipeline';
+import { ReleaseNotes } from './releases/ReleaseNotes';
+import { DeploymentsQueue } from './deployments/DeploymentsQueue';
+import { DeploymentDetail } from './deployments/DeploymentDetail';
+import { Environments } from './deployments/Environments';
+import { TestPlans } from './testing/TestPlans';
+import { TestCases } from './testing/TestCases';
+import { TestRuns } from './testing/TestRuns';
+import { SignOffQueue } from './testing/SignOffQueue';
+import { AvailabilityDashboard } from './availability/AvailabilityDashboard';
+import { SLATargets } from './availability/SLATargets';
+import { Outages } from './availability/Outages';
+import CapacityDashboard from './capacity/CapacityDashboard';
+import CapacityForecast from './capacity/CapacityForecast';
+import CapacityThresholds from './capacity/CapacityThresholds';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
@@ -72,12 +93,29 @@ export const routes: RouteObject[] = [
       { path: 'kb/editor/:slug',                element: <KBEditor /> },
       { path: 'kb/:slug',                       element: <ArticleView /> },
       // Doc 4 — Change & Delivery
-      { path: 'changes',                        element: <Placeholder module="Changes" doc="Doc 4" /> },
-      { path: 'releases',                       element: <Placeholder module="Releases" doc="Doc 4" /> },
-      { path: 'deployments',                    element: <Placeholder module="Deployments" doc="Doc 4" /> },
+      { path: 'changes',                        element: <ChangeCalendar /> },
+      { path: 'changes/new',                    element: <NewChange /> },
+      { path: 'changes/calendar',               element: <ChangeCalendar /> },
+      { path: 'changes/cab',                    element: <CABWorkspace /> },
+      { path: 'changes/:changeId',              element: <ChangeDetail /> },
+      { path: 'releases',                       element: <ReleasesList /> },
+      { path: 'releases/pipeline',              element: <ReleasePipeline /> },
+      { path: 'releases/notes',                 element: <ReleaseNotes /> },
+      { path: 'releases/:releaseId',            element: <ReleaseDetail /> },
+      { path: 'deployments',                    element: <DeploymentsQueue /> },
+      { path: 'deployments/:deploymentId',      element: <DeploymentDetail /> },
+      { path: 'environments',                   element: <Environments /> },
+      { path: 'testing/plans',                  element: <TestPlans /> },
+      { path: 'testing/cases',                  element: <TestCases /> },
+      { path: 'testing/runs',                   element: <TestRuns /> },
+      { path: 'testing/sign-off',               element: <SignOffQueue /> },
       // Doc 5 — Service Health & Intelligence
-      { path: 'availability',                   element: <Placeholder module="Availability" doc="Doc 5" /> },
-      { path: 'capacity',                       element: <Placeholder module="Capacity" doc="Doc 5" /> },
+      { path: 'availability',                   element: <AvailabilityDashboard /> },
+      { path: 'availability/sla',               element: <SLATargets /> },
+      { path: 'availability/outages',           element: <Outages /> },
+      { path: 'capacity',                       element: <CapacityDashboard /> },
+      { path: 'capacity/forecast',              element: <CapacityForecast /> },
+      { path: 'capacity/thresholds',            element: <CapacityThresholds /> },
       { path: 'reports',                        element: <Placeholder module="Reports" doc="Doc 5" /> },
       { path: 'improvement',                    element: <Placeholder module="Improvements" doc="Doc 5" /> },
       // Doc 6 — Platform Features
