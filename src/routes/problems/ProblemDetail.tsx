@@ -25,6 +25,11 @@ import { ProblemSourceChip } from '@/src/components/problems/ProblemSourceChip';
 import { KnownErrorCard } from '@/src/components/problems/KnownErrorCard';
 import { PromoteToKnownErrorModal } from '@/src/components/problems/PromoteToKnownErrorModal';
 import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
+import { getChangeById } from '@/src/mocks/changes';
+import { ChangeStatusPill } from '@/src/components/changes/ChangeStatusPill';
+import { RiskBadge } from '@/src/components/changes/RiskBadge';
+import { mockImprovements } from '@/src/mocks/improvements';
+import { ImprovementStatusPill } from '@/src/components/improvement/ImprovementStatusPill';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -538,20 +543,26 @@ export const ProblemDetail: React.FC = () => {
 
           {problem.linkedChangeIds.length > 0 && (
             <SidebarSection title="Permanent fix">
-              {problem.linkedChangeIds.map(chgId => (
-                <div key={chgId}>
-                  <p className="text-xs font-mono font-semibold text-ois-primary">{chgId}</p>
-                  <p className="text-xs text-ois-text-subtle">Status: planned</p>
-                  {problem.knownError?.permanentFixPlan && (
-                    <p className="text-xs text-ois-text-muted mt-1 line-clamp-2">
-                      Target: {problem.knownError.permanentFixPlan}
-                    </p>
-                  )}
-                  <a href={`/changes/${chgId}`} className="text-xs text-ois-primary hover:underline mt-1 inline-flex items-center gap-1">
-                    <ExternalLink size={10} /> View change
-                  </a>
-                </div>
-              ))}
+              {problem.linkedChangeIds.map(chgId => {
+                const chg = getChangeById(chgId);
+                return (
+                  <div key={chgId} className="space-y-1">
+                    <p className="text-xs font-mono font-semibold text-ois-primary">{chgId}</p>
+                    {chg && (
+                      <>
+                        <p className="text-xs text-ois-text leading-snug line-clamp-2">{chg.title}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <ChangeStatusPill status={chg.status} size="sm" />
+                          <RiskBadge risk={chg.risk} size="sm" />
+                        </div>
+                      </>
+                    )}
+                    <Link to={`/changes/${chgId}`} className="text-xs text-ois-primary hover:underline mt-1 inline-flex items-center gap-1">
+                      <ExternalLink size={10} /> View change
+                    </Link>
+                  </div>
+                );
+              })}
             </SidebarSection>
           )}
         </div>
@@ -634,14 +645,28 @@ export const ProblemDetail: React.FC = () => {
                 </div>
                 {problem.linkedChangeIds.length > 0 ? (
                   <div className="divide-y divide-ois-border">
-                    {problem.linkedChangeIds.map(chgId => (
-                      <div key={chgId} className="px-4 py-3 flex items-center justify-between">
-                        <span className="font-mono text-xs font-semibold text-ois-primary">{chgId}</span>
-                        <a href={`/changes/${chgId}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
-                          <ExternalLink size={11} /> View
-                        </a>
-                      </div>
-                    ))}
+                    {problem.linkedChangeIds.map(chgId => {
+                      const chg = getChangeById(chgId);
+                      return (
+                        <div key={chgId} className="px-4 py-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-mono text-xs font-semibold text-ois-primary">{chgId}</span>
+                            <Link to={`/changes/${chgId}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+                              <ExternalLink size={11} /> View
+                            </Link>
+                          </div>
+                          {chg && (
+                            <>
+                              <p className="text-xs text-ois-text leading-snug mb-1">{chg.title}</p>
+                              <div className="flex items-center gap-1.5">
+                                <ChangeStatusPill status={chg.status} size="sm" />
+                                <RiskBadge risk={chg.risk} size="sm" />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-xs text-ois-text-subtle px-4 py-6 text-center">No changes linked yet</p>
@@ -685,10 +710,44 @@ export const ProblemDetail: React.FC = () => {
                   <p className="text-xs text-ois-text-subtle px-4 py-6 text-center">No KB articles linked yet</p>
                 )}
               </div>
+
+              {/* Linked improvements */}
+              {(() => {
+                const linkedImps = mockImprovements.filter(
+                  imp => imp.linkedProblemPublicId === problem.publicId
+                );
+                if (linkedImps.length === 0) return null;
+                return (
+                  <div className="border border-ois-border rounded-lg overflow-hidden">
+                    <div className="px-4 py-3 border-b border-ois-border bg-ois-surface-muted/40 flex items-center gap-2">
+                      <Link2 size={14} className="text-ois-text-muted" />
+                      <span className="text-xs font-bold text-ois-text uppercase tracking-wider">Linked improvements</span>
+                    </div>
+                    <div className="divide-y divide-ois-border">
+                      {linkedImps.map(imp => (
+                        <div key={imp.id} className="px-4 py-3 flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <ImprovementStatusPill status={imp.status} />
+                            <span className="font-mono text-xs font-semibold text-ois-primary shrink-0">{imp.publicId}</span>
+                            <span className="text-xs text-ois-text truncate">{imp.title}</span>
+                          </div>
+                          <Link
+                            to={`/improvement/${imp.publicId}`}
+                            className="text-xs text-ois-primary hover:underline flex items-center gap-1 shrink-0 ml-2"
+                          >
+                            <ExternalLink size={11} /> View
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Tab 6: History */}
             <HistoryTab problem={problem} />
+
           </Tabs>
         </div>
 

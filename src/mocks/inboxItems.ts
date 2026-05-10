@@ -1,6 +1,6 @@
 import { InboxItem } from '../types/platform';
 
-export const platformMockInboxItems: InboxItem[] = [
+export const mockInboxItems: InboxItem[] = [
   {
     id: 'ibx-001',
     type: 'approval_request',

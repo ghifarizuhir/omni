@@ -53,6 +53,19 @@ import { Outages } from './availability/Outages';
 import CapacityDashboard from './capacity/CapacityDashboard';
 import CapacityForecast from './capacity/CapacityForecast';
 import CapacityThresholds from './capacity/CapacityThresholds';
+import { ImprovementRegister } from './improvement/ImprovementRegister';
+import { ImprovementDetail } from './improvement/ImprovementDetail';
+import { ImprovementKanban } from './improvement/ImprovementKanban';
+import { ImprovementHeatmap } from './improvement/ImprovementHeatmap';
+import { BenefitTracker } from './improvement/BenefitTracker';
+import { BIAMatrixPage } from './continuity/BIAMatrix';
+import { DRPlans } from './continuity/DRPlans';
+import { DRTests } from './continuity/DRTests';
+import { DashboardsIndex } from './measurement/DashboardsIndex';
+import { ExecutiveDashboard } from './measurement/ExecutiveDashboard';
+import { Reports } from './measurement/Reports';
+import { ReportBuilder } from './measurement/ReportBuilder';
+import { MetricCatalog } from './measurement/MetricCatalog';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
@@ -116,8 +129,19 @@ export const routes: RouteObject[] = [
       { path: 'capacity',                       element: <CapacityDashboard /> },
       { path: 'capacity/forecast',              element: <CapacityForecast /> },
       { path: 'capacity/thresholds',            element: <CapacityThresholds /> },
-      { path: 'reports',                        element: <Placeholder module="Reports" doc="Doc 5" /> },
-      { path: 'improvement',                    element: <Placeholder module="Improvements" doc="Doc 5" /> },
+      { path: 'continuity/bia',                 element: <BIAMatrixPage /> },
+      { path: 'continuity/dr-plans',            element: <DRPlans /> },
+      { path: 'continuity/tests',               element: <DRTests /> },
+      { path: 'dashboards/exec',                 element: <ExecutiveDashboard /> },
+      { path: 'dashboards',                      element: <DashboardsIndex /> },
+      { path: 'reports/builder',                 element: <ReportBuilder /> },
+      { path: 'reports',                         element: <Reports /> },
+      { path: 'metrics/catalog',                 element: <MetricCatalog /> },
+      { path: 'improvement',                    element: <ImprovementRegister /> },
+      { path: 'improvement/kanban',             element: <ImprovementKanban /> },
+      { path: 'improvement/heatmap',            element: <ImprovementHeatmap /> },
+      { path: 'improvement/benefits',           element: <BenefitTracker /> },
+      { path: 'improvement/:initiativeId',      element: <ImprovementDetail /> },
       // Doc 6 — Platform Features
       { path: 'inbox',                          element: <Placeholder module="Inbox" doc="Doc 6" /> },
       { path: 'notifications',                  element: <Placeholder module="Notifications" doc="Doc 6" /> },

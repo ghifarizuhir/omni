@@ -16,7 +16,7 @@ export const InboxDrawer: React.FC<InboxDrawerProps> = ({ onClose }) => {
 
   const filteredItems = mockInboxItems.filter(item => {
     if (filter === 'urgent') return item.priority === 'urgent';
-    if (filter === 'approval') return item.type === 'approval';
+    if (filter === 'approval') return item.type === 'approval_request';
     return true;
   });
 
@@ -53,7 +53,7 @@ export const InboxDrawer: React.FC<InboxDrawerProps> = ({ onClose }) => {
         <div className="px-5 py-3 border-b border-ois-border flex items-center gap-2 overflow-x-auto no-scrollbar">
           <FilterPill active={filter === 'all'} onClick={() => setFilter('all')}>All {mockInboxItems.length}</FilterPill>
           <FilterPill active={filter === 'urgent'} onClick={() => setFilter('urgent')} variant="urgent">Urgent {mockInboxItems.filter(i => i.priority === 'urgent').length}</FilterPill>
-          <FilterPill active={filter === 'approval'} onClick={() => setFilter('approval')}>Approvals {mockInboxItems.filter(i => i.type === 'approval').length}</FilterPill>
+          <FilterPill active={filter === 'approval'} onClick={() => setFilter('approval')}>Approvals {mockInboxItems.filter(i => i.type === 'approval_request').length}</FilterPill>
         </div>
 
         {/* Items */}
@@ -69,9 +69,9 @@ export const InboxDrawer: React.FC<InboxDrawerProps> = ({ onClose }) => {
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2 text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">
                     {item.priority === 'urgent' && <span className="text-ois-danger">● URGENT</span>}
-                    <span>{item.type.replace('_', ' ')}</span>
+                    <span>{item.type.replace(/_/g, ' ')}</span>
                     <span>•</span>
-                    <span className="font-mono">{item.sourceRef}</span>
+                    <span className="font-mono">{item.sourcePublicId}</span>
                   </div>
                   <h3 className="text-sm font-semibold text-ois-text leading-tight">{item.title}</h3>
                 </div>
@@ -79,22 +79,17 @@ export const InboxDrawer: React.FC<InboxDrawerProps> = ({ onClose }) => {
                   "text-[11px] font-medium whitespace-nowrap",
                   item.priority === 'urgent' ? "text-ois-danger" : "text-ois-text-subtle"
                 )}>
-                  Due {formatRelative(item.dueAt)}
+                  {formatRelative(item.receivedAt)}
                 </div>
               </div>
-              
-              <p className="text-sm text-ois-text-muted line-clamp-2 mb-4">{item.body}</p>
-              
+
+              <p className="text-sm text-ois-text-muted line-clamp-2 mb-4">{item.summary}</p>
+
               <div className="flex items-center gap-2">
-                {item.type === 'approval' ? (
-                  <>
-                    <Button size="sm" variant="primary">Approve</Button>
-                    <Button size="sm" variant="outline">Reject</Button>
-                  </>
-                ) : item.type === 'escalation' ? (
-                  <Button size="sm" variant="primary">Acknowledge</Button>
+                {item.primaryAction ? (
+                  <Button size="sm" variant="primary">{item.primaryAction.label}</Button>
                 ) : (
-                  <Button size="sm" variant="outline">Mark as done</Button>
+                  <Button size="sm" variant="outline">View</Button>
                 )}
                 <Button size="sm" variant="ghost" className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                   <ExternalLink size={14} />

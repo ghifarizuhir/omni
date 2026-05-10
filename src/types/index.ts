@@ -14,3 +14,5 @@ export * from './deployment';
 export * from './testing';
 export * from './availability';
 export * from './capacity';
+export * from './continuity';
+export * from './measurement';

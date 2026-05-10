@@ -8,8 +8,11 @@ import { getArticleById } from '@/src/mocks/kbArticles';
 import { formatRelative } from '@/src/lib/format';
 import { motion } from 'motion/react';
 
-function resolveNotificationUrl(sourceModule: string | undefined, sourceRef: string | undefined): string | null {
-  if (!sourceModule || !sourceRef) return null;
+function resolveNotificationUrl(sourceModule: string | undefined, sourceRef: string | undefined, notificationId?: string): string | null {
+  if (!sourceModule) return null;
+  // ntf-011 is a capacity threshold alert — link to Reports
+  if (notificationId === 'ntf-011') return '/reports';
+  if (!sourceRef) return null;
   if (sourceModule === 'kb') {
     const art = getArticleById(sourceRef);
     return art ? `/kb/${art.slug}` : null;
@@ -18,6 +21,7 @@ function resolveNotificationUrl(sourceModule: string | undefined, sourceRef: str
   if (sourceModule === 'problem') return `/problems/${sourceRef}`;
   if (sourceModule === 'request') return `/requests/${sourceRef}`;
   if (sourceModule === 'change') return `/changes/${sourceRef}`;
+  if (sourceModule === 'release') return `/releases/${sourceRef}`;
   return null;
 }
 
@@ -61,12 +65,12 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
             <div
               key={notification.id}
               onClick={() => {
-                const url = resolveNotificationUrl(notification.sourceModule, notification.sourceRef);
+                const url = resolveNotificationUrl(notification.sourceModule, notification.sourceRef, notification.id);
                 if (url) { onClose(); navigate(url); }
               }}
               className={cn(
                 "p-4 hover:bg-ois-surface-muted transition-colors flex gap-3 relative",
-                resolveNotificationUrl(notification.sourceModule, notification.sourceRef) ? "cursor-pointer" : "cursor-default",
+                resolveNotificationUrl(notification.sourceModule, notification.sourceRef, notification.id) ? "cursor-pointer" : "cursor-default",
                 !notification.readAt && "bg-ois-primary-pale/30"
               )}
             >

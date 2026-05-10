@@ -1,0 +1,178 @@
+import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { Search, ArrowRight, X } from 'lucide-react';
+import { cn } from '@/src/lib/utils';
+import { mockMetricDefinitions } from '@/src/mocks/metricDefinitions';
+import { MetricCategory } from '@/src/types/measurement';
+import { metricCategoryMeta } from '@/src/lib/constants';
+import { MetricCard } from '@/src/components/measurement/MetricCard';
+import { MetricCategoryNav } from '@/src/components/measurement/MetricCategoryNav';
+
+const ALL_CATEGORIES = Object.keys(metricCategoryMeta) as MetricCategory[];
+const ALL_SOURCES = Array.from(new Set(mockMetricDefinitions.map((m) => m.sourceSystem)));
+
+export const MetricCatalog: React.FC = () => {
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<MetricCategory | 'all'>('all');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [hasTarget, setHasTarget] = useState(false);
+  const [expandedMetricId, setExpandedMetricId] = useState<string | null>(null);
+
+  const totalMetrics = mockMetricDefinitions.length;
+  const totalCategories = ALL_CATEGORIES.filter((cat) =>
+    mockMetricDefinitions.some((m) => m.category === cat),
+  ).length;
+
+  const categoryCounts = useMemo(() => {
+    const counts = {} as Record<MetricCategory, number>;
+    for (const cat of ALL_CATEGORIES) {
+      counts[cat] = mockMetricDefinitions.filter((m) => m.category === cat).length;
+    }
+    return counts;
+  }, []);
+
+  const filteredMetrics = useMemo(() => {
+    return mockMetricDefinitions.filter((m) => {
+      if (selectedCategory !== 'all' && m.category !== selectedCategory) return false;
+      if (sourceFilter !== 'all' && m.sourceSystem !== sourceFilter) return false;
+      if (hasTarget && m.target === undefined) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (
+          !m.name.toLowerCase().includes(q) &&
+          !m.displayName.toLowerCase().includes(q) &&
+          !m.description.toLowerCase().includes(q)
+        ) return false;
+      }
+      return true;
+    });
+  }, [search, selectedCategory, sourceFilter, hasTarget]);
+
+  const resetFilters = () => {
+    setSearch('');
+    setSelectedCategory('all');
+    setSourceFilter('all');
+    setHasTarget(false);
+  };
+
+  const hasActiveFilters =
+    search !== '' || selectedCategory !== 'all' || sourceFilter !== 'all' || hasTarget;
+
+  return (
+    <div className="p-6 space-y-6 max-w-screen-xl mx-auto">
+      {/* Page Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-ois-text">Metric Catalog</h1>
+          <p className="mt-0.5 text-sm text-ois-text-subtle">
+            {totalMetrics} metrics defined · {totalCategories} categories · Browse and understand all tracked metrics
+          </p>
+        </div>
+        <Link
+          to="/reports"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-ois-border bg-white px-3 py-2 text-sm font-medium text-ois-text hover:bg-ois-surface-muted transition-colors"
+        >
+          Reports
+          <ArrowRight size={14} />
+        </Link>
+      </div>
+
+      {/* Search + Filter Bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ois-text-subtle" />
+          <input
+            type="text"
+            placeholder="Search metrics..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-full rounded-lg border border-ois-border pl-9 pr-3 text-sm text-ois-text placeholder:text-ois-text-subtle focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
+          />
+        </div>
+
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value as MetricCategory | 'all')}
+          className="h-9 rounded-lg border border-ois-border bg-white px-3 text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
+        >
+          <option value="all">All categories</option>
+          {ALL_CATEGORIES.map((cat) => (
+            <option key={cat} value={cat}>{metricCategoryMeta[cat].label}</option>
+          ))}
+        </select>
+
+        <select
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value)}
+          className="h-9 rounded-lg border border-ois-border bg-white px-3 text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
+        >
+          <option value="all">All sources</option>
+          {ALL_SOURCES.map((src) => (
+            <option key={src} value={src}>{src}</option>
+          ))}
+        </select>
+
+        <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={hasTarget}
+            onChange={(e) => setHasTarget(e.target.checked)}
+            className="rounded accent-ois-primary"
+          />
+          <span className="text-sm text-ois-text">Has target</span>
+        </label>
+
+        {hasActiveFilters && (
+          <button
+            onClick={resetFilters}
+            className="inline-flex items-center gap-1 text-sm text-ois-text-subtle hover:text-ois-text transition-colors"
+          >
+            <X size={13} />
+            Reset
+          </button>
+        )}
+      </div>
+
+      {/* 2-Column Layout: Sidebar + Main */}
+      <div className="flex gap-6 items-start">
+        {/* Sidebar */}
+        <div className="w-[220px] shrink-0 rounded-xl border border-gray-200 bg-white p-4">
+          <MetricCategoryNav
+            categories={ALL_CATEGORIES.filter((cat) => categoryCounts[cat] > 0)}
+            categoryCounts={categoryCounts}
+            selected={selectedCategory}
+            onSelect={(cat) => setSelectedCategory(cat)}
+          />
+        </div>
+
+        {/* Main Grid */}
+        <div className="flex-1 min-w-0">
+          {filteredMetrics.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white py-20 text-center">
+              <p className="text-sm text-ois-text-subtle">No metrics match your filters.</p>
+              <button
+                onClick={resetFilters}
+                className="mt-2 text-sm text-ois-primary hover:underline"
+              >
+                Reset filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {filteredMetrics.map((metric) => (
+                <MetricCard
+                  key={metric.id}
+                  metric={metric}
+                  isExpanded={expandedMetricId === metric.id}
+                  onToggle={() =>
+                    setExpandedMetricId((prev) => (prev === metric.id ? null : metric.id))
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

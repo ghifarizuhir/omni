@@ -10,7 +10,7 @@ export interface MockInboxItem {
   createdAt: string;
 }
 
-export const mockInboxItems: MockInboxItem[] = [
+export const legacyMockInboxItems: MockInboxItem[] = [
   { id: 'ibx-001', type: 'approval',       sourceModule: 'change',   sourceRef: 'CHG-2026-00091', title: 'CAB approval needed: Payment Service v2.4 rollout',     body: 'Requires sign-off before Friday window. Risk: medium.', priority: 'urgent', dueAt: '2026-05-09T17:00:00Z', createdAt: '2026-05-08T07:00:00Z' },
   { id: 'ibx-002', type: 'escalation',     sourceModule: 'incident', sourceRef: 'INC-2026-00182', title: 'Escalated to you: Search Service ES cluster',           body: 'No ack from primary on-call after 15min.',              priority: 'urgent', dueAt: '2026-05-08T09:00:00Z', createdAt: '2026-05-08T08:30:00Z' },
   { id: 'ibx-003', type: 'sign_off',       sourceModule: 'release',  sourceRef: 'REL-2026-00018', title: 'Release sign-off: Order Service 3.1.0',                  body: 'All tests passed. Awaiting your validation sign-off.',  priority: 'normal', dueAt: '2026-05-08T18:00:00Z', createdAt: '2026-05-08T06:45:00Z' },

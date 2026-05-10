@@ -9,6 +9,7 @@ import {
 import { cn } from '@/src/lib/utils';
 import { formatRelative, formatDate } from '@/src/lib/format';
 import { getIncidentById, getIncidentsByCI, mockIncidents } from '@/src/mocks/incidents';
+import { getBIAByService } from '@/src/mocks/biaEntries';
 import { mockKBArticles } from '@/src/mocks/kbArticles';
 import { getTimelineForIncident } from '@/src/mocks/incidentTimelines';
 import { getCommentsForIncident } from '@/src/mocks/incidentComments';
@@ -198,6 +199,16 @@ export const IncidentDetail: React.FC = () => {
   const affectedCIs = useMemo(() => {
     if (!incident) return [];
     return incident.affectedCIIds.map(id => mockCIs.find(ci => ci.id === id)).filter(Boolean) as typeof mockCIs;
+  }, [incident]);
+
+  // BIA context — find entry matching any affected service
+  const biaEntry = useMemo(() => {
+    if (!incident) return null;
+    for (const svcId of incident.affectedServiceIds) {
+      const entry = getBIAByService(svcId);
+      if (entry) return entry;
+    }
+    return null;
   }, [incident]);
 
   // Assignee / reporter
@@ -805,6 +816,46 @@ export const IncidentDetail: React.FC = () => {
           <SectionCard title="AI suggestions">
             <p className="text-xs text-ois-text-subtle italic">AI-powered suggestions deferred to v2.</p>
           </SectionCard>
+
+          {/* BIA Context */}
+          {biaEntry && (
+            <SectionCard title="BIA Context">
+              <dl className="space-y-2 text-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <dt className="text-ois-text-subtle shrink-0">Service</dt>
+                  <dd className="text-ois-text font-medium text-right">{biaEntry.serviceName}</dd>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <dt className="text-ois-text-subtle shrink-0">Impact Level</dt>
+                  <dd className="font-semibold text-right capitalize" style={{ color: biaEntry.impactLevel === 'catastrophic' ? '#B42318' : biaEntry.impactLevel === 'critical' ? '#DC6803' : '#027A48' }}>
+                    ● {biaEntry.impactLevel.charAt(0).toUpperCase() + biaEntry.impactLevel.slice(1)}
+                  </dd>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <dt className="text-ois-text-subtle shrink-0">Impact Score</dt>
+                  <dd className="text-ois-text font-medium text-right">{biaEntry.impactScore}/100</dd>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <dt className="text-ois-text-subtle shrink-0">RTO Target</dt>
+                  <dd className="text-ois-text font-medium text-right">{biaEntry.rto} min</dd>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <dt className="text-ois-text-subtle shrink-0">RPO Target</dt>
+                  <dd className="text-ois-text font-medium text-right">{biaEntry.rpoMinutes} min</dd>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <dt className="text-ois-text-subtle shrink-0">Hourly Cost</dt>
+                  <dd className="text-ois-danger font-semibold text-right">${biaEntry.estimatedHourlyCostUSD.toLocaleString()}</dd>
+                </div>
+              </dl>
+              <Link
+                to="/continuity/bia"
+                className="mt-3 flex items-center gap-1 text-xs text-ois-primary hover:underline"
+              >
+                View BIA entry <ExternalLink size={11} />
+              </Link>
+            </SectionCard>
+          )}
 
           {/* Related incidents */}
           {relatedIncidents.length > 0 && (

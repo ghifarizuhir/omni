@@ -1,11 +1,12 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/src/lib/utils';
-import { 
+import {
   LayoutDashboard, Inbox, AlertCircle, Bug, ShoppingCart,
   BookOpen, Wrench, Package, Rocket, CheckCircle2, Store,
   Heart, Zap, Lock, Radio, CircleDot, Bell, Clock,
-  BarChart3, Lightbulb, Database, Settings, ChevronLeft, ChevronRight
+  BarChart3, Lightbulb, Database, Settings, ChevronLeft, ChevronRight,
+  FileText, Gauge
 } from 'lucide-react';
 import { mockInboxItems, mockIncidents } from '@/src/mocks';
 
@@ -67,10 +68,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
           <SidebarItem icon={<CircleDot size={18} />} label="Status Page" to="/status" collapsed={collapsed} />
         </SidebarSection>
 
+        <SidebarSection label="Measurement" collapsed={collapsed}>
+          <SidebarItem icon={<LayoutDashboard size={18} />} label="Dashboards" to="/dashboards" collapsed={collapsed} />
+          <SidebarItem icon={<FileText size={18} />} label="Reports" to="/reports" collapsed={collapsed} />
+          <SidebarItem icon={<Gauge size={18} />} label="Metric Catalog" to="/metrics/catalog" collapsed={collapsed} />
+        </SidebarSection>
+
         <SidebarSection label="Platform" collapsed={collapsed}>
           <SidebarItem icon={<Bell size={18} />} label="Notifications" to="/notifications" collapsed={collapsed} />
           <SidebarItem icon={<Clock size={18} />} label="On-Call" to="/oncall" collapsed={collapsed} />
-          <SidebarItem icon={<BarChart3 size={18} />} label="Reports" to="/reports" collapsed={collapsed} />
           <SidebarItem icon={<Lightbulb size={18} />} label="Improvements" to="/improvement" collapsed={collapsed} />
           <SidebarItem icon={<Database size={18} />} label="CMDB" to="/cmdb" collapsed={collapsed} />
         </SidebarSection>
@@ -100,7 +106,7 @@ const SidebarSection: React.FC<{ label: string, collapsed: boolean, children: Re
 
 const SidebarItem: React.FC<{ icon: React.ReactNode, label: string, to: string, collapsed: boolean, badge?: number, badgeVariant?: 'default' | 'urgent' }> = ({ icon, label, to, collapsed, badge, badgeVariant = 'default' }) => {
   const location = useLocation();
-  const isActive = location.pathname === to;
+  const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
 
   return (
     <NavLink 

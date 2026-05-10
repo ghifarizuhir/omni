@@ -21,17 +21,12 @@ import {
   mockChanges,
   mockTeams
 } from '@/src/mocks';
+import { mockImprovements } from '@/src/mocks/improvements';
 import { getMajorIncidents, getActiveIncidents } from '@/src/mocks/incidents';
 import { formatRelative, formatDate } from '@/src/lib/format';
 import { ServiceHealthStatus, Severity } from '../types';
 
-function resolveInboxUrl(sourceModule: string, sourceRef: string): string | null {
-  if (sourceModule === 'request') return `/requests/${sourceRef}`;
-  if (sourceModule === 'incident') return `/incidents/${sourceRef}`;
-  if (sourceModule === 'change') return `/changes/${sourceRef}`;
-  if (sourceModule === 'problem') return `/problems/${sourceRef}`;
-  return null;
-}
+// Inbox items now carry sourceUrl directly
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -54,7 +49,7 @@ export const Dashboard: React.FC = () => {
   const sortedInbox = [...mockInboxItems].sort((a, b) => {
     if (a.priority === 'urgent' && b.priority !== 'urgent') return -1;
     if (a.priority !== 'urgent' && b.priority === 'urgent') return 1;
-    return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
+    return new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
   }).slice(0, 3);
 
   // Section D Logic: Group changes by day
@@ -68,12 +63,19 @@ export const Dashboard: React.FC = () => {
     return formatDate(dateStr, 'EEE MMM dd').toUpperCase();
   };
 
-  const groupedChanges = mockChanges.reduce((acc, change) => {
-    const label = getDayLabel(change.startTime);
+  const upcomingChanges = mockChanges.filter((c) => {
+    const now = new Date('2026-05-09T00:00:00Z');
+    const limit = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const start = new Date(c.plannedStart);
+    return start >= now && start <= limit &&
+      !['closed_successful', 'closed_failed', 'rejected', 'cancelled'].includes(c.status);
+  });
+  const groupedChanges = upcomingChanges.reduce((acc, change) => {
+    const label = getDayLabel(change.plannedStart);
     if (!acc[label]) acc[label] = [];
     acc[label].push(change);
     return acc;
-  }, {} as Record<string, typeof mockChanges>);
+  }, {} as Record<string, typeof upcomingChanges>);
 
   return (
     <div className="space-y-6 pb-8">
@@ -274,8 +276,8 @@ export const Dashboard: React.FC = () => {
                    {item.priority === 'urgent' && (
                      <span className="text-[10px] font-bold text-ois-danger uppercase tracking-tight">Urgent</span>
                    )}
-                   {resolveInboxUrl(item.sourceModule, item.sourceRef) ? (
-                     <Link to={resolveInboxUrl(item.sourceModule, item.sourceRef)!} className="text-[13px] font-semibold text-ois-text leading-tight hover:text-ois-primary hover:underline">
+                   {item.sourceUrl ? (
+                     <Link to={item.sourceUrl} className="text-[13px] font-semibold text-ois-text leading-tight hover:text-ois-primary hover:underline">
                        {item.title}
                      </Link>
                    ) : (
@@ -283,20 +285,13 @@ export const Dashboard: React.FC = () => {
                    )}
                 </div>
                 <div className="text-xs font-mono font-bold text-ois-text-subtle mb-3">
-                  {item.sourceRef} · <span className={cn(
-                    new Date(item.dueAt) < new Date(new Date().getTime() + 3600000) ? "text-ois-danger" : ""
-                  )}>Due {formatRelative(item.dueAt)}</span>
+                  {item.sourcePublicId} · <span>{formatRelative(item.receivedAt)}</span>
                 </div>
                 <div className="flex gap-2">
-                   {item.type === 'approval' ? (
-                     <>
-                       <Button size="xs" variant="primary">Approve</Button>
-                       <Button size="xs" variant="outline">Reject</Button>
-                     </>
-                   ) : item.type === 'sign_off' ? (
-                     <Button size="xs" variant="primary">Sign off</Button>
+                   {item.primaryAction ? (
+                     <Button size="xs" variant="primary">{item.primaryAction.label}</Button>
                    ) : (
-                     <Button size="xs" variant="primary">Acknowledge</Button>
+                     <Button size="xs" variant="primary">View</Button>
                    )}
                 </div>
               </div>
@@ -333,7 +328,7 @@ export const Dashboard: React.FC = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-xs font-bold text-ois-text">
-                              {formatDate(change.startTime, 'HH:mm')} — {change.id}
+                              {formatDate(change.plannedStart, 'HH:mm')} — {change.publicId}
                             </span>
                             <span className="text-xs font-medium text-ois-text-muted group-hover:text-ois-primary transition-colors">
                               {change.title}
@@ -342,10 +337,10 @@ export const Dashboard: React.FC = () => {
                               {change.type}
                             </Badge>
                           </div>
-                          {change.conflict && (
+                          {change.conflicts.length > 0 && (
                             <div className="flex items-center gap-1.5 text-xs text-ois-warning font-semibold mt-1">
                               <AlertTriangle size={12} />
-                              Conflict: 2 changes target {mockServices.find(s => s.id === change.serviceId)?.name}
+                              {change.conflicts.length} conflict{change.conflicts.length > 1 ? 's' : ''} detected
                             </div>
                           )}
                         </div>
@@ -395,24 +390,44 @@ export const Dashboard: React.FC = () => {
           <Card>
             <CardHeader className="flex items-center justify-between border-b border-ois-border">
               <div className="flex items-center gap-2 font-bold text-ois-text text-[14px]">
-                Improvements In Flight
+                Improvement Pipeline
+                <Badge variant="neutral" className="ml-1 bg-ois-surface-muted text-ois-text-muted">
+                  {mockImprovements.filter(i => i.status === 'in_progress').length} active
+                </Badge>
               </div>
               <Link to="/improvement/kanban" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
-                View board <ArrowRight size={12} />
+                View all on Kanban <ArrowRight size={12} />
               </Link>
             </CardHeader>
-            <div className="p-4">
-              <div className="flex items-center gap-4 mb-4 text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">
-                 <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-ois-primary rounded-sm" /> 4 in progress</span>
-                 <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-ois-success rounded-sm" /> 2 verified</span>
-                 <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-ois-border-strong rounded-sm" /> 8 ideas</span>
-              </div>
-              <div className="bg-ois-surface-muted p-3 rounded-lg border border-ois-border">
-                <div className="text-xs font-bold text-ois-text mb-1">Top: "Reduce P2 MTTR for Payment by 30%"</div>
-                <div className="text-[11px] text-ois-text-subtle font-medium">
-                  Linked to <span className="font-mono text-ois-primary">PRB-2026-00021</span> · Owner: Helena V.
-                </div>
-              </div>
+            <div className="divide-y divide-ois-border">
+              {mockImprovements
+                .filter(i => i.status === 'in_progress')
+                .slice(0, 4)
+                .map(imp => (
+                  <div key={imp.id} className="px-4 py-3 flex items-center gap-3 hover:bg-ois-surface-muted transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-[10px] font-mono font-bold text-ois-text-subtle">{imp.publicId}</span>
+                        <span className="text-xs font-medium text-ois-text truncate">{imp.title}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-ois-surface-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-ois-primary"
+                            style={{ width: `${imp.progressPercent}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-ois-text-muted shrink-0">{imp.progressPercent}%</span>
+                      </div>
+                    </div>
+                    <Link
+                      to={`/improvement/${imp.publicId}`}
+                      className="text-ois-primary hover:text-blue-700 shrink-0"
+                    >
+                      <ArrowRight size={13} />
+                    </Link>
+                  </div>
+                ))}
             </div>
           </Card>
         </div>

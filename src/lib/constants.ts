@@ -424,3 +424,109 @@ export const recommendationPriorityMeta: Record<ScalingRecommendation['priority'
   high:   { label: 'High',   color: '#DC6803', bg: '#FFFAEB' },
   urgent: { label: 'Urgent', color: '#B42318', bg: '#FEF3F2' },
 };
+
+// ── Continuity & Measurement (Doc 5b) ────────────────────────────────────────
+
+import { BIAImpactLevel, RTOClass, DRTestType, DRTestStatus } from '../types/continuity';
+import { ReportType, MetricCategory } from '../types/measurement';
+
+export const biaImpactLevelMeta: Record<BIAImpactLevel, { label: string; color: string; bg: string; hourlyMin: number }> = {
+  catastrophic: { label: 'Catastrophic', color: '#7F1D1D', bg: '#FEF2F2', hourlyMin: 38000 },
+  critical:     { label: 'Critical',     color: '#B42318', bg: '#FEF3F2', hourlyMin: 20000 },
+  major:        { label: 'Major',        color: '#DC6803', bg: '#FFFAEB', hourlyMin: 10000 },
+  moderate:     { label: 'Moderate',     color: '#B45309', bg: '#FFFBEB', hourlyMin: 3000 },
+  minor:        { label: 'Minor',        color: '#067647', bg: '#ECFDF3', hourlyMin: 0 },
+};
+
+export const rtoClassMeta: Record<RTOClass, { label: string; minutes: string; color: string }> = {
+  immediate: { label: 'Immediate',  minutes: '< 15 min',   color: '#B42318' },
+  short:     { label: 'Short',      minutes: '15 min–2h',  color: '#DC6803' },
+  medium:    { label: 'Medium',     minutes: '2–8 hours',  color: '#B45309' },
+  long:      { label: 'Long',       minutes: '8–24 hours', color: '#475467' },
+  extended:  { label: 'Extended',   minutes: '> 24 hours', color: '#475467' },
+};
+
+export const drTestTypeMeta: Record<DRTestType, { label: string; description: string; icon: string }> = {
+  tabletop:      { label: 'Tabletop',      description: 'Discussion exercise, no systems affected', icon: 'Users' },
+  functional:    { label: 'Functional',    description: 'Partial component test in DR environment', icon: 'Wrench' },
+  full_failover: { label: 'Full failover', description: 'Complete failover simulation',             icon: 'AlertTriangle' },
+  chaos:         { label: 'Chaos',         description: 'Fault injection in staging',               icon: 'Zap' },
+};
+
+export const drTestStatusMeta: Record<DRTestStatus, { label: string; color: string; bg: string; dot: string }> = {
+  planned:            { label: 'Planned',            color: '#475467', bg: '#F1F3F7', dot: '#98A2B3' },
+  in_progress:        { label: 'In Progress',        color: '#0BA5EC', bg: '#F0F9FF', dot: '#0BA5EC' },
+  passed:             { label: 'Passed',             color: '#067647', bg: '#ECFDF3', dot: '#12B76A' },
+  passed_with_issues: { label: 'Passed with issues', color: '#DC6803', bg: '#FFFAEB', dot: '#F79009' },
+  failed:             { label: 'Failed',             color: '#B42318', bg: '#FEF3F2', dot: '#F04438' },
+  cancelled:          { label: 'Cancelled',          color: '#475467', bg: '#F1F3F7', dot: '#98A2B3' },
+};
+
+export const reportTypeMeta: Record<ReportType, { label: string; icon: string }> = {
+  monthly_summary:     { label: 'Monthly Summary',     icon: 'Calendar' },
+  sla_report:          { label: 'SLA Report',          icon: 'Target' },
+  incident_report:     { label: 'Incident Report',     icon: 'AlertTriangle' },
+  change_report:       { label: 'Change Report',       icon: 'Wrench' },
+  availability_report: { label: 'Availability Report', icon: 'Activity' },
+  capacity_report:     { label: 'Capacity Report',     icon: 'BarChart2' },
+  custom:              { label: 'Custom',              icon: 'FileText' },
+};
+
+export const metricCategoryMeta: Record<MetricCategory, { label: string; icon: string; color: string }> = {
+  availability:        { label: 'Availability',      icon: 'Activity',      color: '#0BA5EC' },
+  reliability:         { label: 'Reliability',       icon: 'Shield',        color: '#067647' },
+  performance:         { label: 'Performance',       icon: 'Zap',           color: '#DC6803' },
+  change_management:   { label: 'Change Management', icon: 'GitBranch',     color: '#6941C6' },
+  incident_management: { label: 'Incident Mgmt',     icon: 'AlertTriangle', color: '#B42318' },
+  capacity:            { label: 'Capacity',          icon: 'Database',      color: '#475467' },
+  service_request:     { label: 'Service Request',   icon: 'ClipboardList', color: '#0BA5EC' },
+  knowledge:           { label: 'Knowledge',         icon: 'BookOpen',      color: '#067647' },
+};
+
+// ── Improvement Management (Doc 5c) ───────────────────────────────────────────
+
+import { ImprovementStatus, ImprovementCategory, ImprovementPriority, BenefitType } from '../types/improvement';
+
+export const improvementStatusMeta: Record<ImprovementStatus, { label: string; color: string; bg: string; dot: string; column: number }> = {
+  identified:  { label: 'Identified',   color: '#475467', bg: '#F1F3F7', dot: '#98A2B3', column: 0 },
+  evaluating:  { label: 'Evaluating',   color: '#0BA5EC', bg: '#F0F9FF', dot: '#0BA5EC', column: 1 },
+  approved:    { label: 'Approved',     color: '#6941C6', bg: '#F4F3FF', dot: '#9E77ED', column: 2 },
+  in_progress: { label: 'In Progress',  color: '#DC6803', bg: '#FFFAEB', dot: '#F79009', column: 3 },
+  validating:  { label: 'Validating',   color: '#0BA5EC', bg: '#F0F9FF', dot: '#0BA5EC', column: 4 },
+  completed:   { label: 'Completed',    color: '#067647', bg: '#ECFDF3', dot: '#12B76A', column: 5 },
+  on_hold:     { label: 'On Hold',      color: '#475467', bg: '#F1F3F7', dot: '#475467', column: -1 },
+  cancelled:   { label: 'Cancelled',    color: '#B42318', bg: '#FEF3F2', dot: '#F04438', column: -1 },
+};
+
+export const improvementCategoryMeta: Record<ImprovementCategory, { label: string; icon: string; color: string }> = {
+  reliability:           { label: 'Reliability',           icon: 'Shield',          color: '#0BA5EC' },
+  performance:           { label: 'Performance',           icon: 'Zap',             color: '#DC6803' },
+  security:              { label: 'Security',              icon: 'ShieldCheck',     color: '#B42318' },
+  process:               { label: 'Process',               icon: 'GitBranch',       color: '#6941C6' },
+  cost:                  { label: 'Cost',                  icon: 'DollarSign',      color: '#067647' },
+  compliance:            { label: 'Compliance',            icon: 'CheckSquare',     color: '#475467' },
+  customer_experience:   { label: 'Customer Experience',   icon: 'Heart',           color: '#B42318' },
+  developer_experience:  { label: 'Developer Experience',  icon: 'Code2',           color: '#0BA5EC' },
+};
+
+export const improvementPriorityMeta: Record<ImprovementPriority, { label: string; color: string; bg: string }> = {
+  critical: { label: 'Critical', color: '#B42318', bg: '#FEF3F2' },
+  high:     { label: 'High',     color: '#DC6803', bg: '#FFFAEB' },
+  medium:   { label: 'Medium',   color: '#0BA5EC', bg: '#F0F9FF' },
+  low:      { label: 'Low',      color: '#475467', bg: '#F1F3F7' },
+};
+
+export const benefitTypeMeta: Record<BenefitType, { label: string; icon: string; color: string }> = {
+  cost_reduction:       { label: 'Cost reduction',       icon: 'TrendingDown', color: '#067647' },
+  revenue_protection:   { label: 'Revenue protection',   icon: 'ShieldCheck',  color: '#0BA5EC' },
+  efficiency_gain:      { label: 'Efficiency gain',      icon: 'Clock',        color: '#6941C6' },
+  risk_reduction:       { label: 'Risk reduction',       icon: 'Shield',       color: '#DC6803' },
+  compliance_value:     { label: 'Compliance value',     icon: 'CheckSquare',  color: '#475467' },
+  quality_improvement:  { label: 'Quality improvement',  icon: 'Star',         color: '#0BA5EC' },
+};
+
+export const formatBenefitUSD = (value: number): string => {
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `$${Math.round(value / 1_000)}k`;
+  return `$${value}`;
+};
