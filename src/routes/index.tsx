@@ -77,8 +77,6 @@ import { AiWorkspace } from './ai/AiWorkspace';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
-  { path: '/ai',            element: <AiWorkspace /> },
-  { path: '/ai/:sessionId', element: <AiWorkspace /> },
   {
     path: '/',
     element: <AppShell />,
@@ -164,6 +162,9 @@ export const routes: RouteObject[] = [
       { path: 'settings',                       element: <Settings /> },
       // 404
       { path: '*',                              element: <NotFound /> },
+      // AI Workspace
+      { path: 'ai',            element: <AiWorkspace /> },
+      { path: 'ai/:sessionId', element: <AiWorkspace /> },
     ]
   },
 ];
