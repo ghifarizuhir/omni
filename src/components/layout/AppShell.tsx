@@ -3,9 +3,10 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { InboxDrawer } from './InboxDrawer';
 import { Outlet, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { AiQuickPanel } from '@/src/components/ai/AiQuickPanel';
+import { cn } from '@/src/lib/utils';
 
 export const AppShell: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -59,19 +60,51 @@ export const AppShell: React.FC = () => {
 
       {/* Floating AI Quick Assist button */}
       {!isAiRoute && (
-        <div className="fixed bottom-6 right-6 z-50 group">
-          <button
-            onClick={() => setAiPanelOpen(v => !v)}
-            className="w-11 h-11 rounded-full bg-[#185FA5] flex items-center justify-center hover:bg-[#1F4FD4] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[#185FA5]/40"
-            aria-label="AI Quick Assist"
-            aria-expanded={aiPanelOpen}
-            type="button"
-          >
-            <Sparkles size={20} className="text-white" />
-          </button>
-          {/* Tooltip */}
-          <div className="absolute bottom-12 right-0 px-2 py-1 bg-ois-surface border border-ois-border rounded-md text-[11px] text-ois-text whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
-            AI Quick Assist (⌘K)
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="relative group">
+            {/* Pulse ring — only when panel is closed */}
+            {!aiPanelOpen && (
+              <span
+                className="absolute inset-0 rounded-full animate-ping"
+                style={{
+                  backgroundColor: 'rgba(31, 79, 212, 0.25)',
+                  animationDuration: '2.5s',
+                  animationTimingFunction: 'cubic-bezier(0, 0, 0.2, 1)',
+                }}
+              />
+            )}
+            {/* Glow aura */}
+            <span
+              className="absolute inset-[-4px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              style={{ background: 'radial-gradient(circle, rgba(31,79,212,0.2) 0%, transparent 70%)' }}
+            />
+            <motion.button
+              onClick={() => setAiPanelOpen(v => !v)}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              className={cn(
+                "relative w-11 h-11 rounded-full flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[#185FA5]/40 transition-colors duration-200",
+                aiPanelOpen
+                  ? "bg-[#1F4FD4]"
+                  : "bg-[#185FA5] hover:bg-[#1F4FD4]"
+              )}
+              aria-label="AI Quick Assist"
+              aria-expanded={aiPanelOpen}
+              type="button"
+            >
+              <motion.div
+                animate={{ rotate: aiPanelOpen ? 20 : 0, scale: aiPanelOpen ? 0.9 : 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              >
+                <Sparkles size={20} className="text-white" />
+              </motion.div>
+            </motion.button>
+            {/* Tooltip */}
+            <div className="absolute bottom-[52px] right-0 px-2.5 py-1.5 bg-ois-text text-white rounded-md text-[11px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none shadow-lg">
+              AI Quick Assist <span className="opacity-60 ml-1">⌘K</span>
+              <div className="absolute bottom-[-4px] right-4 w-2 h-2 bg-ois-text rotate-45" />
+            </div>
           </div>
         </div>
       )}

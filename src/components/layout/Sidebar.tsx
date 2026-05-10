@@ -29,11 +29,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       {/* Brand Header */}
       <div className="h-14 flex items-center px-4 border-b border-ois-sidebar-border shrink-0 overflow-hidden">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-ois-primary flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-xs">OIS</span>
+          <div
+            className="w-8 h-8 rounded-[7px] flex items-center justify-center shrink-0 relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, #1F4FD4 0%, #185FA5 60%, #0C447C 100%)',
+              boxShadow: '0 1px 4px rgba(31,79,212,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+            }}
+          >
+            {/* Geometric accent line */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%)',
+              }}
+            />
+            <span className="relative text-white font-black text-[11px] tracking-tight">OIS</span>
           </div>
           {!collapsed && (
-            <span className="font-bold text-ois-text truncate">Omni Intelligence</span>
+            <div className="flex flex-col overflow-hidden">
+              <span className="font-bold text-[13px] text-ois-text tracking-tight leading-none truncate">Omni</span>
+              <span className="text-[10px] text-ois-text-subtle tracking-[0.05em] uppercase leading-none mt-0.5">Intelligence Suite</span>
+            </div>
           )}
         </div>
       </div>
