@@ -516,7 +516,6 @@ export const mockCIs: ConfigurationItem[] = [
     status: 'active',
     environment: 'production',
     criticality: 'critical',
-    ownerId: 'u-009',
     ownerTeamId: 't-network',
     health: 'operational',
     attributes: {
@@ -571,7 +570,6 @@ export const mockCIs: ConfigurationItem[] = [
     status: 'active',
     environment: 'production',
     criticality: 'critical',
-    ownerId: 'u-007',
     ownerTeamId: 't-platform',
     serviceId: 'svc-001',
     health: 'operational',
@@ -597,7 +595,6 @@ export const mockCIs: ConfigurationItem[] = [
     status: 'active',
     environment: 'production',
     criticality: 'high',
-    ownerId: 'u-007',
     ownerTeamId: 't-platform',
     serviceId: 'svc-002',
     health: 'operational',

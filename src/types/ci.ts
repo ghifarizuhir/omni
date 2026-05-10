@@ -127,7 +127,7 @@ export interface ConfigurationItem {
   criticality: Criticality;
 
   // Ownership
-  ownerId: string;             // user id (responsible person)
+  ownerId?: string;            // user id (responsible person); optional — unowned CIs surface in completeness panel
   ownerTeamId: string;         // team id
 
   // Service context

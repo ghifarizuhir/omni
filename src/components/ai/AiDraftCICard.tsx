@@ -215,17 +215,20 @@ export const AiDraftCICard: React.FC<AiDraftCICardProps> = ({ payload, onConfirm
       {draftStatus === 'pending' && (
         <div className="flex items-center gap-2 pt-1 border-t border-white/5">
           <button
+            type="button"
             onClick={onConfirm}
             className="px-3 py-1.5 rounded text-[11px] font-medium bg-ois-primary text-white hover:bg-ois-primary/90 transition-colors"
           >
             Confirm &amp; save
           </button>
           <button
+            type="button"
             className="px-3 py-1.5 rounded text-[11px] font-medium text-ois-text-muted hover:bg-white/5 transition-colors"
           >
             Edit field
           </button>
           <button
+            type="button"
             onClick={onCancel}
             className="ml-auto px-2 py-1.5 rounded text-[11px] font-medium text-red-400 hover:bg-red-500/10 transition-colors"
           >

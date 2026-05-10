@@ -28,6 +28,8 @@ export const AiSuggestionChip: React.FC<AiSuggestionChipProps> = ({ text, onAcce
 
       {/* Accept button */}
       <button
+        type="button"
+        aria-label="Terima saran"
         onClick={onAccept}
         className={cn(
           'flex-shrink-0 rounded px-2 py-[3px] text-[10px] font-medium transition-colors',
@@ -45,6 +47,7 @@ export const AiSuggestionChip: React.FC<AiSuggestionChipProps> = ({ text, onAcce
 
       {/* Dismiss button */}
       <button
+        type="button"
         onClick={onDismiss}
         className="flex-shrink-0 rounded p-0.5 text-ois-text-subtle hover:text-ois-text-muted hover:bg-white/10 transition-colors"
         aria-label="Dismiss suggestion"

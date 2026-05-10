@@ -104,7 +104,7 @@ export const AiCompletenessPanel: React.FC<AiCompletenessPanelProps> = ({ onFill
     <div className="flex flex-col gap-3 p-3">
       {/* Title */}
       <h3 className="text-[12px] font-semibold uppercase tracking-wider text-ois-text-subtle m-0">
-        Completeness
+        Kelengkapan
       </h3>
 
       {/* Stat rows */}
@@ -144,6 +144,7 @@ export const AiCompletenessPanel: React.FC<AiCompletenessPanelProps> = ({ onFill
 
       {/* CTA */}
       <button
+        type="button"
         onClick={handleFillWithAI}
         className="flex items-center justify-center gap-1.5 w-full py-2 rounded text-[11px] font-medium border border-ois-primary/40 text-ois-primary hover:bg-ois-primary/10 transition-colors"
       >

@@ -21,6 +21,8 @@ const SectionRow: React.FC<SectionRowProps> = ({ heading, body }) => {
   return (
     <div className="border border-white/5 rounded overflow-hidden">
       <button
+        type="button"
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-2.5 py-1.5 text-left hover:bg-white/5 transition-colors"
       >
@@ -133,8 +135,8 @@ export const AiDraftKBCard: React.FC<AiDraftKBCardProps> = ({ payload, onConfirm
             <span className="text-[10px] font-semibold uppercase tracking-wider text-ois-text-subtle">
               Sections
             </span>
-            {payload.sections.map((section, idx) => (
-              <SectionRow key={idx} heading={section.heading} body={section.body} />
+            {payload.sections.map((section) => (
+              <SectionRow key={section.heading} heading={section.heading} body={section.body} />
             ))}
           </div>
         )}
@@ -174,15 +176,17 @@ export const AiDraftKBCard: React.FC<AiDraftKBCardProps> = ({ payload, onConfirm
       {draftStatus === 'pending' && (
         <div className="flex items-center gap-2 pt-1 border-t border-white/5">
           <button
+            type="button"
             onClick={onConfirm}
             className="px-3 py-1.5 rounded text-[11px] font-medium bg-ois-primary text-white hover:bg-ois-primary/90 transition-colors"
           >
             Confirm &amp; publish draft
           </button>
-          <button className="px-3 py-1.5 rounded text-[11px] font-medium text-ois-text-muted hover:bg-white/5 transition-colors">
+          <button type="button" className="px-3 py-1.5 rounded text-[11px] font-medium text-ois-text-muted hover:bg-white/5 transition-colors">
             Edit
           </button>
           <button
+            type="button"
             onClick={onCancel}
             className="ml-auto px-2 py-1.5 rounded text-[11px] font-medium text-red-400 hover:bg-red-500/10 transition-colors"
           >
