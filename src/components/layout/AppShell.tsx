@@ -12,6 +12,7 @@ export const AppShell: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiSidebarContent, setAiSidebarContent] = useState<React.ReactNode>(null);
 
   const location = useLocation();
   const isAiRoute = location.pathname.startsWith('/ai');
@@ -30,8 +31,35 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-ois-bg overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+      {/* Sidebar slot — slides between management nav and AI session panel */}
+      <AnimatePresence mode="wait">
+        {isAiRoute ? (
+          <motion.div
+            key="ai-sidebar"
+            initial={{ x: -240, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -240, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+            className="flex-shrink-0 h-full border-r border-ois-border overflow-hidden"
+          >
+            {aiSidebarContent}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="mgmt-sidebar"
+            initial={{ x: -240, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -240, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+            className="flex-shrink-0 h-full"
+          >
+            <Sidebar
+              collapsed={sidebarCollapsed}
+              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
@@ -40,8 +68,8 @@ export const AppShell: React.FC = () => {
           onOpenInbox={() => setInboxOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+        <main className={isAiRoute ? 'flex-1 overflow-hidden flex min-h-0' : 'flex-1 overflow-y-auto p-6'}>
+          <Outlet context={{ setAiSidebarContent }} />
         </main>
       </div>
 
