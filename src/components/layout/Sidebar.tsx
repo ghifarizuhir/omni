@@ -118,16 +118,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
       <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
         <AnimatePresence mode="wait">
           {isAiRoute ? (
-            <motion.div
-              key="ai-content"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="flex-1 overflow-hidden flex flex-col min-h-0"
-            >
-              {aiSidebarContent}
-            </motion.div>
+            /* Collapsed AI mode: show nothing — logo icon is sufficient */
+            !collapsed ? (
+              <motion.div
+                key="ai-content"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex-1 overflow-hidden flex flex-col min-h-0"
+              >
+                {aiSidebarContent}
+              </motion.div>
+            ) : null
           ) : (
             <motion.div
               key="mgmt-content"
