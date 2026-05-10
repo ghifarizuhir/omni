@@ -9,6 +9,7 @@ import { ReleaseStatus, ReleaseType, ReleaseStage } from '../types/release';
 import { DeploymentStatus, DeploymentStrategy, DeploymentTrigger, DeploymentStageStatus, LogLevel } from '../types/deployment';
 import { TestRunStatus, TestStepResultStatus, TestCasePriority, SignOffStatus, SignOffType } from '../types/testing';
 import { AvailabilitySLAStatus, OutageType, SLAMetric, CapacityResourceType, CapacityThresholdSeverity, ScalingRecommendation } from '../types';
+import { InboxItemType, InboxItemPriority, NotificationTopic, StatusPageEntryStatus, OnCallShiftType } from '../types/platform';
 
 export const ciTypeMeta: Record<CIType, { label: string; icon: string; color: string; bg: string }> = {
   server:        { label: 'Server',        icon: 'Server',       color: '#067647', bg: '#ECFDF3' },
@@ -529,4 +530,57 @@ export const formatBenefitUSD = (value: number): string => {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `$${Math.round(value / 1_000)}k`;
   return `$${value}`;
+};
+
+// ── Platform & Notifications (Doc 6) ──────────────────────────────────────────
+
+export const inboxItemTypeMeta: Record<InboxItemType, { label: string; icon: string; color: string }> = {
+  approval_request:   { label: 'Approval',       icon: 'CheckSquare',   color: '#6941C6' },
+  mention:            { label: 'Mention',         icon: 'AtSign',        color: '#0BA5EC' },
+  incident_update:    { label: 'Incident',        icon: 'AlertTriangle', color: '#B42318' },
+  assignment:         { label: 'Assigned',        icon: 'UserPlus',      color: '#0BA5EC' },
+  sla_warning:        { label: 'SLA',             icon: 'Clock',         color: '#DC6803' },
+  system_alert:       { label: 'Alert',           icon: 'Bell',          color: '#DC6803' },
+  report_ready:       { label: 'Report',          icon: 'FileText',      color: '#475467' },
+  kb_review:          { label: 'KB Review',       icon: 'BookOpen',      color: '#067647' },
+  dr_test_reminder:   { label: 'DR Test',         icon: 'Shield',        color: '#0BA5EC' },
+};
+
+export const inboxPriorityMeta: Record<InboxItemPriority, { label: string; color: string; bg: string }> = {
+  urgent: { label: 'Urgent', color: '#B42318', bg: '#FEF3F2' },
+  high:   { label: 'High',   color: '#DC6803', bg: '#FFFAEB' },
+  normal: { label: 'Normal', color: '#475467', bg: '#F1F3F7' },
+  low:    { label: 'Low',    color: '#98A2B3', bg: '#F1F3F7' },
+};
+
+export const notificationTopicMeta: Record<NotificationTopic, { label: string; group: string; description: string }> = {
+  incident_assigned:         { label: 'Assigned to me',        group: 'INCIDENTS',             description: 'When you are assigned to an incident' },
+  incident_update_p1p2:      { label: 'P1/P2 updates',         group: 'INCIDENTS',             description: 'Status changes on P1 or P2 incidents' },
+  incident_update_any:       { label: 'Any incident update',   group: 'INCIDENTS',             description: 'All incident status changes' },
+  sla_warning:               { label: 'SLA at risk',           group: 'SLA',                   description: '< 20% error budget remaining' },
+  sla_breach:                { label: 'SLA breached',          group: 'SLA',                   description: 'Error budget exhausted' },
+  approval_request:          { label: 'Approval requests',     group: 'APPROVALS',             description: 'CAB votes, sign-offs, service requests' },
+  mention:                   { label: '@Mentions',              group: 'APPROVALS',             description: 'When you are @mentioned' },
+  change_in_my_services:     { label: 'Changes (my services)', group: 'OPERATIONS',            description: 'Changes affecting services you own' },
+  deployment_in_my_services: { label: 'Deploys (my services)', group: 'OPERATIONS',            description: 'Deployments to your services' },
+  capacity_alert:            { label: 'Capacity alerts',       group: 'OPERATIONS',            description: 'Threshold breaches on monitored metrics' },
+  report_ready:              { label: 'Reports ready',         group: 'KNOWLEDGE & REPORTING', description: 'Scheduled reports generated' },
+  kb_review_due:             { label: 'KB review due',         group: 'KNOWLEDGE & REPORTING', description: 'Articles needing your review' },
+  dr_test_reminder:          { label: 'DR test reminders',     group: 'KNOWLEDGE & REPORTING', description: 'Upcoming DR tests' },
+  on_call_shift_start:       { label: 'Shift start',           group: 'ON-CALL',               description: '2 hours before your on-call shift' },
+  on_call_escalation:        { label: 'Escalations',           group: 'ON-CALL',               description: 'Escalated incidents reaching you' },
+};
+
+export const statusPageStatusMeta: Record<StatusPageEntryStatus, { label: string; color: string; bg: string; icon: string; dot: string }> = {
+  operational:    { label: 'Operational',    color: '#067647', bg: '#ECFDF3', icon: 'CheckCircle2',  dot: '#12B76A' },
+  degraded:       { label: 'Degraded',       color: '#DC6803', bg: '#FFFAEB', icon: 'AlertTriangle', dot: '#F79009' },
+  partial_outage: { label: 'Partial outage', color: '#B42318', bg: '#FEF3F2', icon: 'AlertOctagon',  dot: '#F04438' },
+  major_outage:   { label: 'Major outage',   color: '#B42318', bg: '#FEF3F2', icon: 'XOctagon',      dot: '#F04438' },
+  maintenance:    { label: 'Maintenance',    color: '#0BA5EC', bg: '#F0F9FF', icon: 'Wrench',        dot: '#0BA5EC' },
+};
+
+export const onCallShiftTypeMeta: Record<OnCallShiftType, { label: string; color: string }> = {
+  primary:   { label: 'Primary',   color: '#B42318' },
+  secondary: { label: 'Secondary', color: '#DC6803' },
+  shadow:    { label: 'Shadow',    color: '#475467' },
 };
