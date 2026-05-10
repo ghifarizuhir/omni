@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { Sparkles } from 'lucide-react';
 import { mockCIs } from '@/src/mocks';
 import type { ConfigurationItem } from '@/src/types/ci';
 
@@ -148,8 +147,7 @@ export const AiCompletenessPanel: React.FC<AiCompletenessPanelProps> = ({ onFill
         onClick={handleFillWithAI}
         className="flex items-center justify-center gap-1.5 w-full py-2 rounded text-[11px] font-medium border border-ois-primary/40 text-ois-primary hover:bg-ois-primary/10 transition-colors"
       >
-        <Sparkles size={12} />
-        Bantu isi dengan AI
+        ✦ Bantu isi dengan AI
       </button>
     </div>
   );
