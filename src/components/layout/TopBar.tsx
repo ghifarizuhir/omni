@@ -26,17 +26,41 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) 
 
   return (
     <header className="h-14 relative flex items-center px-4 bg-ois-surface border-b border-ois-border shrink-0 z-20" style={{ boxShadow: '0 1px 0 0 #E4E7EC, 0 2px 8px -2px rgba(16,24,40,0.06)' }}>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {/* Brand — always visible in both modes */}
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-8 h-8 rounded-[7px] flex items-center justify-center shrink-0 relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, #1F4FD4 0%, #185FA5 60%, #0C447C 100%)',
+              boxShadow: '0 1px 4px rgba(31,79,212,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+            }}
+          >
+            <div
+              className="absolute inset-0"
+              style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%)' }}
+            />
+            <span className="relative text-white font-black text-[11px] tracking-tight">OIS</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="font-bold text-[13px] text-ois-text tracking-tight leading-none">Omni</span>
+            <span className="text-[10px] text-ois-text-subtle tracking-[0.05em] uppercase leading-none mt-0.5">Intelligence Suite</span>
+          </div>
+        </div>
+
+        {/* Hamburger — collapses whichever sidebar is active */}
         <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="text-ois-text-muted">
           <Menu size={20} />
         </Button>
 
-        {/* Breadcrumb - Placeholder for now */}
-        <div className="flex items-center gap-2 text-xs font-medium">
-          <span className="text-ois-text-subtle">Home</span>
-          <span className="text-ois-border-strong px-0.5">/</span>
-          <span className="text-ois-text">Dashboard</span>
-        </div>
+        {/* Breadcrumb — management mode only */}
+        {!isAiRoute && (
+          <div className="flex items-center gap-2 text-xs font-medium">
+            <span className="text-ois-text-subtle">Home</span>
+            <span className="text-ois-border-strong px-0.5">/</span>
+            <span className="text-ois-text">Dashboard</span>
+          </div>
+        )}
       </div>
 
       {/* Center: Mode Toggle — truly centered via absolute positioning */}
