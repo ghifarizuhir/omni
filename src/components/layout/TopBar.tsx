@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Menu, Search as SearchIcon, Bell, Inbox, User, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { Menu, Search as SearchIcon, Bell, Inbox, User, LogOut, Settings as SettingsIcon, LayoutDashboard, Sparkles } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
 import { cn } from '@/src/lib/utils';
@@ -15,13 +16,16 @@ interface TopBarProps {
 export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isAiRoute = location.pathname.startsWith('/ai');
 
   const urgentInboxCount = mockInboxItems.filter(i => i.priority === 'urgent').length;
   const unreadNotifCount = mockNotifications.filter(n => !n.readAt).length;
 
   return (
-    <header className="h-14 flex items-center justify-between px-4 bg-ois-surface border-b border-ois-border shrink-0 z-20">
-      <div className="flex items-center gap-4">
+    <header className="h-14 flex items-center px-4 bg-ois-surface border-b border-ois-border shrink-0 z-20">
+      <div className="flex items-center gap-4 flex-1">
         <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="text-ois-text-muted">
           <Menu size={20} />
         </Button>
@@ -34,7 +38,39 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) 
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      {/* Center: Mode Toggle */}
+      <div className="flex items-center">
+        <div className="flex items-center bg-ois-surface-muted border border-ois-border rounded-md p-0.5">
+          <button
+            onClick={() => isAiRoute ? navigate(-1) : undefined}
+            type="button"
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-colors",
+              !isAiRoute
+                ? "bg-ois-surface text-ois-text shadow-sm"
+                : "text-ois-text-muted hover:text-ois-text"
+            )}
+          >
+            <LayoutDashboard size={12} />
+            Management
+          </button>
+          <button
+            onClick={() => !isAiRoute ? navigate('/ai') : undefined}
+            type="button"
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-colors",
+              isAiRoute
+                ? "bg-ois-surface text-ois-text shadow-sm"
+                : "text-ois-text-muted hover:text-ois-text"
+            )}
+          >
+            <Sparkles size={12} />
+            AI Workspace
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-1 justify-end">
         {/* Global Search */}
         <div className="relative mr-4 hidden md:block w-72 lg:w-96">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none">
