@@ -271,7 +271,7 @@ export const AiQuickPanel: React.FC<AiQuickPanelProps> = ({ isOpen: _isOpen, onC
             aria-label="Buka di Workspace"
           >
             <ArrowUpRight size={13} />
-            <span className="hidden sm:inline">Workspace</span>
+            <span>Buka di Workspace</span>
           </button>
           <button
             type="button"
