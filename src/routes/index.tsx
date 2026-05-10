@@ -66,6 +66,7 @@ import { ExecutiveDashboard } from './measurement/ExecutiveDashboard';
 import { Reports } from './measurement/Reports';
 import { ReportBuilder } from './measurement/ReportBuilder';
 import { MetricCatalog } from './measurement/MetricCatalog';
+import { Inbox } from './platform/Inbox';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
@@ -143,7 +144,7 @@ export const routes: RouteObject[] = [
       { path: 'improvement/benefits',           element: <BenefitTracker /> },
       { path: 'improvement/:initiativeId',      element: <ImprovementDetail /> },
       // Doc 6 — Platform Features
-      { path: 'inbox',                          element: <Placeholder module="Inbox" doc="Doc 6" /> },
+      { path: 'inbox',                          element: <Inbox /> },
       { path: 'notifications',                  element: <Placeholder module="Notifications" doc="Doc 6" /> },
       { path: 'oncall',                         element: <Placeholder module="On-Call" doc="Doc 6" /> },
       { path: 'status',                         element: <Placeholder module="Status Page" doc="Doc 6" /> },
