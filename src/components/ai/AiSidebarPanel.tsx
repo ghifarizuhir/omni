@@ -20,7 +20,7 @@ export const AiSidebarPanel: React.FC<AiSidebarPanelProps> = ({
   onNewSession,
   onDomainChange,
 }) => (
-  <div className="w-[240px] flex-shrink-0 flex flex-col overflow-hidden bg-ois-surface h-full">
+  <div className="w-[240px] flex-shrink-0 flex flex-col overflow-hidden bg-ois-surface h-full border-r border-ois-border">
     {/* Domain Selector */}
     <div className="p-3 border-b border-ois-border">
       <AiDomainSelector

@@ -31,35 +31,37 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-ois-bg overflow-hidden">
-      {/* Sidebar slot — slides between management nav and AI session panel */}
-      <AnimatePresence mode="wait">
-        {isAiRoute ? (
-          <motion.div
-            key="ai-sidebar"
-            initial={{ x: -240, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -240, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-            className="flex-shrink-0 h-full border-r border-ois-border overflow-hidden"
-          >
-            {aiSidebarContent}
-          </motion.div>
-        ) : (
-          <motion.div
-            key="mgmt-sidebar"
-            initial={{ x: -240, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -240, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-            className="flex-shrink-0 h-full"
-          >
-            <Sidebar
-              collapsed={sidebarCollapsed}
-              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Sidebar — fixed container, only content crossfades on mode switch */}
+      <div className="flex-shrink-0 h-full overflow-hidden">
+        <AnimatePresence mode="wait">
+          {isAiRoute ? (
+            <motion.div
+              key="ai-sidebar"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="h-full"
+            >
+              {aiSidebarContent}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="mgmt-sidebar"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="h-full"
+            >
+              <Sidebar
+                collapsed={sidebarCollapsed}
+                onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
