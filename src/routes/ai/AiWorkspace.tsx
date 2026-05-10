@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useParams, useLocation, useOutletContext } from 'react-router-dom';
 import type {
   AiDomain,
   AiMessage,
@@ -8,7 +8,6 @@ import type {
   AiDraftKBPayload,
   AiDraftStatus,
 } from '@/src/types/ai';
-import { TopBar } from '@/src/components/layout/TopBar';
 import { AiMessageBubble } from '@/src/components/ai/AiMessageBubble';
 import { AiUserMessage } from '@/src/components/ai/AiUserMessage';
 import { AiInputBar } from '@/src/components/ai/AiInputBar';
@@ -18,9 +17,8 @@ import { AiDraftKBCard } from '@/src/components/ai/AiDraftKBCard';
 import { AiDraftPlaceholder } from '@/src/components/ai/AiDraftPlaceholder';
 import { AiQueryResultCI } from '@/src/components/ai/AiQueryResultCI';
 import { AiQueryResultText } from '@/src/components/ai/AiQueryResultText';
-import { AiDomainSelector } from '@/src/components/ai/AiDomainSelector';
-import { AiSessionListItem } from '@/src/components/ai/AiSessionListItem';
 import { AiPendingDraftItem } from '@/src/components/ai/AiPendingDraftItem';
+import { AiSidebarPanel } from '@/src/components/ai/AiSidebarPanel';
 import { AiCompletenessPanel } from '@/src/components/ai/AiCompletenessPanel';
 import { formatAiTime, getDomainLabel, getMockAiResponse } from '@/src/components/ai/utils';
 import { mockAiSessions, getActiveSession } from '@/src/mocks';
@@ -31,6 +29,9 @@ export const AiWorkspace: React.FC = () => {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { setAiSidebarContent } = useOutletContext<{
+    setAiSidebarContent: (node: React.ReactNode) => void;
+  }>();
 
   const initialSessionId = sessionId ?? getActiveSession()?.id ?? 'ai-sess-001';
 
@@ -82,6 +83,25 @@ export const AiWorkspace: React.FC = () => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
+  }, []);
+
+  // Inject AI session panel into AppShell's sidebar slot
+  useEffect(() => {
+    setAiSidebarContent(
+      <AiSidebarPanel
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        activeDomain={activeDomain}
+        onSessionSelect={handleSessionSelect}
+        onNewSession={handleNewSession}
+        onDomainChange={setActiveDomain}
+      />
+    );
+  }, [sessions, activeSessionId, activeDomain]);
+
+  // Clear sidebar slot on unmount
+  useEffect(() => {
+    return () => setAiSidebarContent(null);
   }, []);
 
   // Auto-scroll to bottom when messages change
@@ -270,45 +290,7 @@ export const AiWorkspace: React.FC = () => {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-screen bg-ois-bg overflow-hidden">
-      <TopBar onToggleSidebar={() => {}} onOpenInbox={() => {}} />
-
-      <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* ── Left Panel ──────────────────────────────────────────────────── */}
-        <div className="w-[200px] flex-shrink-0 border-r border-ois-border flex flex-col overflow-hidden bg-ois-surface">
-          {/* Domain Selector */}
-          <div className="p-3 border-b border-ois-border">
-            <AiDomainSelector
-              activeDomain={activeDomain}
-              onDomainChange={setActiveDomain}
-            />
-          </div>
-
-          {/* Session list */}
-          <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-wide">
-                Sesi
-              </span>
-              <button
-                type="button"
-                onClick={handleNewSession}
-                className="text-[11px] text-ois-primary hover:underline"
-              >
-                + Baru
-              </button>
-            </div>
-            {sessions.map((session) => (
-              <AiSessionListItem
-                key={session.id}
-                session={session}
-                isActive={session.id === activeSessionId}
-                onClick={() => handleSessionSelect(session.id)}
-              />
-            ))}
-          </div>
-        </div>
-
+    <div className="flex flex-1 overflow-hidden min-h-0">
         {/* ── Chat Area ───────────────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Context breadcrumb */}
@@ -414,6 +396,5 @@ export const AiWorkspace: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
   );
 };
