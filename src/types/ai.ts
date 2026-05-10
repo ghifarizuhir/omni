@@ -1,3 +1,6 @@
+import { CIType, CIStatus, Environment, Criticality, RelationshipType, CIAttributes } from './ci';
+import { ServiceHealthStatus } from './common';
+
 // ============================================================
 // AI SESSION & MESSAGES
 // ============================================================
@@ -42,16 +45,16 @@ export interface AiDraftCIPayload {
   draftStatus: AiDraftStatus;
   publicId: string;
   name: string;
-  type: import('./ci').CIType;
-  status: import('./ci').CIStatus;
-  environment: import('./ci').Environment;
-  criticality: import('./ci').Criticality;
+  type: CIType;
+  status: CIStatus;
+  environment: Environment;
+  criticality: Criticality;
   ownerTeamId: string;
   ownerId?: string;
   tags: string[];
-  attributes: Partial<import('./ci').CIAttributes>;
+  attributes: Partial<CIAttributes>;
   relationships: Array<{
-    type: import('./ci').RelationshipType;
+    type: RelationshipType;
     targetCiPublicId: string;
     targetCiName: string;
     addedByUser: boolean;
@@ -94,9 +97,9 @@ export interface AiQueryResultCIPayload {
   items: Array<{
     publicId: string;
     name: string;
-    type: import('./ci').CIType;
-    health: string;
-    criticality: import('./ci').Criticality;
+    type: CIType;
+    health: ServiceHealthStatus;
+    criticality: Criticality;
     openIncidentCount: number;
     detailUrl: string;
   }>;

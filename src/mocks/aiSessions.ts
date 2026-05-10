@@ -251,10 +251,10 @@ const session3: AiSession = {
 
 export const mockAiSessions: AiSession[] = [session1, session2, session3];
 
-export const getSessionById = (id: string) =>
+export const getSessionById = (id: string): AiSession | undefined =>
   mockAiSessions.find(s => s.id === id);
 
-export const getActiveSession = () =>
-  mockAiSessions.sort((a, b) =>
+export const getActiveSession = (): AiSession | undefined =>
+  [...mockAiSessions].sort((a, b) =>
     new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   )[0];
