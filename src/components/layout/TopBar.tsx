@@ -24,8 +24,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) 
   const unreadNotifCount = mockNotifications.filter(n => !n.readAt).length;
 
   return (
-    <header className="h-14 flex items-center px-4 bg-ois-surface border-b border-ois-border shrink-0 z-20">
-      <div className="flex items-center gap-4 flex-1">
+    <header className="h-14 relative flex items-center px-4 bg-ois-surface border-b border-ois-border shrink-0 z-20">
+      <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="text-ois-text-muted">
           <Menu size={20} />
         </Button>
@@ -38,39 +38,45 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) 
         </div>
       </div>
 
-      {/* Center: Mode Toggle */}
-      <div className="flex items-center">
-        <div className="flex items-center bg-ois-surface-muted border border-ois-border rounded-md p-0.5">
-          <button
-            onClick={() => isAiRoute ? navigate(-1) : undefined}
-            type="button"
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-colors",
-              !isAiRoute
-                ? "bg-ois-surface text-ois-text shadow-sm"
-                : "text-ois-text-muted hover:text-ois-text"
-            )}
-          >
-            <LayoutDashboard size={12} />
-            Management
-          </button>
-          <button
-            onClick={() => !isAiRoute ? navigate('/ai') : undefined}
-            type="button"
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-colors",
-              isAiRoute
-                ? "bg-ois-surface text-ois-text shadow-sm"
-                : "text-ois-text-muted hover:text-ois-text"
-            )}
-          >
-            <Sparkles size={12} />
-            AI Workspace
-          </button>
-        </div>
+      {/* Center: Mode Toggle — truly centered via absolute positioning */}
+      <div
+        role="group"
+        aria-label="Application mode"
+        className="absolute left-1/2 -translate-x-1/2 flex items-center bg-ois-surface-muted border border-ois-border rounded-md p-0.5"
+      >
+        <button
+          type="button"
+          disabled={!isAiRoute}
+          onClick={() => navigate('/')}
+          aria-pressed={!isAiRoute}
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-colors",
+            !isAiRoute
+              ? "bg-ois-surface text-ois-text shadow-sm cursor-default"
+              : "text-ois-text-muted hover:text-ois-text"
+          )}
+        >
+          <LayoutDashboard size={12} />
+          Management
+        </button>
+        <button
+          type="button"
+          disabled={isAiRoute}
+          onClick={() => navigate('/ai')}
+          aria-pressed={isAiRoute}
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-colors",
+            isAiRoute
+              ? "bg-ois-surface text-ois-text shadow-sm cursor-default"
+              : "text-ois-text-muted hover:text-ois-text"
+          )}
+        >
+          <Sparkles size={12} />
+          AI Workspace
+        </button>
       </div>
 
-      <div className="flex items-center gap-2 flex-1 justify-end">
+      <div className="flex items-center gap-2 ml-auto">
         {/* Global Search */}
         <div className="relative mr-4 hidden md:block w-72 lg:w-96">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none">
