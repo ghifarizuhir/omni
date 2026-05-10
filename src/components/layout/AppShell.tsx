@@ -31,37 +31,13 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-ois-bg overflow-hidden">
-      {/* Sidebar — fixed container, only content crossfades on mode switch */}
-      <div className="flex-shrink-0 h-full overflow-hidden">
-        <AnimatePresence mode="wait">
-          {isAiRoute ? (
-            <motion.div
-              key="ai-sidebar"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="h-full"
-            >
-              {aiSidebarContent}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="mgmt-sidebar"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="h-full"
-            >
-              <Sidebar
-                collapsed={sidebarCollapsed}
-                onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      {/* Sidebar — owns brand, mode toggle, and content switching internally */}
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        isAiRoute={isAiRoute}
+        aiSidebarContent={aiSidebarContent}
+      />
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
