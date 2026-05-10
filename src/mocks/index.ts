@@ -43,3 +43,4 @@ export * from './notificationPreferences';
 export * from './onCallSchedules';
 export * from './onCallOverrides';
 export * from './statusPageEntries';
+export * from './aiSessions';

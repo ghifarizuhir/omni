@@ -16,3 +16,4 @@ export * from './availability';
 export * from './capacity';
 export * from './continuity';
 export * from './measurement';
+export * from './ai';
