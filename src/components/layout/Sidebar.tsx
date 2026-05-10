@@ -75,8 +75,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         </SidebarSection>
 
         <SidebarSection label="Platform" collapsed={collapsed}>
-          <SidebarItem icon={<Bell size={18} />} label="Notifications" to="/notifications" collapsed={collapsed} />
-          <SidebarItem icon={<Clock size={18} />} label="On-Call" to="/oncall" collapsed={collapsed} />
+          <SidebarItem icon={<Bell size={18} />} label="Notifications" to="/notifications/preferences" collapsed={collapsed} />
+          <SidebarItem icon={<Clock size={18} />} label="On-Call" to="/on-call" collapsed={collapsed} />
           <SidebarItem icon={<Lightbulb size={18} />} label="Improvements" to="/improvement" collapsed={collapsed} />
           <SidebarItem icon={<Database size={18} />} label="CMDB" to="/cmdb" collapsed={collapsed} />
         </SidebarSection>
