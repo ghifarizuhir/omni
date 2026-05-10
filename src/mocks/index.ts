@@ -38,3 +38,8 @@ export * from './capacityTimeSeries';
 export * from './capacityForecasts';
 export * from './capacityThresholds';
 export * from './scalingRecommendations';
+export * from './inboxItems';
+export * from './notificationPreferences';
+export * from './onCallSchedules';
+export * from './onCallOverrides';
+export * from './statusPageEntries';
