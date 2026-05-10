@@ -1,14 +1,10 @@
 import React from 'react';
 import { cn } from '@/src/lib/utils';
+import { formatAiTime } from './utils';
 
 interface AiUserMessageProps {
   text: string;
   timestamp: string; // ISO string
-}
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 export const AiUserMessage: React.FC<AiUserMessageProps> = ({ text, timestamp }) => {
@@ -26,7 +22,7 @@ export const AiUserMessage: React.FC<AiUserMessageProps> = ({ text, timestamp })
           {text}
         </p>
         <span className="text-[10px] text-ois-text-subtle self-end select-none">
-          {formatTime(timestamp)}
+          {formatAiTime(timestamp)}
         </span>
       </div>
     </div>

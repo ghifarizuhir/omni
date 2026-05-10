@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState } from 'react';
 import { ArrowUp } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
@@ -18,7 +18,7 @@ export const AiInputBar: React.FC<AiInputBarProps> = ({
 
   const hasText = value.trim().length > 0;
 
-  const handleSend = useCallback(() => {
+  const handleSend = () => {
     const trimmed = value.trim();
     if (!trimmed || disabled) return;
     onSend(trimmed);
@@ -27,7 +27,7 @@ export const AiInputBar: React.FC<AiInputBarProps> = ({
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, [value, disabled, onSend]);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

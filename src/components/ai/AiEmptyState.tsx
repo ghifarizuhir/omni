@@ -1,27 +1,19 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/src/lib/utils';
 import type { AiDomain } from '@/src/types/ai';
+import { getDomainLabel } from './utils';
 
 interface AiEmptyStateProps {
   domain: AiDomain;
   onSuggestionClick: (text: string) => void;
+  userName?: string;
 }
 
 type DomainContent =
   | { type: 'suggestions'; items: string[] }
-  | { type: 'coming_soon' };
-
-function getDomainLabel(domain: AiDomain): string {
-  switch (domain) {
-    case 'cmdb': return 'CMDB';
-    case 'knowledge_base': return 'Knowledge Base';
-    case 'incident': return 'Incident';
-    case 'problem': return 'Problem';
-    case 'change': return 'Change';
-    case 'all': return 'semua domain';
-  }
-}
+  | { type: 'coming_soon'; route: string };
 
 function getDomainContent(domain: AiDomain): DomainContent {
   switch (domain) {
@@ -44,9 +36,11 @@ function getDomainContent(domain: AiDomain): DomainContent {
         ],
       };
     case 'incident':
+      return { type: 'coming_soon', route: '/incidents' };
     case 'problem':
+      return { type: 'coming_soon', route: '/problems' };
     case 'change':
-      return { type: 'coming_soon' };
+      return { type: 'coming_soon', route: '/changes' };
     case 'all':
       return {
         type: 'suggestions',
@@ -59,7 +53,7 @@ function getDomainContent(domain: AiDomain): DomainContent {
   }
 }
 
-export const AiEmptyState: React.FC<AiEmptyStateProps> = ({ domain, onSuggestionClick }) => {
+export const AiEmptyState: React.FC<AiEmptyStateProps> = ({ domain, onSuggestionClick, userName }) => {
   const content = getDomainContent(domain);
   const domainLabel = getDomainLabel(domain);
 
@@ -75,7 +69,7 @@ export const AiEmptyState: React.FC<AiEmptyStateProps> = ({ domain, onSuggestion
 
       {/* Greeting */}
       <h3 className="text-[16px] font-semibold text-ois-text leading-tight m-0">
-        Halo, Sarah!
+        Halo, {userName ?? 'Sarah'}!
       </h3>
 
       {/* Subtitle */}
@@ -107,12 +101,12 @@ export const AiEmptyState: React.FC<AiEmptyStateProps> = ({ domain, onSuggestion
         ) : (
           <div className="text-center text-[12px] text-ois-text-subtle flex flex-col gap-1.5 items-center">
             <span>Domain ini belum tersedia di AI Chat Mode.</span>
-            <a
-              href={`/${domain}`}
+            <Link
+              to={content.route}
               className="text-[12px] text-ois-primary hover:underline font-medium"
             >
               Gunakan Management Mode →
-            </a>
+            </Link>
           </div>
         )}
       </div>

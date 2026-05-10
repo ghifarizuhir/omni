@@ -1,16 +1,12 @@
 import React from 'react';
 import { cn } from '@/src/lib/utils';
 import { AiAvatar } from './AiAvatar';
+import { formatAiTime } from './utils';
 
 interface AiMessageBubbleProps {
   text?: string;
   timestamp: string; // ISO string
   children?: React.ReactNode;
-}
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 export const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({ text, timestamp, children }) => {
@@ -32,7 +28,7 @@ export const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({ text, timestam
 
         {/* Timestamp */}
         <span className="text-[10px] text-ois-text-subtle self-end mt-0.5 select-none">
-          {formatTime(timestamp)}
+          {formatAiTime(timestamp)}
         </span>
       </div>
     </div>

@@ -1,22 +1,12 @@
 import React from 'react';
 import { cn } from '@/src/lib/utils';
 import type { AiSession } from '@/src/types/ai';
+import { getDomainLabel } from './utils';
 
 interface AiSessionListItemProps {
   session: AiSession;
   isActive: boolean;
   onClick: () => void;
-}
-
-function getDomainLabel(domain: AiSession['domain']): string {
-  switch (domain) {
-    case 'cmdb': return 'CMDB';
-    case 'knowledge_base': return 'Knowledge Base';
-    case 'incident': return 'Incident';
-    case 'problem': return 'Problem';
-    case 'change': return 'Change';
-    case 'all': return 'Semua domain';
-  }
 }
 
 function getRelativeDate(iso: string): string {
