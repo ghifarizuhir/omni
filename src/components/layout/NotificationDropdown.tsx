@@ -114,7 +114,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
       </div>
 
       <div className="p-3 bg-ois-surface-muted text-center border-t border-ois-border">
-        <button className="text-xs font-bold text-ois-primary hover:underline">View all notifications</button>
+        <button className="text-xs font-bold text-ois-primary hover:underline" onClick={() => { navigate('/inbox'); onClose(); }}>View all notifications</button>
       </div>
     </div>
   );

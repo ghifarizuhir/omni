@@ -3,7 +3,6 @@ import { RouteObject } from 'react-router-dom';
 import { AppShell } from '@/src/components/layout/AppShell';
 import { Login } from './Login';
 import { Dashboard } from './Dashboard';
-import { Placeholder } from './Placeholder';
 import { CMDBList } from './cmdb/CMDBList';
 import { CMDBDetail } from './cmdb/CMDBDetail';
 import { CMDBGraph } from './cmdb/CMDBGraph';
@@ -67,6 +66,13 @@ import { Reports } from './measurement/Reports';
 import { ReportBuilder } from './measurement/ReportBuilder';
 import { MetricCatalog } from './measurement/MetricCatalog';
 import { Inbox } from './platform/Inbox';
+import NotificationPreferences from './platform/NotificationPreferences';
+import { OnCall } from './platform/OnCall';
+import { OnCallSchedule } from './platform/OnCallSchedule';
+import { OnCallOverrides } from './platform/OnCallOverrides';
+import StatusPage from './platform/StatusPage';
+import { Profile } from './platform/Profile';
+import { Settings } from './platform/Settings';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
@@ -145,11 +151,14 @@ export const routes: RouteObject[] = [
       { path: 'improvement/:initiativeId',      element: <ImprovementDetail /> },
       // Doc 6 — Platform Features
       { path: 'inbox',                          element: <Inbox /> },
-      { path: 'notifications',                  element: <Placeholder module="Notifications" doc="Doc 6" /> },
-      { path: 'oncall',                         element: <Placeholder module="On-Call" doc="Doc 6" /> },
-      { path: 'status',                         element: <Placeholder module="Status Page" doc="Doc 6" /> },
+      { path: 'notifications/preferences',      element: <NotificationPreferences /> },
+      { path: 'on-call',                        element: <OnCall /> },
+      { path: 'on-call/schedule',               element: <OnCallSchedule /> },
+      { path: 'on-call/overrides',              element: <OnCallOverrides /> },
+      { path: 'status',                         element: <StatusPage /> },
+      { path: 'profile',                        element: <Profile /> },
       // Settings
-      { path: 'settings',                       element: <Placeholder module="Settings" doc="Future" /> },
+      { path: 'settings',                       element: <Settings /> },
       // 404
       { path: '*',                              element: <NotFound /> },
     ]

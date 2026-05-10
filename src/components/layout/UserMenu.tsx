@@ -34,8 +34,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onClose }) => {
         </div>
       </div>
 
-      <MenuItem icon={<UserCircle size={16} />} label="Profile" />
-      <MenuItem icon={<Settings size={16} />} label="Preferences" />
+      <MenuItem icon={<UserCircle size={16} />} label="Profile" onClick={() => { navigate('/profile'); onClose(); }} />
+      <MenuItem icon={<Settings size={16} />} label="Preferences" onClick={() => { navigate('/notifications/preferences'); onClose(); }} />
+      <MenuItem icon={<Settings size={16} />} label="Settings" onClick={() => { navigate('/settings'); onClose(); }} />
       <MenuItem icon={<Moon size={16} />} label="Toggle theme" trailing={<span className="text-[10px] font-bold text-ois-text-subtle">MOCK</span>} />
       
       <div className="h-px bg-ois-border my-1" />

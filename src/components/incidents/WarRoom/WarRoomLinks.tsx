@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Video, MessageSquare, BarChart2, Plus, ExternalLink, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 
 interface WarRoomLink {
@@ -25,6 +26,7 @@ export const WarRoomLinks: React.FC<WarRoomLinksProps> = ({ incidentPublicId }) 
       url: `slack://channel?id=${channelSlug}`,
     },
     { id: 'grafana', icon: <BarChart2 size={13} />, label: 'Dashboard', url: 'https://grafana.internal/...' },
+    { id: 'status', icon: <ExternalLink size={13} />, label: 'Status page', url: '/status' },
   ]);
 
   const [addOpen, setAddOpen] = useState(false);
@@ -56,21 +58,34 @@ export const WarRoomLinks: React.FC<WarRoomLinksProps> = ({ incidentPublicId }) 
       </div>
 
       <div className="divide-y divide-ois-border">
-        {links.map(link => (
-          <a
-            key={link.id}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-ois-surface-muted transition-colors group"
-          >
-            <span className="text-ois-text-muted group-hover:text-ois-primary transition-colors">
-              {link.icon}
-            </span>
-            <span className="text-xs text-ois-text flex-1 truncate">{link.label}</span>
-            <ExternalLink size={11} className="text-ois-text-subtle opacity-0 group-hover:opacity-100 transition-opacity" />
-          </a>
-        ))}
+        {links.map(link => {
+          const isInternal = link.url.startsWith('/');
+          const linkClass = "flex items-center gap-2.5 px-3 py-2.5 hover:bg-ois-surface-muted transition-colors group";
+          const content = (
+            <>
+              <span className="text-ois-text-muted group-hover:text-ois-primary transition-colors">
+                {link.icon}
+              </span>
+              <span className="text-xs text-ois-text flex-1 truncate">{link.label}</span>
+              <ExternalLink size={11} className="text-ois-text-subtle opacity-0 group-hover:opacity-100 transition-opacity" />
+            </>
+          );
+          return isInternal ? (
+            <Link key={link.id} to={link.url} className={linkClass}>
+              {content}
+            </Link>
+          ) : (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={linkClass}
+            >
+              {content}
+            </a>
+          );
+        })}
       </div>
 
       {addOpen && (
