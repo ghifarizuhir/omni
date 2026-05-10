@@ -13,7 +13,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import type { AiDomain, AiMessage, AiDraftCIPayload, AiDraftKBPayload, AiQueryResultCIPayload, AiQueryResultTextPayload } from '@/src/types/ai';
+import type { AiDomain, AiMessage, AiDraftCIPayload, AiDraftKBPayload } from '@/src/types/ai';
 import { AiAvatar } from './AiAvatar';
 import { AiMessageBubble } from './AiMessageBubble';
 import { AiUserMessage } from './AiUserMessage';
@@ -29,7 +29,6 @@ import { getDomainLabel } from './utils';
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface AiQuickPanelProps {
-  isOpen: boolean;
   onClose: () => void;
 }
 
@@ -165,7 +164,7 @@ const getMockAiResponse = (userMessage: string, domain: AiDomain): AiMessage => 
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export const AiQuickPanel: React.FC<AiQuickPanelProps> = ({ isOpen: _isOpen, onClose }) => {
+export const AiQuickPanel: React.FC<AiQuickPanelProps> = ({ onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -175,6 +174,7 @@ export const AiQuickPanel: React.FC<AiQuickPanelProps> = ({ isOpen: _isOpen, onC
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-detect domain from route on mount
   useEffect(() => {
@@ -185,6 +185,13 @@ export const AiQuickPanel: React.FC<AiQuickPanelProps> = ({ isOpen: _isOpen, onC
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -210,8 +217,9 @@ export const AiQuickPanel: React.FC<AiQuickPanelProps> = ({ isOpen: _isOpen, onC
     };
     setMessages((prev) => [...prev, userMsg]);
 
-    setTimeout(() => {
-      const aiMsg = getMockAiResponse(text, domain);
+    const capturedDomain = domain;
+    timerRef.current = setTimeout(() => {
+      const aiMsg = getMockAiResponse(text, capturedDomain);
       setMessages((prev) => [...prev, aiMsg]);
     }, 800);
   };
@@ -364,16 +372,16 @@ export const AiQuickPanel: React.FC<AiQuickPanelProps> = ({ isOpen: _isOpen, onC
                     text={msg.text}
                     timestamp={msg.createdAt}
                   >
-                    {msg.contentType === 'draft_ci' && msg.contentPayload && (
+                    {msg.contentPayload?.kind === 'draft_ci' && (
                       <AiDraftCICard
-                        payload={msg.contentPayload as AiDraftCIPayload}
+                        payload={msg.contentPayload}
                         onConfirm={() => updateMessageDraftStatus(msg.id, 'confirmed')}
                         onCancel={() => updateMessageDraftStatus(msg.id, 'cancelled')}
                       />
                     )}
-                    {msg.contentType === 'draft_kb' && msg.contentPayload && (
+                    {msg.contentPayload?.kind === 'draft_kb' && (
                       <AiDraftKBCard
-                        payload={msg.contentPayload as AiDraftKBPayload}
+                        payload={msg.contentPayload}
                         onConfirm={() => updateMessageDraftStatus(msg.id, 'confirmed')}
                         onCancel={() => updateMessageDraftStatus(msg.id, 'cancelled')}
                       />
@@ -381,14 +389,14 @@ export const AiQuickPanel: React.FC<AiQuickPanelProps> = ({ isOpen: _isOpen, onC
                     {msg.contentType === 'draft_placeholder' && (
                       <AiDraftPlaceholder domain={domain} />
                     )}
-                    {msg.contentType === 'query_result_ci' && msg.contentPayload && (
+                    {msg.contentPayload?.kind === 'query_result_ci' && (
                       <AiQueryResultCI
-                        payload={msg.contentPayload as AiQueryResultCIPayload}
+                        payload={msg.contentPayload}
                         onAnalyze={() => {}}
                       />
                     )}
-                    {msg.contentType === 'query_result_text' && msg.contentPayload && (
-                      <AiQueryResultText payload={msg.contentPayload as AiQueryResultTextPayload} />
+                    {msg.contentPayload?.kind === 'query_result_text' && (
+                      <AiQueryResultText payload={msg.contentPayload} />
                     )}
                   </AiMessageBubble>
                 );

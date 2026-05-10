@@ -53,7 +53,7 @@ export const AppShell: React.FC = () => {
 
       <AnimatePresence>
         {aiPanelOpen && !isAiRoute && (
-          <AiQuickPanel isOpen={aiPanelOpen} onClose={() => setAiPanelOpen(false)} />
+          <AiQuickPanel onClose={() => setAiPanelOpen(false)} />
         )}
       </AnimatePresence>
 
@@ -61,9 +61,10 @@ export const AppShell: React.FC = () => {
       {!isAiRoute && (
         <div className="fixed bottom-6 right-6 z-50 group">
           <button
-            onClick={() => setAiPanelOpen(true)}
+            onClick={() => setAiPanelOpen(v => !v)}
             className="w-11 h-11 rounded-full bg-[#185FA5] flex items-center justify-center hover:bg-[#1F4FD4] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[#185FA5]/40"
             aria-label="AI Quick Assist"
+            aria-expanded={aiPanelOpen}
             type="button"
           >
             <Sparkles size={20} className="text-white" />
