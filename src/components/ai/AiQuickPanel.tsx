@@ -13,7 +13,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import type { AiDomain, AiMessage, AiDraftCIPayload, AiDraftKBPayload } from '@/src/types/ai';
+import type { AiDomain, AiMessage } from '@/src/types/ai';
 import { AiAvatar } from './AiAvatar';
 import { AiMessageBubble } from './AiMessageBubble';
 import { AiUserMessage } from './AiUserMessage';
@@ -24,7 +24,7 @@ import { AiDraftKBCard } from './AiDraftKBCard';
 import { AiDraftPlaceholder } from './AiDraftPlaceholder';
 import { AiQueryResultCI } from './AiQueryResultCI';
 import { AiQueryResultText } from './AiQueryResultText';
-import { getDomainLabel } from './utils';
+import { getDomainLabel, getMockAiResponse } from './utils';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -84,84 +84,6 @@ const domainMeta: Record<AiDomain, DomainMeta> = {
 
 const DOMAIN_OPTIONS: AiDomain[] = ['all', 'cmdb', 'knowledge_base', 'incident', 'problem', 'change'];
 
-// ─── Mock AI response ────────────────────────────────────────────────────────
-
-const getMockAiResponse = (userMessage: string, domain: AiDomain): AiMessage => {
-  const id = `quick-${Date.now()}`;
-  const sessionId = 'quick-panel';
-  const createdAt = new Date().toISOString();
-
-  if (['incident', 'problem', 'change'].includes(domain)) {
-    return { id, sessionId, role: 'ai', contentType: 'draft_placeholder', createdAt };
-  }
-  if (domain === 'cmdb' && /tambah|buat|create|add/i.test(userMessage)) {
-    return {
-      id,
-      sessionId,
-      role: 'ai',
-      text: 'Saya draft CI baru berdasarkan permintaan kamu:',
-      contentType: 'draft_ci',
-      contentPayload: {
-        kind: 'draft_ci',
-        draftStatus: 'pending',
-        publicId: `CI-SRV-NEW-${Math.floor(Math.random() * 100).toString().padStart(3, '0')}`,
-        name: 'new-server',
-        type: 'server',
-        status: 'planned',
-        environment: 'production',
-        criticality: 'medium',
-        ownerTeamId: 't-infra',
-        tags: ['draft', 'pending'],
-        attributes: {
-          kind: 'server',
-          region: 'ap-southeast-1',
-          provider: 'aws',
-          os: 'Ubuntu 22.04 LTS',
-          cpuCores: 4,
-          memoryGb: 16,
-          diskGb: 100,
-          ipAddress: '',
-          hostname: 'new-server',
-        },
-        relationships: [],
-        pendingSuggestions: [],
-      } as AiDraftCIPayload,
-      createdAt,
-    };
-  }
-  if (domain === 'knowledge_base' && /buat|draft|tulis|write/i.test(userMessage)) {
-    return {
-      id,
-      sessionId,
-      role: 'ai',
-      text: 'Berikut draft KB article-nya:',
-      contentType: 'draft_kb',
-      contentPayload: {
-        kind: 'draft_kb',
-        draftStatus: 'pending',
-        title: 'Draft Article',
-        category: 'Troubleshooting',
-        tags: ['draft'],
-        relatedCiPublicIds: [],
-        sections: [
-          { heading: 'Symptoms', body: 'Describe the symptoms here.' },
-          { heading: 'Resolution Steps', body: '1. Step one\n2. Step two\n3. Step three' },
-        ],
-        pendingSuggestions: [],
-      } as AiDraftKBPayload,
-      createdAt,
-    };
-  }
-  return {
-    id,
-    sessionId,
-    role: 'ai',
-    text: 'Saya memproses permintaan kamu. (Mode demo — response aktual tersedia setelah AI backend terhubung.)',
-    contentType: 'text',
-    createdAt,
-  };
-};
-
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export const AiQuickPanel: React.FC<AiQuickPanelProps> = ({ onClose }) => {
@@ -218,8 +140,9 @@ export const AiQuickPanel: React.FC<AiQuickPanelProps> = ({ onClose }) => {
     setMessages((prev) => [...prev, userMsg]);
 
     const capturedDomain = domain;
+    if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      const aiMsg = getMockAiResponse(text, capturedDomain);
+      const aiMsg = getMockAiResponse(text, capturedDomain, 'quick-panel');
       setMessages((prev) => [...prev, aiMsg]);
     }, 800);
   };

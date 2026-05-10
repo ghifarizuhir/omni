@@ -22,85 +22,8 @@ import { AiDomainSelector } from '@/src/components/ai/AiDomainSelector';
 import { AiSessionListItem } from '@/src/components/ai/AiSessionListItem';
 import { AiPendingDraftItem } from '@/src/components/ai/AiPendingDraftItem';
 import { AiCompletenessPanel } from '@/src/components/ai/AiCompletenessPanel';
-import { formatAiTime, getDomainLabel } from '@/src/components/ai/utils';
+import { formatAiTime, getDomainLabel, getMockAiResponse } from '@/src/components/ai/utils';
 import { mockAiSessions, getActiveSession } from '@/src/mocks';
-
-// ─── Mock AI response ────────────────────────────────────────────────────────
-
-const getMockAiResponse = (userMessage: string, domain: AiDomain, sessionId: string): AiMessage => {
-  const id = `ai-${Date.now()}`;
-  const createdAt = new Date().toISOString();
-
-  if (['incident', 'problem', 'change'].includes(domain)) {
-    return { id, sessionId, role: 'ai', contentType: 'draft_placeholder', createdAt };
-  }
-  if (domain === 'cmdb' && /tambah|buat|create|add/i.test(userMessage)) {
-    return {
-      id,
-      sessionId,
-      role: 'ai',
-      text: 'Saya draft CI baru berdasarkan permintaan kamu:',
-      contentType: 'draft_ci',
-      contentPayload: {
-        kind: 'draft_ci',
-        draftStatus: 'pending',
-        publicId: `CI-SRV-NEW-${Math.floor(Math.random() * 100).toString().padStart(3, '0')}`,
-        name: 'new-server',
-        type: 'server',
-        status: 'planned',
-        environment: 'production',
-        criticality: 'medium',
-        ownerTeamId: 't-infra',
-        tags: ['draft', 'pending'],
-        attributes: {
-          kind: 'server',
-          region: 'ap-southeast-1',
-          provider: 'aws',
-          os: 'Ubuntu 22.04 LTS',
-          cpuCores: 4,
-          memoryGb: 16,
-          diskGb: 100,
-          ipAddress: '',
-          hostname: 'new-server',
-        },
-        relationships: [],
-        pendingSuggestions: [],
-      } as AiDraftCIPayload,
-      createdAt,
-    };
-  }
-  if (domain === 'knowledge_base' && /buat|draft|tulis|write/i.test(userMessage)) {
-    return {
-      id,
-      sessionId,
-      role: 'ai',
-      text: 'Berikut draft KB article-nya:',
-      contentType: 'draft_kb',
-      contentPayload: {
-        kind: 'draft_kb',
-        draftStatus: 'pending',
-        title: 'Draft Article',
-        category: 'Troubleshooting',
-        tags: ['draft'],
-        relatedCiPublicIds: [],
-        sections: [
-          { heading: 'Symptoms', body: 'Describe the symptoms here.' },
-          { heading: 'Resolution Steps', body: '1. Step one\n2. Step two\n3. Step three' },
-        ],
-        pendingSuggestions: [],
-      } as AiDraftKBPayload,
-      createdAt,
-    };
-  }
-  return {
-    id,
-    sessionId,
-    role: 'ai',
-    text: 'Saya memproses permintaan kamu. (Mode demo — response aktual tersedia setelah AI backend terhubung.)',
-    contentType: 'text',
-    createdAt,
-  };
-};
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -109,11 +32,11 @@ export const AiWorkspace: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const initialSessionId = sessionId ?? getActiveSession()?.id ?? 'ai-sess-001';
+
   const [activeDomain, setActiveDomain] = useState<AiDomain>('cmdb');
   const [sessions, setSessions] = useState<AiSession[]>([...mockAiSessions]);
-  const [activeSessionId, setActiveSessionId] = useState<string>(
-    getActiveSession()?.id ?? 'ai-sess-001'
-  );
+  const [activeSessionId, setActiveSessionId] = useState<string>(initialSessionId);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,35 +48,34 @@ export const AiWorkspace: React.FC = () => {
       const session = sessions.find((s) => s.id === sessionId);
       if (session) setActiveDomain(session.domain);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+  }, [sessionId, sessions]);
 
   // Handle ?from=panel&domain=X query param on mount
+  // intentionally runs once on mount; initialSessionId is stable from the render closure
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const from = params.get('from');
     const domainParam = params.get('domain') as AiDomain | null;
     if (from === 'panel' && domainParam) {
       setActiveDomain(domainParam);
-      // Inject a welcome message into the active session
+      const welcomeMsg: AiMessage = {
+        id: `welcome-${Date.now()}`,
+        sessionId: initialSessionId,
+        role: 'ai',
+        text: 'Melanjutkan dari Quick Assist Panel.',
+        contentType: 'text',
+        createdAt: new Date().toISOString(),
+      };
       setSessions((prev) =>
-        prev.map((s) => {
-          if (s.id !== activeSessionId) return s;
-          const welcomeMsg: AiMessage = {
-            id: `welcome-${Date.now()}`,
-            sessionId: s.id,
-            role: 'ai',
-            text: 'Melanjutkan dari Quick Assist Panel.',
-            contentType: 'text',
-            createdAt: new Date().toISOString(),
-          };
-          return { ...s, messages: [...s.messages, welcomeMsg] };
-        })
+        prev.map((s) =>
+          s.id === initialSessionId
+            ? { ...s, messages: [welcomeMsg, ...s.messages] }
+            : s
+        )
       );
     }
-    // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // intentionally runs once on mount
 
   // Clear timer on unmount
   useEffect(() => {
@@ -175,9 +97,8 @@ export const AiWorkspace: React.FC = () => {
   const pendingDrafts = messages
     .filter(
       (m) =>
-        m.contentPayload &&
-        (m.contentPayload.kind === 'draft_ci' || m.contentPayload.kind === 'draft_kb') &&
-        (m.contentPayload as AiDraftCIPayload | AiDraftKBPayload).draftStatus === 'pending'
+        (m.contentPayload?.kind === 'draft_ci' || m.contentPayload?.kind === 'draft_kb') &&
+        m.contentPayload.draftStatus === 'pending'
     )
     .map((m) => ({
       msgId: m.id,
@@ -187,9 +108,8 @@ export const AiWorkspace: React.FC = () => {
   const confirmedDrafts = messages
     .filter(
       (m) =>
-        m.contentPayload &&
-        (m.contentPayload.kind === 'draft_ci' || m.contentPayload.kind === 'draft_kb') &&
-        (m.contentPayload as AiDraftCIPayload | AiDraftKBPayload).draftStatus === 'confirmed'
+        (m.contentPayload?.kind === 'draft_ci' || m.contentPayload?.kind === 'draft_kb') &&
+        m.contentPayload.draftStatus === 'confirmed'
     )
     .map((m) => ({
       msgId: m.id,
@@ -198,10 +118,6 @@ export const AiWorkspace: React.FC = () => {
     }));
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-
-  const handleDomainChange = (domain: AiDomain) => {
-    setActiveDomain(domain);
-  };
 
   const handleNewSession = () => {
     const newId = `ai-sess-${Date.now()}`;
@@ -259,6 +175,7 @@ export const AiWorkspace: React.FC = () => {
 
     const capturedDomain = activeDomain;
     const capturedSessionId = activeSessionId;
+    if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       const aiMsg = getMockAiResponse(text, capturedDomain, capturedSessionId);
       const hasDraftPending =
@@ -363,7 +280,7 @@ export const AiWorkspace: React.FC = () => {
           <div className="p-3 border-b border-ois-border">
             <AiDomainSelector
               activeDomain={activeDomain}
-              onDomainChange={handleDomainChange}
+              onDomainChange={setActiveDomain}
             />
           </div>
 
@@ -474,16 +391,10 @@ export const AiWorkspace: React.FC = () => {
                     <div key={msgId} className="flex items-center gap-1.5 py-1">
                       <span className="text-[#12B76A] text-[11px] flex-shrink-0">✓</span>
                       <Link
-                        to={
-                          payload.kind === 'draft_ci'
-                            ? `/cmdb/${(payload as AiDraftCIPayload).publicId}`
-                            : '/kb'
-                        }
+                        to={payload.kind === 'draft_ci' ? `/cmdb/${payload.publicId}` : '/kb'}
                         className="text-[11px] text-ois-text hover:text-ois-primary truncate flex-1 min-w-0"
                       >
-                        {payload.kind === 'draft_ci'
-                          ? (payload as AiDraftCIPayload).name
-                          : (payload as AiDraftKBPayload).title}
+                        {payload.kind === 'draft_ci' ? payload.name : payload.title}
                       </Link>
                       <span className="text-[10px] text-ois-text-subtle flex-shrink-0">
                         {formatAiTime(createdAt)}
