@@ -73,12 +73,15 @@ import { OnCallOverrides } from './platform/OnCallOverrides';
 import StatusPage from './platform/StatusPage';
 import { Profile } from './platform/Profile';
 import { Settings } from './platform/Settings';
+import { AiWorkspace } from './ai/AiWorkspace';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
-  { 
-    path: '/',              
-    element: <AppShell />, 
+  { path: '/ai',            element: <AiWorkspace /> },
+  { path: '/ai/:sessionId', element: <AiWorkspace /> },
+  {
+    path: '/',
+    element: <AppShell />,
     children: [
       { index: true,                            element: <Dashboard /> },
       // Doc 1 — CMDB
