@@ -698,7 +698,7 @@ export const ProblemDetail: React.FC = () => {
                     <Wrench size={14} className="text-ois-text-muted" />
                     <span className="text-xs font-bold text-ois-text uppercase tracking-wider">Linked changes</span>
                   </div>
-                  <button className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+                  <button className="text-xs text-ois-primary hover:underline flex items-center gap-1" onClick={() => setLinkChangeOpen(true)}>
                     <Plus size={11} /> Link change
                   </button>
                 </div>
@@ -841,25 +841,23 @@ export const ProblemDetail: React.FC = () => {
                 <Plus size={13} className="text-ois-text-muted" />
                 Link incidents
               </button>
-              {[
-                { icon: Activity, label: 'Open RCA workspace', to: `/problems/${problem.publicId}/rca` },
-                { icon: Wrench, label: 'Link change' },
-                { icon: BookOpen, label: 'Suggest KB article' },
-              ].map(({ icon: Icon, label, to }) => (
-                to ? (
-                  <Link key={label} to={to}
-                    className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2">
-                    <Icon size={13} className="text-ois-text-muted" />
-                    {label}
-                  </Link>
-                ) : (
-                  <button key={label}
-                    className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2">
-                    <Icon size={13} className="text-ois-text-muted" />
-                    {label}
-                  </button>
-                )
-              ))}
+              <Link to={`/problems/${problem.publicId}/rca`}
+                className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2">
+                <Activity size={13} className="text-ois-text-muted" />
+                Open RCA workspace
+              </Link>
+              <button
+                onClick={() => setLinkChangeOpen(true)}
+                className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2">
+                <Wrench size={13} className="text-ois-text-muted" />
+                Link change
+              </button>
+              <button
+                onClick={() => navigate(`/kb/editor?source=problem&id=${problem!.publicId}&title=${encodeURIComponent(problem!.title)}`)}
+                className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2">
+                <BookOpen size={13} className="text-ois-text-muted" />
+                Suggest KB article
+              </button>
               <button
                 className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text-muted hover:bg-ois-surface-muted border border-ois-border/50 transition-colors flex items-center gap-2 mt-2"
                 onClick={() => setCloseConfirmOpen(true)}
@@ -896,6 +894,18 @@ export const ProblemDetail: React.FC = () => {
                   relatedIncidentIds: [...new Set([...prev.relatedIncidentIds, ...newPublicIds])],
                   relatedIncidentCount: prev.relatedIncidentCount + newPublicIds.length,
                 }
+              : prev
+          )
+        }
+      />
+      <LinkChangeModal
+        isOpen={linkChangeOpen}
+        onClose={() => setLinkChangeOpen(false)}
+        currentChangeIds={problem!.linkedChangeIds}
+        onLink={newIds =>
+          setProblem(prev =>
+            prev
+              ? { ...prev, linkedChangeIds: [...new Set([...prev.linkedChangeIds, ...newIds])] }
               : prev
           )
         }
