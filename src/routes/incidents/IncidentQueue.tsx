@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Search, BarChart2, Plus, CheckSquare, Square, MoreHorizontal,
   CheckCircle2, Filter, X
@@ -15,9 +15,12 @@ import { IncidentPriorityBadge } from '@/src/components/incidents/IncidentPriori
 import { SLAIndicator } from '@/src/components/incidents/SLAIndicator';
 import { MajorIncidentBanner } from '@/src/components/incidents/MajorIncidentBanner';
 import { CreateIncidentModal } from '@/src/components/incidents/CreateIncidentModal';
+import { UserPickerModal } from '@/src/components/incidents/UserPickerModal';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { Button } from '@/src/components/ui/Button';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
+import { Modal } from '@/src/components/ui/Modal';
+import { Input } from '@/src/components/ui/Input';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -78,6 +81,10 @@ function applyQuickFilter(incidents: Incident[], qf: QuickFilter): Incident[] {
 
 export const IncidentQueue: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // mutable incidents state
+  const [incidents, setIncidents] = useState(() => [...mockIncidents]);
 
   // filter state
   const [search, setSearch] = useState('');
@@ -88,22 +95,36 @@ export const IncidentQueue: React.FC = () => {
   // selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // modal
+  // row overflow menu
+  const [rowMenuId, setRowMenuId] = useState<string | null>(null);
+
+  // modals
   const [createOpen, setCreateOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [tagOpen, setTagOpen] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [confirmClose, setConfirmClose] = useState(false);
+
+  // pre-fill search from location state
+  useEffect(() => {
+    if ((location.state as any)?.search) {
+      setSearch((location.state as any).search);
+    }
+  }, []);
 
   // major incidents
   const majorActive = useMemo(() => getMajorIncidents().filter(i => i.status !== 'closed'), []);
 
   // derived counts
-  const totalCount = mockIncidents.length;
-  const activeCount = getActiveIncidents().length;
+  const totalCount = incidents.length;
+  const activeCount = useMemo(() => incidents.filter(i => ACTIVE_STATUSES.includes(i.status)).length, [incidents]);
   const majorCount = majorActive.length;
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    mockIncidents.forEach(i => { counts[i.status] = (counts[i.status] ?? 0) + 1; });
+    incidents.forEach(i => { counts[i.status] = (counts[i.status] ?? 0) + 1; });
     return counts;
-  }, []);
+  }, [incidents]);
 
   const statusOptions = useMemo(() =>
     STATUS_FILTERS.map(s => ({
@@ -122,9 +143,16 @@ export const IncidentQueue: React.FC = () => {
     { value: 'P4',  label: 'P4 — Low' },
   ];
 
+  const bulkPriorityOptions = [
+    { value: 'P1', label: 'P1 — Critical' },
+    { value: 'P2', label: 'P2 — High' },
+    { value: 'P3', label: 'P3 — Medium' },
+    { value: 'P4', label: 'P4 — Low' },
+  ];
+
   // filtered & sorted list
   const filtered = useMemo(() => {
-    let list = [...mockIncidents];
+    let list = [...incidents];
 
     // quick filter
     list = applyQuickFilter(list, quickFilter);
@@ -154,7 +182,7 @@ export const IncidentQueue: React.FC = () => {
     });
 
     return list;
-  }, [search, statusFilter, priorityFilter, quickFilter]);
+  }, [incidents, search, statusFilter, priorityFilter, quickFilter]);
 
   // selection helpers
   const allSelected = filtered.length > 0 && filtered.every(i => selectedIds.has(i.id));
@@ -181,14 +209,57 @@ export const IncidentQueue: React.FC = () => {
 
   // quick filter counts
   const now = new Date('2026-05-09T00:00:00Z').getTime();
-  const myOpenCount = mockIncidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === 'u-001').length;
-  const slaRiskCount = mockIncidents.filter(i =>
+  const myOpenCount = incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === 'u-001').length;
+  const slaRiskCount = incidents.filter(i =>
     i.slaResponseStatus === 'warning' || i.slaResponseStatus === 'breached' ||
     i.slaResolveStatus === 'warning' || i.slaResolveStatus === 'breached'
   ).length;
-  const p1p2Count = mockIncidents.filter(i => i.priority === 'P1' || i.priority === 'P2').length;
-  const last24hCount = mockIncidents.filter(i => now - new Date(i.createdAt).getTime() < 86_400_000).length;
-  const customerFacingCount = mockIncidents.filter(i => i.tags.includes('customer-facing')).length;
+  const p1p2Count = incidents.filter(i => i.priority === 'P1' || i.priority === 'P2').length;
+  const last24hCount = incidents.filter(i => now - new Date(i.createdAt).getTime() < 86_400_000).length;
+  const customerFacingCount = incidents.filter(i => i.tags.includes('customer-facing')).length;
+
+  // ── Bulk action handlers ──────────────────────────────────────────────────
+
+  const handleBulkExport = () => {
+    const selected = incidents.filter(i => selectedIds.has(i.id));
+    const headers = ['ID', 'Title', 'Priority', 'Status', 'Assignee', 'Service', 'Created', 'Tags'];
+    const rows = selected.map(inc => {
+      const assigneeName = mockUsers.find(u => u.id === inc.assigneeId)?.name ?? '';
+      const serviceName = inc.affectedServiceIds.map(id => mockServices.find(s => s.id === id)?.name ?? id).join('; ');
+      return [inc.publicId, `"${inc.title.replace(/"/g, '""')}"`, inc.priority, inc.status, `"${assigneeName}"`, `"${serviceName}"`, inc.createdAt, `"${inc.tags.join(', ')}"`].join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `incidents-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkClose = () => {
+    setIncidents(prev => prev.map(i => selectedIds.has(i.id) ? { ...i, status: 'closed' as const } : i));
+    setSelectedIds(new Set());
+    setConfirmClose(false);
+  };
+
+  const handleBulkAssign = (userId: string) => {
+    setIncidents(prev => prev.map(i => selectedIds.has(i.id) ? { ...i, assigneeId: userId } : i));
+    setSelectedIds(new Set());
+    setAssignOpen(false);
+  };
+
+  const handleBulkTag = () => {
+    const tag = tagInput.trim();
+    if (!tag) return;
+    setIncidents(prev => prev.map(i => selectedIds.has(i.id) ? { ...i, tags: [...new Set([...i.tags, tag])] } : i));
+    setSelectedIds(new Set());
+    setTagInput('');
+    setTagOpen(false);
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -294,16 +365,53 @@ export const IncidentQueue: React.FC = () => {
       {selectedIds.size > 0 && (
         <div className="px-6 py-2 bg-ois-primary/5 border-b border-ois-primary/20 flex items-center gap-3 shrink-0">
           <span className="text-sm font-medium text-ois-primary">{selectedIds.size} selected</span>
-          <div className="flex items-center gap-1.5">
-            {['Assign', 'Change priority', 'Tag', 'Close', 'Export'].map(action => (
+          {confirmClose ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-ois-danger font-medium">
+                Close {selectedIds.size} incident{selectedIds.size > 1 ? 's' : ''}?
+              </span>
+              <Button variant="destructive" size="sm" onClick={handleBulkClose}>Confirm</Button>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmClose(false)}>Cancel</Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 flex-wrap">
               <button
-                key={action}
+                onClick={() => setAssignOpen(true)}
                 className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors"
               >
-                {action}
+                Assign
               </button>
-            ))}
-          </div>
+              <div className="h-7">
+                <FilterDropdown
+                  value=""
+                  onChange={val => {
+                    setIncidents(prev => prev.map(i => selectedIds.has(i.id) ? { ...i, priority: val as IncidentPriority } : i));
+                    setSelectedIds(new Set());
+                  }}
+                  options={bulkPriorityOptions}
+                  placeholder="Change priority"
+                />
+              </div>
+              <button
+                onClick={() => setTagOpen(true)}
+                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors"
+              >
+                Tag
+              </button>
+              <button
+                onClick={() => setConfirmClose(true)}
+                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleBulkExport}
+                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors"
+              >
+                Export
+              </button>
+            </div>
+          )}
           <button
             onClick={() => setSelectedIds(new Set())}
             className="ml-auto text-xs text-ois-text-subtle hover:text-ois-text"
@@ -349,6 +457,10 @@ export const IncidentQueue: React.FC = () => {
                   selected={selectedIds.has(incident.id)}
                   onSelect={() => toggleOne(incident.id)}
                   onClick={() => navigate(`/incidents/${incident.publicId}`)}
+                  menuOpen={rowMenuId === incident.id}
+                  onMenuOpen={() => setRowMenuId(incident.id)}
+                  onMenuClose={() => setRowMenuId(null)}
+                  onAssignToMe={() => setIncidents(prev => prev.map(i => i.id === incident.id ? { ...i, assigneeId: 'u-001' } : i))}
                 />
               ))}
             </tbody>
@@ -361,6 +473,31 @@ export const IncidentQueue: React.FC = () => {
         onClose={() => setCreateOpen(false)}
         onCreated={id => navigate(`/incidents/${id}`)}
       />
+
+      <UserPickerModal
+        isOpen={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        title="Assign to"
+        onSelect={handleBulkAssign}
+      />
+
+      {tagOpen && (
+        <Modal isOpen={tagOpen} onClose={() => { setTagOpen(false); setTagInput(''); }} title="Add Tag" size="sm">
+          <div className="py-4 space-y-4">
+            <Input
+              label="Tag"
+              placeholder="e.g. customer-facing, database"
+              value={tagInput}
+              onChange={e => setTagInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && tagInput.trim()) handleBulkTag(); }}
+            />
+            <div className="flex justify-end gap-2 pt-2 border-t border-ois-border">
+              <Button variant="ghost" size="sm" onClick={() => { setTagOpen(false); setTagInput(''); }}>Cancel</Button>
+              <Button variant="primary" size="sm" disabled={!tagInput.trim()} onClick={handleBulkTag}>Add Tag</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
@@ -381,12 +518,20 @@ const QuickFilterChip: React.FC<{ label: string; active: boolean; onClick: () =>
   </button>
 );
 
-const IncidentRow: React.FC<{
+interface IncidentRowProps {
   incident: Incident;
   selected: boolean;
   onSelect: () => void;
   onClick: () => void;
-}> = ({ incident, selected, onSelect, onClick }) => {
+  menuOpen: boolean;
+  onMenuOpen: () => void;
+  onMenuClose: () => void;
+  onAssignToMe: () => void;
+}
+
+const IncidentRow: React.FC<IncidentRowProps> = ({
+  incident, selected, onSelect, onClick, menuOpen, onMenuOpen, onMenuClose, onAssignToMe
+}) => {
   const assigneeName = getAssigneeName(incident.assigneeId);
   const serviceName = getServiceName(incident.affectedServiceIds);
   const visibleTags = incident.tags.slice(0, 2);
@@ -491,13 +636,32 @@ const IncidentRow: React.FC<{
       </td>
 
       {/* Actions */}
-      <td className="px-2 py-2.5">
+      <td className="px-2 py-2.5 relative">
         <button
-          onClick={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); menuOpen ? onMenuClose() : onMenuOpen(); }}
           className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-ois-surface-muted"
         >
           <MoreHorizontal size={14} className="text-ois-text-subtle" />
         </button>
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={e => { e.stopPropagation(); onMenuClose(); }} />
+            <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-ois-border rounded-lg shadow-ois-dropdown overflow-hidden min-w-[140px]">
+              <button
+                onClick={e => { e.stopPropagation(); onClick(); onMenuClose(); }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-ois-surface-muted text-ois-text"
+              >
+                View
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); onAssignToMe(); onMenuClose(); }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-ois-surface-muted text-ois-text"
+              >
+                Assign to me
+              </button>
+            </div>
+          </>
+        )}
       </td>
     </tr>
   );

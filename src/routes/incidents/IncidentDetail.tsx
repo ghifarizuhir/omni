@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, MoreHorizontal, ChevronDown, AlertCircle,
@@ -17,7 +17,7 @@ import { mockProblems } from '@/src/mocks/problems';
 import { mockUsers } from '@/src/mocks/users';
 import { mockServices } from '@/src/mocks/services';
 import { mockCIs } from '@/src/mocks/cis';
-import { Incident, IncidentStatus, IncidentEventKind } from '@/src/types/incident';
+import { Incident, IncidentStatus, IncidentEventKind, IncidentComment } from '@/src/types/incident';
 import { incidentStatusMeta, incidentEventKindMeta } from '@/src/lib/constants';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { Button } from '@/src/components/ui/Button';
@@ -32,6 +32,11 @@ import { SLAIndicator } from '@/src/components/incidents/SLAIndicator';
 import { IncidentTimelineEntry } from '@/src/components/incidents/IncidentTimelineEntry';
 import { IncidentCommentThread } from '@/src/components/incidents/IncidentCommentThread';
 import { ResolveIncidentModal, ResolveData } from '@/src/components/incidents/ResolveIncidentModal';
+import { PromoteMajorModal } from '@/src/components/incidents/PromoteMajorModal';
+import { LinkCIModal } from '@/src/components/incidents/LinkCIModal';
+import { LinkProblemModal } from '@/src/components/incidents/LinkProblemModal';
+import { LinkChangeModal } from '@/src/components/incidents/LinkChangeModal';
+import { UserPickerModal } from '@/src/components/incidents/UserPickerModal';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -136,7 +141,13 @@ export const IncidentDetail: React.FC = () => {
 
   const incident = useMemo(() => getIncidentById(incidentId ?? ''), [incidentId]);
 
-  const [status, setStatus] = useState<IncidentStatus>(incident?.status ?? 'new');
+  // Local mutable incident copy — all mutations go through setInc
+  const [inc, setInc] = useState<Incident | null>(incident ?? null);
+
+  // Derive status from inc for StatusDropdown compatibility
+  const status = inc?.status ?? 'new';
+  const setStatus = (s: IncidentStatus) => setInc(prev => prev ? { ...prev, status: s } : prev);
+
   const [resolveOpen, setResolveOpen] = useState(false);
   const [resolvedData, setResolvedData] = useState<ResolveData | null>(
     incident?.resolution
@@ -147,13 +158,29 @@ export const IncidentDetail: React.FC = () => {
   const [timelineFilter, setTimelineFilter] = useState<string>('all');
   const [newComment, setNewComment] = useState('');
   const [isInternal, setIsInternal] = useState(false);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descDraft, setDescDraft] = useState('');
+  const [overflowOpen, setOverflowOpen] = useState(false);
+
+  // Modal open states
+  const [promoteMajorOpen, setPromoteMajorOpen] = useState(false);
+  const [linkCIOpen, setLinkCIOpen] = useState(false);
+  const [linkProblemOpen, setLinkProblemOpen] = useState(false);
+  const [linkChangeOpen, setLinkChangeOpen] = useState(false);
+  const [addWatcherOpen, setAddWatcherOpen] = useState(false);
+
+  // Comments and watchers as local state
+  const [comments, setComments] = useState(() => incident ? getCommentsForIncident(incident.id) : []);
+  const [watchers, setWatchers] = useState(() => {
+    const ids = new Set([incident?.assigneeId, incident?.incidentCommander, 'u-006'].filter(Boolean) as string[]);
+    return [...ids].map(id => getUserById(id)).filter(Boolean) as typeof mockUsers;
+  });
+
+  // Ref for focusing the comment textarea
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const timeline = useMemo(
     () => incident ? getTimelineForIncident(incident.id) : [],
-    [incident]
-  );
-  const comments = useMemo(
-    () => incident ? getCommentsForIncident(incident.id) : [],
     [incident]
   );
 
@@ -167,54 +194,48 @@ export const IncidentDetail: React.FC = () => {
     return timeline;
   }, [timeline, timelineFilter]);
 
-  // Watchers (mock — first 3 users associated with incident)
-  const watchers = useMemo(() => {
-    const ids = new Set([incident?.assigneeId, incident?.incidentCommander, 'u-006'].filter(Boolean) as string[]);
-    return [...ids].map(id => getUserById(id)).filter(Boolean) as typeof mockUsers;
-  }, [incident]);
-
   // Related incidents sharing same CIs
   const relatedIncidents = useMemo(() => {
-    if (!incident) return [];
-    const related = incident.affectedCIIds.flatMap(ci => getIncidentsByCI(ci));
+    if (!inc) return [];
+    const related = inc.affectedCIIds.flatMap(ci => getIncidentsByCI(ci));
     const seen = new Map<string, Incident>();
     for (const i of related) seen.set(i.id, i);
-    return [...seen.values()].filter(i => i.id !== incident.id).slice(0, 5);
-  }, [incident]);
+    return [...seen.values()].filter(i => i.id !== inc.id).slice(0, 5);
+  }, [inc]);
 
   // Linked problem
   const linkedProblem = useMemo(() => {
-    if (!incident?.linkedProblemId) return null;
-    return mockProblems.find(p => p.id === incident.linkedProblemId) ?? null;
-  }, [incident]);
+    if (!inc?.linkedProblemId) return null;
+    return mockProblems.find(p => p.id === inc.linkedProblemId) ?? null;
+  }, [inc]);
 
   const linkedKBArticles = useMemo(() => {
-    if (!incident) return [];
+    if (!inc) return [];
     return mockKBArticles.filter(a =>
-      a.linkedIncidentIds.includes(incident.publicId) && a.status === 'published'
+      a.linkedIncidentIds.includes(inc.publicId) && a.status === 'published'
     );
-  }, [incident]);
+  }, [inc]);
 
   // Affected CIs
   const affectedCIs = useMemo(() => {
-    if (!incident) return [];
-    return incident.affectedCIIds.map(id => mockCIs.find(ci => ci.id === id)).filter(Boolean) as typeof mockCIs;
-  }, [incident]);
+    if (!inc) return [];
+    return inc.affectedCIIds.map(id => mockCIs.find(ci => ci.id === id)).filter(Boolean) as typeof mockCIs;
+  }, [inc]);
 
   // BIA context — find entry matching any affected service
   const biaEntry = useMemo(() => {
-    if (!incident) return null;
-    for (const svcId of incident.affectedServiceIds) {
+    if (!inc) return null;
+    for (const svcId of inc.affectedServiceIds) {
       const entry = getBIAByService(svcId);
       if (entry) return entry;
     }
     return null;
-  }, [incident]);
+  }, [inc]);
 
   // Assignee / reporter
-  const assignee = getUserById(incident?.assigneeId);
-  const reporter = getUserById(incident?.reporterId);
-  const commander = getUserById(incident?.incidentCommander);
+  const assignee = getUserById(inc?.assigneeId);
+  const reporter = getUserById(inc?.reporterId);
+  const commander = getUserById(inc?.incidentCommander);
 
   const handleStatusChange = (s: IncidentStatus) => {
     if (s === 'resolved' && !resolvedData) {
@@ -227,6 +248,16 @@ export const IncidentDetail: React.FC = () => {
   const handleResolve = (data: ResolveData) => {
     setResolvedData(data);
     setStatus('resolved');
+  };
+
+  const handlePromoteMajor = (commanderId: string) => {
+    setInc(prev => prev ? {
+      ...prev,
+      isMajor: true,
+      incidentCommander: commanderId,
+      majorDeclaredAt: new Date().toISOString(),
+      majorDeclaredBy: 'u-001',
+    } : prev);
   };
 
   // ── Not found ────────────────────────────────────────────────────────────────
@@ -245,9 +276,9 @@ export const IncidentDetail: React.FC = () => {
     );
   }
 
-  const priorityColor = PRIORITY_COLOR[incident.priority] ?? '#475467';
+  const priorityColor = PRIORITY_COLOR[inc!.priority] ?? '#475467';
   const isResolved = status === 'resolved' || status === 'closed';
-  const serviceNames = getServiceNames(incident.affectedServiceIds);
+  const serviceNames = getServiceNames(inc!.affectedServiceIds);
 
   // ── Tabs definition ──────────────────────────────────────────────────────────
   const tabs = [
@@ -265,35 +296,53 @@ export const IncidentDetail: React.FC = () => {
     <div className="space-y-4">
       {/* Description */}
       <SectionCard title="Description">
-        <div className="prose prose-sm max-w-none text-ois-text leading-relaxed whitespace-pre-wrap text-sm">
-          {incident.description}
-        </div>
-        <button className="mt-3 flex items-center gap-1 text-xs text-ois-primary hover:underline">
-          <Edit3 size={12} /> Edit
-        </button>
+        {editingDesc ? (
+          <>
+            <textarea
+              rows={4}
+              value={descDraft}
+              onChange={e => setDescDraft(e.target.value)}
+              className="w-full text-sm text-ois-text border border-ois-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary resize-none"
+            />
+            <div className="flex gap-2 mt-2">
+              <Button variant="primary" size="sm" onClick={() => { setInc(prev => prev ? { ...prev, description: descDraft } : prev); setEditingDesc(false); }}>Save</Button>
+              <Button variant="ghost" size="sm" onClick={() => setEditingDesc(false)}>Cancel</Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="prose prose-sm max-w-none text-ois-text leading-relaxed whitespace-pre-wrap text-sm">{inc!.description}</div>
+            <button
+              onClick={() => { setDescDraft(inc!.description); setEditingDesc(true); }}
+              className="mt-3 flex items-center gap-1 text-xs text-ois-primary hover:underline"
+            >
+              <Edit3 size={12} /> Edit
+            </button>
+          </>
+        )}
       </SectionCard>
 
       {/* Customer impact */}
-      {incident.customerImpact && (
+      {inc!.customerImpact && (
         <SectionCard title="Customer impact">
-          <p className="text-sm text-ois-text">{incident.customerImpact}</p>
+          <p className="text-sm text-ois-text">{inc!.customerImpact}</p>
         </SectionCard>
       )}
 
       {/* Triggering event */}
-      {incident.triggeringEventPublicId && (
+      {inc!.triggeringEventPublicId && (
         <SectionCard title="Triggering event">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-mono text-sm font-semibold text-ois-primary">
-                {incident.triggeringEventPublicId}
+                {inc!.triggeringEventPublicId}
               </p>
               <p className="text-xs text-ois-text-muted mt-0.5">
-                Source: monitoring · {formatRelative(incident.createdAt)}
+                Source: monitoring · {formatRelative(inc!.createdAt)}
               </p>
             </div>
             <Link
-              to={`/events/${incident.triggeringEventId}`}
+              to={`/events/${inc!.triggeringEventId}`}
               className="flex items-center gap-1 text-xs text-ois-primary hover:underline"
             >
               Open event <ExternalLink size={12} />
@@ -355,6 +404,7 @@ export const IncidentDetail: React.FC = () => {
           ))}
         </div>
         <textarea
+          ref={commentTextareaRef}
           rows={3}
           placeholder="Type a comment… (Markdown supported)"
           value={newComment}
@@ -373,7 +423,29 @@ export const IncidentDetail: React.FC = () => {
           </label>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => setNewComment('')}>Cancel</Button>
-            <Button variant="primary" size="sm" disabled={!newComment.trim()}>Comment</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!newComment.trim()}
+              onClick={() => {
+                if (!newComment.trim()) return;
+                const newCmt: IncidentComment = {
+                  id: `cmt-new-${Date.now()}`,
+                  incidentId: inc!.id,
+                  authorId: 'u-001',
+                  authorName: 'Sarah Chen',
+                  body: newComment.trim(),
+                  isInternal,
+                  mentions: [],
+                  createdAt: new Date().toISOString(),
+                };
+                setComments(prev => [...prev, newCmt]);
+                setNewComment('');
+                setIsInternal(false);
+              }}
+            >
+              Comment
+            </Button>
           </div>
         </div>
       </div>
@@ -383,7 +455,7 @@ export const IncidentDetail: React.FC = () => {
   const AffectedCIsTab = (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={() => setLinkCIOpen(true)}>
           <Plus size={14} className="mr-1" /> Link CI
         </Button>
       </div>
@@ -419,14 +491,14 @@ export const IncidentDetail: React.FC = () => {
   const LinkedItemsTab = (
     <div className="space-y-4">
       {/* Triggering event */}
-      {incident.triggeringEventPublicId && (
+      {inc!.triggeringEventPublicId && (
         <SectionCard title={`Triggering event (1)`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-mono text-sm font-semibold text-ois-primary">{incident.triggeringEventPublicId}</p>
-              <p className="text-xs text-ois-text-muted mt-0.5">Monitoring event · {formatRelative(incident.createdAt)}</p>
+              <p className="font-mono text-sm font-semibold text-ois-primary">{inc!.triggeringEventPublicId}</p>
+              <p className="text-xs text-ois-text-muted mt-0.5">Monitoring event · {formatRelative(inc!.createdAt)}</p>
             </div>
-            <Link to={`/events/${incident.triggeringEventId}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+            <Link to={`/events/${inc!.triggeringEventId}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
               Open <ExternalLink size={12} />
             </Link>
           </div>
@@ -453,21 +525,21 @@ export const IncidentDetail: React.FC = () => {
             </Button>
           </div>
         ) : (
-          <button className="flex items-center gap-2 text-xs text-ois-primary hover:underline">
+          <button onClick={() => setLinkProblemOpen(true)} className="flex items-center gap-2 text-xs text-ois-primary hover:underline">
             <Plus size={12} /> Link problem
           </button>
         )}
       </SectionCard>
 
       {/* Linked changes */}
-      <SectionCard title={`Linked changes (${incident.linkedChangeIds?.length ?? 0})`}>
-        {(incident.linkedChangeIds?.length ?? 0) === 0 ? (
-          <button className="flex items-center gap-2 text-xs text-ois-primary hover:underline">
+      <SectionCard title={`Linked changes (${inc!.linkedChangeIds?.length ?? 0})`}>
+        {(inc!.linkedChangeIds?.length ?? 0) === 0 ? (
+          <button onClick={() => setLinkChangeOpen(true)} className="flex items-center gap-2 text-xs text-ois-primary hover:underline">
             <Plus size={12} /> Link change
           </button>
         ) : (
           <div className="space-y-2">
-            {incident.linkedChangeIds!.map(id => {
+            {inc!.linkedChangeIds!.map(id => {
               const chg = getChangeById(id);
               return (
                 <div key={id} className="p-2 rounded-lg bg-ois-bg border border-ois-border">
@@ -505,7 +577,7 @@ export const IncidentDetail: React.FC = () => {
             </div>
           ))}
           <Link
-            to={`/kb/editor?source=incident&id=${incident?.publicId}&title=${encodeURIComponent(incident?.title ?? '')}`}
+            to={`/kb/editor?source=incident&id=${inc?.publicId}&title=${encodeURIComponent(inc?.title ?? '')}`}
             className="flex items-center gap-2 text-xs text-ois-primary hover:underline mt-1"
           >
             <BookOpen size={12} /> Suggest article
@@ -515,10 +587,10 @@ export const IncidentDetail: React.FC = () => {
 
       {/* Linked outages */}
       {(() => {
-        const outages = incident.affectedServiceIds.flatMap(id => getOutagesByService(id))
+        const outages = inc!.affectedServiceIds.flatMap(id => getOutagesByService(id))
           .filter(o => {
             const oStart = new Date(o.startedAt).getTime();
-            const iStart = new Date(incident.createdAt).getTime();
+            const iStart = new Date(inc!.createdAt).getTime();
             return Math.abs(oStart - iStart) < 3 * 60 * 60 * 1000; // within 3 hours
           });
         if (outages.length === 0) return null;
@@ -546,34 +618,34 @@ export const IncidentDetail: React.FC = () => {
       {isResolved || resolvedData ? (
         <>
           <SectionCard title="Resolution summary">
-            <p className="text-sm text-ois-text">{resolvedData?.summary ?? incident.resolution?.summary}</p>
+            <p className="text-sm text-ois-text">{resolvedData?.summary ?? inc!.resolution?.summary}</p>
           </SectionCard>
-          {(resolvedData?.rootCause ?? incident.resolution?.rootCause) && (
+          {(resolvedData?.rootCause ?? inc!.resolution?.rootCause) && (
             <SectionCard title="Root cause (lightweight)">
-              <p className="text-sm text-ois-text">{resolvedData?.rootCause ?? incident.resolution?.rootCause}</p>
-              {incident.linkedProblemPublicId && (
+              <p className="text-sm text-ois-text">{resolvedData?.rootCause ?? inc!.resolution?.rootCause}</p>
+              {inc!.linkedProblemPublicId && (
                 <p className="text-xs text-ois-text-subtle mt-1">
                   Linked to{' '}
-                  <Link to={`/problems/${incident.linkedProblemPublicId}`} className="text-ois-primary hover:underline font-mono">
-                    {incident.linkedProblemPublicId}
+                  <Link to={`/problems/${inc!.linkedProblemPublicId}`} className="text-ois-primary hover:underline font-mono">
+                    {inc!.linkedProblemPublicId}
                   </Link>{' '}
                   for full RCA.
                 </p>
               )}
             </SectionCard>
           )}
-          {(resolvedData?.workaround ?? incident.resolution?.workaround) && (
+          {(resolvedData?.workaround ?? inc!.resolution?.workaround) && (
             <SectionCard title="Workaround applied">
-              <p className="text-sm text-ois-text">{resolvedData?.workaround ?? incident.resolution?.workaround}</p>
+              <p className="text-sm text-ois-text">{resolvedData?.workaround ?? inc!.resolution?.workaround}</p>
             </SectionCard>
           )}
           <div className="text-xs text-ois-text-subtle">
             Resolved by{' '}
             <span className="font-medium text-ois-text">
-              {getUserById(incident.resolution?.resolvedBy)?.name ?? 'Unknown'}
+              {getUserById(inc!.resolution?.resolvedBy)?.name ?? 'Unknown'}
             </span>
-            {incident.resolution?.resolvedAt && (
-              <> · {formatRelative(incident.resolution.resolvedAt)}</>
+            {inc!.resolution?.resolvedAt && (
+              <> · {formatRelative(inc!.resolution.resolvedAt)}</>
             )}
           </div>
         </>
@@ -622,9 +694,30 @@ export const IncidentDetail: React.FC = () => {
           </button>
           <div className="flex items-center gap-2">
             <StatusDropdown status={status} onChange={handleStatusChange} />
-            <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-ois-border bg-white text-sm text-ois-text-muted hover:bg-ois-surface-muted transition-colors">
-              <MoreHorizontal size={16} />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setOverflowOpen(v => !v)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-ois-border bg-white text-sm text-ois-text-muted hover:bg-ois-surface-muted transition-colors"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+              {overflowOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setOverflowOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[160px]">
+                    {[
+                      { label: 'Copy incident ID', action: () => navigator.clipboard.writeText(inc!.publicId) },
+                      { label: 'Copy link', action: () => navigator.clipboard.writeText(window.location.href) },
+                    ].map(item => (
+                      <button key={item.label} onClick={() => { item.action(); setOverflowOpen(false); }}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors text-ois-text">
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -633,17 +726,17 @@ export const IncidentDetail: React.FC = () => {
           <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: priorityColor }} />
           <div className="flex-1 px-6 py-4">
             <div className="flex items-start gap-3 mb-2">
-              <IncidentPriorityBadge priority={incident.priority} />
-              {incident.isMajor && (
+              <IncidentPriorityBadge priority={inc!.priority} />
+              {inc!.isMajor && (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
                   <Siren size={11} /> MAJOR
                 </span>
               )}
             </div>
-            <p className="font-mono text-xs text-ois-text-subtle mb-1">{incident.publicId}</p>
-            <h1 className="text-xl font-bold text-ois-text leading-tight">{incident.title}</h1>
+            <p className="font-mono text-xs text-ois-text-subtle mb-1">{inc!.publicId}</p>
+            <h1 className="text-xl font-bold text-ois-text leading-tight">{inc!.title}</h1>
             <div className="flex items-center flex-wrap gap-1.5 mt-2">
-              {incident.tags.map(tag => (
+              {inc!.tags.map(tag => (
                 <span key={tag} className="inline-flex items-center gap-1 text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full">
                   <Tag size={9} />{tag}
                 </span>
@@ -651,11 +744,11 @@ export const IncidentDetail: React.FC = () => {
             </div>
             <div className="flex items-center gap-3 mt-2.5 text-xs text-ois-text-subtle flex-wrap">
               <span>
-                Created {formatRelative(incident.createdAt)}
-                {reporter && <> by {reporter.name} ({getReporterChannelLabel(incident.reporterChannel)})</>}
+                Created {formatRelative(inc!.createdAt)}
+                {reporter && <> by {reporter.name} ({getReporterChannelLabel(inc!.reporterChannel)})</>}
               </span>
               {assignee && <span>· Assigned to <span className="font-medium text-ois-text">{assignee.name}</span></span>}
-              <span>· Updated {formatRelative(incident.updatedAt)}</span>
+              <span>· Updated {formatRelative(inc!.updatedAt)}</span>
             </div>
           </div>
         </div>
@@ -674,21 +767,21 @@ export const IncidentDetail: React.FC = () => {
             </div>
             <div className="px-3 py-2.5 flex items-center justify-between">
               <span className="text-[11px] font-bold text-ois-text-subtle uppercase tracking-widest">Priority</span>
-              <IncidentPriorityBadge priority={incident.priority} />
+              <IncidentPriorityBadge priority={inc!.priority} />
             </div>
           </div>
 
           <SectionCard title="At a glance">
             <dl className="space-y-2 text-xs">
               {[
-                { label: 'Severity',  value: <span className="font-semibold">{incident.severity}</span> },
-                { label: 'Created',   value: formatRelative(incident.createdAt) },
-                { label: 'Reporter',  value: reporter?.name ?? incident.reporterId },
-                { label: 'Channel',   value: getReporterChannelLabel(incident.reporterChannel) },
+                { label: 'Severity',  value: <span className="font-semibold">{inc!.severity}</span> },
+                { label: 'Created',   value: formatRelative(inc!.createdAt) },
+                { label: 'Reporter',  value: reporter?.name ?? inc!.reporterId },
+                { label: 'Channel',   value: getReporterChannelLabel(inc!.reporterChannel) },
                 { label: 'Assignee',  value: assignee ? (
                   <span className="flex items-center gap-1.5"><Avatar name={assignee.name} size="xs" />{assignee.name}</span>
                 ) : '—' },
-                ...(incident.incidentCommander ? [{ label: 'Commander', value: commander?.name ?? incident.incidentCommander }] : []),
+                ...(inc!.incidentCommander ? [{ label: 'Commander', value: commander?.name ?? inc!.incidentCommander }] : []),
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start justify-between gap-2">
                   <dt className="text-ois-text-subtle shrink-0">{label}</dt>
@@ -700,8 +793,8 @@ export const IncidentDetail: React.FC = () => {
 
           <SectionCard title="SLA timers">
             <div className="space-y-4">
-              <SLATimer label="Response" status={incident.slaResponseStatus} targetMinutes={incident.slaResponseTarget} createdAt={incident.createdAt} resolvedAt={incident.firstResponseAt} />
-              <SLATimer label="Resolution" status={incident.slaResolveStatus} targetMinutes={incident.slaResolveTarget} createdAt={incident.createdAt} resolvedAt={incident.resolution?.resolvedAt} />
+              <SLATimer label="Response" status={inc!.slaResponseStatus} targetMinutes={inc!.slaResponseTarget} createdAt={inc!.createdAt} resolvedAt={inc!.firstResponseAt} />
+              <SLATimer label="Resolution" status={inc!.slaResolveStatus} targetMinutes={inc!.slaResolveTarget} createdAt={inc!.createdAt} resolvedAt={inc!.resolution?.resolvedAt} />
             </div>
           </SectionCard>
 
@@ -726,7 +819,7 @@ export const IncidentDetail: React.FC = () => {
                 </li>
               ))}
             </ul>
-            <button className="mt-2 text-xs text-ois-primary hover:underline flex items-center gap-1">
+            <button onClick={() => setAddWatcherOpen(true)} className="mt-2 text-xs text-ois-primary hover:underline flex items-center gap-1">
               <Plus size={12} /> Add watcher
             </button>
           </SectionCard>
@@ -768,13 +861,13 @@ export const IncidentDetail: React.FC = () => {
           <SectionCard title="Quick actions">
             <div className="space-y-1.5">
               {[
-                { icon: UserPlus,      label: 'Assign to me' },
-                { icon: Eye,           label: 'Acknowledge' },
-                { icon: CheckCircle2,  label: 'Resolve', action: () => setResolveOpen(true), primary: !isResolved },
-                ...(incident.isMajor ? [] : [{ icon: Siren, label: 'Promote to Major' }]),
-                { icon: MessageCircle, label: 'Add comment' },
-                { icon: Server,        label: 'Link CI' },
-                { icon: ShieldAlert,   label: 'Link problem' },
+                { icon: UserPlus,      label: 'Assign to me',     action: () => setInc(prev => prev ? { ...prev, assigneeId: 'u-001' } : prev) },
+                { icon: Eye,           label: 'Acknowledge',       action: () => setInc(prev => prev ? { ...prev, status: 'triaging' } : prev) },
+                { icon: CheckCircle2,  label: 'Resolve',           action: () => setResolveOpen(true), primary: !isResolved },
+                ...(inc!.isMajor ? [] : [{ icon: Siren, label: 'Promote to Major', action: () => setPromoteMajorOpen(true) }]),
+                { icon: MessageCircle, label: 'Add comment',       action: () => { setActiveTabId('comments'); setTimeout(() => commentTextareaRef.current?.focus(), 100); } },
+                { icon: Server,        label: 'Link CI',           action: () => setLinkCIOpen(true) },
+                { icon: ShieldAlert,   label: 'Link problem',      action: () => setLinkProblemOpen(true) },
               ].map(({ icon: Icon, label, action, primary }) => (
                 <button
                   key={label}
@@ -824,33 +917,38 @@ export const IncidentDetail: React.FC = () => {
             <SectionCard title={`Related incidents (${relatedIncidents.length})`}>
               <p className="text-[11px] text-ois-text-subtle mb-2">Same CI in last 7 days:</p>
               <ul className="space-y-2">
-                {relatedIncidents.map(inc => (
-                  <li key={inc.id}>
+                {relatedIncidents.map(related => (
+                  <li key={related.id}>
                     <button
-                      onClick={() => navigate(`/incidents/${inc.publicId}`)}
+                      onClick={() => navigate(`/incidents/${related.publicId}`)}
                       className="w-full text-left hover:bg-ois-surface-muted rounded px-1 py-0.5 transition-colors"
                     >
-                      <p className="text-xs font-mono text-ois-primary">{inc.publicId}</p>
+                      <p className="text-xs font-mono text-ois-primary">{related.publicId}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <IncidentPriorityBadge priority={inc.priority} />
-                        <IncidentStatusPill status={inc.status} />
+                        <IncidentPriorityBadge priority={related.priority} />
+                        <IncidentStatusPill status={related.status} />
                       </div>
                     </button>
                   </li>
                 ))}
               </ul>
-              <button className="mt-2 text-xs text-ois-primary hover:underline">View all →</button>
+              <button onClick={() => navigate('/incidents', { state: { search: inc!.affectedCIPublicIds[0] } })} className="mt-2 text-xs text-ois-primary hover:underline">View all →</button>
             </SectionCard>
           )}
         </aside>
       </div>
 
       <ResolveIncidentModal
-        incident={incident}
+        incident={inc!}
         isOpen={resolveOpen}
         onClose={() => setResolveOpen(false)}
         onResolve={handleResolve}
       />
+      <PromoteMajorModal incident={inc!} isOpen={promoteMajorOpen} onClose={() => setPromoteMajorOpen(false)} onConfirm={handlePromoteMajor} />
+      <LinkCIModal isOpen={linkCIOpen} onClose={() => setLinkCIOpen(false)} currentCIIds={inc!.affectedCIIds} onLink={newIds => setInc(prev => prev ? { ...prev, affectedCIIds: [...prev.affectedCIIds, ...newIds], affectedCIPublicIds: [...prev.affectedCIPublicIds] } : prev)} />
+      <LinkProblemModal isOpen={linkProblemOpen} onClose={() => setLinkProblemOpen(false)} currentProblemId={inc?.linkedProblemId} onLink={(id, pubId) => setInc(prev => prev ? { ...prev, linkedProblemId: id, linkedProblemPublicId: pubId } : prev)} />
+      <LinkChangeModal isOpen={linkChangeOpen} onClose={() => setLinkChangeOpen(false)} currentChangeIds={inc?.linkedChangeIds ?? []} onLink={newIds => setInc(prev => prev ? { ...prev, linkedChangeIds: [...(prev.linkedChangeIds ?? []), ...newIds] } : prev)} />
+      <UserPickerModal isOpen={addWatcherOpen} onClose={() => setAddWatcherOpen(false)} title="Add Watcher" excludeIds={watchers.map(w => w.id)} onSelect={userId => { const user = mockUsers.find(u => u.id === userId); if (user) setWatchers(prev => [...prev, user]); }} />
     </div>
   );
 };

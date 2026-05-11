@@ -13,6 +13,9 @@ import { CommunicationComposer } from '@/src/components/incidents/WarRoom/Commun
 import { RolesPanel } from '@/src/components/incidents/WarRoom/RolesPanel';
 import { WarRoomLinks } from '@/src/components/incidents/WarRoom/WarRoomLinks';
 import { ResolveIncidentModal } from '@/src/components/incidents/ResolveIncidentModal';
+import { UserPickerModal } from '@/src/components/incidents/UserPickerModal';
+import { LinkChangeModal } from '@/src/components/incidents/LinkChangeModal';
+import { LinkProblemModal } from '@/src/components/incidents/LinkProblemModal';
 import { getIncidentById, mockIncidents } from '@/src/mocks/incidents';
 import { mockIncidentTimelines } from '@/src/mocks/incidentTimelines';
 import { mockCIs } from '@/src/mocks/cis';
@@ -116,6 +119,14 @@ export const MajorIncidentWarRoom: React.FC = () => {
 
   // Local state for timeline (so we can add new comms events)
   const incident = incidentId ? getIncidentById(incidentId) : undefined;
+
+  const [addCommenterOpen, setAddCommenterOpen] = useState(false);
+  const [linkChangeOpen, setLinkChangeOpen] = useState(false);
+  const [linkProblemOpen, setLinkProblemOpen] = useState(false);
+  const [linkedChangeIds, setLinkedChangeIds] = useState<string[]>(incident?.linkedChangeIds ?? []);
+  const [linkedProblemId, setLinkedProblemId] = useState<string | undefined>(incident?.linkedProblemId);
+  const [commenters, setCommenters] = useState<string[]>([]);
+
   const allEvents = incident
     ? mockIncidentTimelines.filter(e => e.incidentId === incident.id)
     : [];
@@ -244,15 +255,24 @@ export const MajorIncidentWarRoom: React.FC = () => {
                   </span>
                 </div>
                 <div className="p-3 space-y-2">
-                  <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors">
+                  <button
+                    onClick={() => setAddCommenterOpen(true)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors"
+                  >
                     <MessageSquarePlus size={13} className="text-ois-text-muted" />
                     Add commenter
                   </button>
-                  <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors">
+                  <button
+                    onClick={() => setLinkChangeOpen(true)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors"
+                  >
                     <LinkIcon size={13} className="text-ois-text-muted" />
                     Link change
                   </button>
-                  <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors">
+                  <button
+                    onClick={() => setLinkProblemOpen(true)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors"
+                  >
                     <LinkIcon size={13} className="text-ois-text-muted" />
                     Link problem
                   </button>
@@ -291,6 +311,26 @@ export const MajorIncidentWarRoom: React.FC = () => {
         isOpen={resolveOpen}
         onClose={() => setResolveOpen(false)}
         onResolve={handleResolve}
+      />
+
+      <UserPickerModal
+        isOpen={addCommenterOpen}
+        onClose={() => setAddCommenterOpen(false)}
+        title="Add Commenter"
+        excludeIds={commenters}
+        onSelect={userId => setCommenters(prev => [...prev, userId])}
+      />
+      <LinkChangeModal
+        isOpen={linkChangeOpen}
+        onClose={() => setLinkChangeOpen(false)}
+        currentChangeIds={linkedChangeIds}
+        onLink={newIds => setLinkedChangeIds(prev => [...prev, ...newIds])}
+      />
+      <LinkProblemModal
+        isOpen={linkProblemOpen}
+        onClose={() => setLinkProblemOpen(false)}
+        currentProblemId={linkedProblemId}
+        onLink={(id, _pubId) => setLinkedProblemId(id)}
       />
     </>
   );
