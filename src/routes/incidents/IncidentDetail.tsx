@@ -301,27 +301,6 @@ export const IncidentDetail: React.FC = () => {
           </div>
         </SectionCard>
       )}
-
-      {/* Quick actions */}
-      <SectionCard title="Quick actions">
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { icon: Link2,    label: 'Link to existing problem', to: null },
-            { icon: Plus,     label: 'Create problem from incident', to: null },
-            { icon: GitMerge, label: 'Link change', to: null },
-            { icon: BookOpen, label: 'Suggest KB article', to: `/kb/editor?source=incident&id=${incident?.publicId}&title=${encodeURIComponent(incident?.title ?? '')}` },
-          ].map(({ icon: Icon, label, to }) => (
-            <button
-              key={label}
-              onClick={to ? () => navigate(to) : undefined}
-              className="flex items-center gap-2 text-xs text-ois-text-muted border border-ois-border rounded-lg px-3 py-2 hover:bg-ois-surface-muted hover:text-ois-text transition-colors text-left"
-            >
-              <Icon size={13} className="shrink-0 text-ois-text-subtle" />
-              {label}
-            </button>
-          ))}
-        </div>
-      </SectionCard>
     </div>
   );
 
@@ -810,11 +789,6 @@ export const IncidentDetail: React.FC = () => {
                 </button>
               ))}
             </div>
-          </SectionCard>
-
-          {/* AI suggestions placeholder */}
-          <SectionCard title="AI suggestions">
-            <p className="text-xs text-ois-text-subtle italic">AI-powered suggestions deferred to v2.</p>
           </SectionCard>
 
           {/* BIA Context */}
