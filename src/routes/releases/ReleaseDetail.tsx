@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MoreVertical, ExternalLink, Tag, Check, Loader2, X, Clock, Lock, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -82,6 +82,7 @@ export const ReleaseDetail: React.FC = () => {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navigateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (message: string, variant: ToastState['variant'] = 'success') => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -93,8 +94,15 @@ export const ReleaseDetail: React.FC = () => {
     setPromoteModalOpen(false);
     setLocalStatus('deploying');
     showToast('Promoted to staging successfully');
-    setTimeout(() => navigate('/deployments'), 2000);
+    if (navigateTimerRef.current) clearTimeout(navigateTimerRef.current);
+    navigateTimerRef.current = setTimeout(() => navigate('/deployments'), 2000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (navigateTimerRef.current) clearTimeout(navigateTimerRef.current);
+    };
+  }, []);
 
   const handleCancelConfirm = () => {
     setCancelModalOpen(false);
@@ -436,7 +444,7 @@ export const ReleaseDetail: React.FC = () => {
           </p>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" size="sm" onClick={() => setCancelModalOpen(false)}>Go back</Button>
-            <Button size="sm" className="bg-ois-danger hover:bg-ois-danger/90 text-white" onClick={handleCancelConfirm}>
+            <Button variant="destructive" size="sm" onClick={handleCancelConfirm}>
               Yes, cancel release
             </Button>
           </div>
