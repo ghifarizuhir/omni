@@ -226,6 +226,7 @@ export const NewChange: React.FC = () => {
   const draftSavedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSaveDraft = () => {
+    localStorage.setItem('new-change-draft', JSON.stringify(form));
     if (draftSavedTimerRef.current) clearTimeout(draftSavedTimerRef.current);
     setDraftSaved(true);
     draftSavedTimerRef.current = setTimeout(() => setDraftSaved(false), 2000);
@@ -243,6 +244,19 @@ export const NewChange: React.FC = () => {
       return () => clearTimeout(t);
     }
   }, [submitted, navigate]);
+
+  // Restore draft on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('new-change-draft');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as FormState;
+        setForm(parsed);
+      } catch {
+        // ignore malformed data
+      }
+    }
+  }, []);
 
   // Cleanup draft saved timer on unmount
   useEffect(() => {
@@ -758,7 +772,7 @@ export const NewChange: React.FC = () => {
       <p className="text-xs text-ois-text-subtle mb-6">Navigating to change detail in 3 seconds…</p>
 
       <div className="flex gap-3">
-        <Button variant="outline" onClick={() => { setStep(0); setForm(INITIAL); setSubmitted(false); }}>
+        <Button variant="outline" onClick={() => { localStorage.removeItem('new-change-draft'); setStep(0); setForm(INITIAL); setSubmitted(false); }}>
           Submit another
         </Button>
         <Button onClick={() => navigate('/changes/CHG-2026-00092')}>
@@ -778,7 +792,11 @@ export const NewChange: React.FC = () => {
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
-    else { setSubmitted(true); setStep(4); }
+    else {
+      localStorage.removeItem('new-change-draft');
+      setSubmitted(true);
+      setStep(4);
+    }
   };
 
   return (
