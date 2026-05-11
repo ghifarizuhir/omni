@@ -28,7 +28,7 @@ const Toast: React.FC<ToastState> = ({ message, variant }) => (
   </div>
 );
 
-const StageCard: React.FC<{ stage: ReleaseStage; isCurrent: boolean }> = ({ stage, isCurrent }) => {
+const StageCard: React.FC<{ stage: ReleaseStage; isCurrent: boolean; onDeploy?: () => void }> = ({ stage, isCurrent, onDeploy }) => {
   const meta = stageStatusMeta[stage.status];
   const StatusIcon = stage.status === 'success' ? Check : stage.status === 'in_progress' ? Loader2 : stage.status === 'failed' || stage.status === 'rolled_back' ? X : Clock;
 
@@ -64,7 +64,13 @@ const StageCard: React.FC<{ stage: ReleaseStage; isCurrent: boolean }> = ({ stag
         </div>
       )}
       {stage.status === 'pending' && (
-        <Button variant="outline" size="sm" className="mt-3 h-7 text-xs w-full opacity-60" disabled>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-3 h-7 text-xs w-full"
+          disabled={!onDeploy}
+          onClick={onDeploy}
+        >
           Deploy to {stage.environment} →
         </Button>
       )}
@@ -78,6 +84,8 @@ export const ReleaseDetail: React.FC = () => {
   const release = getReleaseById(releaseId ?? '');
   const [activeTab, setActiveTab] = useState('overview');
   const [localStatus, setLocalStatus] = useState<ReleaseStatus | null>(null);
+  const [localStages, setLocalStages] = useState<ReleaseStage[]>(() => release?.stages ?? []);
+  const [deployIdx, setDeployIdx] = useState<number | null>(null);
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -325,8 +333,13 @@ export const ReleaseDetail: React.FC = () => {
           {/* Pipeline */}
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
-              {release.stages.map((stage, i) => (
-                <StageCard key={stage.id} stage={stage} isCurrent={i === release.currentStageIndex} />
+              {localStages.map((stage, i) => (
+                <StageCard
+                  key={stage.id}
+                  stage={stage}
+                  isCurrent={i === release.currentStageIndex}
+                  onDeploy={stage.status === 'pending' ? () => setDeployIdx(i) : undefined}
+                />
               ))}
             </div>
           </div>
@@ -446,6 +459,37 @@ export const ReleaseDetail: React.FC = () => {
             <Button variant="outline" size="sm" onClick={() => setCancelModalOpen(false)}>Go back</Button>
             <Button variant="destructive" size="sm" onClick={handleCancelConfirm}>
               Yes, cancel release
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Deploy to environment modal */}
+      <Modal
+        isOpen={deployIdx !== null}
+        onClose={() => setDeployIdx(null)}
+        title={deployIdx !== null ? `Deploy to ${localStages[deployIdx]?.environment}?` : ''}
+        size="sm"
+      >
+        <div className="py-4 space-y-3">
+          <p className="text-sm text-ois-text">
+            This will start a deployment to{' '}
+            <span className="font-semibold capitalize">{deployIdx !== null ? localStages[deployIdx]?.environment : ''}</span>.
+            The stage status will update to <span className="font-semibold">In Progress</span>.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setDeployIdx(null)}>Cancel</Button>
+            <Button size="sm" onClick={() => {
+              if (deployIdx === null) return;
+              setLocalStages(prev => prev.map((s, i) =>
+                i === deployIdx
+                  ? { ...s, status: 'in_progress' as const, startedAt: new Date().toISOString() }
+                  : s
+              ));
+              showToast(`Deployment to ${localStages[deployIdx]?.environment} started`);
+              setDeployIdx(null);
+            }}>
+              Confirm deploy
             </Button>
           </div>
         </div>
