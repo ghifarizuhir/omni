@@ -309,6 +309,25 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
   );
 };
 
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+interface ToastProps {
+  message: string;
+  variant?: 'success' | 'info';
+}
+
+const Toast: React.FC<ToastProps> = ({ message, variant = 'success' }) => (
+  <div
+    className={cn(
+      'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 pointer-events-none',
+      variant === 'success' ? 'bg-emerald-600 text-white' : 'bg-ois-primary text-white',
+    )}
+  >
+    {variant === 'success' && <CheckCircle2 size={15} />}
+    {message}
+  </div>
+);
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export const CABWorkspace: React.FC = () => {
@@ -318,6 +337,13 @@ export const CABWorkspace: React.FC = () => {
   const [votes, setVotes] = useState<Record<string, Record<string, CABVote>>>({});
   const [votingFor, setVotingFor] = useState<ChangeApproval | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [deferredIds, setDeferredIds] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<ToastProps | null>(null);
+
+  const showToast = (message: string, variant: ToastProps['variant'] = 'success') => {
+    setToast({ message, variant });
+    setTimeout(() => setToast(null), 2000);
+  };
 
   const selected = AGENDA[selectedIdx];
 
@@ -363,13 +389,18 @@ export const CABWorkspace: React.FC = () => {
                   className={cn(
                     'w-full text-left px-4 py-3 transition-colors',
                     i === selectedIdx ? 'bg-ois-primary/5 border-l-2 border-ois-primary' : 'hover:bg-ois-bg',
+                    deferredIds.has(c.id) && 'opacity-60',
                   )}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-mono text-[11px] font-bold text-ois-primary">{c.publicId.replace('CHG-2026-', 'CHG-')}</span>
-                    <RiskBadge risk={c.risk} size="sm" />
+                    {deferredIds.has(c.id) ? (
+                      <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">Deferred</span>
+                    ) : (
+                      <RiskBadge risk={c.risk} size="sm" />
+                    )}
                   </div>
-                  <p className="text-[11px] text-ois-text leading-snug line-clamp-2">{c.title}</p>
+                  <p className={cn('text-[11px] leading-snug line-clamp-2', deferredIds.has(c.id) ? 'text-ois-text-muted line-through' : 'text-ois-text')}>{c.title}</p>
                   <div className="flex gap-0.5 mt-1.5">
                     {c.approvals.map((a) => {
                       const v = getVote(c.id, a.id) ?? (a.decision !== 'pending' ? a.decision : 'pending');
@@ -406,7 +437,7 @@ export const CABWorkspace: React.FC = () => {
             >
               <Play size={12} /> {sessionStarted ? 'End session' : 'Start session'}
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => showToast('Export coming soon', 'info')}>
               <Download size={12} /> Export agenda
             </Button>
           </div>
@@ -434,7 +465,17 @@ export const CABWorkspace: React.FC = () => {
                 <ChevronLeft size={14} /> Previous
               </Button>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => {
+                    setDeferredIds((ids) => new Set([...ids, selected.id]));
+                    if (selectedIdx < AGENDA.length - 1) {
+                      setSelectedIdx(selectedIdx + 1);
+                    }
+                  }}
+                >
                   <SkipForward size={12} /> Defer to next session
                 </Button>
               </div>
@@ -527,9 +568,13 @@ export const CABWorkspace: React.FC = () => {
               [selected.id]: { ...(v[selected.id] ?? {}), [votingFor.id]: decision },
             }));
             setVotingFor(null);
+            showToast('Vote recorded');
           }}
         />
       )}
+
+      {/* Toast */}
+      {toast && <Toast message={toast.message} variant={toast.variant} />}
     </div>
   );
 };
