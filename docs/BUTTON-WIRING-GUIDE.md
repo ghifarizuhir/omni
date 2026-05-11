@@ -360,9 +360,9 @@ All 24 dead buttons wired in commit `9ff9c3c`. See `src/routes/incidents/`.
 
 | Page | Button | Priority | Approach | Status |
 |------|--------|----------|----------|--------|
-| `Dashboard.tsx` | Last 24h time filter | 🟡 | Local dropdown state + filter metrics by time range | ❌ |
-| `Dashboard.tsx` | Refresh | 🟡 | Re-initialize local state from mock (or simulate a brief loading state) | ❌ |
-| `Dashboard.tsx` | Action Required primary actions | 🔴 | Route each inbox item's `primaryAction` to the correct handler based on item type (e.g. approval → navigate to approval page, incident update → navigate to incident) | ❌ |
+| `Dashboard.tsx` | Last 24h time filter | 🟡 | Dropdown (24h/7d/30d) filters `filteredActiveIncidents` + `filteredInboxItems` via useMemo | ✅ |
+| `Dashboard.tsx` | Refresh | 🟡 | Increments `refreshCount` (re-runs memos) + shows "Refreshed just now" | ✅ |
+| `Dashboard.tsx` | Action Required primary actions | 🔴 | `navigate(item.primaryAction?.navigateTo ?? item.sourceUrl)` | ✅ |
 
 ---
 
