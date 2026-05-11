@@ -494,18 +494,9 @@ export const RequestDetail: React.FC = () => {
   // ── Comments tab ─────────────────────────────────────────────────────────────
   const CommentsTab = (
     <div className="space-y-4">
-      {/* Placeholder comment */}
-      <div className="flex gap-3">
-        <Avatar name={req.requesterName} size="sm" className="shrink-0" />
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-semibold text-ois-text">{req.requesterName}</span>
-            <span className="text-xs text-ois-text-subtle">{req.submittedAt ? formatRelative(req.submittedAt) : ''}</span>
-          </div>
-          <div className="text-sm text-ois-text-muted bg-ois-surface-muted rounded-lg px-3 py-2.5">
-            Adding context: this is for investigating the reconciliation issue (case #1247). I'll only run SELECT queries with LIMIT clauses.
-          </div>
-        </div>
+      {/* Empty state - no comments yet */}
+      <div className="flex flex-col items-center py-8 text-center">
+        <p className="text-sm text-ois-text-subtle">No comments yet.</p>
       </div>
 
       {/* New comment box */}
