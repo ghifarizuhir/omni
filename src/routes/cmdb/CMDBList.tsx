@@ -28,8 +28,8 @@ const Toast: React.FC<ToastState> = ({ message }) => (
 );
 
 type ViewMode = 'tree' | 'list';
-type HealthFilter = 'all' | 'operational' | 'degraded' | 'down' | 'maintenance';
-const HEALTH_CYCLE: HealthFilter[] = ['all', 'operational', 'degraded', 'down', 'maintenance'];
+type HealthFilter = 'all' | 'operational' | 'degraded' | 'partial_outage' | 'major_outage' | 'maintenance';
+const HEALTH_CYCLE: HealthFilter[] = ['all', 'operational', 'degraded', 'partial_outage', 'major_outage', 'maintenance'];
 
 // Derive the service IDs that actually appear in CI data
 const SERVICE_IDS = mockServices.map(s => s.id);
