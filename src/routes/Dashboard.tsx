@@ -260,9 +260,9 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center gap-2 font-bold text-ois-text">
               Action Required
             </div>
-            <button className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
+            <Link to="/inbox" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
               Open Inbox <ArrowRight size={12} />
-            </button>
+            </Link>
           </CardHeader>
           <div className="p-3 bg-ois-surface-muted/50 border-b border-ois-border">
             <div className="text-xs font-medium text-ois-text-muted">
@@ -360,7 +360,7 @@ export const Dashboard: React.FC = () => {
               <div className="flex items-center gap-2 font-bold text-ois-text text-[14px]">
                 On-Call Right Now
               </div>
-              <Link to="/oncall" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
+              <Link to="/on-call" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
                 View schedule <ArrowRight size={12} />
               </Link>
             </CardHeader>
