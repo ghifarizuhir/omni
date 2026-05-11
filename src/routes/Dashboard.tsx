@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { KPICard } from '../components/ui/KPICard';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
@@ -28,10 +28,47 @@ import { ServiceHealthStatus, Severity } from '../types';
 
 // Inbox items now carry sourceUrl directly
 
+type DashboardTimeRange = '24h' | '7d' | '30d';
+
+const DASHBOARD_RANGE_LABELS: Record<DashboardTimeRange, string> = {
+  '24h': 'Last 24h',
+  '7d':  'Last 7 days',
+  '30d': 'Last 30 days',
+};
+
+const DASHBOARD_REFERENCE_DATE = new Date('2026-05-08');
+
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const activeIncidents = getActiveIncidents();
   const majorIncidents = getMajorIncidents().filter(i => !['resolved', 'closed'].includes(i.status));
+
+  const [timeRange, setTimeRange]         = useState<DashboardTimeRange>('24h');
+  const [timeRangeOpen, setTimeRangeOpen] = useState(false);
+  const [refreshCount, setRefreshCount]   = useState(0);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+
+  const filteredActiveIncidents = useMemo(() => {
+    const ms =
+      timeRange === '24h' ? 86_400_000 :
+      timeRange === '7d'  ? 7  * 86_400_000 :
+                            30 * 86_400_000;
+    const cutoff = new Date(DASHBOARD_REFERENCE_DATE.getTime() - ms);
+    return getActiveIncidents().filter(
+      i => new Date(i.createdAt).getTime() >= cutoff.getTime()
+    );
+  }, [timeRange, refreshCount]);
+
+  const filteredInboxItems = useMemo(() => {
+    const ms =
+      timeRange === '24h' ? 86_400_000 :
+      timeRange === '7d'  ? 7  * 86_400_000 :
+                            30 * 86_400_000;
+    const cutoff = new Date(DASHBOARD_REFERENCE_DATE.getTime() - ms);
+    return mockInboxItems.filter(
+      item => new Date(item.receivedAt).getTime() >= cutoff.getTime()
+    );
+  }, [timeRange, refreshCount]);
   
   // Section A Logic
   const getStatusColor = (status: ServiceHealthStatus) => {
@@ -46,7 +83,7 @@ export const Dashboard: React.FC = () => {
   };
 
   // Section C Logic: Top 3 inbox items (urgent first, then normal by oldest dueAt)
-  const sortedInbox = [...mockInboxItems].sort((a, b) => {
+  const sortedInbox = [...filteredInboxItems].sort((a, b) => {
     if (a.priority === 'urgent' && b.priority !== 'urgent') return -1;
     if (a.priority !== 'urgent' && b.priority === 'urgent') return 1;
     return new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
@@ -88,12 +125,52 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2 h-9 border-ois-border-strong">
-            Last 24h <ChevronDown size={14} />
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2 h-9 border-ois-border-strong">
-            Refresh <RefreshCw size={14} />
-          </Button>
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTimeRangeOpen(v => !v)}
+              className="gap-1.5"
+            >
+              {DASHBOARD_RANGE_LABELS[timeRange]}
+              <ChevronDown size={13} className={timeRangeOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+            </Button>
+            {timeRangeOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setTimeRangeOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[150px]">
+                  {(Object.entries(DASHBOARD_RANGE_LABELS) as [DashboardTimeRange, string][]).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => { setTimeRange(key); setTimeRangeOpen(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors ${timeRange === key ? 'font-semibold text-ois-primary' : 'text-ois-text'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-0.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                setRefreshCount(c => c + 1);
+                setLastRefreshed(new Date());
+              }}
+            >
+              <RefreshCw size={14} />
+              Refresh
+            </Button>
+            {lastRefreshed && (
+              <span className="text-[11px] text-ois-text-subtle">
+                Refreshed just now
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -139,14 +216,14 @@ export const Dashboard: React.FC = () => {
 
       {/* Section B: KPI Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard 
-          label="Open Incidents" 
-          value={activeIncidents.length} 
-          trend={2} 
-          trendLabel="+2 from yest" 
+        <KPICard
+          label="Open Incidents"
+          value={filteredActiveIncidents.length}
+          trend={2}
+          trendLabel="+2 from yest"
           trendBetter="low"
-          subDetail={`${activeIncidents.filter(i => i.severity === 'P1').length} P1 · ${activeIncidents.filter(i => i.severity === 'P2').length} P2`}
-          icon={<AlertCircle className="w-5 h-5" />} 
+          subDetail={`${filteredActiveIncidents.filter(i => i.severity === 'P1').length} P1 · ${filteredActiveIncidents.filter(i => i.severity === 'P2').length} P2`}
+          icon={<AlertCircle className="w-5 h-5" />}
         />
         <KPICard 
           label="MTTR (24h)" 
@@ -207,7 +284,7 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center gap-2 font-bold text-ois-text">
               Active Incidents
               <Badge variant="neutral" className="ml-1 bg-ois-surface-muted text-ois-text-muted">
-                {activeIncidents.length}
+                {filteredActiveIncidents.length}
               </Badge>
             </div>
             <Link to="/incidents" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
@@ -215,7 +292,7 @@ export const Dashboard: React.FC = () => {
             </Link>
           </CardHeader>
           <div className="divide-y divide-ois-border">
-            {activeIncidents.slice(0, 5).map(incident => (
+            {filteredActiveIncidents.slice(0, 5).map(incident => (
               <div 
                 key={incident.id} 
                 onClick={() => navigate(`/incidents/${incident.publicId}`)}
@@ -266,7 +343,7 @@ export const Dashboard: React.FC = () => {
           </CardHeader>
           <div className="p-3 bg-ois-surface-muted/50 border-b border-ois-border">
             <div className="text-xs font-medium text-ois-text-muted">
-              {mockInboxItems.filter(i => i.priority === 'urgent').length} urgent · {mockInboxItems.filter(i => i.priority === 'normal').length} normal
+              {filteredInboxItems.filter(i => i.priority === 'urgent').length} urgent · {filteredInboxItems.filter(i => i.priority === 'normal').length} normal
             </div>
           </div>
           <div className="divide-y divide-ois-border">
