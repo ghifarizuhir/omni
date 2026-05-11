@@ -164,10 +164,10 @@ export const IncidentAnalytics: React.FC = () => {
   };
 
   return (
-    <div className="-mx-6 -mt-6">
+    <div className="-mx-6 -mt-6 flex flex-col" style={{ height: 'calc(100vh - 3.5rem)' }}>
 
-      {/* ── Nav row — mirrors IncidentDetail header pattern exactly ─────────────── */}
-      <div className="sticky top-0 z-30 bg-white border-b border-ois-border">
+      {/* ── Nav row — shrink-0 keeps it pinned; no sticky needed in flex-column layout ── */}
+      <div className="bg-white border-b border-ois-border shrink-0">
         <div className="flex items-center justify-between px-6 py-2">
           <Link
             to="/incidents"
@@ -209,8 +209,8 @@ export const IncidentAnalytics: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Scrollable content ────────────────────────────────────────────────── */}
-      <div className="px-6 py-6 space-y-6 pb-10">
+      {/* ── Scrollable content — only this region scrolls ────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-10">
 
         {/* Title section — accent stripe + module label + h1 */}
         <div className="flex items-start gap-3">
