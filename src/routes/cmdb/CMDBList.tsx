@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Search, Plus, Download, RefreshCw, Settings, Grid, List as ListIcon, 
-  SlidersHorizontal, ChevronDown
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import {
+  Search, Plus, Download, RefreshCw, Settings, Grid, List as ListIcon,
+  SlidersHorizontal, ChevronDown, CheckCircle2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { mockCIs, mockCIRelationships, mockServices } from '@/src/mocks';
@@ -18,7 +18,21 @@ import { CIServiceGroup } from '../../components/cmdb/CIServiceGroup';
 import { CITreeNode, TreeDataNode } from '../../components/cmdb/CITreeNode';
 import { ciTypeMeta } from '../../lib/constants';
 
+// ─── Toast ────────────────────────────────────────────────────────────────────
+interface ToastState { message: string }
+const Toast: React.FC<ToastState> = ({ message }) => (
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 pointer-events-none bg-ois-primary text-white">
+    <CheckCircle2 size={15} />
+    {message}
+  </div>
+);
+
 type ViewMode = 'tree' | 'list';
+type HealthFilter = 'all' | 'operational' | 'degraded' | 'down' | 'maintenance';
+const HEALTH_CYCLE: HealthFilter[] = ['all', 'operational', 'degraded', 'down', 'maintenance'];
+
+// Derive the service IDs that actually appear in CI data
+const SERVICE_IDS = mockServices.map(s => s.id);
 
 export const CMDBList: React.FC = () => {
   const navigate = useNavigate();
@@ -26,23 +40,37 @@ export const CMDBList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<CIType | 'all'>('all');
   const [critFilter, setCritFilter] = useState<Criticality | 'all'>('all');
-  const [expandedServices, setExpandedServices] = useState<Record<string, boolean>>({
-    'svc-001': true,
-    'svc-002': true,
-    'svc-003': true,
-    'unassigned': true
-  });
+  const [healthFilter, setHealthFilter] = useState<HealthFilter>('all');
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (message: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ message });
+    toastTimer.current = setTimeout(() => setToast(null), 2000);
+  };
+
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
+
+  const initialExpanded = useMemo<Record<string, boolean>>(() => {
+    const acc: Record<string, boolean> = { unassigned: true };
+    SERVICE_IDS.forEach(id => { acc[id] = true; });
+    return acc;
+  }, []);
+
+  const [expandedServices, setExpandedServices] = useState<Record<string, boolean>>(initialExpanded);
 
   const filteredCIs = useMemo(() => {
     return mockCIs.filter(ci => {
-      const matchesSearch = ci.name.toLowerCase().includes(search.toLowerCase()) || 
+      const matchesSearch = ci.name.toLowerCase().includes(search.toLowerCase()) ||
                            ci.publicId.toLowerCase().includes(search.toLowerCase()) ||
                            JSON.stringify(ci.attributes).toLowerCase().includes(search.toLowerCase());
       const matchesType = typeFilter === 'all' || ci.type === typeFilter;
       const matchesCrit = critFilter === 'all' || ci.criticality === critFilter;
-      return matchesSearch && matchesType && matchesCrit;
+      const matchesHealth = healthFilter === 'all' || ci.health === healthFilter;
+      return matchesSearch && matchesType && matchesCrit && matchesHealth;
     });
-  }, [search, typeFilter, critFilter]);
+  }, [search, typeFilter, critFilter, healthFilter]);
 
   const toggleService = (id: string) => {
     setExpandedServices(prev => ({ ...prev, [id]: !prev[id] }));
@@ -66,7 +94,7 @@ export const CMDBList: React.FC = () => {
       };
     };
 
-    const groupedServices = mockServices.filter(s => ['svc-001', 'svc-002', 'svc-003'].includes(s.id));
+    const groupedServices = mockServices;
     const serviceTrees = groupedServices.map(svc => {
       const apps = filteredCIs.filter(ci => ci.serviceId === svc.id && ci.type === 'application');
       return {
@@ -127,14 +155,14 @@ export const CMDBList: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-ois-text">CMDB Explorer</h1>
           <p className="text-sm text-ois-text-muted font-medium mt-1">
-            {mockCIs.length} configuration items · {mockCIRelationships.length} relationships · Last discovery: 12m ago
+            {mockCIs.length} configuration items · {mockCIRelationships.length} relationships · Last updated {formatRelative([...mockCIs].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]?.updatedAt ?? new Date())}
           </p>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="primary" size="sm" className="gap-2 h-9 px-4">
+           <Button variant="primary" size="sm" className="gap-2 h-9 px-4" onClick={() => showToast('Create CI form coming soon')}>
              <Plus size={16} /> Add CI
            </Button>
-           <Button variant="outline" size="sm" className="h-9 px-3 border-ois-border-strong bg-white">
+           <Button variant="outline" size="sm" className="h-9 px-3 border-ois-border-strong bg-white" onClick={() => showToast('Import coming soon')}>
              Import
            </Button>
            <div className="w-px h-6 bg-ois-border mx-1" />
@@ -168,13 +196,22 @@ export const CMDBList: React.FC = () => {
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="gap-2 h-10 border-ois-border-strong bg-white whitespace-nowrap">
-            Status <ChevronDown size={14} />
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn("gap-2 h-10 border-ois-border-strong bg-white whitespace-nowrap", healthFilter !== 'all' && "border-ois-primary text-ois-primary")}
+            onClick={() => {
+              const idx = HEALTH_CYCLE.indexOf(healthFilter);
+              setHealthFilter(HEALTH_CYCLE[(idx + 1) % HEALTH_CYCLE.length]);
+            }}
+          >
+            {healthFilter === 'all' ? 'Status' : healthFilter.charAt(0).toUpperCase() + healthFilter.slice(1)}
+            <ChevronDown size={14} />
           </Button>
-          {(search || typeFilter !== 'all' || critFilter !== 'all') && (
-            <button 
+          {(search || typeFilter !== 'all' || critFilter !== 'all' || healthFilter !== 'all') && (
+            <button
               className="text-xs font-bold text-ois-primary hover:underline ml-2"
-              onClick={() => { setSearch(''); setTypeFilter('all'); setCritFilter('all'); }}
+              onClick={() => { setSearch(''); setTypeFilter('all'); setCritFilter('all'); setHealthFilter('all'); }}
             >
               Clear
             </button>
@@ -228,7 +265,7 @@ export const CMDBList: React.FC = () => {
             <SlidersHorizontal size={32} className="mx-auto text-ois-text-subtle mb-4" />
             <h3 className="text-lg font-bold text-ois-text mb-1">No matching CIs</h3>
             <p className="text-sm text-ois-text-muted mb-6">Try adjusting your filters or search terms.</p>
-            <Button variant="outline" onClick={() => { setSearch(''); setTypeFilter('all'); setCritFilter('all'); }}>Clear filters</Button>
+            <Button variant="outline" onClick={() => { setSearch(''); setTypeFilter('all'); setCritFilter('all'); setHealthFilter('all'); }}>Clear filters</Button>
         </Card>
       ) : viewMode === 'tree' ? (
         <div className="space-y-4">
@@ -281,6 +318,8 @@ export const CMDBList: React.FC = () => {
           </div>
         </Card>
       )}
+
+      {toast && <Toast message={toast.message} />}
     </div>
   );
 };
