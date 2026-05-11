@@ -208,7 +208,7 @@ const RCASummaryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
 
 // ── Related incidents tab ─────────────────────────────────────────────────────
 
-const RelatedIncidentsTab: React.FC<{ problem: Problem }> = ({ problem }) => {
+const RelatedIncidentsTab: React.FC<{ problem: Problem; onLinkIncidents: () => void }> = ({ problem, onLinkIncidents }) => {
   const incidents = mockIncidents.filter(i =>
     problem.relatedIncidentIds.includes(i.publicId)
   );
@@ -218,7 +218,7 @@ const RelatedIncidentsTab: React.FC<{ problem: Problem }> = ({ problem }) => {
       <div className="flex flex-col items-center py-16 gap-3 text-center">
         <AlertTriangle size={32} className="text-ois-text-subtle" />
         <p className="text-sm font-medium text-ois-text">No related incidents linked yet</p>
-        <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" onClick={onLinkIncidents}>
           <Plus size={13} className="mr-1.5" />
           Link incidents
         </Button>
@@ -230,7 +230,7 @@ const RelatedIncidentsTab: React.FC<{ problem: Problem }> = ({ problem }) => {
     <div className="space-y-3">
       <div className="flex justify-between items-center">
         <p className="text-xs text-ois-text-muted">{incidents.length} incident{incidents.length !== 1 ? 's' : ''} attributed to this problem</p>
-        <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" onClick={onLinkIncidents}>
           <Plus size={13} className="mr-1.5" />
           Link more incidents
         </Button>
@@ -666,7 +666,7 @@ export const ProblemDetail: React.FC = () => {
             </div>
 
             {/* Tab 2: Related Incidents */}
-            <RelatedIncidentsTab problem={problem} />
+            <RelatedIncidentsTab problem={problem} onLinkIncidents={() => setLinkIncidentsOpen(true)} />
 
             {/* Tab 3: RCA */}
             <RCASummaryTab problem={problem} />
@@ -834,8 +834,14 @@ export const ProblemDetail: React.FC = () => {
                   Edit known error
                 </button>
               )}
+              <button
+                onClick={() => setLinkIncidentsOpen(true)}
+                className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2"
+              >
+                <Plus size={13} className="text-ois-text-muted" />
+                Link incidents
+              </button>
               {[
-                { icon: Plus, label: 'Link incidents' },
                 { icon: Activity, label: 'Open RCA workspace', to: `/problems/${problem.publicId}/rca` },
                 { icon: Wrench, label: 'Link change' },
                 { icon: BookOpen, label: 'Suggest KB article' },
@@ -877,6 +883,22 @@ export const ProblemDetail: React.FC = () => {
         isOpen={promoteOpen}
         onClose={() => setPromoteOpen(false)}
         onPromote={handlePromote}
+      />
+      <LinkIncidentsModal
+        problem={problem!}
+        isOpen={linkIncidentsOpen}
+        onClose={() => setLinkIncidentsOpen(false)}
+        onLink={newPublicIds =>
+          setProblem(prev =>
+            prev
+              ? {
+                  ...prev,
+                  relatedIncidentIds: [...new Set([...prev.relatedIncidentIds, ...newPublicIds])],
+                  relatedIncidentCount: prev.relatedIncidentCount + newPublicIds.length,
+                }
+              : prev
+          )
+        }
       />
     </div>
   );
