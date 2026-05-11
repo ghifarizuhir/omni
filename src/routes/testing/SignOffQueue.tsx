@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ClipboardCheck, Search, X } from 'lucide-react';
+import { ClipboardCheck, Search, X, Flame, AlertTriangle, ClipboardList } from 'lucide-react';
 import { SignOff, SignOffStatus, SignOffType } from '../../types/testing';
 import { mockSignOffs, getActiveSignOffs } from '../../mocks/signOffs';
 import { SignOffCard } from '../../components/testing/SignOffCard';
@@ -42,6 +42,7 @@ export const SignOffQueue: React.FC = () => {
 
   const [approveTarget, setApproveTarget] = useState<SignOff | null>(null);
   const [rejectTarget, setRejectTarget] = useState<SignOff | null>(null);
+  const [localStatuses, setLocalStatuses] = useState<Map<string, 'approved' | 'rejected'>>(new Map());
 
   // Header counts
   const totalCount = mockSignOffs.length;
@@ -69,7 +70,7 @@ export const SignOffQueue: React.FC = () => {
   }, []);
 
   const filteredSignOffs = useMemo(() => {
-    let results = [...mockSignOffs];
+    let results = mockSignOffs.filter(s => !localStatuses.has(s.publicId));
 
     // Quick filter takes precedence over individual filters
     if (quickFilter === 'myPending') {
@@ -121,7 +122,7 @@ export const SignOffQueue: React.FC = () => {
       if (a.status !== 'pending' && b.status === 'pending') return 1;
       return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
     });
-  }, [search, typeFilter, statusFilter, approverFilter, slaFilter, quickFilter]);
+  }, [search, typeFilter, statusFilter, approverFilter, slaFilter, quickFilter, localStatuses]);
 
   const handleReset = () => {
     setSearch('');
@@ -234,7 +235,7 @@ export const SignOffQueue: React.FC = () => {
               : 'bg-ois-surface text-ois-text border-ois-border hover:border-[#1F4FD4] hover:text-[#1F4FD4]'
           )}
         >
-          <span>🔥</span> My pending ({myPendingCount})
+          <Flame size={14} /> My pending ({myPendingCount})
         </button>
         <button
           onClick={() => setQuickFilter(quickFilter === 'slaAtRisk' ? null : 'slaAtRisk')}
@@ -245,7 +246,7 @@ export const SignOffQueue: React.FC = () => {
               : 'bg-ois-surface text-ois-text border-ois-border hover:border-[#DC6803] hover:text-[#DC6803]'
           )}
         >
-          <span>⚠</span> SLA at risk ({slaAtRiskCount})
+          <AlertTriangle size={14} /> SLA at risk ({slaAtRiskCount})
         </button>
         <button
           onClick={() => setQuickFilter(quickFilter === 'releaseValidations' ? null : 'releaseValidations')}
@@ -256,7 +257,7 @@ export const SignOffQueue: React.FC = () => {
               : 'bg-ois-surface text-ois-text border-ois-border hover:border-[#1F4FD4] hover:text-[#1F4FD4]'
           )}
         >
-          <span>📋</span> Release validations ({releaseValidationsCount})
+          <ClipboardList size={14} /> Release validations ({releaseValidationsCount})
         </button>
       </div>
 
@@ -286,7 +287,10 @@ export const SignOffQueue: React.FC = () => {
           signOff={approveTarget}
           isOpen={true}
           onClose={() => setApproveTarget(null)}
-          onConfirm={() => setApproveTarget(null)}
+          onConfirm={() => {
+            setLocalStatuses(prev => new Map(prev).set(approveTarget.publicId, 'approved'));
+            setApproveTarget(null);
+          }}
         />
       )}
 
@@ -296,7 +300,10 @@ export const SignOffQueue: React.FC = () => {
           signOff={rejectTarget}
           isOpen={true}
           onClose={() => setRejectTarget(null)}
-          onConfirm={() => setRejectTarget(null)}
+          onConfirm={() => {
+            setLocalStatuses(prev => new Map(prev).set(rejectTarget.publicId, 'rejected'));
+            setRejectTarget(null);
+          }}
         />
       )}
     </div>
