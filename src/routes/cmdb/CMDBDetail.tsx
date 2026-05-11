@@ -24,6 +24,7 @@ import { TrendIndicator } from '@/src/components/capacity/TrendIndicator';
 import { ChangeStatusPill } from '@/src/components/changes/ChangeStatusPill';
 import { RiskBadge } from '@/src/components/changes/RiskBadge';
 import { MonitoringRule } from '../../types/monitoring';
+import { ConfigurationItem } from '../../types/ci';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -42,10 +43,15 @@ export const CMDBDetail: React.FC = () => {
   const navigate = useNavigate();
   const [showJson, setShowJson] = useState(false);
 
-  const ci = useMemo(() => mockCIs.find(c => c.id === ciId || c.publicId === ciId), [ciId]);
+  const rawCI = useMemo(() => mockCIs.find(c => c.id === ciId || c.publicId === ciId), [ciId]);
+  const [ci, setCi] = useState<ConfigurationItem | null>(() => mockCIs.find(c => c.id === ciId || c.publicId === ciId) ?? null);
   const service = useMemo(() => mockServices.find(s => s.id === ci?.serviceId), [ci]);
 
-  if (!ci) {
+  const [editMode, setEditMode] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [editDraft, setEditDraft] = useState({ name: '', status: 'active', environment: 'production', criticality: 'critical' });
+
+  if (!rawCI || !ci) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <h2 className="text-xl font-bold text-ois-text">CI Not Found</h2>
@@ -66,12 +72,53 @@ export const CMDBDetail: React.FC = () => {
           <ArrowLeft size={16} /> Back to CMDB
         </button>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2 h-9 bg-white border-ois-border-strong">
-            <Edit2 size={14} /> Edit
-          </Button>
-          <Button variant="outline" size="sm" className="h-9 w-9 p-0 bg-white border-ois-border-strong">
-            <MoreHorizontal size={18} />
-          </Button>
+          {editMode ? (
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setEditMode(false)}>Cancel</Button>
+              <Button variant="primary" size="sm" onClick={() => {
+                setCi(prev => prev ? { ...prev, name: editDraft.name, status: editDraft.status as any, environment: editDraft.environment as any, criticality: editDraft.criticality as any } : prev);
+                setEditMode(false);
+              }}>Save</Button>
+            </div>
+          ) : (
+            <Button variant="outline" size="sm" className="gap-2 h-9 bg-white border-ois-border-strong"
+              onClick={() => {
+                setEditDraft({ name: ci.name, status: ci.status, environment: ci.environment, criticality: ci.criticality });
+                setEditMode(true);
+              }}
+            >
+              <Edit2 size={14} /> Edit
+            </Button>
+          )}
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 w-9 p-0 bg-white border-ois-border-strong"
+              onClick={() => setMoreOpen(v => !v)}
+            >
+              <MoreHorizontal size={18} />
+            </Button>
+            {moreOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMoreOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[160px]">
+                  {[
+                    { label: 'Copy CI ID', action: () => navigator.clipboard.writeText(ci.publicId) },
+                    { label: 'Copy link', action: () => navigator.clipboard.writeText(window.location.href) },
+                  ].map(item => (
+                    <button
+                      key={item.label}
+                      onClick={() => { item.action(); setMoreOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted text-ois-text"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -83,7 +130,16 @@ export const CMDBDetail: React.FC = () => {
               <span className="font-mono font-bold text-xs bg-ois-surface-muted px-1.5 py-0.5 rounded text-ois-text-subtle">{ci.publicId}</span>
               <CIStatusBadge status={ci.status} />
             </div>
-            <h1 className="text-2xl font-bold text-ois-text leading-tight">{ci.name}</h1>
+            {editMode ? (
+              <input
+                autoFocus
+                value={editDraft.name}
+                onChange={e => setEditDraft(d => ({ ...d, name: e.target.value }))}
+                className="text-2xl font-bold text-ois-text leading-tight border-b-2 border-ois-primary bg-transparent focus:outline-none w-full max-w-sm"
+              />
+            ) : (
+              <h1 className="text-2xl font-bold text-ois-text leading-tight">{ci.name}</h1>
+            )}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ois-text-muted font-medium">
               <span className="flex items-center gap-1"><Globe size={14} /> {service?.name || 'Unassigned'}</span>
               <span>•</span>
@@ -150,7 +206,7 @@ export const CMDBDetail: React.FC = () => {
               <Card>
                 <div className="p-4 border-b border-ois-border bg-ois-surface-muted/20 flex justify-between items-center">
                   <h3 className="text-sm font-bold text-ois-text uppercase tracking-wider opacity-60">Activity</h3>
-                  <button onClick={() => {}} className="text-[10px] font-bold text-ois-primary uppercase hover:underline">View All</button>
+                  <button onClick={() => navigate(`/cmdb/audit?ci=${ci.publicId}`)} className="text-[10px] font-bold text-ois-primary uppercase hover:underline">View All</button>
                 </div>
                 <div className="p-4 scale-95 origin-top">
                   <CIAuditTimeline entries={mockCIAuditEntries.filter(e => e.ciId === ci.id).slice(0, 5)} showCIInfo={false} />
