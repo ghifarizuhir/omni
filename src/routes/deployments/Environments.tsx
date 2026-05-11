@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ArrowRight, Calendar, ChevronDown } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Calendar } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
 import { EnvironmentCard } from '../../components/deployments/EnvironmentCard';
 import { RecentDeploymentsTable } from '../../components/deployments/RecentDeploymentsTable';
@@ -99,14 +99,14 @@ export const Environments: React.FC = () => {
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#101828]">Environments</h1>
-          <div className="flex items-center gap-3 mt-1 text-sm text-[#475467]">
+          <h1 className="text-2xl font-bold text-ois-text">Environments</h1>
+          <div className="flex items-center gap-3 mt-1 text-sm text-ois-text-muted">
             <span>{envCount} environments</span>
-            <span className="text-[#D0D5DD]">·</span>
+            <span className="text-ois-border-strong">·</span>
             <span>{inProgressCount} deployment{inProgressCount !== 1 ? 's' : ''} in progress</span>
             {prodEnv && (
               <>
-                <span className="text-[#D0D5DD]">·</span>
+                <span className="text-ois-border-strong">·</span>
                 <span className="flex items-center gap-1.5">
                   Production:
                   <span
@@ -121,10 +121,7 @@ export const Environments: React.FC = () => {
             )}
           </div>
         </div>
-        <button className="flex items-center gap-1.5 text-sm text-[#475467] border border-[#D0D5DD] rounded-lg px-3 py-2 hover:bg-[#F9FAFB] transition-colors">
-          Last 7d
-          <ChevronDown size={14} />
-        </button>
+        <span className="text-sm text-ois-text-muted">Last 7d</span>
       </div>
 
       {/* Main layout */}
@@ -140,13 +137,13 @@ export const Environments: React.FC = () => {
 
           {/* Recent deployments table */}
           <Card>
-            <div className="px-5 pt-4 pb-3 border-b border-[#EAECF0]">
+            <div className="px-5 pt-4 pb-3 border-b border-ois-border">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-wider">
                   Recent Deployments (Last 7 Days)
                 </h2>
                 <div className="flex items-center gap-3">
-                  <select className="text-xs border border-[#D0D5DD] rounded-md px-2 py-1 text-[#475467] bg-white focus:outline-none focus:ring-1 focus:ring-[#1F4FD4]">
+                  <select className="text-xs border border-ois-border-strong rounded-md px-2 py-1 text-ois-text-muted bg-white focus:outline-none focus:ring-1 focus:ring-ois-primary">
                     <option>All envs</option>
                     {mockEnvironments.map(e => (
                       <option key={e.id} value={e.name}>
@@ -154,7 +151,7 @@ export const Environments: React.FC = () => {
                       </option>
                     ))}
                   </select>
-                  <select className="text-xs border border-[#D0D5DD] rounded-md px-2 py-1 text-[#475467] bg-white focus:outline-none focus:ring-1 focus:ring-[#1F4FD4]">
+                  <select className="text-xs border border-ois-border-strong rounded-md px-2 py-1 text-ois-text-muted bg-white focus:outline-none focus:ring-1 focus:ring-ois-primary">
                     <option>All statuses</option>
                     <option>success</option>
                     <option>failed</option>
@@ -165,7 +162,7 @@ export const Environments: React.FC = () => {
                   </select>
                   <Link
                     to="/deployments"
-                    className="text-xs text-[#1F4FD4] hover:underline flex items-center gap-1"
+                    className="text-xs text-ois-primary hover:underline flex items-center gap-1"
                   >
                     View all <ArrowRight size={12} />
                   </Link>
@@ -182,34 +179,34 @@ export const Environments: React.FC = () => {
         <div className="w-72 shrink-0 space-y-4 sticky top-4 self-start">
           {/* Deploy Health card */}
           <Card>
-            <div className="px-4 pt-4 pb-2 border-b border-[#EAECF0]">
+            <div className="px-4 pt-4 pb-2 border-b border-ois-border">
               <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-wider">
                 Deploy Health
               </h2>
             </div>
             <CardBody className="pt-3 pb-4 px-4 space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#475467]">Success rate (7d)</span>
-                <span className="font-bold text-[#101828]">
+                <span className="text-ois-text-muted">Success rate (7d)</span>
+                <span className="font-bold text-ois-text">
                   {(successRate7d * 100).toFixed(0)}%
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#475467]">Avg duration</span>
-                <span className="font-bold text-[#101828]">{formatDuration(avgDurationSec)}</span>
+                <span className="text-ois-text-muted">Avg duration</span>
+                <span className="font-bold text-ois-text">{formatDuration(avgDurationSec)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#475467]">Active failures</span>
+                <span className="text-ois-text-muted">Active failures</span>
                 <span
-                  className={`font-bold ${activeFailures > 0 ? 'text-[#B42318]' : 'text-[#101828]'}`}
+                  className={`font-bold ${activeFailures > 0 ? 'text-ois-sev-p1' : 'text-ois-text'}`}
                 >
                   {activeFailures}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[#475467]">Rollbacks (7d)</span>
+                <span className="text-ois-text-muted">Rollbacks (7d)</span>
                 <span
-                  className={`font-bold ${rollbacks7d > 0 ? 'text-[#DC6803]' : 'text-[#101828]'}`}
+                  className={`font-bold ${rollbacks7d > 0 ? 'text-ois-sev-p2' : 'text-ois-text'}`}
                 >
                   {rollbacks7d}
                 </span>
@@ -219,27 +216,27 @@ export const Environments: React.FC = () => {
 
           {/* Freeze Windows card */}
           <Card>
-            <div className="px-4 pt-4 pb-2 border-b border-[#EAECF0]">
+            <div className="px-4 pt-4 pb-2 border-b border-ois-border">
               <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-wider">
                 Freeze Windows
               </h2>
             </div>
             <CardBody className="pt-3 pb-4 px-4 space-y-3">
               {freezeEnvs.length === 0 ? (
-                <p className="text-xs text-[#98A2B3]">No active freeze windows</p>
+                <p className="text-xs text-ois-text-subtle">No active freeze windows</p>
               ) : (
                 freezeEnvs.map(env => (
                   <div
                     key={env.id}
-                    className="flex items-start gap-2 rounded-lg bg-[#FFFAEB] border border-[#F79009]/20 px-3 py-2"
+                    className="flex items-start gap-2 rounded-lg bg-ois-warning-pale border border-ois-warning/20 px-3 py-2"
                   >
-                    <AlertTriangle size={13} className="text-[#DC6803] mt-0.5 shrink-0" />
+                    <AlertTriangle size={13} className="text-ois-sev-p2 mt-0.5 shrink-0" />
                     <div className="space-y-0.5">
-                      <p className="text-xs font-semibold text-[#DC6803]">
+                      <p className="text-xs font-semibold text-ois-sev-p2">
                         {env.displayName}
                       </p>
                       {env.freezeWindowReason && (
-                        <p className="text-[11px] text-[#DC6803] leading-snug">
+                        <p className="text-[11px] text-ois-sev-p2 leading-snug">
                           {env.freezeWindowReason}
                         </p>
                       )}
@@ -255,14 +252,14 @@ export const Environments: React.FC = () => {
 
           {/* Upcoming Deployments card */}
           <Card>
-            <div className="px-4 pt-4 pb-2 border-b border-[#EAECF0]">
+            <div className="px-4 pt-4 pb-2 border-b border-ois-border">
               <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-wider">
                 Upcoming Deployments
               </h2>
             </div>
             <CardBody className="pt-3 pb-4 px-4 space-y-3">
               {upcomingDeployments.length === 0 ? (
-                <p className="text-xs text-[#98A2B3]">No scheduled deployments</p>
+                <p className="text-xs text-ois-text-subtle">No scheduled deployments</p>
               ) : (
                 upcomingDeployments.map(dep => {
                   const version = versionFromArtifact(dep.artifactRef);
@@ -272,9 +269,9 @@ export const Environments: React.FC = () => {
                         <Calendar size={11} className="shrink-0" />
                         <span>{formatScheduledDate(dep.scheduledFor!)}</span>
                       </div>
-                      <p className="text-xs font-medium text-[#101828]">
+                      <p className="text-xs font-medium text-ois-text">
                         {dep.componentName}{' '}
-                        <span className="font-mono text-[#475467]">{version}</span>{' '}
+                        <span className="font-mono text-ois-text-muted">{version}</span>{' '}
                         <span className="text-[#667085]">→ {dep.environment}</span>
                       </p>
                       {dep.linkedChangePublicId && (
@@ -282,7 +279,7 @@ export const Environments: React.FC = () => {
                           <span className="text-[#667085]">via {dep.linkedChangePublicId}</span>
                           <Link
                             to={`/changes/${dep.linkedChangePublicId}`}
-                            className="text-[#1F4FD4] hover:underline flex items-center gap-0.5"
+                            className="text-ois-primary hover:underline flex items-center gap-0.5"
                           >
                             View change <ArrowRight size={10} />
                           </Link>
