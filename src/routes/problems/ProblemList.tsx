@@ -7,6 +7,7 @@ import {
   FileText, Wrench, ArrowUpDown,
 } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
+import { Modal } from '@/src/components/ui/Modal';
 import { SeverityBadge } from '@/src/components/ui/StatusSeverityBadges';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { ProblemStatusPill } from '@/src/components/problems/ProblemStatusPill';
@@ -27,6 +28,68 @@ const STATUSES: ProblemStatus[] = ['identified', 'investigating', 'known_error',
 const SOURCES: ProblemSource[] = ['incident_pattern', 'major_incident', 'proactive', 'audit', 'user_reported'];
 
 const SEVERITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
+
+// Linked items icon row for a problem
+// Create Problem Modal Component
+interface CreateProblemModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const CreateProblemModal: React.FC<CreateProblemModalProps> = ({ isOpen, onClose }) => {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+
+  const handleCreate = () => {
+    if (!title.trim()) return;
+    console.log('Creating problem:', { title, description });
+    setTitle('');
+    setDescription('');
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="New problem" size="md">
+      <div className="space-y-4 py-2">
+        {/* Title */}
+        <div>
+          <label className="text-sm font-medium text-ois-text block mb-1.5">
+            Title <span className="text-ois-danger">*</span>
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Brief, descriptive summary"
+            className="w-full border border-ois-border rounded-lg px-3 py-2 text-sm text-ois-text placeholder:text-ois-text-subtle focus:outline-none focus:ring-2 focus:ring-ois-primary/30 focus:border-ois-primary"
+          />
+        </div>
+
+        {/* Description */}
+        <div>
+          <label className="text-sm font-medium text-ois-text block mb-1.5">Description</label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Optional details"
+            rows={3}
+            className="w-full border border-ois-border rounded-lg px-3 py-2 text-sm text-ois-text placeholder:text-ois-text-subtle focus:outline-none focus:ring-2 focus:ring-ois-primary/30 focus:border-ois-primary resize-none"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end gap-2 pt-2 border-t border-ois-border">
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" disabled={!title.trim()} onClick={handleCreate}>
+            Create problem
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
 
 // Linked items icon row for a problem
 const LinkedItemsIcons: React.FC<{ problem: Problem }> = ({ problem }) => (
@@ -61,6 +124,7 @@ export const ProblemList: React.FC = () => {
   const [ownerFilter, setOwnerFilter] = useState<string>('all');
   const [sortKey, setSortKey] = useState<SortKey>('lastIncidentDate');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [createOpen, setCreateOpen] = useState(false);
 
   // Stats
   const statusCounts = useMemo(
@@ -142,7 +206,7 @@ export const ProblemList: React.FC = () => {
               KEDB
             </Button>
           </Link>
-          <Button variant="primary" size="sm" className="gap-1.5">
+          <Button variant="primary" size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
             <Plus size={14} />
             New problem
           </Button>
@@ -418,6 +482,9 @@ export const ProblemList: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Create Problem Modal */}
+      <CreateProblemModal isOpen={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 };
