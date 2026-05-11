@@ -67,6 +67,8 @@ export const EventDetail: React.FC = () => {
   const [resolveModalOpen, setResolveModalOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState<{ id: string; user: string; text: string; date: string }[]>([]);
+  const [overflowOpen, setOverflowOpen]     = useState(false);
+  const [showAllRelated, setShowAllRelated] = useState(false);
 
   if (!event) {
     return (
@@ -185,9 +187,33 @@ export const EventDetail: React.FC = () => {
           <ArrowLeft size={16} /> Back to events
         </Link>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-             <MoreVertical size={18} />
-          </Button>
+          <div className="relative">
+            <button
+              onClick={() => setOverflowOpen(v => !v)}
+              className="p-1.5 rounded-lg border border-ois-border hover:bg-ois-surface-muted transition-colors"
+            >
+              <MoreVertical size={16} className="text-ois-text-muted" />
+            </button>
+            {overflowOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setOverflowOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[180px]">
+                  {[
+                    { label: 'Copy event ID', action: () => navigator.clipboard.writeText(event!.publicId) },
+                    { label: 'Copy link',     action: () => navigator.clipboard.writeText(window.location.href) },
+                  ].map(item => (
+                    <button
+                      key={item.label}
+                      onClick={() => { item.action(); setOverflowOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors text-ois-text"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           {event.status === 'open' && (
             <Button variant="primary" size="sm" className="h-9 px-6 font-bold" onClick={handleAcknowledge}>
               Acknowledge
@@ -307,7 +333,10 @@ export const EventDetail: React.FC = () => {
                    ))}
                 </div>
                 <div className="p-4 bg-ois-bg/30 border-t border-ois-border text-center">
-                   <Button variant="ghost" size="sm" className="text-[11px] font-bold text-ois-primary gap-2">
+                   <Button variant="ghost" size="sm" className="text-[11px] font-bold text-ois-primary gap-2" onClick={() => {
+                      const firstCI = affectedCIs[0];
+                      navigate(firstCI ? `/cmdb/graph?ci=${firstCI.publicId}` : '/cmdb/graph');
+                   }}>
                       View full CMDB dependency graph <BarChart2 size={14} />
                    </Button>
                 </div>
@@ -358,7 +387,7 @@ export const EventDetail: React.FC = () => {
                     <div>
                        <div className="flex items-center justify-between mb-2">
                           <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">Query Expression (PromQL)</p>
-                          <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold text-ois-primary p-0">Copy query</Button>
+                          <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold text-ois-primary p-0" onClick={() => navigator.clipboard.writeText(rule?.query ?? '')}>Copy query</Button>
                        </div>
                        <div className="bg-slate-900 rounded-lg p-3 font-mono text-emerald-400 text-xs shadow-inner">
                           {event.payload?.promql || `sum(rate(http_requests_total{job="payment-api", status=~"5.."}[5m])) / sum(rate(http_requests_total{job="payment-api"}[5m])) > 0.01`}
@@ -434,7 +463,7 @@ export const EventDetail: React.FC = () => {
                    </p>
                 </div>
                 <div className="divide-y divide-ois-border">
-                   {relatedEvents.slice(0, 5).map(e => (
+                   {(showAllRelated ? relatedEvents : relatedEvents.slice(0, 5)).map(e => (
                       <div 
                         key={e.id} 
                         className={cn(
@@ -461,7 +490,7 @@ export const EventDetail: React.FC = () => {
                 </div>
                 {relatedEvents.length > 5 && (
                   <div className="p-3 text-center border-t border-ois-border">
-                     <Button variant="ghost" size="sm" className="text-[11px] font-bold text-ois-text-muted">
+                     <Button variant="ghost" size="sm" className="text-[11px] font-bold text-ois-text-muted" onClick={() => setShowAllRelated(true)}>
                         Show {relatedEvents.length - 5} more events
                      </Button>
                   </div>
