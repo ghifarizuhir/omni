@@ -48,7 +48,7 @@ function sortItems(items: InboxItem[]): InboxItem[] {
 export const Inbox: React.FC = () => {
   const [items, setItems] = useState<InboxItem[]>(mockInboxItems);
   const [activeTab, setActiveTab] = useState<TabId>('all');
-  const [selectedId, setSelectedId] = useState<string>('ibx-001');
+  const [selectedId, setSelectedId] = useState<string>('');
   const [search, setSearch] = useState('');
 
   // ── Stats ─────────────────────────────────────────────────────────────────
