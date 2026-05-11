@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreVertical, ExternalLink, Tag, Check, Loader2, X, Clock, Lock } from 'lucide-react';
+import { ArrowLeft, MoreVertical, ExternalLink, Tag, Check, Loader2, X, Clock, Lock, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Tabs } from '../../components/ui/Tabs';
 import { Badge } from '../../components/ui/Badge';
+import { Modal } from '../../components/ui/Modal';
 import { cn } from '../../lib/utils';
 import { getReleaseById } from '../../mocks/releases';
 import { ReleaseStatusPill } from '../../components/releases/ReleaseStatusPill';
 import { ReleaseTypeChip } from '../../components/releases/ReleaseTypeChip';
 import { StagesMiniStepper } from '../../components/releases/StagesMiniStepper';
 import { stageStatusMeta, riskMeta } from '../../lib/constants';
-import { ReleaseStage } from '../../types/release';
-import { formatDate, formatRelative } from '../../lib/format';
+import { ReleaseStage, ReleaseStatus } from '../../types/release';
+import { formatDate } from '../../lib/format';
+
+interface ToastState { message: string; variant: 'success' | 'danger' | 'info' }
+const Toast: React.FC<ToastState> = ({ message, variant }) => (
+  <div className={cn(
+    'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 pointer-events-none',
+    variant === 'success' ? 'bg-ois-success text-white' :
+    variant === 'danger' ? 'bg-ois-danger text-white' :
+    'bg-ois-primary text-white',
+  )}>
+    {variant === 'success' && <CheckCircle2 size={15} />}
+    {message}
+  </div>
+);
 
 const StageCard: React.FC<{ stage: ReleaseStage; isCurrent: boolean }> = ({ stage, isCurrent }) => {
   const meta = stageStatusMeta[stage.status];
@@ -63,6 +77,30 @@ export const ReleaseDetail: React.FC = () => {
   const navigate = useNavigate();
   const release = getReleaseById(releaseId ?? '');
   const [activeTab, setActiveTab] = useState('overview');
+  const [localStatus, setLocalStatus] = useState<ReleaseStatus | null>(null);
+  const [promoteModalOpen, setPromoteModalOpen] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (message: string, variant: ToastState['variant'] = 'success') => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ message, variant });
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
+  };
+
+  const handlePromoteConfirm = () => {
+    setPromoteModalOpen(false);
+    setLocalStatus('deploying');
+    showToast('Promoted to staging successfully');
+    setTimeout(() => navigate('/deployments'), 2000);
+  };
+
+  const handleCancelConfirm = () => {
+    setCancelModalOpen(false);
+    setLocalStatus('cancelled');
+    showToast('Release cancelled', 'danger');
+  };
 
   if (!release) {
     return (
@@ -93,7 +131,7 @@ export const ReleaseDetail: React.FC = () => {
           <CardBody className="p-0">
             <dl className="divide-y divide-ois-border text-xs">
               {[
-                { label: 'Status', value: <ReleaseStatusPill status={release.status} size="sm" /> },
+                { label: 'Status', value: <ReleaseStatusPill status={localStatus ?? release.status} size="sm" /> },
                 { label: 'Type', value: <ReleaseTypeChip type={release.type} size="sm" /> },
                 { label: 'Version', value: <span className="font-mono font-bold text-ois-text">{release.version}</span> },
                 { label: 'Component', value: <span className="text-ois-text">{release.componentName}</span> },
@@ -157,7 +195,7 @@ export const ReleaseDetail: React.FC = () => {
                   {release.name && <span className="font-normal text-ois-text-muted text-base"> — {release.name}</span>}
                 </h1>
               </div>
-              <ReleaseStatusPill status={release.status} />
+              <ReleaseStatusPill status={localStatus ?? release.status} />
             </div>
             <div className="flex flex-wrap gap-1.5 mb-3">
               {release.tags.map((t) => (
@@ -334,17 +372,9 @@ export const ReleaseDetail: React.FC = () => {
               <h3 className="text-sm font-bold text-ois-text">Audit History</h3>
             </div>
             <CardBody>
-              <div className="space-y-3">
-                {[
-                  { ts: release.updatedAt, msg: 'Release updated' },
-                  { ts: release.createdAt, msg: 'Release created' },
-                ].map((e, i) => (
-                  <div key={i} className="flex gap-3 text-xs">
-                    <span className="text-ois-text-subtle whitespace-nowrap">{formatDate(e.ts, 'MMM d HH:mm')}</span>
-                    <span className="text-ois-text-muted">{e.msg}</span>
-                  </div>
-                ))}
-              </div>
+              <p className="text-sm text-ois-text-subtle italic">
+                No history available — Audit log tracking is coming soon.
+              </p>
             </CardBody>
           </Card>
         </Tabs>
@@ -357,17 +387,63 @@ export const ReleaseDetail: React.FC = () => {
             <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Quick Actions</h3>
           </div>
           <CardBody className="p-0">
-            {['Lock composition', 'Promote to staging', 'Cancel release', 'Add change'].map((label, i) => (
-              <button key={label} className={cn(
-                'w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors border-b border-ois-border last:border-0',
-                i === 2 ? 'text-ois-danger' : 'text-ois-text',
-              )}>
-                {label}
-              </button>
-            ))}
+            <button className="w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors border-b border-ois-border text-ois-text">
+              Lock composition
+            </button>
+            <button
+              className="w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors border-b border-ois-border text-ois-text"
+              onClick={() => setPromoteModalOpen(true)}
+            >
+              Promote to staging
+            </button>
+            <button
+              className="w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors border-b border-ois-border text-ois-danger"
+              onClick={() => setCancelModalOpen(true)}
+            >
+              Cancel release
+            </button>
+            <button className="w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors text-ois-text">
+              Add change
+            </button>
           </CardBody>
         </Card>
       </div>
+
+      {/* Promote to staging modal */}
+      <Modal isOpen={promoteModalOpen} onClose={() => setPromoteModalOpen(false)} title="Promote to staging?" size="sm">
+        <div className="py-4 space-y-3">
+          <p className="text-sm text-ois-text">
+            This will move <span className="font-semibold">{release.publicId}</span> into the staging deployment queue and update the release status.
+          </p>
+          <p className="text-xs text-ois-text-muted">
+            You will be redirected to the deployments queue after confirmation.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setPromoteModalOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={handlePromoteConfirm}>Confirm promote</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Cancel release modal */}
+      <Modal isOpen={cancelModalOpen} onClose={() => setCancelModalOpen(false)} title="Cancel this release?" size="sm">
+        <div className="py-4 space-y-3">
+          <p className="text-sm text-ois-text">
+            This will mark <span className="font-semibold">{release.publicId}</span> as <span className="font-semibold text-ois-danger">cancelled</span>. This action cannot be undone.
+          </p>
+          <p className="text-xs text-ois-text-muted">
+            All pending deployment stages will be stopped and the release will be closed.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setCancelModalOpen(false)}>Go back</Button>
+            <Button size="sm" className="bg-ois-danger hover:bg-ois-danger/90 text-white" onClick={handleCancelConfirm}>
+              Yes, cancel release
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {toast && <Toast message={toast.message} variant={toast.variant} />}
     </div>
   );
 };

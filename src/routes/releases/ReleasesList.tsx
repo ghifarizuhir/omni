@@ -1,12 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, GitMerge, FileText } from 'lucide-react';
+import { Search, Plus, GitMerge, FileText, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
 import { mockReleases } from '../../mocks';
 import { ReleaseCard } from '../../components/releases/ReleaseCard';
 import { ReleaseStatus, ReleaseType } from '../../types/release';
+
+interface ToastState { message: string; variant: 'success' | 'info' }
+const Toast: React.FC<ToastState> = ({ message, variant }) => (
+  <div className={cn(
+    'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 pointer-events-none',
+    variant === 'success' ? 'bg-ois-success text-white' : 'bg-ois-primary text-white',
+  )}>
+    {variant === 'success' && <CheckCircle2 size={15} />}
+    {message}
+  </div>
+);
 
 const STATUS_TABS: { label: string; value: ReleaseStatus | 'all' }[] = [
   { label: 'All', value: 'all' },
@@ -22,6 +33,14 @@ export const ReleasesList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReleaseStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<ReleaseType | 'all'>('all');
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (message: string, variant: ToastState['variant'] = 'info') => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ message, variant });
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
+  };
 
   const filtered = useMemo(() => {
     return mockReleases.filter((r) => {
@@ -74,7 +93,7 @@ export const ReleasesList: React.FC = () => {
           <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => navigate('/releases/notes')}>
             <FileText size={13} /> Notes archive
           </Button>
-          <Button size="sm" className="gap-1.5 h-8 text-xs">
+          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => showToast('New release form coming soon', 'info')}>
             <Plus size={13} /> New release
           </Button>
         </div>
@@ -145,6 +164,8 @@ export const ReleasesList: React.FC = () => {
           {filtered.map((r) => <ReleaseCard key={r.id} release={r} />)}
         </div>
       )}
+
+      {toast && <Toast message={toast.message} variant={toast.variant} />}
     </div>
   );
 };
