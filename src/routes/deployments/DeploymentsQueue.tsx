@@ -11,6 +11,7 @@ import { DeploymentStatusPill } from '../../components/deployments/DeploymentSta
 import { EnvironmentChip } from '../../components/deployments/EnvironmentChip';
 import { DeploymentStrategyChip } from '../../components/deployments/DeploymentStrategyChip';
 import { DeploymentTriggerChip } from '../../components/deployments/DeploymentTriggerChip';
+import { RollbackModal } from '../../components/deployments/DeploymentDetail/RollbackModal';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -31,8 +32,12 @@ type QuickFilter = 'active' | 'failed' | 'rolled_back' | 'last24h' | 'production
 
 // ── Actions menu ──────────────────────────────────────────────────────────
 
-const ActionsMenu: React.FC<{ dep: Deployment }> = ({ dep }) => {
+const ActionsMenu: React.FC<{
+  dep: Deployment;
+  onRollbackSuccess: (id: string) => void;
+}> = ({ dep, onRollbackSuccess }) => {
   const [open, setOpen] = useState(false);
+  const [rollbackOpen, setRollbackOpen] = useState(false);
   const navigate = useNavigate();
 
   const canRollback = dep.status === 'success' || dep.status === 'running';
@@ -46,41 +51,40 @@ const ActionsMenu: React.FC<{ dep: Deployment }> = ({ dep }) => {
     return () => document.removeEventListener('click', handler);
   }, [open]);
 
+  const handleRollbackConfirm = (_reason: string) => {
+    setRollbackOpen(false);
+    onRollbackSuccess(dep.id);
+  };
+
   return (
     <div className="relative" onClick={(e) => e.stopPropagation()}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="p-1 rounded hover:bg-[#F2F4F7] text-[#667085] hover:text-[#344054] transition-colors"
+        className="p-1 rounded hover:bg-ois-surface-muted text-ois-text-muted hover:text-gray-700 transition-colors"
         aria-label="Actions"
       >
         <MoreVertical size={14} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-7 z-50 min-w-[140px] rounded-lg border border-[#E4E7EC] bg-white shadow-lg py-1 text-sm">
+        <div className="absolute right-0 top-7 z-50 min-w-[140px] rounded-lg border border-ois-border bg-white shadow-lg py-1 text-sm">
           <button
-            className="w-full text-left px-3 py-1.5 hover:bg-[#F9FAFB] text-[#344054]"
+            className="w-full text-left px-3 py-1.5 hover:bg-[#F9FAFB] text-gray-700"
             onClick={() => { navigate(`/deployments/${dep.publicId}`); setOpen(false); }}
           >
             Open
           </button>
-          <button
-            className="w-full text-left px-3 py-1.5 hover:bg-[#F9FAFB] text-[#344054]"
-            onClick={() => { navigate(`/deployments/${dep.publicId}`); setOpen(false); }}
-          >
-            View logs
-          </button>
           {canRollback && (
             <button
-              className="w-full text-left px-3 py-1.5 hover:bg-[#F9FAFB] text-[#344054]"
-              onClick={() => setOpen(false)}
+              className="w-full text-left px-3 py-1.5 hover:bg-[#F9FAFB] text-gray-700"
+              onClick={() => { setOpen(false); setRollbackOpen(true); }}
             >
               Rollback
             </button>
           )}
           {canCancel && (
             <button
-              className="w-full text-left px-3 py-1.5 hover:bg-[#FEF3F2] text-[#B42318]"
+              className="w-full text-left px-3 py-1.5 hover:bg-ois-danger-pale text-ois-sev-p1"
               onClick={() => setOpen(false)}
             >
               Cancel
@@ -88,14 +92,21 @@ const ActionsMenu: React.FC<{ dep: Deployment }> = ({ dep }) => {
           )}
           {canRedeploy && (
             <button
-              className="w-full text-left px-3 py-1.5 hover:bg-[#F9FAFB] text-[#344054]"
-              onClick={() => setOpen(false)}
+              className="w-full text-left px-3 py-1.5 hover:bg-[#F9FAFB] text-gray-700"
+              onClick={() => { navigate(`/deployments/${dep.publicId}`); setOpen(false); }}
             >
               Re-deploy
             </button>
           )}
         </div>
       )}
+
+      <RollbackModal
+        deployment={dep}
+        isOpen={rollbackOpen}
+        onClose={() => setRollbackOpen(false)}
+        onConfirm={handleRollbackConfirm}
+      />
     </div>
   );
 };
@@ -127,6 +138,13 @@ const DurationCell: React.FC<{ dep: Deployment; elapsed: number }> = ({ dep, ela
 
 export const DeploymentsQueue: React.FC = () => {
   const navigate = useNavigate();
+
+  // local status overrides applied after rollback confirmation
+  const [localStatuses, setLocalStatuses] = useState<Record<string, DeploymentStatus>>({});
+
+  const handleRollbackSuccess = (id: string) => {
+    setLocalStatuses((prev) => ({ ...prev, [id]: 'rolled_back' }));
+  };
 
   // filter state
   const [search, setSearch] = useState('');
@@ -456,8 +474,10 @@ export const DeploymentsQueue: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-[#F2F4F7]">
                 {filtered.map((dep) => {
-                  const isRunning = dep.status === 'running' || dep.status === 'rolling_back';
-                  const isRolledBack = dep.status === 'rolled_back';
+                  const effectiveStatus = localStatuses[dep.id] ?? dep.status;
+                  const effectiveDep = effectiveStatus !== dep.status ? { ...dep, status: effectiveStatus } : dep;
+                  const isRunning = effectiveStatus === 'running' || effectiveStatus === 'rolling_back';
+                  const isRolledBack = effectiveStatus === 'rolled_back';
                   const hasIncident = dep.triggeredIncidentIds.length > 0;
 
                   return (
@@ -472,7 +492,7 @@ export const DeploymentsQueue: React.FC = () => {
                       {/* Status */}
                       <td className="px-4 py-2.5 whitespace-nowrap">
                         <DeploymentStatusPill
-                          status={dep.status}
+                          status={effectiveStatus}
                           size="sm"
                           hasIncident={hasIncident}
                         />
@@ -539,12 +559,12 @@ export const DeploymentsQueue: React.FC = () => {
 
                       {/* Duration */}
                       <td className="px-4 py-2.5 whitespace-nowrap">
-                        <DurationCell dep={dep} elapsed={elapsedTick} />
+                        <DurationCell dep={effectiveDep} elapsed={elapsedTick} />
                       </td>
 
                       {/* Actions */}
                       <td className="px-4 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
-                        <ActionsMenu dep={dep} />
+                        <ActionsMenu dep={effectiveDep} onRollbackSuccess={handleRollbackSuccess} />
                       </td>
                     </tr>
                   );
