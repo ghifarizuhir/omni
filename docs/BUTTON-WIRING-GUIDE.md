@@ -350,9 +350,9 @@ All 24 dead buttons wired in commit `9ff9c3c`. See `src/routes/incidents/`.
 |------|--------|----------|----------|--------|
 | `ChangeDetail.tsx` | Actions dropdown | 🟡 | Overflow menu: Copy ID, Copy link | ✅ |
 | `ChangeDetail.tsx` | Reschedule | 🟡 | `RescheduleModal` with datetime inputs, updates `plannedStart` / `plannedEnd` | ✅ |
-| `CABWorkspace.tsx` | Export agenda | 🟢 | CSV export of CAB agenda (CSV export pattern above) | ❌ |
-| `CABWorkspace.tsx` | Schedule new session | 🟡 | Modal with date picker + attendees | ❌ |
-| `NewChange.tsx` | Save as draft | 🟡 | Persist form to `localStorage` keyed by a draft ID, restore on return | ❌ |
+| `CABWorkspace.tsx` | Export agenda | 🟢 | CSV export of CAB agenda (CSV export pattern above) | ✅ |
+| `CABWorkspace.tsx` | Schedule new session | 🟡 | Modal with date picker + attendees | ✅ |
+| `NewChange.tsx` | Save as draft | 🟡 | Persist form to `localStorage` keyed by a draft ID, restore on return | ✅ |
 
 ---
 
