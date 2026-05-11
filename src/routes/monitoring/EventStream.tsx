@@ -9,7 +9,7 @@ import {
   TrendingUp, Circle, X
 } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { format, formatDistanceToNow, isToday, isYesterday, parseISO } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isYesterday, parseISO, subDays, isAfter } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
@@ -22,6 +22,13 @@ import { mockEvents, mockCIs, mockMonitoringRules, mockUsers } from '../../mocks
 import { Event, EventStatus, EventType, EventSource } from '../../types/monitoring';
 import { Severity } from '../../types/common';
 import { cn } from '../../lib/utils';
+
+type TimeRange = '24h' | '7d' | '30d';
+const TIME_RANGE_LABELS: Record<TimeRange, string> = {
+  '24h': 'Last 24h',
+  '7d':  'Last 7 days',
+  '30d': 'Last 30 days',
+};
 
 export const EventStream: React.FC = () => {
   const navigate = useNavigate();
@@ -36,10 +43,18 @@ export const EventStream: React.FC = () => {
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(25);
   const [showStatsDrawer, setShowStatsDrawer] = useState(false);
+  const [timeRange, setTimeRange]         = useState<TimeRange>('7d');
+  const [timeRangeOpen, setTimeRangeOpen] = useState(false);
 
   // Filter Logic
   const filteredEvents = useMemo(() => {
-    let result = [...mockEvents].sort((a, b) => new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime());
+    const referenceDate = new Date('2026-05-09');
+    const days = timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : 30;
+    const cutoff = subDays(referenceDate, days);
+
+    let result = (isPaused ? frozenEvents : mockEvents)
+      .filter(e => isAfter(parseISO(e.firedAt), cutoff))
+      .sort((a, b) => new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime());
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -83,7 +98,7 @@ export const EventStream: React.FC = () => {
     }
 
     return result;
-  }, [searchQuery, statusFilter, severityFilter, sourceFilter, typeFilter, activeQuickFilter]);
+  }, [timeRange, searchQuery, statusFilter, severityFilter, sourceFilter, typeFilter, activeQuickFilter, isPaused, frozenEvents]);
 
   const togglePause = () => {
     if (!isPaused) {
@@ -191,12 +206,60 @@ export const EventStream: React.FC = () => {
             {isPaused ? <Play size={14} className="fill-current" /> : <Pause size={14} className="fill-current" />}
             {isPaused ? 'Resume' : 'Pause'}
           </Button>
-          <div className="relative group">
-            <Button variant="outline" size="sm" className="gap-2 h-9">
-              <Clock size={14} /> Last 7d <ChevronDown size={14} />
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTimeRangeOpen(v => !v)}
+              className="gap-1.5 h-9"
+            >
+              {TIME_RANGE_LABELS[timeRange]}
+              <ChevronDown size={13} className={timeRangeOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
             </Button>
+            {timeRangeOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setTimeRangeOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[150px]">
+                  {(Object.entries(TIME_RANGE_LABELS) as [TimeRange, string][]).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => { setTimeRange(key); setTimeRangeOpen(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors ${timeRange === key ? 'font-semibold text-ois-primary' : 'text-ois-text'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-          <Button variant="outline" size="sm" className="gap-2 h-9">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 h-9"
+            onClick={() => {
+              const headers = ['ID', 'Title', 'Severity', 'Status', 'Source', 'Fired At', 'Tags'];
+              const rows = filteredEvents.map(e => [
+                e.publicId,
+                `"${e.title.replace(/"/g, '""')}"`,
+                e.severity,
+                e.status,
+                e.source,
+                e.firedAt,
+                `"${(e.tags ?? []).join(', ')}"`,
+              ].join(','));
+              const csv = [headers.join(','), ...rows].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `events-${timeRange}-${new Date().toISOString().slice(0, 10)}.csv`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+          >
             <Download size={14} /> Export
           </Button>
           <Button 
