@@ -31,6 +31,8 @@ import { ChangeStatusPill } from '@/src/components/changes/ChangeStatusPill';
 import { RiskBadge } from '@/src/components/changes/RiskBadge';
 import { mockImprovements } from '@/src/mocks/improvements';
 import { ImprovementStatusPill } from '@/src/components/improvement/ImprovementStatusPill';
+import { LinkIncidentsModal } from '@/src/components/problems/LinkIncidentsModal';
+import { LinkChangeModal } from '@/src/components/incidents/LinkChangeModal';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -392,6 +394,14 @@ export const ProblemDetail: React.FC = () => {
   const [statusOpen, setStatusOpen] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
 
+  // Modal open states
+  const [linkIncidentsOpen, setLinkIncidentsOpen] = useState(false);
+  const [linkChangeOpen, setLinkChangeOpen]       = useState(false);
+
+  // Inline description edit
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descDraft, setDescDraft]     = useState('');
+
   if (!problem) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
@@ -597,11 +607,38 @@ export const ProblemDetail: React.FC = () => {
               <div className="border border-ois-border rounded-lg p-4 bg-ois-surface">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <h4 className="text-xs font-bold text-ois-text uppercase tracking-wider">Description</h4>
-                  <button className="text-xs text-ois-primary hover:underline flex items-center gap-1">
-                    <Edit3 size={11} /> Edit
-                  </button>
                 </div>
-                <p className="text-sm text-ois-text leading-relaxed">{problem.description}</p>
+                {editingDesc ? (
+                  <>
+                    <textarea
+                      rows={4}
+                      value={descDraft}
+                      onChange={e => setDescDraft(e.target.value)}
+                      className="w-full text-sm text-ois-text border border-ois-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary resize-none"
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <Button variant="primary" size="sm" onClick={() => {
+                        setProblem(prev => prev ? { ...prev, description: descDraft } : prev);
+                        setEditingDesc(false);
+                      }}>
+                        Save
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditingDesc(false)}>Cancel</Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-ois-text whitespace-pre-wrap leading-relaxed">
+                      {problem!.description}
+                    </p>
+                    <button
+                      onClick={() => { setDescDraft(problem!.description); setEditingDesc(true); }}
+                      className="mt-3 flex items-center gap-1 text-xs text-ois-primary hover:underline"
+                    >
+                      <Edit3 size={12} /> Edit
+                    </button>
+                  </>
+                )}
               </div>
 
               <div className="border border-ois-border rounded-lg p-4 bg-ois-surface">
