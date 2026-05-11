@@ -222,6 +222,12 @@ export const NewChange: React.FC = () => {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(INITIAL);
   const [submitted, setSubmitted] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
+
+  const handleSaveDraft = () => {
+    setDraftSaved(true);
+    setTimeout(() => setDraftSaved(false), 2000);
+  };
 
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: val }));
@@ -231,7 +237,7 @@ export const NewChange: React.FC = () => {
   // Auto-navigate after submit
   useEffect(() => {
     if (submitted) {
-      const t = setTimeout(() => navigate('/changes/CHG-2026-00091'), 3000);
+      const t = setTimeout(() => navigate('/changes/CHG-2026-00092'), 3000);
       return () => clearTimeout(t);
     }
   }, [submitted, navigate]);
@@ -667,7 +673,59 @@ export const NewChange: React.FC = () => {
     );
   };
 
-  // ── Step 4: Submit (success) ──────────────────────────────────────────────────
+  // ── Step 4 (index 3): Submit confirmation ─────────────────────────────────────
+  const renderSubmitStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-sm font-bold text-ois-text mb-1">Ready to submit</h3>
+        <p className="text-xs text-ois-text-muted">
+          Review the summary below, then click "Submit for review" to send this RFC to the approval queue.
+        </p>
+      </div>
+
+      <Card>
+        <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+          <h4 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Change summary</h4>
+        </div>
+        <CardBody>
+          <dl className="space-y-3 text-sm">
+            <div>
+              <dt className="text-xs text-ois-text-muted mb-0.5">Title</dt>
+              <dd className="font-medium text-ois-text">{form.title || '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-ois-text-muted mb-0.5">Type</dt>
+              <dd className="capitalize font-medium text-ois-text">{changeTypeMeta[form.type].label} change</dd>
+            </div>
+            {!isStandard && (
+              <div>
+                <dt className="text-xs text-ois-text-muted mb-0.5">Risk</dt>
+                <dd className="font-medium text-ois-text capitalize">{form.risk} (score: {score})</dd>
+              </div>
+            )}
+            <div>
+              <dt className="text-xs text-ois-text-muted mb-0.5">Planned window</dt>
+              <dd className="font-medium text-ois-text">
+                {form.plannedStart ? new Date(form.plannedStart).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                {' → '}
+                {form.plannedEnd ? new Date(form.plannedEnd).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' UTC' : ''}
+              </dd>
+            </div>
+          </dl>
+        </CardBody>
+      </Card>
+
+      <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <CheckCircle size={16} className="text-ois-primary mt-0.5 shrink-0" />
+        <p className="text-xs text-blue-800">
+          Submitting will route this change to the appropriate approvers and place it on the next CAB agenda (if required).
+          You can still edit the RFC until it reaches "In Review" status.
+        </p>
+      </div>
+    </div>
+  );
+
+  // ── Step 5: Submit (success) ──────────────────────────────────────────────────
   const renderStep4 = () => (
     <div className="flex flex-col items-center py-12 text-center">
       <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-6">
@@ -694,7 +752,7 @@ export const NewChange: React.FC = () => {
         <Button variant="outline" onClick={() => { setStep(0); setForm(INITIAL); setSubmitted(false); }}>
           Submit another
         </Button>
-        <Button onClick={() => navigate('/changes/CHG-2026-00091')}>
+        <Button onClick={() => navigate('/changes/CHG-2026-00092')}>
           View change →
         </Button>
       </div>
@@ -722,9 +780,14 @@ export const NewChange: React.FC = () => {
           <ArrowLeft size={16} /> Calendar
         </Link>
         {step < 4 && (
-          <Button variant="outline" size="sm" className="text-xs h-8">
-            Save as draft
-          </Button>
+          <div className="flex items-center gap-3">
+            {draftSaved && (
+              <span className="text-xs font-semibold text-ois-success">Draft saved</span>
+            )}
+            <Button variant="outline" size="sm" className="text-xs h-8" onClick={handleSaveDraft}>
+              Save as draft
+            </Button>
+          </div>
         )}
       </div>
 
@@ -744,7 +807,7 @@ export const NewChange: React.FC = () => {
           {step === 0 && renderStep1()}
           {step === 1 && renderStep2()}
           {step === 2 && renderStep3()}
-          {step === 3 && renderStep3()}
+          {step === 3 && renderSubmitStep()}
           {step === 4 && renderStep4()}
 
           {step < 4 && (
@@ -757,15 +820,15 @@ export const NewChange: React.FC = () => {
                 )}
               </div>
               <div className="flex gap-3">
-                {step === 2 && (
-                  <Button variant="outline" size="sm">Save as draft</Button>
+                {(step === 2 || step === 3) && (
+                  <Button variant="outline" size="sm" onClick={handleSaveDraft}>Save as draft</Button>
                 )}
                 <Button
                   onClick={handleNext}
                   disabled={!canAdvance()}
                   className="gap-1.5"
                 >
-                  {step === 2 ? 'Submit for review' : step === 3 ? 'Submit for review' : (
+                  {step === 3 ? 'Submit for review' : (
                     <>Next: {STEPS[step + 1]} <ArrowRight size={14} /></>
                   )}
                 </Button>
