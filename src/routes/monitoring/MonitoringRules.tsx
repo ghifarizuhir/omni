@@ -1,15 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Plus, Search, Filter, MoreVertical, 
-  Play, Pause, Settings, History, 
-  AlertCircle, Shield, Zap, Bell, 
-  Target, ArrowRight, BarChart3, 
-  Loader2, CheckCircle2, ChevronRight, 
-  ArrowLeft, Terminal, Database, 
-  Copy, RefreshCw, X, CircleDot, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Plus, Search, MoreVertical,
+  Play, Pause, Settings, History,
+  AlertCircle, Shield, Zap, Bell,
+  Target, ArrowRight, BarChart3,
+  Loader2, CheckCircle2, ChevronRight,
+  ArrowLeft, Terminal, Database,
+  Copy, RefreshCw, X, CircleDot,
   Radio, Layers, Info, Construction,
   Globe, AlertTriangle, ExternalLink,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Trash2
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -68,8 +69,11 @@ interface RuleFormData {
 const generateSparklineData = () => Array.from({ length: 12 }, () => Math.floor(Math.random() * 10));
 
 export const MonitoringRules: React.FC = () => {
+  const navigate = useNavigate();
+
   // --- State ---
   const [rules, setRules] = useState<MonitoringRule[]>(mockMonitoringRules);
+  const [deleteConfirmRule, setDeleteConfirmRule] = useState<MonitoringRule | null>(null);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<MonitoringRuleType | 'all'>('all');
   const [severityFilter, setSeverityFilter] = useState<Severity | 'all'>('all');
@@ -126,6 +130,22 @@ export const MonitoringRules: React.FC = () => {
     }, {} as Record<string, number>);
 
     return { totalCount, enabledCount, disabledCount, avgSNR, typeCounts };
+  }, [rules]);
+
+  // Memoize sparkline data so it doesn't regenerate on every render
+  const sparklineData = useMemo(() => {
+    return Object.fromEntries(rules.map(r => [r.id, generateSparklineData()]));
+  }, [rules]);
+
+  // --- Derived stats strip values ---
+  const statsStrip = useMemo(() => {
+    const total = rules.length;
+    const avgFires = total > 0
+      ? Math.round(rules.reduce((acc, r) => acc + r.totalFires30d, 0) / total)
+      : 0;
+    const noisy = rules.filter(r => (r.signalToNoiseRatio || 0) < 0.5).length;
+    const neverFired = rules.filter(r => r.totalFires30d === 0).length;
+    return { avgFires, noisy, neverFired };
   }, [rules]);
 
   // --- Handlers ---
@@ -231,9 +251,8 @@ export const MonitoringRules: React.FC = () => {
   };
 
   const handleDeleteRule = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this monitoring rule?')) {
-      setRules(prev => prev.filter(r => r.id !== id));
-    }
+    setRules(prev => prev.filter(r => r.id !== id));
+    setDeleteConfirmRule(null);
   };
 
   // --- Table Columns ---
@@ -317,7 +336,7 @@ export const MonitoringRules: React.FC = () => {
        accessor: (rule) => (
          <div className="flex items-center gap-3">
            <span className="text-xs font-bold text-ois-text w-6">{rule.totalFires30d}</span>
-           <RuleSparkline data={generateSparklineData()} color={rule.totalFires30d > 50 ? '#F04438' : '#1F4FD4'} />
+           <RuleSparkline data={sparklineData[rule.id] || []} color={rule.totalFires30d > 50 ? '#F04438' : '#1F4FD4'} />
          </div>
        ),
     },
@@ -336,7 +355,10 @@ export const MonitoringRules: React.FC = () => {
     {
        header: 'Route',
        accessor: (rule) => (
-         <button className="text-[11px] font-bold text-ois-primary hover:underline whitespace-nowrap">
+         <button
+           className="text-[11px] font-bold text-ois-primary hover:underline whitespace-nowrap"
+           onClick={(e) => { e.stopPropagation(); navigate('/monitoring/routing'); }}
+         >
            {rule.alertRoutePublicId}
          </button>
        ),
@@ -356,9 +378,9 @@ export const MonitoringRules: React.FC = () => {
             >
                <Settings size={14} className="text-ois-text-muted" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="h-8 w-8 p-0"
               onClick={(e) => {
                 e.stopPropagation();
@@ -367,9 +389,20 @@ export const MonitoringRules: React.FC = () => {
             >
                <Play size={14} className="text-ois-text-muted" />
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteConfirmRule(rule);
+              }}
+            >
+               <Trash2 size={14} className="text-ois-danger" />
+            </Button>
          </div>
        ),
-       className: 'w-20'
+       className: 'w-28'
     }
   ];
 
@@ -393,17 +426,11 @@ export const MonitoringRules: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-           <Button variant="outline" className="h-10 px-4 font-bold border-ois-border-strong bg-white hover:bg-ois-bg gap-2">
-              <Filter size={16} /> Filter
-           </Button>
-           <Button variant="outline" className="h-10 px-4 font-bold border-ois-border-strong bg-white hover:bg-ois-bg">
-              Bulk actions
-           </Button>
-           <Button 
-             variant="primary" 
+           <Button
+             variant="primary"
              className="h-10 px-6 font-bold gap-2 shadow-sm"
              onClick={() => handleOpenWizard()}
-            >
+           >
               <Plus size={18} /> New rule
            </Button>
         </div>
@@ -497,11 +524,11 @@ export const MonitoringRules: React.FC = () => {
            </Badge>
          ))}
          <div className="flex items-center gap-4 ml-auto px-4 py-1.5 bg-ois-bg rounded-lg border border-ois-border">
-            <span className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Avg fires (30d): 38</span>
+            <span className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Avg fires (30d): {statsStrip.avgFires}</span>
             <span className="w-px h-3 bg-ois-border" />
-            <span className="text-[11px] font-bold text-ois-danger uppercase tracking-wider">Noisy: 1</span>
+            <span className="text-[11px] font-bold text-ois-danger uppercase tracking-wider">Noisy: {statsStrip.noisy}</span>
             <span className="w-px h-3 bg-ois-border" />
-            <span className="text-[11px] font-bold text-ois-text-subtle uppercase tracking-wider">Never fired: 2</span>
+            <span className="text-[11px] font-bold text-ois-text-subtle uppercase tracking-wider">Never fired: {statsStrip.neverFired}</span>
          </div>
       </div>
 
@@ -635,57 +662,110 @@ export const MonitoringRules: React.FC = () => {
       </Modal>
 
       {/* Rule Test Modal */}
+      {(() => {
+        const testRoute = testModalRule
+          ? mockAlertRoutes.find(ar => ar.id === testModalRule.alertRouteId) ?? null
+          : null;
+        const channelIconMap: Record<string, React.ElementType> = {
+          sms: Bell,
+          email: Bell,
+          slack: Zap,
+          teams: Zap,
+          webhook: Globe,
+          in_app: Bell,
+        };
+        return (
+          <Modal
+            isOpen={!!testModalRule}
+            onClose={() => setTestModalRule(null)}
+            title={`Test rule: ${testModalRule?.publicId}`}
+            size="md"
+          >
+            <div className="space-y-6 py-4">
+               <div className="p-4 bg-ois-warning-pale border border-ois-warning/20 rounded-xl">
+                  <p className="text-xs text-ois-warning flex items-start gap-2 leading-tight">
+                     <Info size={16} className="shrink-0" />
+                     This will simulate a test event payload using current live data and trigger a simulated routing dry-run. No real SMS or Phone calls will be made, but Slack webhook tests will fire if enabled.
+                  </p>
+               </div>
+
+               <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-ois-text uppercase tracking-widest leading-none mb-4">Channel preview</h4>
+                  {testRoute ? (
+                    <div className="divide-y divide-ois-border border border-ois-border rounded-xl overflow-hidden">
+                       {testRoute.channels.map((channel, i) => {
+                         const Icon = channelIconMap[channel] ?? Bell;
+                         const recipientNames = testRoute.recipients.map(r => r.targetName).join(', ');
+                         return (
+                           <div key={i} className="flex items-center justify-between p-4 bg-white">
+                              <div className="flex items-center gap-3">
+                                 <div className="p-2 bg-ois-bg rounded-lg">
+                                    <Icon size={16} className="text-ois-text-muted" />
+                                 </div>
+                                 <div>
+                                    <p className="text-xs font-bold text-ois-text capitalize">{channel.replace('_', ' ')}</p>
+                                    <p className="text-[10px] text-ois-text-muted">{recipientNames || '—'}</p>
+                                 </div>
+                              </div>
+                              <Button variant="outline" size="sm" className="h-8 px-4 font-bold text-[10px] bg-white border-ois-border-strong">
+                                 Test
+                              </Button>
+                           </div>
+                         );
+                       })}
+                    </div>
+                  ) : (
+                    <div className="p-4 border border-ois-border rounded-xl text-sm text-ois-text-muted text-center">
+                      No route configured for this rule.
+                    </div>
+                  )}
+               </div>
+
+               <div className="flex items-center justify-between pt-6 border-t border-ois-border">
+                  <span className="text-[10px] font-bold text-ois-text-subtle uppercase">Last test: Never</span>
+                  <div className="flex items-center gap-3">
+                     <Button variant="ghost" className="h-10 font-bold text-ois-text-muted" onClick={() => setTestModalRule(null)}>
+                        Close
+                     </Button>
+                     <Button variant="primary" className="h-10 px-8 font-bold gap-2">
+                        <Play size={16} /> Run all
+                     </Button>
+                  </div>
+               </div>
+            </div>
+          </Modal>
+        );
+      })()}
+
+      {/* Delete Confirmation Modal */}
       <Modal
-        isOpen={!!testModalRule}
-        onClose={() => setTestModalRule(null)}
-        title={`Test rule: ${testModalRule?.publicId}`}
-        size="md"
+        isOpen={!!deleteConfirmRule}
+        onClose={() => setDeleteConfirmRule(null)}
+        title="Delete monitoring rule"
+        size="sm"
       >
         <div className="space-y-6 py-4">
-           <div className="p-4 bg-ois-warning-pale border border-ois-warning/20 rounded-xl">
-              <p className="text-xs text-ois-warning flex items-start gap-2 leading-tight">
-                 <Info size={16} className="shrink-0" />
-                 This will simulate a test event payload using current live data and trigger a simulated routing dry-run. No real SMS or Phone calls will be made, but Slack webhook tests will fire if enabled.
-              </p>
-           </div>
-
-           <div className="space-y-4">
-              <h4 className="text-xs font-bold text-ois-text uppercase tracking-widest leading-none mb-4">Channel preview</h4>
-              <div className="divide-y divide-ois-border border border-ois-border rounded-xl overflow-hidden">
-                 {[
-                   { name: 'SMS', target: 'David Okafor (+1-***-1234)', icon: Bell },
-                   { name: 'Slack', target: '#payment-alerts', icon: Zap },
-                   { name: 'Email', target: 'platform-oncall@acme.io', icon: Bell }
-                 ].map((channel, i) => (
-                   <div key={i} className="flex items-center justify-between p-4 bg-white">
-                      <div className="flex items-center gap-3">
-                         <div className="p-2 bg-ois-bg rounded-lg">
-                            <channel.icon size={16} className="text-ois-text-muted" />
-                         </div>
-                         <div>
-                            <p className="text-xs font-bold text-ois-text">{channel.name}</p>
-                            <p className="text-[10px] text-ois-text-muted">{channel.target}</p>
-                         </div>
-                      </div>
-                      <Button variant="outline" size="sm" className="h-8 px-4 font-bold text-[10px] bg-white border-ois-border-strong">
-                         Test
-                      </Button>
-                   </div>
-                 ))}
-              </div>
-           </div>
-
-           <div className="flex items-center justify-between pt-6 border-t border-ois-border">
-              <span className="text-[10px] font-bold text-ois-text-subtle uppercase">Last test: Never</span>
-              <div className="flex items-center gap-3">
-                 <Button variant="ghost" className="h-10 font-bold text-ois-text-muted" onClick={() => setTestModalRule(null)}>
-                    Close
-                 </Button>
-                 <Button variant="primary" className="h-10 px-8 font-bold gap-2">
-                    <Play size={16} /> Run all
-                 </Button>
-              </div>
-           </div>
+          <p className="text-sm text-ois-text">
+            Are you sure you want to delete{' '}
+            <span className="font-bold">{deleteConfirmRule?.name}</span>?
+            This action cannot be undone.
+          </p>
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Button
+              variant="ghost"
+              className="h-10 px-6 font-bold text-ois-text-muted"
+              onClick={() => setDeleteConfirmRule(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="h-10 px-6 font-bold"
+              onClick={() => deleteConfirmRule && handleDeleteRule(deleteConfirmRule.id)}
+            >
+              Delete rule
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>
