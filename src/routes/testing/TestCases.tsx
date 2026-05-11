@@ -104,10 +104,10 @@ export const TestCases: React.FC = () => {
     if (statusFilter)    cases = cases.filter((c) => c.status === statusFilter);
 
     // Stats strip chips
-    if (priorityChip !== 'all' && !typeChip && !qualityChip) {
+    if (priorityChip !== 'all' && typeChip === 'all' && qualityChip === '') {
       cases = cases.filter((c) => c.priority === priorityChip);
     }
-    if (typeChip !== 'all' && !priorityChip) {
+    if (typeChip !== 'all' && priorityChip === 'all') {
       cases = cases.filter((c) => c.type === typeChip);
     }
     if (qualityChip === 'flaky')       cases = cases.filter((c) => (c.flakeRate ?? 0) > 0.1);
