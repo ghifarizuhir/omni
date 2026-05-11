@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, MoreVertical, AlertTriangle, CheckCircle2, Clock,
-  ExternalLink, Tag, ClipboardCheck,
+  ExternalLink, Tag, ClipboardCheck, History,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -11,7 +11,6 @@ import { Tabs } from '../../components/ui/Tabs';
 import { cn } from '../../lib/utils';
 import { getChangeById } from '../../mocks/changes';
 import { mockScalingRecommendations } from '../../mocks/scalingRecommendations';
-import { changeStatusMeta, changeTypeMeta, riskMeta } from '../../lib/constants';
 import { ChangeStatusPill } from '../../components/changes/ChangeStatusPill';
 import { ChangeTypeChip } from '../../components/changes/ChangeTypeChip';
 import { RiskBadge } from '../../components/changes/RiskBadge';
@@ -31,6 +30,11 @@ export const ChangeDetail: React.FC = () => {
   const navigate = useNavigate();
   const change = getChangeById(changeId ?? '');
 
+  const [changeStatus, setChangeStatus] = useState(change?.status ?? 'draft');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+
   if (!change) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -41,11 +45,9 @@ export const ChangeDetail: React.FC = () => {
     );
   }
 
-  const statusMeta = changeStatusMeta[change.status];
   const approvedCount = change.approvals.filter((a) => a.decision === 'approve').length;
   const activeConflicts = change.conflicts.filter((c) => !c.resolvedAt);
-  const resolvedConflicts = change.conflicts.filter((c) => c.resolvedAt);
-  const isImplemented = ['implemented', 'closed_successful', 'closed_failed'].includes(change.status);
+  const isImplemented = ['implemented', 'closed_successful', 'closed_failed'].includes(changeStatus);
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -56,8 +58,6 @@ export const ChangeDetail: React.FC = () => {
     { id: 'pir', label: 'PIR' },
     { id: 'history', label: 'History' },
   ];
-
-  const [activeTab, setActiveTab] = useState('overview');
 
   return (
     <div className="flex gap-6 min-h-0">
@@ -70,7 +70,7 @@ export const ChangeDetail: React.FC = () => {
           <CardBody className="p-0">
             <dl className="divide-y divide-ois-border text-xs">
               {[
-                { label: 'Status', value: <ChangeStatusPill status={change.status} size="sm" /> },
+                { label: 'Status', value: <ChangeStatusPill status={changeStatus} size="sm" /> },
                 { label: 'Type', value: <ChangeTypeChip type={change.type} size="sm" /> },
                 { label: 'Risk', value: <RiskBadge risk={change.risk} score={change.riskScore} size="sm" /> },
                 { label: 'Impact', value: <span className="capitalize font-medium text-ois-text">{change.impact}</span> },
@@ -166,7 +166,7 @@ export const ChangeDetail: React.FC = () => {
                 </div>
                 <h1 className="text-xl font-bold text-ois-text leading-snug">{change.title}</h1>
               </div>
-              <ChangeStatusPill status={change.status} />
+              <ChangeStatusPill status={changeStatus} />
             </div>
 
             {/* Tags */}
@@ -266,9 +266,8 @@ export const ChangeDetail: React.FC = () => {
               { label: 'Test Plan', content: change.testPlan },
             ].map(({ label, content }) => (
               <Card key={label}>
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg flex items-center justify-between">
+                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
                   <h3 className="text-sm font-bold text-ois-text">{label}</h3>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs">Edit</Button>
                 </div>
                 <CardBody>
                   <pre className="text-xs text-ois-text font-mono whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
@@ -480,22 +479,71 @@ export const ChangeDetail: React.FC = () => {
               <h3 className="text-sm font-bold text-ois-text">Audit History</h3>
             </div>
             <CardBody>
-              <div className="space-y-3">
-                {[
-                  { ts: change.updatedAt, actor: change.ownerName, msg: 'Approval received from Tom Bergstrom (Service Owner)' },
-                  { ts: change.createdAt, actor: change.requesterName, msg: 'Change request submitted for review' },
-                ].map((entry, i) => (
-                  <div key={i} className="flex gap-3 text-xs">
-                    <span className="text-ois-text-subtle whitespace-nowrap">{formatDate(entry.ts, 'MMM d HH:mm')}</span>
-                    <span className="font-medium text-ois-text">{entry.actor}</span>
-                    <span className="text-ois-text-muted">{entry.msg}</span>
-                  </div>
-                ))}
+              <div className="py-8 text-center">
+                <History size={32} className="mx-auto text-ois-text-subtle mb-3" />
+                <p className="text-sm font-bold text-ois-text">No history available</p>
+                <p className="text-xs text-ois-text-muted mt-1">
+                  Audit log tracking is coming soon. Full change history will be recorded here.
+                </p>
               </div>
             </CardBody>
           </Card>
         </Tabs>
       </div>
+
+      {/* Cancel change confirmation modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl border border-ois-border w-full max-w-sm mx-4 p-6">
+            {cancelled ? (
+              <div className="text-center py-2">
+                <CheckCircle2 size={40} className="mx-auto text-ois-success mb-3" />
+                <p className="text-base font-bold text-ois-text mb-1">Change cancelled</p>
+                <p className="text-sm text-ois-text-muted mb-5">{change.publicId} has been marked as cancelled.</p>
+                <Button onClick={() => { setShowCancelModal(false); setCancelled(false); }} className="w-full">
+                  Close
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="flex-shrink-0 w-9 h-9 rounded-full bg-red-50 flex items-center justify-center">
+                    <AlertTriangle size={18} className="text-ois-danger" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-ois-text mb-1">Cancel this change?</h2>
+                    <p className="text-xs text-ois-text-muted leading-relaxed">
+                      This will mark <span className="font-semibold text-ois-text">{change.publicId}</span> as cancelled.
+                      Pending approvals will be voided and the change will no longer appear on the forward schedule.
+                      This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setShowCancelModal(false)}
+                  >
+                    Keep change
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-ois-danger hover:bg-red-600 border-ois-danger text-white"
+                    onClick={() => {
+                      setChangeStatus('cancelled');
+                      setCancelled(true);
+                    }}
+                  >
+                    Confirm cancel
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Right sidebar */}
       <div className="w-56 shrink-0 space-y-3">
@@ -509,7 +557,7 @@ export const ChangeDetail: React.FC = () => {
                 { label: 'Approve change', primary: true, onClick: () => setActiveTab('approvals') },
                 { label: 'Open CAB workspace', onClick: () => navigate('/changes/cab') },
                 { label: 'Reschedule', onClick: () => {} },
-                { label: 'Cancel change', danger: true, onClick: () => {} },
+                { label: 'Cancel change', danger: true, onClick: () => setShowCancelModal(true) },
               ].map(({ label, primary, danger, onClick }) => (
                 <button
                   key={label}
