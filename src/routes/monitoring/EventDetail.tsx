@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Modal } from '../../components/ui/Modal';
 import { 
   ArrowLeft, Activity, Clock, User, Shield, 
   ExternalLink, AlertTriangle, CheckCircle2, 
@@ -21,6 +22,40 @@ import { mockEvents, mockCIs, mockMonitoringRules, mockUsers, mockIncidents } fr
 import { cn } from '../../lib/utils';
 import { EventStatus } from '../../types/monitoring';
 
+interface ResolveEventModalProps {
+  linkedIncidentId: string;
+  onResolveOnly: () => void;
+  onResolveAndOpen: () => void;
+  onClose: () => void;
+}
+
+const ResolveEventModal: React.FC<ResolveEventModalProps> = ({
+  linkedIncidentId,
+  onResolveOnly,
+  onResolveAndOpen,
+  onClose,
+}) => {
+  return (
+    <Modal isOpen={true} onClose={onClose} title="Resolve event" size="sm">
+      <div className="py-4 space-y-6">
+        <p className="text-sm text-ois-text-muted">
+          This event is linked to incident{' '}
+          <span className="font-bold font-mono text-ois-danger">{linkedIncidentId}</span>.
+          How do you want to proceed?
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-end pb-2">
+          <Button variant="outline" className="font-bold border-ois-border-strong bg-white" onClick={onResolveOnly}>
+            Resolve event only
+          </Button>
+          <Button variant="primary" className="font-bold" onClick={onResolveAndOpen}>
+            Resolve event + open incident
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
 export const EventDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -28,7 +63,8 @@ export const EventDetail: React.FC = () => {
   // State for simulated interactions
   const foundEvent = mockEvents.find(e => e.id === id || e.publicId === id);
   const [event, setEvent] = useState(foundEvent);
-  const [showRawPayload, setShowRawPayload] = useState(true);
+  const [showRawPayload, setShowRawPayload] = useState(false);
+  const [resolveModalOpen, setResolveModalOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState<{ id: string; user: string; text: string; date: string }[]>([]);
 
@@ -114,15 +150,7 @@ export const EventDetail: React.FC = () => {
 
   const handleResolve = () => {
     if (event.linkedIncidentId) {
-      if (confirm(`This event is linked to ${event.linkedIncidentId}. Resolve only this event, or also resolve the incident?`)) {
-        // Mock resolve logic
-        setEvent({
-          ...event,
-          status: 'resolved',
-          resolvedAt: new Date().toISOString(),
-          resolvedBy: 'Sarah Chen'
-        });
-      }
+      setResolveModalOpen(true);
     } else {
       setEvent({
         ...event,
@@ -531,6 +559,22 @@ export const EventDetail: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {resolveModalOpen && event.linkedIncidentId && (
+        <ResolveEventModal
+          linkedIncidentId={event.linkedIncidentId}
+          onResolveOnly={() => {
+            setEvent({ ...event, status: 'resolved', resolvedAt: new Date().toISOString(), resolvedBy: 'Sarah Chen' });
+            setResolveModalOpen(false);
+          }}
+          onResolveAndOpen={() => {
+            setEvent({ ...event, status: 'resolved', resolvedAt: new Date().toISOString(), resolvedBy: 'Sarah Chen' });
+            setResolveModalOpen(false);
+            navigate(`/incidents/${event.linkedIncidentId}`);
+          }}
+          onClose={() => setResolveModalOpen(false)}
+        />
+      )}
     </div>
   );
 };
