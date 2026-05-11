@@ -164,23 +164,61 @@ export const IncidentAnalytics: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-10">
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
+    <div className="-mx-6 -mt-6">
+
+      {/* ── Nav row — mirrors IncidentDetail header pattern exactly ─────────────── */}
+      <div className="sticky top-0 z-30 bg-white border-b border-ois-border">
+        <div className="flex items-center justify-between px-6 py-2">
+          <Link
+            to="/incidents"
+            className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
+          >
+            <ArrowLeft size={15} />
+            Incidents
+          </Link>
+
+          <div className="flex items-center gap-2">
+            {/* Date range picker */}
+            <div className="relative">
+              <Button variant="outline" size="sm" onClick={() => setRangeOpen(!rangeOpen)} className="gap-2">
+                {RANGE_LABELS[range]}
+                <ChevronDown size={14} />
+              </Button>
+              {rangeOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setRangeOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[160px]">
+                    {(Object.entries(RANGE_LABELS) as [DateRange, string][]).map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => { setRange(key); setRangeOpen(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors ${range === key ? 'font-semibold text-ois-primary' : 'text-ois-text'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <Button variant="secondary" size="sm" className="gap-1.5" onClick={handleExport}>
+              <Download size={14} />
+              Export
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Scrollable content ────────────────────────────────────────────────── */}
+      <div className="px-6 py-6 space-y-6 pb-10">
+
+        {/* Title section — accent stripe + module label + h1 */}
         <div className="flex items-start gap-3">
-          {/* Danger→warning gradient stripe anchors this page to the Incidents module */}
           <div
             className="w-1 self-stretch rounded-full shrink-0 mt-1"
             style={{ background: 'linear-gradient(to bottom, #F04438, #F79009)' }}
           />
           <div>
-            <Link
-              to="/incidents"
-              className="flex items-center gap-1 text-xs text-ois-text-muted hover:text-ois-primary transition-colors mb-1"
-            >
-              <ArrowLeft size={13} />
-              Incidents
-            </Link>
             <p className="text-[10px] font-bold uppercase tracking-widest text-ois-text-subtle mb-1">
               Incidents · Analytics
             </p>
@@ -190,43 +228,6 @@ export const IncidentAnalytics: React.FC = () => {
             </p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Date range picker */}
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRangeOpen(!rangeOpen)}
-              className="gap-2"
-            >
-              {RANGE_LABELS[range]}
-              <ChevronDown size={14} />
-            </Button>
-            {rangeOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setRangeOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-lg overflow-hidden min-w-[160px]">
-                  {(Object.entries(RANGE_LABELS) as [DateRange, string][]).map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => { setRange(key); setRangeOpen(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors ${range === key ? 'font-semibold text-ois-primary' : 'text-ois-text'}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          <Button variant="secondary" size="sm" className="gap-1.5" onClick={handleExport}>
-            <Download size={14} />
-            Export
-          </Button>
-        </div>
-      </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-4">
@@ -419,6 +420,7 @@ export const IncidentAnalytics: React.FC = () => {
           <SLAPerformancePanel incidents={filteredIncidents} />
         </CardBody>
       </Card>
+      </div>
     </div>
   );
 };
