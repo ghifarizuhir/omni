@@ -289,9 +289,9 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <div className="flex gap-2">
                    {item.primaryAction ? (
-                     <Button size="xs" variant="primary">{item.primaryAction.label}</Button>
+                     <Button size="xs" variant="primary" onClick={() => navigate(item.primaryAction?.navigateTo ?? item.sourceUrl)}>{item.primaryAction.label}</Button>
                    ) : (
-                     <Button size="xs" variant="primary">View</Button>
+                     <Button size="xs" variant="primary" onClick={() => navigate(item.sourceUrl)}>View</Button>
                    )}
                 </div>
               </div>
