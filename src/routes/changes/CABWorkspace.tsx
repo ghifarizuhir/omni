@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Play, Download, AlertTriangle, CheckCircle2, Clock, ChevronRight,
@@ -320,7 +320,7 @@ const Toast: React.FC<ToastProps> = ({ message, variant = 'success' }) => (
   <div
     className={cn(
       'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 pointer-events-none',
-      variant === 'success' ? 'bg-emerald-600 text-white' : 'bg-ois-primary text-white',
+      variant === 'success' ? 'bg-ois-success text-white' : 'bg-ois-primary text-white',
     )}
   >
     {variant === 'success' && <CheckCircle2 size={15} />}
@@ -339,11 +339,19 @@ export const CABWorkspace: React.FC = () => {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [deferredIds, setDeferredIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<ToastProps | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (message: string, variant: ToastProps['variant'] = 'success') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ message, variant });
-    setTimeout(() => setToast(null), 2000);
+    toastTimerRef.current = setTimeout(() => setToast(null), 2000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   const selected = AGENDA[selectedIdx];
 
