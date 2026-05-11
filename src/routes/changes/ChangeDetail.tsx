@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, MoreVertical, AlertTriangle, CheckCircle2, Clock,
-  ExternalLink, Tag, ClipboardCheck, History,
+  ArrowLeft, AlertTriangle, CheckCircle2, Clock,
+  ExternalLink, Tag, ClipboardCheck, History, ChevronDown,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -17,6 +17,7 @@ import { ChangeTypeChip } from '../../components/changes/ChangeTypeChip';
 import { RiskBadge } from '../../components/changes/RiskBadge';
 import { ApprovalMatrix } from '../../components/changes/ApprovalMatrix';
 import { PIRPanel } from '../../components/changes/PIRPanel';
+import { RescheduleModal } from '../../components/changes/RescheduleModal';
 import { formatDate, formatRelative } from '../../lib/format';
 
 const riskStripe: Record<string, string> = {
@@ -29,13 +30,16 @@ const riskStripe: Record<string, string> = {
 export const ChangeDetail: React.FC = () => {
   const { changeId } = useParams<{ changeId: string }>();
   const navigate = useNavigate();
-  const change = getChangeById(changeId ?? '');
+  const rawChange = getChangeById(changeId ?? '');
+  const [change, setChange] = useState(rawChange ?? null);
 
   const [changeStatus, setChangeStatus] = useState(change?.status ?? 'draft');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
 
-  if (!change) {
+  if (!rawChange || !change) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <p className="text-2xl font-bold text-ois-text mb-2">Change not found</p>
@@ -151,9 +155,42 @@ export const ChangeDetail: React.FC = () => {
           <Link to="/changes" className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text">
             <ArrowLeft size={16} /> Calendar
           </Link>
-          <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
-            <MoreVertical size={14} /> Actions
-          </Button>
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActionsOpen(v => !v)}
+              className="gap-1.5"
+            >
+              Actions
+              <ChevronDown size={14} />
+            </Button>
+            {actionsOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setActionsOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[180px]">
+                  {[
+                    {
+                      label: 'Copy change ID',
+                      action: () => navigator.clipboard.writeText(change!.publicId),
+                    },
+                    {
+                      label: 'Copy link',
+                      action: () => navigator.clipboard.writeText(window.location.href),
+                    },
+                  ].map(item => (
+                    <button
+                      key={item.label}
+                      onClick={() => { item.action(); setActionsOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors text-ois-text"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Header card */}
@@ -548,6 +585,18 @@ export const ChangeDetail: React.FC = () => {
         )}
       </Modal>
 
+      <RescheduleModal
+        isOpen={rescheduleOpen}
+        onClose={() => setRescheduleOpen(false)}
+        currentStart={change!.plannedStart}
+        currentEnd={change!.plannedEnd}
+        onReschedule={(newStart, newEnd) =>
+          setChange(prev =>
+            prev ? { ...prev, plannedStart: newStart, plannedEnd: newEnd } : prev
+          )
+        }
+      />
+
       {/* Right sidebar */}
       <div className="w-56 shrink-0 space-y-3">
         <Card>
@@ -559,7 +608,7 @@ export const ChangeDetail: React.FC = () => {
               {[
                 { label: 'Approve change', primary: true, onClick: () => setActiveTab('approvals') },
                 { label: 'Open CAB workspace', onClick: () => navigate('/changes/cab') },
-                { label: 'Reschedule', onClick: () => {} },
+                { label: 'Reschedule', onClick: () => setRescheduleOpen(true) },
                 { label: 'Cancel change', danger: true, onClick: () => setShowCancelModal(true) },
               ].map(({ label, primary, danger, onClick }) => (
                 <button
