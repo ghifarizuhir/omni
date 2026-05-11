@@ -60,10 +60,12 @@ export const AlertRouting: React.FC = () => {
   // Toast
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const modalCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (modalCloseTimerRef.current) clearTimeout(modalCloseTimerRef.current);
     };
   }, []);
 
@@ -860,7 +862,8 @@ export const AlertRouting: React.FC = () => {
                    className="h-10 px-8 font-bold gap-2"
                    onClick={() => {
                      showToast('Dry-run complete — no real alerts were sent');
-                     setTimeout(() => setIsTestModalOpen(false), 1000);
+                     if (modalCloseTimerRef.current) clearTimeout(modalCloseTimerRef.current);
+                     modalCloseTimerRef.current = setTimeout(() => setIsTestModalOpen(false), 1000);
                    }}
                  >
                     <Play size={16} /> Run dry-run
