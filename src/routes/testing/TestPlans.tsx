@@ -46,7 +46,6 @@ function unique<T>(arr: T[]): T[] {
 export const TestPlans: React.FC = () => {
   // Filter state
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
   const [componentFilter, setComponentFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [ownerFilter, setOwnerFilter] = useState<string>('');
@@ -118,7 +117,6 @@ export const TestPlans: React.FC = () => {
           (p.componentName && p.componentName.toLowerCase().includes(q))
       );
     }
-    if (typeFilter) list = list.filter((p) => p.type === typeFilter);
     if (componentFilter) list = list.filter((p) => p.componentName === componentFilter);
     if (statusFilter) list = list.filter((p) => p.status === statusFilter);
     if (ownerFilter) list = list.filter((p) => p.ownerName === ownerFilter);
@@ -132,11 +130,10 @@ export const TestPlans: React.FC = () => {
     });
 
     return list;
-  }, [search, typeFilter, componentFilter, statusFilter, ownerFilter, typeChip, qualityChip, now]);
+  }, [search, componentFilter, statusFilter, ownerFilter, typeChip, qualityChip, now]);
 
   const handleReset = () => {
     setSearch('');
-    setTypeFilter('');
     setComponentFilter('');
     setStatusFilter('');
     setOwnerFilter('');
@@ -201,20 +198,6 @@ export const TestPlans: React.FC = () => {
             className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-ois-border bg-ois-surface text-sm text-ois-text placeholder:text-ois-text-subtle focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
           />
         </div>
-
-        {/* Type dropdown */}
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3 py-1.5 rounded-lg border border-ois-border bg-ois-surface text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-        >
-          <option value="">Type</option>
-          {ALL_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </option>
-          ))}
-        </select>
 
         {/* Component dropdown */}
         <select

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MoreVertical, Play, FileEdit, Archive, Copy, ExternalLink } from 'lucide-react';
 import { TestPlan } from '../../types/testing';
 import { TestRunStatusBadge } from './TestRunStatusBadge';
@@ -21,6 +22,7 @@ const typeChipColors: Record<string, { color: string; bg: string }> = {
 };
 
 export const TestPlanRow: React.FC<TestPlanRowProps> = ({ plan, onOpen }) => {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const typeStyle = typeChipColors[plan.type] ?? { color: '#475467', bg: '#F1F3F7' };
@@ -69,36 +71,44 @@ export const TestPlanRow: React.FC<TestPlanRowProps> = ({ plan, onOpen }) => {
         <span className="text-xs text-ois-text-muted">{plan.ownerName}</span>
       </td>
       <td className="px-4 py-3">
-        <div className="relative" ref={menuRef}>
+        <div className="flex items-center gap-2">
           <button
-            className="p-1 rounded hover:bg-ois-border text-ois-text-muted"
-            onClick={() => setMenuOpen((v) => !v)}
+            className="text-xs text-ois-primary font-medium hover:underline"
+            onClick={() => navigate(`/testing/runs?plan=${plan.publicId}`)}
           >
-            <MoreVertical size={14} />
+            View runs →
           </button>
-          {menuOpen && (
-            <div
-              className="absolute right-0 top-7 z-20 bg-ois-surface border border-ois-border rounded-lg shadow-lg py-1 min-w-[160px]"
-              onBlur={() => setMenuOpen(false)}
+          <div className="relative" ref={menuRef}>
+            <button
+              className="p-1 rounded hover:bg-ois-border text-ois-text-muted"
+              onClick={() => setMenuOpen((v) => !v)}
             >
-              {[
-                { label: 'Open', icon: ExternalLink, action: onOpen },
-                { label: 'Run now', icon: Play, action: () => {} },
-                { label: 'Edit cases', icon: FileEdit, action: () => {} },
-                { label: 'Archive', icon: Archive, action: () => {} },
-                { label: 'Duplicate', icon: Copy, action: () => {} },
-              ].map(({ label, icon: Icon, action }) => (
-                <button
-                  key={label}
-                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-ois-text hover:bg-ois-surface-muted"
-                  onClick={() => { setMenuOpen(false); action(); }}
-                >
-                  <Icon size={12} />
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
+              <MoreVertical size={14} />
+            </button>
+            {menuOpen && (
+              <div
+                className="absolute right-0 top-7 z-20 bg-ois-surface border border-ois-border rounded-lg shadow-lg py-1 min-w-[160px]"
+                onBlur={() => setMenuOpen(false)}
+              >
+                {[
+                  { label: 'Open', icon: ExternalLink, action: onOpen },
+                  { label: 'Run now', icon: Play, action: () => {} },
+                  { label: 'Edit cases', icon: FileEdit, action: () => {} },
+                  { label: 'Archive', icon: Archive, action: () => {} },
+                  { label: 'Duplicate', icon: Copy, action: () => {} },
+                ].map(({ label, icon: Icon, action }) => (
+                  <button
+                    key={label}
+                    className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-ois-text hover:bg-ois-surface-muted"
+                    onClick={() => { setMenuOpen(false); action(); }}
+                  >
+                    <Icon size={12} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </td>
     </tr>

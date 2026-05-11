@@ -134,7 +134,6 @@ const TRIGGER_CHIPS: { label: string; key: string }[] = [
 export const TestRuns: React.FC = () => {
   // Filter state
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
   const [planFilter, setPlanFilter] = useState<string>('');
   const [envFilter, setEnvFilter] = useState<string>('');
   const [triggerFilter, setTriggerFilter] = useState<string>('');
@@ -236,7 +235,6 @@ export const TestRuns: React.FC = () => {
           r.environment.toLowerCase().includes(q)
       );
     }
-    if (statusFilter) list = list.filter((r) => r.status === statusFilter);
     if (planFilter) list = list.filter((r) => r.testPlanName === planFilter);
     if (envFilter) list = list.filter((r) => r.environment === envFilter);
     if (triggerFilter)
@@ -255,7 +253,6 @@ export const TestRuns: React.FC = () => {
     return list;
   }, [
     search,
-    statusFilter,
     planFilter,
     envFilter,
     triggerFilter,
@@ -266,7 +263,6 @@ export const TestRuns: React.FC = () => {
 
   const handleReset = () => {
     setSearch('');
-    setStatusFilter('');
     setPlanFilter('');
     setEnvFilter('');
     setTriggerFilter('');
@@ -334,20 +330,6 @@ export const TestRuns: React.FC = () => {
                 className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-ois-border bg-ois-surface text-sm text-ois-text placeholder:text-ois-text-subtle focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
               />
             </div>
-
-            {/* Status dropdown */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-ois-border bg-ois-surface text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-            >
-              <option value="">Status</option>
-              {ALL_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' ')}
-                </option>
-              ))}
-            </select>
 
             {/* Plan dropdown */}
             <select
