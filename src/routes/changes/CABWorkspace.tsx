@@ -328,6 +328,59 @@ const Toast: React.FC<ToastProps> = ({ message, variant = 'success' }) => (
   </div>
 );
 
+// ─── Schedule Session Modal ───────────────────────────────────────────────────
+
+const ScheduleSessionModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  date: string;
+  onDateChange: (v: string) => void;
+  attendees: string[];
+  onAttendeesChange: (ids: string[]) => void;
+  onConfirm: () => void;
+}> = ({ isOpen, onClose, date, onDateChange, attendees, onAttendeesChange, onConfirm }) => (
+  <Modal isOpen={isOpen} onClose={onClose} title="Schedule new CAB session" size="md">
+    <div className="py-4 space-y-5">
+      <div>
+        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+          Session date & time (UTC) <span className="text-ois-danger">*</span>
+        </label>
+        <input
+          type="datetime-local"
+          value={date}
+          onChange={e => onDateChange(e.target.value)}
+          className="w-full h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
+        />
+      </div>
+      <div>
+        <p className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-2">Attendees</p>
+        <div className="space-y-2">
+          {SESSION.members.map(m => (
+            <label key={m.id} className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={attendees.includes(m.id)}
+                onChange={e => onAttendeesChange(
+                  e.target.checked
+                    ? [...attendees, m.id]
+                    : attendees.filter(id => id !== m.id)
+                )}
+                className="rounded border-ois-border"
+              />
+              <span className="text-sm text-ois-text">{m.name}</span>
+              <span className="text-xs text-ois-text-subtle">{m.role}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 pt-2 border-t border-ois-border">
+        <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+        <Button size="sm" disabled={!date} onClick={onConfirm}>Schedule session</Button>
+      </div>
+    </div>
+  </Modal>
+);
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export const CABWorkspace: React.FC = () => {
@@ -340,6 +393,9 @@ export const CABWorkspace: React.FC = () => {
   const [deferredIds, setDeferredIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<ToastProps | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleAttendees, setScheduleAttendees] = useState<string[]>(SESSION.members.map(m => m.id));
 
   const showToast = (message: string, variant: ToastProps['variant'] = 'success') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -353,6 +409,15 @@ export const CABWorkspace: React.FC = () => {
     };
   }, []);
 
+  const handleScheduleConfirm = () => {
+    const formatted = scheduleDate
+      ? new Date(scheduleDate).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+      : '';
+    showToast(`Session scheduled for ${formatted}`);
+    setScheduleOpen(false);
+    setScheduleDate('');
+  };
+
   const selected = AGENDA[selectedIdx];
 
   const getVote = (changeId: string, approvalId: string): CABVote | undefined =>
@@ -363,17 +428,29 @@ export const CABWorkspace: React.FC = () => {
 
   if (AGENDA.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <Calendar size={48} className="text-ois-text-subtle mb-4" />
-        <h2 className="text-xl font-bold text-ois-text mb-2">No active CAB session</h2>
-        <p className="text-sm text-ois-text-muted mb-6">
-          Next scheduled session: Thursday May 9, 10:00 UTC (changes on agenda)
-        </p>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => navigate('/changes')}>View upcoming changes</Button>
-          <Button onClick={() => navigate('/changes')}>Schedule new session</Button>
+      <>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <Calendar size={48} className="text-ois-text-subtle mb-4" />
+          <h2 className="text-xl font-bold text-ois-text mb-2">No active CAB session</h2>
+          <p className="text-sm text-ois-text-muted mb-6">
+            Next scheduled session: Thursday May 9, 10:00 UTC (changes on agenda)
+          </p>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => navigate('/changes')}>View upcoming changes</Button>
+            <Button onClick={() => setScheduleOpen(true)}>Schedule new session</Button>
+          </div>
         </div>
-      </div>
+        {toast && <Toast message={toast.message} variant={toast.variant} />}
+        <ScheduleSessionModal
+          isOpen={scheduleOpen}
+          onClose={() => setScheduleOpen(false)}
+          date={scheduleDate}
+          onDateChange={setScheduleDate}
+          attendees={scheduleAttendees}
+          onAttendeesChange={setScheduleAttendees}
+          onConfirm={handleScheduleConfirm}
+        />
+      </>
     );
   }
 
@@ -445,7 +522,31 @@ export const CABWorkspace: React.FC = () => {
             >
               <Play size={12} /> {sessionStarted ? 'End session' : 'Start session'}
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => showToast('Export coming soon', 'info')}>
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setScheduleOpen(true)}>
+              <Calendar size={12} /> Schedule session
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => {
+              const headers = ['ID', 'Title', 'Type', 'Risk', 'Risk Score', 'Window'];
+              const rows = AGENDA.map(c => [
+                c.publicId,
+                `"${c.title.replace(/"/g, '""')}"`,
+                c.type,
+                c.risk,
+                String(c.riskScore),
+                `"${c.implementationWindow ?? ''}"`,
+              ].join(','));
+              const csv = [headers.join(','), ...rows].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `cab-agenda-${SESSION.date.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.csv`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              showToast('Agenda exported');
+            }}>
               <Download size={12} /> Export agenda
             </Button>
           </div>
@@ -583,6 +684,16 @@ export const CABWorkspace: React.FC = () => {
 
       {/* Toast */}
       {toast && <Toast message={toast.message} variant={toast.variant} />}
+
+      <ScheduleSessionModal
+        isOpen={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        date={scheduleDate}
+        onDateChange={setScheduleDate}
+        attendees={scheduleAttendees}
+        onAttendeesChange={setScheduleAttendees}
+        onConfirm={handleScheduleConfirm}
+      />
     </div>
   );
 };
