@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
+import { formatRelative } from '@/src/lib/format';
 import { getArticleBySlug } from '@/src/mocks/kbArticles';
 import { mockKBCategories } from '@/src/mocks/kbCategories';
 import { Modal } from '@/src/components/ui/Modal';
@@ -91,6 +92,76 @@ function countWords(text: string): number {
 
 function estimateReadTime(text: string): number {
   return Math.max(1, Math.ceil(countWords(text) / 200));
+}
+
+// ── Incident postmortem template ──────────────────────────────────────────────
+
+function buildIncidentTemplate(incidentId: string, title: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  return `# Postmortem: ${title}
+
+**Incident:** ${incidentId}
+**Date:** ${today}
+
+## Summary
+
+[Brief description of what happened and customer impact]
+
+## Timeline
+
+| Time (UTC) | Event |
+|---|---|
+| 00:00 | Incident detected |
+| 00:05 | On-call engineer paged |
+| 00:30 | Root cause identified |
+| 01:00 | Incident resolved |
+
+## Root Cause
+
+[Describe the root cause]
+
+## Contributing Factors
+
+- [Factor 1]
+- [Factor 2]
+
+## Resolution
+
+[What was done to resolve the incident]
+
+## Action Items
+
+| Action | Owner | Due |
+|---|---|---|
+| [Action 1] | [Owner] | [Date] |
+`;
+}
+
+function getInitialEditorState(slug: string | undefined, searchParams: URLSearchParams): EditorState {
+  const source = searchParams.get('source');
+  const id = searchParams.get('id') ?? '';
+  const title = searchParams.get('title') ?? '';
+
+  let body = PLACEHOLDER_BODY;
+  let contentType: KBContentType = 'how_to';
+
+  if (source === 'incident' && id) {
+    body = buildIncidentTemplate(id, title || id);
+    contentType = 'incident_postmortem';
+  }
+
+  return {
+    title: source === 'incident' && title ? `Postmortem: ${title}` : '',
+    summary: '',
+    body,
+    categoryId: '',
+    contentType,
+    visibility: 'internal',
+    tags: source === 'incident' ? ['postmortem', 'incident'] : [],
+    linkedCIs: [],
+    linkedItems: source === 'incident' && id ? [id] : [],
+    status: 'draft',
+  };
 }
 
 // ── Minimal markdown preview (lightweight, for editor panel) ─────────────────
@@ -467,18 +538,7 @@ export const KBEditor: React.FC = () => {
         status:      existingArticle.status,
       };
     }
-    return {
-      title:       searchParams.get('title') ?? '',
-      summary:     '',
-      body:        PLACEHOLDER_BODY,
-      categoryId:  'kbc-002',
-      contentType: 'how_to',
-      visibility:  'internal',
-      tags:        [],
-      linkedCIs:   [],
-      linkedItems: [],
-      status:      'draft',
-    };
+    return getInitialEditorState(slug, searchParams);
   });
 
   const set = <K extends keyof EditorState>(key: K, val: EditorState[K]) =>
@@ -491,6 +551,7 @@ export const KBEditor: React.FC = () => {
   const [slashIndex,     setSlashIndex]     = useState(0);
   const [slashInsertAt,  setSlashInsertAt]  = useState(0);
   const [autoSavedAt,    setAutoSavedAt]    = useState<Date | null>(null);
+  const [lastSaved,      setLastSaved]      = useState<Date | null>(null);
   const [pendingAction,  setPendingAction]  = useState<'publish' | 'review' | 'draft' | null>(null);
   const [published,      setPublished]      = useState(false);
   const [lastBody,       setLastBody]       = useState(state.body);
@@ -508,6 +569,31 @@ export const KBEditor: React.FC = () => {
     }, 10_000);
     return () => { if (autoSaveTimer.current) clearInterval(autoSaveTimer.current); };
   }, [state.body, lastBody]);
+
+  // Autosave to localStorage (debounced 30s)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      localStorage.setItem('kb-editor-draft', JSON.stringify(state));
+      setLastSaved(new Date());
+    }, 30_000);
+    return () => clearTimeout(timer);
+  }, [state]);
+
+  // Restore from localStorage on mount (new articles only, no source context)
+  useEffect(() => {
+    if (!slug && !searchParams.get('source')) {
+      const saved = localStorage.getItem('kb-editor-draft');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as EditorState;
+          setState(parsed);
+          setLastSaved(new Date());
+        } catch {
+          // ignore malformed data
+        }
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard shortcut for save
   useEffect(() => {
@@ -849,6 +935,14 @@ export const KBEditor: React.FC = () => {
                 <>
                   <span>·</span>
                   <span className="text-ois-text-subtle">Auto-saves every 10s</span>
+                </>
+              )}
+              {lastSaved && (
+                <>
+                  <span>·</span>
+                  <span className="text-xs text-ois-text-subtle">
+                    Draft saved {formatRelative(lastSaved.toISOString())}
+                  </span>
                 </>
               )}
             </div>
