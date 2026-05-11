@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   BarChart2, Download, ChevronDown, ArrowLeft,
   AlertCircle, Clock, ShieldCheck, Siren,
-  ExternalLink,
+  ExternalLink, ArrowUpDown, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '@/src/components/ui/Card';
 import { KPICard } from '@/src/components/ui/KPICard';
@@ -14,7 +14,8 @@ import { TopCategoriesPanel } from '@/src/components/incidents/analytics/TopCate
 import { SLAPerformancePanel } from '@/src/components/incidents/analytics/SLAPerformancePanel';
 import { mockIncidents } from '@/src/mocks/incidents';
 import { mockServices } from '@/src/mocks/services';
-import { formatRelative } from '@/src/lib/format';
+import { mockUsers } from '@/src/mocks/users';
+import { formatRelative, formatDate } from '@/src/lib/format';
 import { subDays, parseISO, isAfter } from 'date-fns';
 
 type DateRange = '7d' | '30d' | '90d';
@@ -27,9 +28,12 @@ const RANGE_LABELS: Record<DateRange, string> = {
 
 const SERVICE_MAP = Object.fromEntries(mockServices.map(s => [s.id, s.name]));
 
+type CISortField = 'publicId' | 'count' | 'lastIncident';
+
 export const IncidentAnalytics: React.FC = () => {
   const [range, setRange] = useState<DateRange>('30d');
   const [rangeOpen, setRangeOpen] = useState(false);
+  const [ciSort, setCISort] = useState<{ field: CISortField; dir: 'asc' | 'desc' }>({ field: 'count', dir: 'desc' });
 
   const referenceDate = new Date('2026-05-08');
   const rangeDays = range === '7d' ? 7 : range === '30d' ? 30 : 90;
@@ -93,27 +97,101 @@ export const IncidentAnalytics: React.FC = () => {
   const linkedProblemCISet = new Set(activeProblemsLinkedCIs);
   const linkedProblemCount = topCIs.filter(ci => linkedProblemCISet.has(ci.ciId)).length;
 
+  const sortedCIs = useMemo(() => {
+    return [...topCIs].sort((a, b) => {
+      const dir = ciSort.dir === 'asc' ? 1 : -1;
+      if (ciSort.field === 'publicId') return dir * (a.publicId ?? '').localeCompare(b.publicId ?? '');
+      if (ciSort.field === 'lastIncident') {
+        return dir * (
+          new Date(a.lastIncidentTime || 0).getTime() -
+          new Date(b.lastIncidentTime || 0).getTime()
+        );
+      }
+      return dir * (a.count - b.count);
+    });
+  }, [topCIs, ciSort]);
+
+  const toggleCISort = (field: CISortField) => {
+    setCISort(prev =>
+      prev.field === field
+        ? { field, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
+        : { field, dir: 'desc' }
+    );
+  };
+
+  const SortIcon: React.FC<{ field: CISortField }> = ({ field }) => {
+    if (ciSort.field !== field) return <ArrowUpDown size={12} className="text-ois-text-subtle ml-1 shrink-0" />;
+    return ciSort.dir === 'asc'
+      ? <ArrowUp size={12} className="text-ois-primary ml-1 shrink-0" />
+      : <ArrowDown size={12} className="text-ois-primary ml-1 shrink-0" />;
+  };
+
+  const handleExport = () => {
+    const headers = [
+      'ID', 'Title', 'Priority', 'Status', 'Assignee',
+      'Service', 'Created', 'MTTR (min)', 'SLA Response', 'SLA Resolve', 'Tags',
+    ];
+    const rows = filteredIncidents.map(inc => {
+      const assigneeName = mockUsers.find(u => u.id === inc.assigneeId)?.name ?? '';
+      const serviceName = inc.affectedServiceIds.map(id => SERVICE_MAP[id]).filter(Boolean).join('; ');
+      const mttr = inc.resolution?.resolvedAt
+        ? Math.round((new Date(inc.resolution.resolvedAt).getTime() - new Date(inc.createdAt).getTime()) / 60_000)
+        : '';
+      return [
+        inc.publicId,
+        `"${inc.title.replace(/"/g, '""')}"`,
+        inc.priority,
+        inc.status,
+        `"${assigneeName}"`,
+        `"${serviceName}"`,
+        formatDate(inc.createdAt),
+        mttr,
+        inc.slaResponseStatus,
+        inc.slaResolveStatus,
+        `"${inc.tags.join(', ')}"`,
+      ].join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `incidents-${range}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6 pb-10">
       {/* Page header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          {/* Danger→warning gradient stripe anchors this page to the Incidents module */}
+          <div
+            className="w-1 self-stretch rounded-full shrink-0 mt-1"
+            style={{ background: 'linear-gradient(to bottom, #F04438, #F79009)' }}
+          />
+          <div>
             <Link
               to="/incidents"
-              className="flex items-center gap-1 text-xs text-ois-text-muted hover:text-ois-primary transition-colors"
+              className="flex items-center gap-1 text-xs text-ois-text-muted hover:text-ois-primary transition-colors mb-1"
             >
               <ArrowLeft size={13} />
               Incidents
             </Link>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-ois-text-subtle mb-1">
+              Incidents · Analytics
+            </p>
+            <h1 className="text-2xl font-bold text-ois-text">Incident Analytics</h1>
+            <p className="text-sm text-ois-text-muted mt-0.5">
+              {filteredIncidents.length} incidents · {RANGE_LABELS[range]}
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-ois-text">Incident Analytics</h1>
-          <p className="text-sm text-ois-text-muted mt-0.5">
-            {filteredIncidents.length} incidents · {RANGE_LABELS[range]}
-          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Date range picker */}
           <div className="relative">
             <Button
@@ -143,7 +221,7 @@ export const IncidentAnalytics: React.FC = () => {
             )}
           </div>
 
-          <Button variant="secondary" size="sm" className="gap-1.5">
+          <Button variant="secondary" size="sm" className="gap-1.5" onClick={handleExport}>
             <Download size={14} />
             Export
           </Button>
@@ -158,7 +236,7 @@ export const IncidentAnalytics: React.FC = () => {
           trend={-3}
           trendLabel="vs prev 30d"
           trendBetter="low"
-          icon={<AlertCircle size={18} />}
+          icon={<div className="p-2 rounded-lg bg-ois-danger-pale"><AlertCircle size={18} className="text-ois-danger" /></div>}
         />
         <KPICard
           label="MTTR"
@@ -166,7 +244,7 @@ export const IncidentAnalytics: React.FC = () => {
           trend={-14}
           trendLabel="min vs prev 30d"
           trendBetter="low"
-          icon={<Clock size={18} />}
+          icon={<div className="p-2 rounded-lg bg-ois-warning-pale"><Clock size={18} className="text-ois-warning" /></div>}
         />
         <KPICard
           label="SLA compliance"
@@ -174,7 +252,7 @@ export const IncidentAnalytics: React.FC = () => {
           trend={1.2}
           trendLabel="vs prev 30d"
           trendBetter="high"
-          icon={<ShieldCheck size={18} />}
+          icon={<div className="p-2 rounded-lg bg-ois-success-pale"><ShieldCheck size={18} className="text-ois-success" /></div>}
         />
         <KPICard
           label="Major incidents"
@@ -182,7 +260,7 @@ export const IncidentAnalytics: React.FC = () => {
           trend={0}
           trendLabel="same as prev 30d"
           trendBetter="low"
-          icon={<Siren size={18} />}
+          icon={<div className="p-2 rounded-lg bg-ois-danger-pale"><Siren size={18} className="text-ois-danger" /></div>}
         />
       </div>
 
@@ -261,15 +339,27 @@ export const IncidentAnalytics: React.FC = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-ois-border bg-ois-surface-muted/40">
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">CI</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Incidents</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Last incident</th>
+                <th className="px-4 py-2.5 text-left">
+                  <button onClick={() => toggleCISort('publicId')} className="flex items-center text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider hover:text-ois-text transition-colors">
+                    CI <SortIcon field="publicId" />
+                  </button>
+                </th>
+                <th className="px-4 py-2.5 text-left">
+                  <button onClick={() => toggleCISort('count')} className="flex items-center text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider hover:text-ois-text transition-colors">
+                    Incidents <SortIcon field="count" />
+                  </button>
+                </th>
+                <th className="px-4 py-2.5 text-left">
+                  <button onClick={() => toggleCISort('lastIncident')} className="flex items-center text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider hover:text-ois-text transition-colors">
+                    Last incident <SortIcon field="lastIncident" />
+                  </button>
+                </th>
                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Problem linked</th>
                 <th className="px-4 py-2.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-ois-border">
-              {topCIs.map((ci, idx) => {
+              {sortedCIs.map((ci, idx) => {
                 const hasActiveProblem = linkedProblemCISet.has(ci.ciId);
                 return (
                   <tr key={ci.ciId} className="hover:bg-ois-surface-muted/30 transition-colors">
