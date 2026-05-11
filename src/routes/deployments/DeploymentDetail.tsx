@@ -14,7 +14,7 @@ import { mockTestRuns } from '../../mocks/testRuns';
 import { formatDate, formatRelative } from '../../lib/format';
 import { cn } from '../../lib/utils';
 
-const TABS = [
+const BASE_TABS = [
   { id: 'overview',   label: 'Overview' },
   { id: 'manifest',   label: 'Manifest' },
   { id: 'linked',     label: 'Linked Items' },
@@ -22,68 +22,13 @@ const TABS = [
   { id: 'history',    label: 'History' },
 ];
 
-const MANIFEST_YAML = `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: payment-api
-  namespace: staging
-spec:
-  replicas: 5
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-  selector:
-    matchLabels:
-      app: payment-api
-  template:
-    metadata:
-      labels:
-        app: payment-api
-        version: 2.4.1
-    spec:
-      serviceAccountName: payment-api-sa
-      initContainers:
-      - name: pgbouncer-init
-        image: registry.acme.io/pgbouncer-init:1.2.0
-        env:
-        - name: DB_HOST
-          value: pg-staging-01
-        - name: POOL_SIZE
-          value: "50"
-      containers:
-      - name: payment-api
-        image: registry.acme.io/payment-api:2.4.1
-        ports:
-        - containerPort: 8080
-        resources:
-          requests:
-            cpu: "200m"
-            memory: "256Mi"
-          limits:
-            cpu: "1000m"
-            memory: "512Mi"
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 10
-          periodSeconds: 10`;
-
 function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <tr className="border-b border-[#F2F4F7] last:border-0">
-      <td className="py-3 pr-6 text-xs font-semibold text-[#667085] uppercase tracking-wide whitespace-nowrap w-40 align-top">
+    <tr className="border-b border-ois-border last:border-0">
+      <td className="py-3 pr-6 text-xs font-semibold text-ois-text-muted uppercase tracking-wide whitespace-nowrap w-40 align-top">
         {label}
       </td>
-      <td className="py-3 text-sm text-[#344054] break-all align-top">{children}</td>
+      <td className="py-3 text-sm text-ois-text break-all align-top">{children}</td>
     </tr>
   );
 }
@@ -102,16 +47,16 @@ function LinkedCard({
   return (
     <Link
       to={href}
-      className="flex items-center justify-between rounded-xl border border-[#EAECF0] px-5 py-4 bg-white hover:border-[#1F4FD4] hover:bg-[#F5F8FF] transition-colors group"
+      className="flex items-center justify-between rounded-xl border border-ois-border px-5 py-4 bg-white hover:border-ois-primary hover:bg-ois-primary-pale transition-colors group"
     >
       <div className="flex items-center gap-3">
-        <span className="text-[#1F4FD4] opacity-70 group-hover:opacity-100">{icon}</span>
+        <span className="text-ois-primary opacity-70 group-hover:opacity-100">{icon}</span>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3]">{label}</p>
-          <p className="font-mono text-sm font-bold text-[#101828] mt-0.5">{publicId}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-ois-text-subtle">{label}</p>
+          <p className="font-mono text-sm font-bold text-ois-text mt-0.5">{publicId}</p>
         </div>
       </div>
-      <span className="text-[#1F4FD4] text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+      <span className="text-ois-primary text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">
         View →
       </span>
     </Link>
@@ -122,13 +67,13 @@ function HistoryItem({ time, label, detail, color }: { time: string; label: stri
   return (
     <div className="flex gap-4 relative">
       <div className="flex flex-col items-center">
-        <div className={cn('w-3 h-3 rounded-full mt-0.5 shrink-0 border-2 border-white shadow', color ?? 'bg-[#1F4FD4]')} />
-        <div className="w-px flex-1 bg-[#E4E7EC] mt-1" />
+        <div className={cn('w-3 h-3 rounded-full mt-0.5 shrink-0 border-2 border-white shadow', color ?? 'bg-ois-primary')} />
+        <div className="w-px flex-1 bg-ois-border mt-1" />
       </div>
       <div className="pb-6 flex-1 min-w-0">
-        <p className="text-[11px] text-[#98A2B3] font-mono">{time}</p>
-        <p className="text-sm font-semibold text-[#344054] mt-0.5">{label}</p>
-        {detail && <p className="text-xs text-[#667085] mt-0.5">{detail}</p>}
+        <p className="text-[11px] text-ois-text-subtle font-mono">{time}</p>
+        <p className="text-sm font-semibold text-ois-text mt-0.5">{label}</p>
+        {detail && <p className="text-xs text-ois-text-muted mt-0.5">{detail}</p>}
       </div>
     </div>
   );
@@ -249,8 +194,8 @@ export const DeploymentDetail: React.FC = () => {
   if (!deployment) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
-        <p className="text-[#344054] font-semibold text-lg">Deployment not found</p>
-        <Link to="/deployments" className="text-sm text-[#1F4FD4] hover:underline flex items-center gap-1">
+        <p className="text-ois-text font-semibold text-lg">Deployment not found</p>
+        <Link to="/deployments" className="text-sm text-ois-primary hover:underline flex items-center gap-1">
           <ArrowLeft size={14} /> Back to deployments
         </Link>
       </div>
@@ -264,7 +209,7 @@ export const DeploymentDetail: React.FC = () => {
       time: formatDate(deployment.createdAt),
       label: 'Deployment triggered',
       detail: `by ${deployment.triggeredByName}`,
-      color: 'bg-[#1F4FD4]',
+      color: 'bg-ois-primary',
     });
   }
   deployment.stages.forEach((stage) => {
@@ -275,10 +220,10 @@ export const DeploymentDetail: React.FC = () => {
         detail: stage.durationSec != null ? `${stage.durationSec}s` : undefined,
         color:
           stage.status === 'success'
-            ? 'bg-[#12B76A]'
+            ? 'bg-ois-success'
             : stage.status === 'failed'
-            ? 'bg-[#F04438]'
-            : 'bg-[#98A2B3]',
+            ? 'bg-ois-danger'
+            : 'bg-ois-text-subtle',
       });
     }
   });
@@ -287,13 +232,13 @@ export const DeploymentDetail: React.FC = () => {
       time: formatDate(deployment.rollback.initiatedAt),
       label: 'Rollback initiated',
       detail: `by ${deployment.rollback.initiatedBy} — ${deployment.rollback.reason}`,
-      color: 'bg-[#F79009]',
+      color: 'bg-ois-warning',
     });
     if (deployment.rollback.completedAt) {
       historyEvents.push({
         time: formatDate(deployment.rollback.completedAt),
         label: 'Rollback completed',
-        color: 'bg-[#F79009]',
+        color: 'bg-ois-warning',
       });
     }
   }
@@ -305,12 +250,12 @@ export const DeploymentDetail: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] pb-20">
+    <div className="min-h-screen bg-ois-bg pb-20">
       {/* ── Top nav bar ──────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 bg-white border-b border-[#EAECF0] px-6 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-10 bg-white border-b border-ois-border px-6 py-3 flex items-center justify-between">
         <Link
           to="/deployments"
-          className="flex items-center gap-1.5 text-sm text-[#667085] hover:text-[#344054] transition-colors"
+          className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
         >
           <ArrowLeft size={15} />
           Deployments
@@ -318,30 +263,30 @@ export const DeploymentDetail: React.FC = () => {
         <div className="relative">
           <button
             onClick={() => setActionsOpen((v) => !v)}
-            className="flex items-center gap-1 text-[#667085] hover:text-[#344054] p-2 rounded-lg hover:bg-[#F9FAFB] border border-transparent hover:border-[#EAECF0] transition-colors"
+            className="flex items-center gap-1 text-ois-text-muted hover:text-ois-text p-2 rounded-lg hover:bg-ois-bg border border-transparent hover:border-ois-border transition-colors"
           >
             <MoreVertical size={16} />
           </button>
           {actionsOpen && (
             <div
-              className="absolute right-0 top-full mt-1 bg-white border border-[#EAECF0] rounded-xl shadow-lg w-48 py-1 z-30"
+              className="absolute right-0 top-full mt-1 bg-white border border-ois-border rounded-xl shadow-lg w-48 py-1 z-30"
               onMouseLeave={() => setActionsOpen(false)}
             >
               <button
-                className="w-full text-left px-4 py-2.5 text-sm text-[#344054] hover:bg-[#F9FAFB] transition-colors"
+                className="w-full text-left px-4 py-2.5 text-sm text-ois-text hover:bg-ois-bg transition-colors"
                 onClick={() => { setActionsOpen(false); }}
               >
                 Copy deployment ID
               </button>
               <button
-                className="w-full text-left px-4 py-2.5 text-sm text-[#344054] hover:bg-[#F9FAFB] transition-colors"
+                className="w-full text-left px-4 py-2.5 text-sm text-ois-text hover:bg-ois-bg transition-colors"
                 onClick={() => { setActionsOpen(false); }}
               >
                 Export logs
               </button>
               {(deployment.status === 'running' || deployment.status === 'success') && (
                 <button
-                  className="w-full text-left px-4 py-2.5 text-sm text-[#B42318] hover:bg-[#FEF3F2] transition-colors"
+                  className="w-full text-left px-4 py-2.5 text-sm text-ois-sev-p1 hover:bg-ois-danger-pale transition-colors"
                   onClick={() => { setActionsOpen(false); setRollbackOpen(true); }}
                 >
                   Rollback
@@ -364,8 +309,8 @@ export const DeploymentDetail: React.FC = () => {
         <div className="flex gap-6">
           {/* Left 60% — stages */}
           <div className="flex-[3] min-w-0">
-            <div className="bg-white rounded-xl border border-[#EAECF0] p-5">
-              <p className="text-xs font-bold uppercase tracking-wide text-[#667085] mb-4">
+            <div className="bg-white rounded-xl border border-ois-border p-5">
+              <p className="text-xs font-bold uppercase tracking-wide text-ois-text-muted mb-4">
                 Pipeline Stages
               </p>
               <DeploymentStages
@@ -382,8 +327,17 @@ export const DeploymentDetail: React.FC = () => {
         </div>
 
         {/* ── Full-width tabs ───────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-[#EAECF0] p-6">
-          <Tabs tabs={TABS}>
+        {(() => {
+          // Manifest tab is only shown if the deployment has actual YAML content.
+          // manifestRef is just a file path — not renderable YAML — so exclude the tab
+          // unless a future field (e.g. manifestYaml) is present on the deployment.
+          const manifestYaml = (deployment as unknown as Record<string, unknown>).manifestYaml as string | undefined;
+          const showManifest = Boolean(manifestYaml);
+          const tabs = BASE_TABS.filter(t => t.id !== 'manifest' || showManifest);
+
+          return (
+        <div className="bg-white rounded-xl border border-ois-border p-6">
+          <Tabs tabs={tabs}>
             {/* ── Overview ── */}
             <div>
               <table className="w-full border-collapse">
@@ -392,25 +346,25 @@ export const DeploymentDetail: React.FC = () => {
                     <span className="font-semibold">{deployment.componentName}</span>
                   </MetaRow>
                   <MetaRow label="Version">
-                    <span className="font-mono text-xs bg-[#F1F3F7] text-[#475467] rounded px-2 py-0.5">
+                    <span className="font-mono text-xs bg-ois-surface-muted text-ois-text-muted rounded px-2 py-0.5">
                       {deployment.artifactRef.includes(':')
                         ? deployment.artifactRef.split(':').pop()
                         : deployment.artifactRef}
                     </span>
                   </MetaRow>
                   <MetaRow label="Artifact">
-                    <span className="font-mono text-xs text-[#475467]">{deployment.artifactRef}</span>
+                    <span className="font-mono text-xs text-ois-text-muted">{deployment.artifactRef}</span>
                   </MetaRow>
                   <MetaRow label="Commit">
-                    <span className="font-mono text-xs bg-[#F1F3F7] text-[#475467] rounded px-1.5 py-0.5 mr-2">
+                    <span className="font-mono text-xs bg-ois-surface-muted text-ois-text-muted rounded px-1.5 py-0.5 mr-2">
                       {deployment.commitSha}
                     </span>
                     {deployment.commitMessage && (
-                      <span className="text-xs text-[#667085]">{deployment.commitMessage}</span>
+                      <span className="text-xs text-ois-text-muted">{deployment.commitMessage}</span>
                     )}
                   </MetaRow>
                   <MetaRow label="Branch">
-                    <span className="font-mono text-xs text-[#475467]">{deployment.branch}</span>
+                    <span className="font-mono text-xs text-ois-text-muted">{deployment.branch}</span>
                   </MetaRow>
                   {deployment.targetCIIds.length > 0 && (
                     <MetaRow label="Target CIs">
@@ -419,7 +373,7 @@ export const DeploymentDetail: React.FC = () => {
                           <Link
                             key={ci}
                             to={`/cmdb/${ci}`}
-                            className="font-mono text-xs bg-[#EEF2FF] text-[#1F4FD4] rounded px-2 py-0.5 hover:bg-[#1F4FD4] hover:text-white transition-colors"
+                            className="font-mono text-xs bg-ois-primary-pale text-ois-primary rounded px-2 py-0.5 hover:bg-ois-primary hover:text-white transition-colors"
                           >
                             {ci}
                           </Link>
@@ -433,7 +387,7 @@ export const DeploymentDetail: React.FC = () => {
                         href={`https://${deployment.pipelineUrl}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-mono text-xs text-[#1F4FD4] hover:underline"
+                        className="font-mono text-xs text-ois-primary hover:underline"
                       >
                         {deployment.pipelineRunId} →
                       </a>
@@ -441,7 +395,7 @@ export const DeploymentDetail: React.FC = () => {
                   )}
                   {deployment.manifestRef && (
                     <MetaRow label="Manifest">
-                      <span className="font-mono text-xs text-[#475467]">{deployment.manifestRef}</span>
+                      <span className="font-mono text-xs text-ois-text-muted">{deployment.manifestRef}</span>
                     </MetaRow>
                   )}
                   {deployment.tags.length > 0 && (
@@ -450,7 +404,7 @@ export const DeploymentDetail: React.FC = () => {
                         {deployment.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="text-xs bg-[#F2F4F7] text-[#475467] rounded-full px-2.5 py-0.5 font-medium"
+                            className="text-xs bg-ois-surface-muted text-ois-text-muted rounded-full px-2.5 py-0.5 font-medium"
                           >
                             {tag}
                           </span>
@@ -462,20 +416,22 @@ export const DeploymentDetail: React.FC = () => {
               </table>
             </div>
 
-            {/* ── Manifest ── */}
+            {/* ── Manifest (only rendered when showManifest is true) ── */}
+            {showManifest && (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">
+                <p className="text-xs font-bold uppercase tracking-wide text-ois-text-muted">
                   Kubernetes Manifest
                 </p>
                 {deployment.manifestRef && (
-                  <span className="font-mono text-[11px] text-[#98A2B3]">{deployment.manifestRef}</span>
+                  <span className="font-mono text-[11px] text-ois-text-subtle">{deployment.manifestRef}</span>
                 )}
               </div>
               <pre className="bg-[#0D1117] text-[#C9D1D9] rounded-xl p-5 text-xs font-mono leading-relaxed overflow-x-auto border border-[#30363D] whitespace-pre">
-                {MANIFEST_YAML}
+                {manifestYaml}
               </pre>
             </div>
+            )}
 
             {/* ── Linked Items ── */}
             <div className="flex flex-col gap-4">
@@ -496,31 +452,31 @@ export const DeploymentDetail: React.FC = () => {
                 />
               )}
               {linkedTestRun && (
-                <div className="rounded-xl border border-[#EAECF0] px-5 py-4 bg-white">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3] mb-1">
+                <div className="rounded-xl border border-ois-border px-5 py-4 bg-white">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-ois-text-subtle mb-1">
                     Test Run
                   </p>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
-                      <p className="font-mono text-sm font-bold text-[#101828]">{linkedTestRun.publicId}</p>
-                      <p className="text-xs text-[#667085] mt-0.5">{linkedTestRun.testPlanName}</p>
+                      <p className="font-mono text-sm font-bold text-ois-text">{linkedTestRun.publicId}</p>
+                      <p className="text-xs text-ois-text-muted mt-0.5">{linkedTestRun.testPlanName}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <span
                         className={cn(
                           'text-xs font-semibold px-2.5 py-1 rounded-full',
                           linkedTestRun.status === 'passed'
-                            ? 'bg-[#ECFDF3] text-[#067647]'
+                            ? 'bg-ois-success-pale text-[#067647]'
                             : linkedTestRun.status === 'failed'
-                            ? 'bg-[#FEF3F2] text-[#B42318]'
+                            ? 'bg-ois-danger-pale text-ois-sev-p1'
                             : linkedTestRun.status === 'running'
-                            ? 'bg-[#EEF2FF] text-[#1F4FD4]'
-                            : 'bg-[#F2F4F7] text-[#667085]',
+                            ? 'bg-ois-primary-pale text-ois-primary'
+                            : 'bg-ois-surface-muted text-ois-text-muted',
                         )}
                       >
                         {linkedTestRun.status.toUpperCase()}
                       </span>
-                      <span className="text-xs text-[#667085]">
+                      <span className="text-xs text-ois-text-muted">
                         {linkedTestRun.passedCount}/{linkedTestRun.totalCases} passed
                       </span>
                     </div>
@@ -528,7 +484,7 @@ export const DeploymentDetail: React.FC = () => {
                 </div>
               )}
               {!deployment.linkedReleasePublicId && !deployment.linkedChangePublicId && !linkedTestRun && (
-                <div className="py-10 text-center text-sm text-[#98A2B3]">
+                <div className="py-10 text-center text-sm text-ois-text-subtle">
                   No linked items for this deployment.
                 </div>
               )}
@@ -538,9 +494,9 @@ export const DeploymentDetail: React.FC = () => {
             <div>
               {deployment.triggeredIncidentIds.length === 0 ? (
                 <div className="py-12 flex flex-col items-center gap-2 text-center">
-                  <CheckCircle2 size={32} className="text-[#12B76A] opacity-70" />
-                  <p className="text-sm font-semibold text-[#344054]">No incidents triggered</p>
-                  <p className="text-xs text-[#98A2B3]">This deployment has not triggered any incidents.</p>
+                  <CheckCircle2 size={32} className="text-ois-success opacity-70" />
+                  <p className="text-sm font-semibold text-ois-text">No incidents triggered</p>
+                  <p className="text-xs text-ois-text-subtle">This deployment has not triggered any incidents.</p>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -548,7 +504,7 @@ export const DeploymentDetail: React.FC = () => {
                     <Link
                       key={incId}
                       to={`/incidents/${incId}`}
-                      className="font-mono text-sm font-bold text-[#B42318] bg-[#FEF3F2] border border-[#F04438]/20 rounded-lg px-3 py-2 hover:bg-[#F04438] hover:text-white transition-colors"
+                      className="font-mono text-sm font-bold text-ois-sev-p1 bg-ois-danger-pale border border-ois-danger/20 rounded-lg px-3 py-2 hover:bg-ois-danger hover:text-white transition-colors"
                     >
                       {incId} →
                     </Link>
@@ -560,7 +516,7 @@ export const DeploymentDetail: React.FC = () => {
             {/* ── History ── */}
             <div>
               {historyEvents.length === 0 ? (
-                <p className="text-sm text-[#98A2B3] py-8 text-center">No history events available.</p>
+                <p className="text-sm text-ois-text-subtle py-8 text-center">No history events available.</p>
               ) : (
                 <div className="pt-2">
                   {historyEvents.map((evt, i) => (
@@ -573,6 +529,8 @@ export const DeploymentDetail: React.FC = () => {
             </div>
           </Tabs>
         </div>
+          );
+        })()}
       </div>
 
       {/* ── Sticky bottom action bar ─────────────────────────────────────── */}
