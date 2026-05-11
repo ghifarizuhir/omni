@@ -69,14 +69,14 @@ const ActionsMenu: React.FC<{
       {open && (
         <div className="absolute right-0 top-7 z-50 min-w-[140px] rounded-lg border border-ois-border bg-white shadow-lg py-1 text-sm">
           <button
-            className="w-full text-left px-3 py-1.5 hover:bg-[#F9FAFB] text-gray-700"
+            className="w-full text-left px-3 py-1.5 hover:bg-ois-surface-muted text-ois-text"
             onClick={() => { navigate(`/deployments/${dep.publicId}`); setOpen(false); }}
           >
             Open
           </button>
           {canRollback && (
             <button
-              className="w-full text-left px-3 py-1.5 hover:bg-[#F9FAFB] text-gray-700"
+              className="w-full text-left px-3 py-1.5 hover:bg-ois-surface-muted text-ois-text"
               onClick={() => { setOpen(false); setRollbackOpen(true); }}
             >
               Rollback
@@ -92,7 +92,7 @@ const ActionsMenu: React.FC<{
           )}
           {canRedeploy && (
             <button
-              className="w-full text-left px-3 py-1.5 hover:bg-[#F9FAFB] text-gray-700"
+              className="w-full text-left px-3 py-1.5 hover:bg-ois-surface-muted text-ois-text"
               onClick={() => { navigate(`/deployments/${dep.publicId}`); setOpen(false); }}
             >
               Re-deploy
