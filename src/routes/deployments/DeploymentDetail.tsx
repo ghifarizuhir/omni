@@ -13,6 +13,7 @@ import { getLogsByDeploymentId } from '../../mocks/deploymentLogs';
 import { mockTestRuns } from '../../mocks/testRuns';
 import { formatDate, formatRelative } from '../../lib/format';
 import { cn } from '../../lib/utils';
+import { Modal } from '../../components/ui/Modal';
 
 const BASE_TABS = [
   { id: 'overview',   label: 'Overview' },
@@ -184,6 +185,8 @@ export const DeploymentDetail: React.FC = () => {
   const navigate = useNavigate();
   const [rollbackOpen, setRollbackOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [redeployOpen, setRedeployOpen] = useState(false);
+  const [localStatus, setLocalStatus] = useState<string | null>(null);
 
   const deployment = getDeploymentById(deploymentId ?? '');
   const logs = getLogsByDeploymentId(deployment?.id ?? '');
@@ -201,6 +204,10 @@ export const DeploymentDetail: React.FC = () => {
       </div>
     );
   }
+
+  const effectiveDeployment = localStatus
+    ? { ...deployment, status: localStatus as typeof deployment.status }
+    : deployment;
 
   // ── History timeline events ──────────────────────────────────────────────
   const historyEvents: { time: string; label: string; detail?: string; color?: string }[] = [];
@@ -300,9 +307,9 @@ export const DeploymentDetail: React.FC = () => {
       <div className="max-w-[1440px] mx-auto px-6 py-6 flex flex-col gap-6">
         {/* ── Hero ─────────────────────────────────────────────────────── */}
         <DeploymentHero
-          deployment={deployment}
+          deployment={effectiveDeployment}
           onRollback={() => setRollbackOpen(true)}
-          onRedeploy={() => navigate('/deployments')}
+          onRedeploy={() => setRedeployOpen(true)}
         />
 
         {/* ── 2-column main ─────────────────────────────────────────────── */}
@@ -535,10 +542,38 @@ export const DeploymentDetail: React.FC = () => {
 
       {/* ── Sticky bottom action bar ─────────────────────────────────────── */}
       <StickyActionBar
-        deployment={deployment}
+        deployment={effectiveDeployment}
         onRollback={() => setRollbackOpen(true)}
-        onRedeploy={() => navigate('/deployments')}
+        onRedeploy={() => setRedeployOpen(true)}
       />
+
+      {/* ── Redeploy confirm modal ───────────────────────────────────────── */}
+      <Modal
+        isOpen={redeployOpen}
+        onClose={() => setRedeployOpen(false)}
+        title="Re-deploy this build?"
+        size="sm"
+      >
+        <div className="py-4 space-y-3">
+          <p className="text-sm text-ois-text">
+            This will re-run the deployment pipeline for{' '}
+            <span className="font-semibold font-mono">{deployment.artifactRef}</span>{' '}
+            to <span className="font-semibold capitalize">{deployment.environment}</span>.
+          </p>
+          <p className="text-xs text-ois-text-muted">
+            Stage progress will reset and deployment status will update to Running.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setRedeployOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={() => {
+              setLocalStatus('running');
+              setRedeployOpen(false);
+            }}>
+              Confirm re-deploy
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* ── Rollback modal ───────────────────────────────────────────────── */}
       <RollbackModal
