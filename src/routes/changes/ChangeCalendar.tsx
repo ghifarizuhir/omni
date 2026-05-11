@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Plus, LayoutGrid, List, Calendar, AlertTriangle, Clock, ChevronRight, CheckCircle2,
+  Plus, LayoutGrid, List, Calendar, AlertTriangle, Clock, ChevronRight, CheckCircle2, Lock, Search,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card, CardBody } from '../../components/ui/Card';
@@ -15,7 +15,7 @@ import { ChangeStatusPill } from '../../components/changes/ChangeStatusPill';
 import { ChangeTypeChip } from '../../components/changes/ChangeTypeChip';
 import { RiskBadge } from '../../components/changes/RiskBadge';
 import { formatDate } from '../../lib/format';
-import { Change } from '../../types/change';
+import { Change, ChangeStatus, RiskLevel } from '../../types/change';
 
 type ViewMode = 'calendar' | 'board' | 'list';
 
@@ -45,6 +45,9 @@ function groupByDay(changes: Change[]) {
 
 export const ChangeCalendar: React.FC = () => {
   const [view, setView] = useState<ViewMode>('calendar');
+  const [listSearch, setListSearch] = useState('');
+  const [listStatusFilter, setListStatusFilter] = useState<ChangeStatus | ''>('');
+  const [listRiskFilter, setListRiskFilter] = useState<RiskLevel | ''>('');
   const navigate = useNavigate();
 
   const activeChanges = useMemo(
@@ -72,6 +75,18 @@ export const ChangeCalendar: React.FC = () => {
 
   const implementingThisWeek = mockChanges.filter((c) => c.status === 'implementing').length;
   const totalConflicts = mockChanges.reduce((n, c) => n + c.conflicts.filter((cf) => !cf.resolvedAt).length, 0);
+
+  const filteredListChanges = useMemo(() => {
+    const query = listSearch.trim().toLowerCase();
+    return mockChanges
+      .filter((c) => !['closed_successful', 'closed_failed', 'rejected', 'cancelled'].includes(c.status))
+      .filter((c) => {
+        if (query && !c.title.toLowerCase().includes(query) && !c.publicId.toLowerCase().includes(query)) return false;
+        if (listStatusFilter && c.status !== listStatusFilter) return false;
+        if (listRiskFilter && c.risk !== listRiskFilter) return false;
+        return true;
+      });
+  }, [listSearch, listStatusFilter, listRiskFilter]);
 
   return (
     <div className="flex gap-6 h-full min-h-0">
@@ -143,26 +158,72 @@ export const ChangeCalendar: React.FC = () => {
 
         {/* List view */}
         {view === 'list' && (
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-ois-border bg-ois-bg">
-                    {['ID', 'Title', 'Type', 'Status', 'Risk', 'Owner', 'Window', ''].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockChanges
-                    .filter((c) => !['closed_successful', 'closed_failed', 'rejected', 'cancelled'].includes(c.status))
-                    .map((c) => <ChangeRow key={c.id} change={c} />)}
-                </tbody>
-              </table>
+          <div className="space-y-3">
+            {/* Filter bar */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[180px]">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search by title or ID…"
+                  value={listSearch}
+                  onChange={(e) => setListSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-ois-border bg-white text-ois-text placeholder:text-ois-text-subtle focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
+                />
+              </div>
+              <select
+                value={listStatusFilter}
+                onChange={(e) => setListStatusFilter(e.target.value as ChangeStatus | '')}
+                className="text-xs rounded-lg border border-ois-border bg-white text-ois-text px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
+              >
+                <option value="">All statuses</option>
+                <option value="draft">Draft</option>
+                <option value="submitted">Submitted</option>
+                <option value="in_review">In review</option>
+                <option value="approved">Approved</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="implementing">Implementing</option>
+                <option value="implemented">Implemented</option>
+              </select>
+              <select
+                value={listRiskFilter}
+                onChange={(e) => setListRiskFilter(e.target.value as RiskLevel | '')}
+                className="text-xs rounded-lg border border-ois-border bg-white text-ois-text px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
+              >
+                <option value="">All risk levels</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
             </div>
-          </Card>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-ois-border bg-ois-bg">
+                      {['ID', 'Title', 'Type', 'Status', 'Risk', 'Owner', 'Window', ''].map((h) => (
+                        <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredListChanges.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-xs text-ois-text-subtle italic">
+                          No changes match the current filters.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredListChanges.map((c) => <ChangeRow key={c.id} change={c} />)
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
         )}
       </div>
 
@@ -208,11 +269,13 @@ export const ChangeCalendar: React.FC = () => {
                           </p>
                           {c.conflicts.some((cf) => !cf.resolvedAt) && (
                             <p className="text-[10px] text-ois-warning font-semibold ml-3.5 flex items-center gap-1">
-                              <AlertTriangle size={9} />⚠ Conflict
+                              <AlertTriangle size={9} className="text-ois-warning shrink-0" /> Conflict
                             </p>
                           )}
                           {c.freezeWindow && (
-                            <p className="text-[10px] text-amber-600 font-semibold ml-3.5">⚠ Freeze window</p>
+                            <p className="text-[10px] text-ois-warning font-semibold ml-3.5 flex items-center gap-1">
+                              <Lock size={9} className="text-ois-warning shrink-0" /> Freeze window
+                            </p>
                           )}
                         </Link>
                       ))}
