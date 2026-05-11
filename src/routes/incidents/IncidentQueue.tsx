@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, BarChart2, Plus, CheckSquare, Square, MoreHorizontal,
-  CheckCircle2, Filter, X, ChevronDown
+  CheckCircle2, Filter, X
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
@@ -16,6 +16,8 @@ import { SLAIndicator } from '@/src/components/incidents/SLAIndicator';
 import { MajorIncidentBanner } from '@/src/components/incidents/MajorIncidentBanner';
 import { CreateIncidentModal } from '@/src/components/incidents/CreateIncidentModal';
 import { Avatar } from '@/src/components/ui/Avatar';
+import { Button } from '@/src/components/ui/Button';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -103,6 +105,23 @@ export const IncidentQueue: React.FC = () => {
     return counts;
   }, []);
 
+  const statusOptions = useMemo(() =>
+    STATUS_FILTERS.map(s => ({
+      value: s.value,
+      label: s.label,
+      count: s.value === 'all' ? totalCount : (statusCounts[s.value] ?? 0),
+    })),
+    [statusCounts, totalCount]
+  );
+
+  const priorityOptions = [
+    { value: 'all', label: 'All priorities' },
+    { value: 'P1',  label: 'P1 — Critical' },
+    { value: 'P2',  label: 'P2 — High' },
+    { value: 'P3',  label: 'P3 — Medium' },
+    { value: 'P4',  label: 'P4 — Low' },
+  ];
+
   // filtered & sorted list
   const filtered = useMemo(() => {
     let list = [...mockIncidents];
@@ -183,20 +202,14 @@ export const IncidentQueue: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/incidents/analytics')}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-ois-text-subtle hover:text-ois-text border border-ois-border rounded-lg hover:bg-ois-surface-muted transition-colors"
-            >
-              <BarChart2 size={15} />
+            <Button variant="outline" size="sm" onClick={() => navigate('/incidents/analytics')}>
+              <BarChart2 size={15} className="mr-1.5" />
               Analytics
-            </button>
-            <button
-              onClick={() => setCreateOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-ois-primary hover:bg-ois-primary/90 rounded-lg transition-colors"
-            >
-              <Plus size={15} />
+            </Button>
+            <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus size={15} className="mr-1.5" />
               New incident
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -221,36 +234,20 @@ export const IncidentQueue: React.FC = () => {
           </div>
 
           {/* Status filter */}
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value as IncidentStatus | 'all')}
-              className="appearance-none pl-3 pr-7 py-1.5 text-sm border border-ois-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ois-primary/30 cursor-pointer"
-            >
-              {STATUS_FILTERS.map(s => (
-                <option key={s.value} value={s.value}>
-                  {s.label}{s.value !== 'all' ? ` (${statusCounts[s.value] ?? 0})` : ` (${totalCount})`}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none" />
-          </div>
+          <FilterDropdown
+            value={statusFilter}
+            onChange={val => setStatusFilter(val as IncidentStatus | 'all')}
+            options={statusOptions}
+            placeholder="Status"
+          />
 
           {/* Priority filter */}
-          <div className="relative">
-            <select
-              value={priorityFilter}
-              onChange={e => setPriorityFilter(e.target.value as IncidentPriority | 'all')}
-              className="appearance-none pl-3 pr-7 py-1.5 text-sm border border-ois-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ois-primary/30 cursor-pointer"
-            >
-              <option value="all">All priorities</option>
-              <option value="P1">P1 — Critical</option>
-              <option value="P2">P2 — High</option>
-              <option value="P3">P3 — Medium</option>
-              <option value="P4">P4 — Low</option>
-            </select>
-            <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none" />
-          </div>
+          <FilterDropdown
+            value={priorityFilter}
+            onChange={val => setPriorityFilter(val as IncidentPriority | 'all')}
+            options={priorityOptions}
+            placeholder="All priorities"
+          />
 
           {hasFilters && (
             <button

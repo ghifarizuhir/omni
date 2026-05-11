@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Menu, Search as SearchIcon, Bell, Inbox } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
@@ -6,6 +7,7 @@ import { cn } from '@/src/lib/utils';
 import { mockInboxItems, mockNotifications, currentUser } from '@/src/mocks';
 import { NotificationDropdown } from './NotificationDropdown';
 import { UserMenu } from './UserMenu';
+import { useBreadcrumbs } from '@/src/lib/breadcrumbs';
 
 interface TopBarProps {
   onToggleSidebar: () => void;
@@ -15,6 +17,7 @@ interface TopBarProps {
 export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const breadcrumbs = useBreadcrumbs();
 
   const urgentInboxCount = mockInboxItems.filter(i => i.priority === 'urgent').length;
   const unreadNotifCount = mockNotifications.filter(n => !n.readAt).length;
@@ -29,11 +32,21 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) 
         <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="text-ois-text-muted">
           <Menu size={20} />
         </Button>
-        <div className="flex items-center gap-2 text-xs font-medium">
-          <span className="text-ois-text-subtle">Home</span>
-          <span className="text-ois-border-strong px-0.5">/</span>
-          <span className="text-ois-text">Dashboard</span>
-        </div>
+        <nav className="flex items-center gap-1 text-xs font-medium">
+          <Link to="/" className="text-ois-text-subtle hover:text-ois-text transition-colors">Home</Link>
+          {breadcrumbs.map((crumb, i) => (
+            <React.Fragment key={i}>
+              <span className="text-ois-border-strong px-0.5">/</span>
+              {crumb.href ? (
+                <Link to={crumb.href} className="text-ois-text-muted hover:text-ois-text transition-colors">
+                  {crumb.label}
+                </Link>
+              ) : (
+                <span className="text-ois-text">{crumb.label}</span>
+              )}
+            </React.Fragment>
+          ))}
+        </nav>
       </div>
 
       {/* Right — search + inbox + notifications + user */}

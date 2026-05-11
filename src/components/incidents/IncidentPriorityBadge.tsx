@@ -5,20 +5,34 @@ import { IncidentPriority } from '@/src/types/incident';
 
 interface Props {
   priority: IncidentPriority;
+  urgent?: boolean;
   className?: string;
 }
 
-export const IncidentPriorityBadge: React.FC<Props> = ({ priority, className }) => {
+export const IncidentPriorityBadge: React.FC<Props> = ({ priority, urgent, className }) => {
   const meta = incidentPriorityMeta[priority];
+  const showPulse = priority === 'P1' || urgent === true;
+
+  const badgeStyle: React.CSSProperties =
+    priority === 'P1' || priority === 'P2'
+      ? { backgroundColor: meta.color, color: '#FFFFFF', borderColor: 'transparent' }
+      : { backgroundColor: meta.bg, color: meta.color, borderColor: meta.border + '60' };
+
   return (
-    <span
-      className={cn(
-        'inline-flex items-center justify-center w-8 h-5 rounded text-[11px] font-bold border',
-        className
+    <span className={cn('relative inline-flex items-center', className)}>
+      {showPulse && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 rounded animate-ping opacity-40"
+          style={{ backgroundColor: meta.border }}
+        />
       )}
-      style={{ color: meta.color, backgroundColor: meta.bg, borderColor: meta.border }}
-    >
-      {meta.label}
+      <span
+        className="relative inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-bold rounded border"
+        style={badgeStyle}
+      >
+        {meta.label}
+      </span>
     </span>
   );
 };

@@ -32,7 +32,6 @@ import { SLAIndicator } from '@/src/components/incidents/SLAIndicator';
 import { IncidentTimelineEntry } from '@/src/components/incidents/IncidentTimelineEntry';
 import { IncidentCommentThread } from '@/src/components/incidents/IncidentCommentThread';
 import { ResolveIncidentModal, ResolveData } from '@/src/components/incidents/ResolveIncidentModal';
-import { Tabs } from '@/src/components/ui/Tabs';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -144,6 +143,7 @@ export const IncidentDetail: React.FC = () => {
       ? { summary: incident.resolution.summary, rootCause: incident.resolution.rootCause, workaround: incident.resolution.workaround, suggestKB: false, schedulePIR: false }
       : null
   );
+  const [activeTabId, setActiveTabId] = useState('overview');
   const [timelineFilter, setTimelineFilter] = useState<string>('all');
   const [newComment, setNewComment] = useState('');
   const [isInternal, setIsInternal] = useState(false);
@@ -596,10 +596,21 @@ export const IncidentDetail: React.FC = () => {
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
+  const tabPanels: Record<string, React.ReactNode> = {
+    overview: OverviewTab,
+    timeline: TimelineTab,
+    comments: CommentsTab,
+    'affected-cis': AffectedCIsTab,
+    linked: LinkedItemsTab,
+    resolution: ResolutionTab,
+  };
+
   return (
-    <div className="min-h-screen bg-ois-bg">
-      {/* ─── Top header ────────────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-ois-border sticky top-0 z-30">
+    // Counter the p-6 padding on AppShell <main> and fill the full viewport height below the TopBar (h-14 = 3.5rem)
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+
+      {/* ─── Top header — no sticky needed; it stays put via flex shrink-0 ─────── */}
+      <div className="bg-white border-b border-ois-border shrink-0 z-30">
         {/* Nav row */}
         <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
           <button
@@ -619,9 +630,7 @@ export const IncidentDetail: React.FC = () => {
 
         {/* Incident header */}
         <div className="flex items-start gap-0">
-          {/* Severity stripe */}
           <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: priorityColor }} />
-
           <div className="flex-1 px-6 py-4">
             <div className="flex items-start gap-3 mb-2">
               <IncidentPriorityBadge priority={incident.priority} />
@@ -633,43 +642,30 @@ export const IncidentDetail: React.FC = () => {
             </div>
             <p className="font-mono text-xs text-ois-text-subtle mb-1">{incident.publicId}</p>
             <h1 className="text-xl font-bold text-ois-text leading-tight">{incident.title}</h1>
-
-            {/* Tags */}
             <div className="flex items-center flex-wrap gap-1.5 mt-2">
               {incident.tags.map(tag => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full"
-                >
-                  <Tag size={9} />
-                  {tag}
+                <span key={tag} className="inline-flex items-center gap-1 text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full">
+                  <Tag size={9} />{tag}
                 </span>
               ))}
             </div>
-
-            {/* Meta */}
             <div className="flex items-center gap-3 mt-2.5 text-xs text-ois-text-subtle flex-wrap">
               <span>
                 Created {formatRelative(incident.createdAt)}
                 {reporter && <> by {reporter.name} ({getReporterChannelLabel(incident.reporterChannel)})</>}
               </span>
-              {assignee && (
-                <span>
-                  · Assigned to <span className="font-medium text-ois-text">{assignee.name}</span>
-                </span>
-              )}
+              {assignee && <span>· Assigned to <span className="font-medium text-ois-text">{assignee.name}</span></span>}
               <span>· Updated {formatRelative(incident.updatedAt)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ─── Body: 3-column grid ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-[280px_1fr_280px] gap-0 items-start">
+      {/* ─── Body: three independent-scroll columns ───────────────────────────── */}
+      <div className="flex flex-1 min-h-0">
 
         {/* ── Left sidebar ──────────────────────────────────────────────────────── */}
-        <aside className="sticky top-[113px] max-h-[calc(100vh-113px)] overflow-y-auto border-r border-ois-border bg-white p-4 space-y-4">
-          {/* At a glance */}
+        <aside className="w-[280px] shrink-0 overflow-y-auto border-r border-ois-border bg-white p-4 space-y-4">
           <SectionCard title="At a glance">
             <dl className="space-y-2 text-xs">
               {[
@@ -680,15 +676,9 @@ export const IncidentDetail: React.FC = () => {
                 { label: 'Reporter',  value: reporter?.name ?? incident.reporterId },
                 { label: 'Channel',   value: getReporterChannelLabel(incident.reporterChannel) },
                 { label: 'Assignee',  value: assignee ? (
-                  <span className="flex items-center gap-1.5">
-                    <Avatar name={assignee.name} size="xs" />
-                    {assignee.name}
-                  </span>
+                  <span className="flex items-center gap-1.5"><Avatar name={assignee.name} size="xs" />{assignee.name}</span>
                 ) : '—' },
-                ...(incident.incidentCommander ? [{
-                  label: 'Commander',
-                  value: commander?.name ?? incident.incidentCommander,
-                }] : []),
+                ...(incident.incidentCommander ? [{ label: 'Commander', value: commander?.name ?? incident.incidentCommander }] : []),
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start justify-between gap-2">
                   <dt className="text-ois-text-subtle shrink-0">{label}</dt>
@@ -698,41 +688,25 @@ export const IncidentDetail: React.FC = () => {
             </dl>
           </SectionCard>
 
-          {/* SLA timers */}
           <SectionCard title="SLA timers">
             <div className="space-y-4">
-              <SLATimer
-                label="Response"
-                status={incident.slaResponseStatus}
-                targetMinutes={incident.slaResponseTarget}
-                createdAt={incident.createdAt}
-                resolvedAt={incident.firstResponseAt}
-              />
-              <SLATimer
-                label="Resolution"
-                status={incident.slaResolveStatus}
-                targetMinutes={incident.slaResolveTarget}
-                createdAt={incident.createdAt}
-                resolvedAt={incident.resolution?.resolvedAt}
-              />
+              <SLATimer label="Response" status={incident.slaResponseStatus} targetMinutes={incident.slaResponseTarget} createdAt={incident.createdAt} resolvedAt={incident.firstResponseAt} />
+              <SLATimer label="Resolution" status={incident.slaResolveStatus} targetMinutes={incident.slaResolveTarget} createdAt={incident.createdAt} resolvedAt={incident.resolution?.resolvedAt} />
             </div>
           </SectionCard>
 
-          {/* Affected services */}
           {serviceNames.length > 0 && (
             <SectionCard title="Affected services">
               <ul className="space-y-1">
                 {serviceNames.map(name => (
                   <li key={name} className="flex items-center gap-2 text-xs text-ois-text">
-                    <span className="w-2 h-2 rounded-full bg-ois-danger shrink-0" />
-                    {name}
+                    <span className="w-2 h-2 rounded-full bg-ois-danger shrink-0" />{name}
                   </li>
                 ))}
               </ul>
             </SectionCard>
           )}
 
-          {/* Watchers */}
           <SectionCard title={`Watchers (${watchers.length})`}>
             <ul className="space-y-2">
               {watchers.map(w => (
@@ -748,31 +722,49 @@ export const IncidentDetail: React.FC = () => {
           </SectionCard>
         </aside>
 
-        {/* ── Center: tabs ──────────────────────────────────────────────────────── */}
-        <main className="min-w-0 px-6 py-5">
-          <Tabs tabs={tabs}>
-            {OverviewTab}
-            {TimelineTab}
-            {CommentsTab}
-            {AffectedCIsTab}
-            {LinkedItemsTab}
-            {ResolutionTab}
-          </Tabs>
-        </main>
+        {/* ── Center: pinned tab bar + scrollable content ────────────────────────── */}
+        <div className="flex flex-col flex-1 min-w-0">
+          {/* Tab bar — always visible, never scrolls away */}
+          <div className="border-b border-ois-border bg-white shrink-0 px-6">
+            <nav className="flex gap-8 overflow-x-auto scrollbar-hide" aria-label="Tabs">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => !tab.disabled && setActiveTabId(tab.id)}
+                  disabled={tab.disabled}
+                  className={cn(
+                    'py-4 px-1 border-b-2 font-bold text-sm whitespace-nowrap transition-all',
+                    activeTabId === tab.id
+                      ? 'border-ois-primary text-ois-primary'
+                      : 'border-transparent text-ois-text-muted hover:text-ois-text hover:border-ois-border-strong',
+                    tab.disabled && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+          {/* Tab content — only this region scrolls */}
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="animate-in fade-in slide-in-from-top-1 duration-200" key={activeTabId}>
+              {tabPanels[activeTabId]}
+            </div>
+          </div>
+        </div>
 
         {/* ── Right sidebar ─────────────────────────────────────────────────────── */}
-        <aside className="sticky top-[113px] max-h-[calc(100vh-113px)] overflow-y-auto border-l border-ois-border bg-white p-4 space-y-4">
-          {/* Quick actions */}
+        <aside className="w-[280px] shrink-0 overflow-y-auto border-l border-ois-border bg-white p-4 space-y-4">
           <SectionCard title="Quick actions">
             <div className="space-y-1.5">
               {[
-                { icon: UserPlus,     label: 'Assign to me' },
-                { icon: Eye,          label: 'Acknowledge' },
-                { icon: CheckCircle2, label: 'Resolve', action: () => setResolveOpen(true), primary: !isResolved },
+                { icon: UserPlus,      label: 'Assign to me' },
+                { icon: Eye,           label: 'Acknowledge' },
+                { icon: CheckCircle2,  label: 'Resolve', action: () => setResolveOpen(true), primary: !isResolved },
                 ...(incident.isMajor ? [] : [{ icon: Siren, label: 'Promote to Major' }]),
                 { icon: MessageCircle, label: 'Add comment' },
-                { icon: Server,       label: 'Link CI' },
-                { icon: ShieldAlert,  label: 'Link problem' },
+                { icon: Server,        label: 'Link CI' },
+                { icon: ShieldAlert,   label: 'Link problem' },
               ].map(({ icon: Icon, label, action, primary }) => (
                 <button
                   key={label}
@@ -791,47 +783,33 @@ export const IncidentDetail: React.FC = () => {
             </div>
           </SectionCard>
 
-          {/* BIA Context */}
           {biaEntry && (
             <SectionCard title="BIA Context">
               <dl className="space-y-2 text-xs">
-                <div className="flex items-start justify-between gap-2">
-                  <dt className="text-ois-text-subtle shrink-0">Service</dt>
-                  <dd className="text-ois-text font-medium text-right">{biaEntry.serviceName}</dd>
-                </div>
-                <div className="flex items-start justify-between gap-2">
-                  <dt className="text-ois-text-subtle shrink-0">Impact Level</dt>
-                  <dd className="font-semibold text-right capitalize" style={{ color: biaEntry.impactLevel === 'catastrophic' ? '#B42318' : biaEntry.impactLevel === 'critical' ? '#DC6803' : '#027A48' }}>
-                    ● {biaEntry.impactLevel.charAt(0).toUpperCase() + biaEntry.impactLevel.slice(1)}
-                  </dd>
-                </div>
-                <div className="flex items-start justify-between gap-2">
-                  <dt className="text-ois-text-subtle shrink-0">Impact Score</dt>
-                  <dd className="text-ois-text font-medium text-right">{biaEntry.impactScore}/100</dd>
-                </div>
-                <div className="flex items-start justify-between gap-2">
-                  <dt className="text-ois-text-subtle shrink-0">RTO Target</dt>
-                  <dd className="text-ois-text font-medium text-right">{biaEntry.rto} min</dd>
-                </div>
-                <div className="flex items-start justify-between gap-2">
-                  <dt className="text-ois-text-subtle shrink-0">RPO Target</dt>
-                  <dd className="text-ois-text font-medium text-right">{biaEntry.rpoMinutes} min</dd>
-                </div>
-                <div className="flex items-start justify-between gap-2">
-                  <dt className="text-ois-text-subtle shrink-0">Hourly Cost</dt>
-                  <dd className="text-ois-danger font-semibold text-right">${biaEntry.estimatedHourlyCostUSD.toLocaleString()}</dd>
-                </div>
+                {[
+                  { label: 'Service',      value: biaEntry.serviceName },
+                  { label: 'Impact Level', value: (
+                    <span className="font-semibold capitalize" style={{ color: biaEntry.impactLevel === 'catastrophic' ? '#B42318' : biaEntry.impactLevel === 'critical' ? '#DC6803' : '#027A48' }}>
+                      ● {biaEntry.impactLevel.charAt(0).toUpperCase() + biaEntry.impactLevel.slice(1)}
+                    </span>
+                  )},
+                  { label: 'Impact Score', value: `${biaEntry.impactScore}/100` },
+                  { label: 'RTO Target',   value: `${biaEntry.rto} min` },
+                  { label: 'RPO Target',   value: `${biaEntry.rpoMinutes} min` },
+                  { label: 'Hourly Cost',  value: <span className="text-ois-danger font-semibold">${biaEntry.estimatedHourlyCostUSD.toLocaleString()}</span> },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-start justify-between gap-2">
+                    <dt className="text-ois-text-subtle shrink-0">{label}</dt>
+                    <dd className="text-ois-text font-medium text-right">{value}</dd>
+                  </div>
+                ))}
               </dl>
-              <Link
-                to="/continuity/bia"
-                className="mt-3 flex items-center gap-1 text-xs text-ois-primary hover:underline"
-              >
+              <Link to="/continuity/bia" className="mt-3 flex items-center gap-1 text-xs text-ois-primary hover:underline">
                 View BIA entry <ExternalLink size={11} />
               </Link>
             </SectionCard>
           )}
 
-          {/* Related incidents */}
           {relatedIncidents.length > 0 && (
             <SectionCard title={`Related incidents (${relatedIncidents.length})`}>
               <p className="text-[11px] text-ois-text-subtle mb-2">Same CI in last 7 days:</p>
@@ -857,7 +835,6 @@ export const IncidentDetail: React.FC = () => {
         </aside>
       </div>
 
-      {/* Resolve modal */}
       <ResolveIncidentModal
         incident={incident}
         isOpen={resolveOpen}
