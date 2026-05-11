@@ -12,6 +12,8 @@ import { EnvironmentChip } from '../../components/deployments/EnvironmentChip';
 import { DeploymentStrategyChip } from '../../components/deployments/DeploymentStrategyChip';
 import { DeploymentTriggerChip } from '../../components/deployments/DeploymentTriggerChip';
 import { RollbackModal } from '../../components/deployments/DeploymentDetail/RollbackModal';
+import { Modal } from '../../components/ui/Modal';
+import { Button } from '../../components/ui/Button';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -142,6 +144,16 @@ export const DeploymentsQueue: React.FC = () => {
   // local status overrides applied after rollback confirmation
   const [localStatuses, setLocalStatuses] = useState<Record<string, DeploymentStatus>>({});
 
+  const [manualDeployOpen, setManualDeployOpen] = useState(false);
+  const [extraDeployments, setExtraDeployments] = useState<Deployment[]>([]);
+
+  // Manual deploy form
+  const [mdComponent, setMdComponent] = useState('');
+  const [mdEnv, setMdEnv] = useState<Environment | ''>('');
+  const [mdArtifact, setMdArtifact] = useState('');
+  const [mdStrategy, setMdStrategy] = useState<DeploymentStrategy | ''>('');
+  const [mdBranch, setMdBranch] = useState('main');
+
   const handleRollbackSuccess = (id: string) => {
     setLocalStatuses((prev) => ({ ...prev, [id]: 'rolled_back' }));
   };
@@ -170,7 +182,7 @@ export const DeploymentsQueue: React.FC = () => {
 
   // summary counts (last 30 days)
   const summary = useMemo(() => {
-    const recent = mockDeployments.filter(
+    const recent = [...extraDeployments, ...mockDeployments].filter(
       (d) => (d.startedAt ?? d.createdAt) >= LAST_30D
     );
     return {
@@ -180,26 +192,26 @@ export const DeploymentsQueue: React.FC = () => {
       success: recent.filter((d) => d.status === 'success').length,
       failed: recent.filter((d) => d.status === 'failed').length,
     };
-  }, []);
+  }, [extraDeployments]);
 
   // status badge counts for dropdown
   const statusCounts = useMemo(() => {
     const counts: Partial<Record<DeploymentStatus, number>> = {};
-    mockDeployments.forEach((d) => {
+    [...extraDeployments, ...mockDeployments].forEach((d) => {
       counts[d.status] = (counts[d.status] ?? 0) + 1;
     });
     return counts;
-  }, []);
+  }, [extraDeployments]);
 
   // unique values for filter dropdowns
   const uniqueComponents = useMemo(
-    () => [...new Set(mockDeployments.map((d) => d.componentName))].sort(),
-    []
+    () => [...new Set([...extraDeployments, ...mockDeployments].map((d) => d.componentName))].sort(),
+    [extraDeployments]
   );
 
   // filtered + sorted
   const filtered = useMemo(() => {
-    let list = [...mockDeployments];
+    let list = [...extraDeployments, ...mockDeployments];
 
     // search
     if (search.trim()) {
@@ -253,7 +265,7 @@ export const DeploymentsQueue: React.FC = () => {
     });
 
     return list;
-  }, [search, statusFilter, envFilter, componentFilter, strategyFilter, triggerFilter, quickFilters]);
+  }, [search, statusFilter, envFilter, componentFilter, strategyFilter, triggerFilter, quickFilters, extraDeployments]);
 
   const hasFilters =
     search ||
@@ -285,15 +297,53 @@ export const DeploymentsQueue: React.FC = () => {
 
   // quick chip counts
   const qCounts = useMemo(() => {
-    const active = mockDeployments.filter(
+    const all = [...extraDeployments, ...mockDeployments];
+    const active = all.filter(
       (d) => d.status === 'running' || d.status === 'rolling_back'
     ).length;
-    const failed = mockDeployments.filter((d) => d.status === 'failed').length;
-    const rolled = mockDeployments.filter((d) => d.status === 'rolled_back').length;
-    const last24h = mockDeployments.filter((d) => (d.startedAt ?? d.createdAt) >= LAST_24H).length;
-    const production = mockDeployments.filter((d) => d.environment === 'production').length;
+    const failed = all.filter((d) => d.status === 'failed').length;
+    const rolled = all.filter((d) => d.status === 'rolled_back').length;
+    const last24h = all.filter((d) => (d.startedAt ?? d.createdAt) >= LAST_24H).length;
+    const production = all.filter((d) => d.environment === 'production').length;
     return { active, failed, rolled, last24h, production };
-  }, []);
+  }, [extraDeployments]);
+
+  const handleManualDeploy = () => {
+    if (!mdComponent || !mdEnv || !mdArtifact || !mdStrategy) return;
+    const newId = `dep-manual-${Date.now()}`;
+    const publicId = `DPL-M-${String(extraDeployments.length + 1).padStart(4, '0')}`;
+    const now = new Date().toISOString();
+    const newDep: Deployment = {
+      id: newId,
+      publicId,
+      componentName: mdComponent,
+      artifactRef: mdArtifact,
+      commitSha: 'manual',
+      branch: mdBranch,
+      environment: mdEnv,
+      targetCIIds: [],
+      status: 'pending',
+      strategy: mdStrategy,
+      trigger: 'manual',
+      triggeredById: 'u-001',
+      triggeredByName: 'Sarah Chen',
+      stages: [],
+      currentStageIndex: 0,
+      tags: [],
+      triggeredIncidentIds: [],
+      postDeployHealth: 'pending',
+      createdAt: now,
+      updatedAt: now,
+    };
+    setExtraDeployments(prev => [newDep, ...prev]);
+    setManualDeployOpen(false);
+    // reset form
+    setMdComponent('');
+    setMdEnv('');
+    setMdArtifact('');
+    setMdStrategy('');
+    setMdBranch('main');
+  };
 
   return (
     <div className="p-6 space-y-5">
@@ -314,7 +364,10 @@ export const DeploymentsQueue: React.FC = () => {
           >
             Environments →
           </Link>
-          <button className="inline-flex items-center gap-1.5 rounded-lg bg-[#1F4FD4] px-3 py-2 text-sm font-semibold text-white hover:bg-[#1a44b8] transition-colors">
+          <button
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#1F4FD4] px-3 py-2 text-sm font-semibold text-white hover:bg-[#1a44b8] transition-colors"
+            onClick={() => setManualDeployOpen(true)}
+          >
             + Manual deploy
           </button>
         </div>
@@ -574,6 +627,88 @@ export const DeploymentsQueue: React.FC = () => {
           </div>
         )}
       </div>
+
+      <Modal isOpen={manualDeployOpen} onClose={() => setManualDeployOpen(false)} title="Manual deploy" size="md">
+        <div className="py-4 space-y-4">
+          <div>
+            <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+              Component <span className="text-ois-danger">*</span>
+            </label>
+            <select
+              value={mdComponent}
+              onChange={e => setMdComponent(e.target.value)}
+              className="w-full h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
+            >
+              <option value="">Select component…</option>
+              {uniqueComponents.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+              Environment <span className="text-ois-danger">*</span>
+            </label>
+            <select
+              value={mdEnv}
+              onChange={e => setMdEnv(e.target.value as Environment)}
+              className="w-full h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
+            >
+              <option value="">Select environment…</option>
+              {(['development', 'staging', 'production', 'dr'] as Environment[]).map(e => (
+                <option key={e} value={e}>{e}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+              Artifact ref <span className="text-ois-danger">*</span>
+            </label>
+            <input
+              value={mdArtifact}
+              onChange={e => setMdArtifact(e.target.value)}
+              placeholder="e.g. my-service:v1.2.3"
+              className="w-full h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+                Strategy <span className="text-ois-danger">*</span>
+              </label>
+              <select
+                value={mdStrategy}
+                onChange={e => setMdStrategy(e.target.value as DeploymentStrategy)}
+                className="w-full h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
+              >
+                <option value="">Select…</option>
+                {(['rolling', 'blue_green', 'canary', 'big_bang', 'phased'] as DeploymentStrategy[]).map(s => (
+                  <option key={s} value={s}>{s.replace('_', ' ')}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+                Branch
+              </label>
+              <input
+                value={mdBranch}
+                onChange={e => setMdBranch(e.target.value)}
+                placeholder="main"
+                className="w-full h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t border-ois-border">
+            <Button variant="outline" size="sm" onClick={() => setManualDeployOpen(false)}>Cancel</Button>
+            <Button
+              size="sm"
+              disabled={!mdComponent || !mdEnv || !mdArtifact || !mdStrategy}
+              onClick={handleManualDeploy}
+            >
+              Deploy
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
