@@ -276,27 +276,6 @@ export const MajorIncidentWarRoom: React.FC = () => {
           </div>
         </div>
 
-        {/* Sticky bottom action bar */}
-        <div className="shrink-0 h-12 border-t border-ois-border bg-white flex items-center px-6 gap-6">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="font-medium text-ois-text capitalize">{incident.status.replace('_', ' ')}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-sm text-ois-text-muted">
-            <span className="font-mono text-xs font-semibold">{incident.publicId}</span>
-            <span className="text-ois-border">·</span>
-            <span className="text-xs">Resolve SLA: see hero</span>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setStandDownOpen(true)}>
-              Stand down
-            </Button>
-            <Button variant="primary" size="sm" onClick={() => setResolveOpen(true)}>
-              <CheckCircle2 size={14} className="mr-1.5" />
-              Resolve incident
-            </Button>
-          </div>
-        </div>
       </div>
 
       {/* Modals */}

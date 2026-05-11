@@ -666,11 +666,21 @@ export const IncidentDetail: React.FC = () => {
 
         {/* ── Left sidebar ──────────────────────────────────────────────────────── */}
         <aside className="w-[280px] shrink-0 overflow-y-auto border-r border-ois-border bg-white p-4 space-y-4">
+          {/* Status + Priority — featured prominently, visually separate from housekeeping metadata */}
+          <div className="rounded-lg border border-ois-border overflow-hidden">
+            <div className="px-3 py-2.5 flex items-center justify-between border-b border-ois-border bg-ois-surface-muted/40">
+              <span className="text-[11px] font-bold text-ois-text-subtle uppercase tracking-widest">Status</span>
+              <IncidentStatusPill status={status} />
+            </div>
+            <div className="px-3 py-2.5 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-ois-text-subtle uppercase tracking-widest">Priority</span>
+              <IncidentPriorityBadge priority={incident.priority} />
+            </div>
+          </div>
+
           <SectionCard title="At a glance">
             <dl className="space-y-2 text-xs">
               {[
-                { label: 'Status',    value: <IncidentStatusPill status={status} /> },
-                { label: 'Priority',  value: <IncidentPriorityBadge priority={incident.priority} /> },
                 { label: 'Severity',  value: <span className="font-semibold">{incident.severity}</span> },
                 { label: 'Created',   value: formatRelative(incident.createdAt) },
                 { label: 'Reporter',  value: reporter?.name ?? incident.reporterId },
