@@ -366,6 +366,8 @@ export const RCAWorkspace: React.FC = () => {
 
   const [rca, setRca] = useState<RCAAnalysis>(problem?.rca ?? DEFAULT_RCA);
   const [saved, setSaved] = useState(!!problem?.rca);
+  const [published, setPublished] = useState(false);
+  const [publishedAt, setPublishedAt] = useState<string | null>(null);
   const [techniqueOpen, setTechniqueOpen] = useState(false);
 
   if (!problem) {
@@ -380,6 +382,13 @@ export const RCAWorkspace: React.FC = () => {
 
   const handleSave = () => {
     setSaved(true);
+    setRca(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
+  };
+
+  const handlePublish = () => {
+    setSaved(true);
+    setPublished(true);
+    setPublishedAt(new Date().toISOString());
     setRca(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
   };
 
@@ -402,7 +411,7 @@ export const RCAWorkspace: React.FC = () => {
   };
 
   const author = mockUsers.find(u => u.id === rca.authorId);
-  const TECHNIQUES: RCATechnique[] = ['five_whys', 'fishbone', 'fault_tree', 'timeline', 'narrative'];
+  const TECHNIQUES: RCATechnique[] = ['five_whys', 'fishbone', 'narrative'];
 
   return (
     <div className="space-y-5 pb-10">
@@ -466,11 +475,19 @@ export const RCAWorkspace: React.FC = () => {
             <Save size={14} className="mr-1.5" />
             Save draft
           </Button>
-          <Button variant="primary" size="sm" onClick={handleSave}>
-            Publish RCA
+          <Button variant="primary" size="sm" onClick={handlePublish}>
+            {published ? 'Re-publish' : 'Publish RCA'}
           </Button>
         </div>
       </div>
+
+      {/* Success banner */}
+      {published && publishedAt && (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-ois-success-pale border border-ois-success/20 text-ois-success text-sm font-medium">
+          <CheckCircle2 size={16} />
+          RCA published — visible on the problem record.
+        </div>
+      )}
 
       {/* Technique-specific editor */}
       <div className="border border-ois-border rounded-xl bg-white p-5">
@@ -531,9 +548,9 @@ export const RCAWorkspace: React.FC = () => {
         </Link>
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={handleSave}>Save draft</Button>
-          <Button variant="primary" onClick={handleSave}>
+          <Button variant="primary" onClick={handlePublish}>
             <CheckCircle2 size={14} className="mr-1.5" />
-            Publish RCA
+            {published ? 'Re-publish' : 'Publish RCA'}
           </Button>
         </div>
       </div>
