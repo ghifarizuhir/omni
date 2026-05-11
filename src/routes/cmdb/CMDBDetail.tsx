@@ -321,7 +321,7 @@ export const CMDBDetail: React.FC = () => {
                     ) : (
                       <div className="divide-y divide-ois-border">
                         {ciKBArticles.map(art => (
-                          <RouterLink key={art.id} to={`/knowledge/${art.slug}`} className="flex items-center gap-3 px-4 py-3 hover:bg-ois-surface-muted transition-colors">
+                          <RouterLink key={art.id} to={`/kb/${art.slug}`} className="flex items-center gap-3 px-4 py-3 hover:bg-ois-surface-muted transition-colors">
                             <span className="font-mono text-xs font-semibold text-ois-primary w-24 shrink-0">{art.publicId}</span>
                             <span className="text-xs text-ois-text flex-1 truncate">{art.title}</span>
                           </RouterLink>
