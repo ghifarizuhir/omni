@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { KnownErrorCard } from '@/src/components/problems/KnownErrorCard';
 import { getKnownErrors } from '@/src/mocks/problems';
+import { mockIncidents } from '@/src/mocks/incidents';
 import { mockServices } from '@/src/mocks/services';
 import { cn } from '@/src/lib/utils';
 
@@ -63,10 +64,12 @@ export const KEDB: React.FC = () => {
             {knownErrors.length} known error{knownErrors.length !== 1 ? 's' : ''} · Search saves time during incident response
           </p>
         </div>
-        <Button variant="primary" size="sm" className="gap-1.5">
-          <Plus size={14} />
-          Add known error
-        </Button>
+        <Link to="/problems">
+          <Button variant="primary" size="sm" className="gap-1.5">
+            <Plus size={14} />
+            Add known error
+          </Button>
+        </Link>
       </div>
 
       {/* Prominent search */}
@@ -215,6 +218,13 @@ const ApplyWorkaroundButton: React.FC<{ problemPublicId: string }> = ({ problemP
   const [open, setOpen] = useState(false);
   const [incidentId, setIncidentId] = useState('');
 
+  const recentIncidents = useMemo(() => {
+    return [...mockIncidents]
+      .filter(i => !['resolved', 'closed'].includes(i.status))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 10);
+  }, []);
+
   if (!open) {
     return (
       <button
@@ -228,14 +238,18 @@ const ApplyWorkaroundButton: React.FC<{ problemPublicId: string }> = ({ problemP
 
   return (
     <div className="flex items-center gap-2 bg-white border border-ois-border rounded-lg px-3 py-2 shadow-sm">
-      <input
-        type="text"
+      <select
         value={incidentId}
         onChange={e => setIncidentId(e.target.value)}
-        placeholder="Enter incident ID (e.g. INC-2026-00184)"
-        className="text-xs border-b border-ois-border bg-transparent focus:outline-none focus:border-ois-primary py-0.5 w-64 text-ois-text"
-        autoFocus
-      />
+        className="text-xs border border-ois-border rounded-lg bg-white px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary text-ois-text"
+      >
+        <option value="">Select incident…</option>
+        {recentIncidents.map(inc => (
+          <option key={inc.id} value={inc.publicId}>
+            {inc.publicId} — {inc.title.slice(0, 50)}{inc.title.length > 50 ? '…' : ''}
+          </option>
+        ))}
+      </select>
       <Link
         to={incidentId ? `/incidents/${incidentId}` : '#'}
         className={cn(
