@@ -20,6 +20,7 @@ import { Button } from '@/src/components/ui/Button';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { SeverityBadge } from '@/src/components/ui/StatusSeverityBadges';
 import { Tabs } from '@/src/components/ui/Tabs';
+import { Modal } from '@/src/components/ui/Modal';
 import { ProblemStatusPill } from '@/src/components/problems/ProblemStatusPill';
 import { ProblemSourceChip } from '@/src/components/problems/ProblemSourceChip';
 import { KnownErrorCard } from '@/src/components/problems/KnownErrorCard';
@@ -319,6 +320,26 @@ const PatternSummaryCard: React.FC<{ problem: Problem }> = ({ problem }) => {
   );
 };
 
+// ── Close Problem Modal ────────────────────────────────────────────────────────
+
+const CloseProblemModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}> = ({ isOpen, onClose, onConfirm }) => (
+  <Modal isOpen={isOpen} onClose={onClose} title="Close problem" size="sm">
+    <div className="py-2 space-y-4">
+      <p className="text-sm text-ois-text-muted">
+        Are you sure you want to close this problem? Closed problems are removed from active investigation queues.
+      </p>
+      <div className="flex justify-end gap-2 pt-2 border-t border-ois-border">
+        <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button variant="primary" onClick={() => { onConfirm(); onClose(); }}>Close problem</Button>
+      </div>
+    </div>
+  </Modal>
+);
+
 // ── History tab ───────────────────────────────────────────────────────────────
 
 const HistoryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
@@ -369,6 +390,7 @@ export const ProblemDetail: React.FC = () => {
   );
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
 
   if (!problem) {
     return (
@@ -797,7 +819,7 @@ export const ProblemDetail: React.FC = () => {
               ))}
               <button
                 className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text-muted hover:bg-ois-surface-muted border border-ois-border/50 transition-colors flex items-center gap-2 mt-2"
-                onClick={() => handleStatusChange('closed')}
+                onClick={() => setCloseConfirmOpen(true)}
               >
                 <CheckCircle2 size={13} />
                 Close problem
@@ -808,6 +830,11 @@ export const ProblemDetail: React.FC = () => {
       </div>
 
       {/* Modals */}
+      <CloseProblemModal
+        isOpen={closeConfirmOpen}
+        onClose={() => setCloseConfirmOpen(false)}
+        onConfirm={() => handleStatusChange('closed')}
+      />
       <PromoteToKnownErrorModal
         problem={problem}
         isOpen={promoteOpen}
