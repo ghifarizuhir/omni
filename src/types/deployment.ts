@@ -81,6 +81,7 @@ export interface Deployment {
   pipelineUrl?: string;
   configHash?: string;
   manifestRef?: string;
+  manifestYaml?: string;
 
   tags: string[];
 

@@ -105,14 +105,14 @@ function StickyActionBar({
   const etaStr = etaSec > 60 ? `~${Math.round(etaSec / 60)} min` : `~${etaSec}s`;
 
   return (
-    <div className="sticky bottom-0 z-20 bg-white border-t border-[#EAECF0] px-6 py-3 flex items-center gap-4 flex-wrap">
+    <div className="sticky bottom-0 z-20 bg-white border-t border-ois-border px-6 py-3 flex items-center gap-4 flex-wrap">
       {status === 'running' && (
         <>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#0BA5EC] animate-pulse" />
-            <span className="text-sm font-semibold text-[#344054]">Running ({pct}%)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-ois-info animate-pulse" />
+            <span className="text-sm font-semibold text-ois-text-muted">Running ({pct}%)</span>
           </div>
-          <span className="text-xs text-[#98A2B3]">ETA {etaStr}</span>
+          <span className="text-xs text-ois-text-subtle">ETA {etaStr}</span>
           <div className="ml-auto flex items-center gap-2">
             <Button size="sm" variant="destructive" onClick={onRollback}>
               <RotateCcw size={13} className="mr-1" /> Rollback
@@ -122,12 +122,12 @@ function StickyActionBar({
       )}
       {status === 'success' && (
         <>
-          <div className="flex items-center gap-2 text-[#067647]">
+          <div className="flex items-center gap-2 text-ois-sev-p4">
             <CheckCircle2 size={16} />
             <span className="text-sm font-semibold">Deployment Succeeded</span>
           </div>
-          <span className="text-xs text-[#98A2B3]">
-            Health: <span className="font-semibold capitalize text-[#344054]">{deployment.postDeployHealth}</span>
+          <span className="text-xs text-ois-text-subtle">
+            Health: <span className="font-semibold capitalize text-ois-text-muted">{deployment.postDeployHealth}</span>
           </span>
           <div className="ml-auto flex items-center gap-2">
             <Button size="sm" variant="secondary" onClick={onRedeploy}>
@@ -141,7 +141,7 @@ function StickyActionBar({
       )}
       {status === 'failed' && (
         <>
-          <div className="flex items-center gap-2 text-[#B42318]">
+          <div className="flex items-center gap-2 text-ois-sev-p1">
             <XCircle size={16} />
             <span className="text-sm font-semibold">Deployment Failed</span>
           </div>
@@ -154,12 +154,12 @@ function StickyActionBar({
       )}
       {status === 'rolled_back' && (
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 text-[#B54708]">
+          <div className="flex items-center gap-2 text-ois-sev-p2">
             <RotateCcw size={16} />
             <span className="text-sm font-semibold">Rolled Back</span>
           </div>
           {rollback?.reason && (
-            <span className="text-xs text-[#667085] truncate max-w-xs">
+            <span className="text-xs text-ois-text-muted truncate max-w-xs">
               Reason: {rollback.reason}
             </span>
           )}
@@ -171,7 +171,7 @@ function StickyActionBar({
         </div>
       )}
       {(status === 'pending' || status === 'cancelled' || status === 'rolling_back') && (
-        <div className="flex items-center gap-2 text-[#667085]">
+        <div className="flex items-center gap-2 text-ois-text-muted">
           <span className="text-sm font-semibold capitalize">{status.replace('_', ' ')}</span>
         </div>
       )}
@@ -331,8 +331,8 @@ export const DeploymentDetail: React.FC = () => {
           // Manifest tab is only shown if the deployment has actual YAML content.
           // manifestRef is just a file path — not renderable YAML — so exclude the tab
           // unless a future field (e.g. manifestYaml) is present on the deployment.
-          const manifestYaml = (deployment as unknown as Record<string, unknown>).manifestYaml as string | undefined;
-          const showManifest = Boolean(manifestYaml);
+          const manifestYaml = deployment.manifestYaml;
+          const showManifest = typeof deployment.manifestYaml === 'string';
           const tabs = BASE_TABS.filter(t => t.id !== 'manifest' || showManifest);
 
           return (
@@ -466,7 +466,7 @@ export const DeploymentDetail: React.FC = () => {
                         className={cn(
                           'text-xs font-semibold px-2.5 py-1 rounded-full',
                           linkedTestRun.status === 'passed'
-                            ? 'bg-ois-success-pale text-[#067647]'
+                            ? 'bg-ois-success-pale text-ois-sev-p4'
                             : linkedTestRun.status === 'failed'
                             ? 'bg-ois-danger-pale text-ois-sev-p1'
                             : linkedTestRun.status === 'running'
