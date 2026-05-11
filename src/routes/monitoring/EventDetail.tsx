@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Modal } from '../../components/ui/Modal';
-import { 
-  ArrowLeft, Activity, Clock, User, Shield, 
-  ExternalLink, AlertTriangle, CheckCircle2, 
-  Terminal, Database, History, Share2, 
+import {
+  ArrowLeft, Activity, Clock, User, Shield,
+  ExternalLink, AlertTriangle, CheckCircle2,
+  Terminal, Database, History, Share2,
   FileJson, Zap, MoreVertical, MessageSquare,
   ChevronDown, ChevronUp, Copy, RefreshCw,
   Search, Info, BarChart2, Filter, Layers,
-  Construction, Globe
+  Construction, Globe, Plus
 } from 'lucide-react';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { Button } from '../../components/ui/Button';
@@ -21,6 +21,7 @@ import { EventTimeline } from '../../components/monitoring/EventTimeline';
 import { mockEvents, mockCIs, mockMonitoringRules, mockUsers, mockIncidents } from '../../mocks';
 import { cn } from '../../lib/utils';
 import { EventStatus } from '../../types/monitoring';
+import { CreateIncidentModal } from '../../components/incidents/CreateIncidentModal';
 
 interface ResolveEventModalProps {
   linkedIncidentId: string;
@@ -69,6 +70,9 @@ export const EventDetail: React.FC = () => {
   const [comments, setComments] = useState<{ id: string; user: string; text: string; date: string }[]>([]);
   const [overflowOpen, setOverflowOpen]     = useState(false);
   const [showAllRelated, setShowAllRelated] = useState(false);
+  const [createIncidentOpen, setCreateIncidentOpen] = useState(false);
+  const [addingTag, setAddingTag]                   = useState(false);
+  const [tagInput, setTagInput]                     = useState('');
 
   if (!event) {
     return (
@@ -161,6 +165,11 @@ export const EventDetail: React.FC = () => {
         resolvedBy: 'Sarah Chen'
       });
     }
+  };
+
+  const handleIncidentCreated = (publicId: string) => {
+    setEvent(prev => prev ? { ...prev, linkedIncidentId: publicId } : prev);
+    navigate(`/incidents/${publicId}`);
   };
 
   const handleAddComment = (e: React.FormEvent) => {
@@ -441,7 +450,7 @@ export const EventDetail: React.FC = () => {
                      <p className="text-sm font-medium text-ois-text-muted mb-4 text-center max-w-sm">
                         This event is currently an isolated alert. Link it to an incident to track operational response.
                      </p>
-                     <Button variant="outline" className="h-10 px-6 font-bold gap-2 bg-white border-ois-border-strong text-ois-danger hover:bg-ois-danger-pale">
+                     <Button variant="outline" className="h-10 px-6 font-bold gap-2 bg-white border-ois-border-strong text-ois-danger hover:bg-ois-danger-pale" onClick={() => setCreateIncidentOpen(true)}>
                         <AlertTriangle size={16} /> Create Incident from alert
                      </Button>
                   </div>
@@ -581,13 +590,47 @@ export const EventDetail: React.FC = () => {
                       {tag}
                    </Badge>
                 ))}
-                <Button variant="ghost" size="sm" className="h-6 p-1 border border-dashed border-ois-border rounded text-[10px] font-bold text-ois-text-subtle">
-                   + Add tag
-                </Button>
+                {addingTag ? (
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      const tag = tagInput.trim();
+                      if (tag && !event!.tags.includes(tag)) {
+                        setEvent(prev => prev ? { ...prev, tags: [...prev.tags, tag] } : prev);
+                      }
+                      setTagInput('');
+                      setAddingTag(false);
+                    }}
+                    className="flex items-center gap-1.5 mt-2"
+                  >
+                    <input
+                      autoFocus
+                      value={tagInput}
+                      onChange={e => setTagInput(e.target.value)}
+                      placeholder="tag name"
+                      className="h-6 px-2 text-xs border border-ois-border rounded focus:outline-none focus:ring-1 focus:ring-ois-primary/30 focus:border-ois-primary"
+                    />
+                    <Button variant="primary" size="sm" type="submit" className="h-6 px-2 text-[11px]">Add</Button>
+                    <Button variant="ghost" size="sm" type="button" className="h-6 px-2 text-[11px]" onClick={() => { setAddingTag(false); setTagInput(''); }}>Cancel</Button>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => setAddingTag(true)}
+                    className="mt-2 flex items-center gap-1 text-xs text-ois-primary hover:underline"
+                  >
+                    <Plus size={11} /> Add tag
+                  </button>
+                )}
              </div>
           </Card>
         </div>
       </div>
+
+      <CreateIncidentModal
+        isOpen={createIncidentOpen}
+        onClose={() => setCreateIncidentOpen(false)}
+        onCreated={handleIncidentCreated}
+      />
 
       {resolveModalOpen && event.linkedIncidentId && (
         <ResolveEventModal
