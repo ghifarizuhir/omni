@@ -313,9 +313,9 @@ All 24 dead buttons wired in commit `9ff9c3c`. See `src/routes/incidents/`.
 
 | Page | Button | Priority | Approach | Status |
 |------|--------|----------|----------|--------|
-| `CMDBDetail.tsx` | Edit CI | 🟡 | Inline edit mode (toggle fields to editable inputs, Save updates local state) | ❌ |
-| `CMDBDetail.tsx` | More options (···) | 🟢 | Overflow menu: Copy CI ID, Copy link | ❌ |
-| `CMDBDetail.tsx` | View All (Activity log) | 🟢 | `navigate('/cmdb/audit?ci=...')` | ❌ |
+| `CMDBDetail.tsx` | Edit CI | 🟡 | Inline edit mode (toggle fields to editable inputs, Save updates local state) | ✅ |
+| `CMDBDetail.tsx` | More options (···) | 🟢 | Overflow menu: Copy CI ID, Copy link | ✅ |
+| `CMDBDetail.tsx` | View All (Activity log) | 🟢 | `navigate('/cmdb/audit?ci=...')` | ✅ |
 
 ---
 
