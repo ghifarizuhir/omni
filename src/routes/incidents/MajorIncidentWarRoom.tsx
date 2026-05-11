@@ -15,7 +15,14 @@ import { WarRoomLinks } from '@/src/components/incidents/WarRoom/WarRoomLinks';
 import { ResolveIncidentModal } from '@/src/components/incidents/ResolveIncidentModal';
 import { getIncidentById, mockIncidents } from '@/src/mocks/incidents';
 import { mockIncidentTimelines } from '@/src/mocks/incidentTimelines';
+import { mockCIs } from '@/src/mocks/cis';
 import { Incident, IncidentTimelineEvent } from '@/src/types/incident';
+
+// ── Helper Functions ──────────────────────────────────────────────────────────
+
+function getCIName(publicId: string): string {
+  return mockCIs.find(ci => ci.publicId === publicId)?.name ?? publicId;
+}
 
 // ── Stand Down Modal ──────────────────────────────────────────────────────────
 
@@ -217,7 +224,7 @@ export const MajorIncidentWarRoom: React.FC = () => {
                   {incident.affectedCIPublicIds.map(ci => (
                     <div key={ci} className="px-3 py-2.5 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-ois-danger shrink-0" />
-                      <span className="text-xs font-mono text-ois-text">{ci}</span>
+                      <span className="text-xs text-ois-text">{getCIName(ci)}</span>
                     </div>
                   ))}
                 </div>
