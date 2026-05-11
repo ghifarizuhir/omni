@@ -963,3 +963,8 @@ export const getArticlesByCategory = (categoryId: string) =>
 
 export const getRelatedArticles = (slugs: string[]) =>
   mockKBArticles.filter(a => slugs.includes(a.slug));
+
+export const getKBArticlesByCI = (ciId: string): typeof mockKBArticles =>
+  mockKBArticles.filter(
+    a => a.relatedCIIds?.includes(ciId) || a.relatedCIPublicIds?.includes(ciId),
+  );

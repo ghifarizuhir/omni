@@ -15,6 +15,9 @@ import {
 import { getIncidentsByCI } from '@/src/mocks/incidents';
 import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
 import { getChangesByCI } from '@/src/mocks/changes';
+import { getProblemsByCI } from '@/src/mocks/problems';
+import { getKBArticlesByCI } from '@/src/mocks/kbArticles';
+import { formatDistanceToNow, parseISO } from 'date-fns';
 import { getMetricsByCI } from '@/src/mocks/capacityMetrics';
 import { UtilizationBar } from '@/src/components/capacity/UtilizationBar';
 import { TrendIndicator } from '@/src/components/capacity/TrendIndicator';
@@ -27,7 +30,6 @@ import { Badge } from '../../components/ui/Badge';
 import { Tabs } from '../../components/ui/Tabs';
 import { StatusBadge } from '../../components/ui/StatusSeverityBadges';
 import { DataTable } from '../../components/ui/DataTable';
-import { SparkLine } from '../../components/charts/SparkLine';
 import { cn } from '@/src/lib/utils';
 import { CIQuickFactsCard } from '../../components/cmdb/CIQuickFactsCard';
 import { CIAuditTimeline } from '../../components/cmdb/CIAuditTimeline';
@@ -92,7 +94,24 @@ export const CMDBDetail: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-           <Badge variant="neutral" className="gap-2 px-3 py-1.5 h-auto font-bold bg-white border-ois-border-strong"><Heart size={14} className="text-ois-success" /> Operational</Badge>
+           <Badge variant="neutral" className={cn(
+               "gap-2 px-3 py-1.5 h-auto font-bold bg-white border-ois-border-strong",
+             )}>
+             <Heart size={14} className={
+               ci.health === 'operational' ? 'text-ois-success' :
+               ci.health === 'degraded' ? 'text-ois-warning' :
+               ci.health === 'partial_outage' ? 'text-ois-danger' :
+               ci.health === 'major_outage' ? 'text-ois-danger' :
+               ci.health === 'maintenance' ? 'text-ois-info' :
+               'text-ois-text-muted'
+             } />
+             {ci.health === 'operational' ? 'Operational' :
+              ci.health === 'degraded' ? 'Degraded' :
+              ci.health === 'partial_outage' ? 'Partial Outage' :
+              ci.health === 'major_outage' ? 'Major Outage' :
+              ci.health === 'maintenance' ? 'Maintenance' :
+              'Unknown'}
+           </Badge>
            <Badge variant="neutral" className="gap-2 px-3 py-1.5 h-auto font-bold bg-white border-ois-border-strong"><Radio size={14} className="text-ois-primary" /> {ci.monitoringRuleCount} Rules</Badge>
            <Badge variant="neutral" className="gap-2 px-3 py-1.5 h-auto font-bold bg-white border-ois-border-strong"><AlertCircle size={14} className={ci.openIncidentCount > 0 ? "text-ois-danger" : "text-ois-success"} /> {ci.openIncidentCount} Incidents</Badge>
         </div>
@@ -119,8 +138,8 @@ export const CMDBDetail: React.FC = () => {
                   {Object.entries(ci.attributes).filter(([k]) => k !== 'kind').map(([k, v]) => (
                     <div key={k} className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-ois-text-subtle uppercase">{k.replace(/([A-Z])/g, ' $1')}</span>
-                      {k === 'repoUrl' ? (
-                        <a href="#" className="text-sm font-semibold text-ois-primary flex items-center gap-1.5">{String(v)} <ExternalLink size={14} /></a>
+                      {k === 'repoUrl' && String(v) ? (
+                        <a href={String(v)} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-ois-primary flex items-center gap-1.5 hover:underline">{String(v)} <ExternalLink size={14} /></a>
                       ) : <span className="text-sm font-semibold text-ois-text">{String(v)}</span>}
                     </div>
                   ))}
@@ -141,12 +160,10 @@ export const CMDBDetail: React.FC = () => {
                 <div className="p-4 border-b border-ois-border bg-ois-surface-muted/20">
                    <h3 className="text-sm font-bold text-ois-text uppercase tracking-wider opacity-60">Health Snapshot</h3>
                 </div>
-                <div className="p-4 space-y-4">
-                  <div className="flex justify-between text-[11px] font-bold uppercase"><span className="text-ois-text-muted">Last 24 hours</span><span className="text-ois-success">100% Operational</span></div>
-                  <div className="h-10 w-full bg-ois-success-pale/30 rounded flex items-center px-2">
-                     <SparkLine data={[100, 100, 95, 100, 100, 100, 100]} className="w-full h-8 text-ois-success" />
-                  </div>
-                  <div className="text-[10px] font-bold text-ois-text-subtle text-right uppercase tracking-tighter">99.98% Composite Uptime</div>
+                <div className="p-6 flex flex-col items-center justify-center gap-2 text-center">
+                  <Activity size={24} className="text-ois-text-subtle opacity-40" />
+                  <p className="text-xs text-ois-text-muted font-medium">No health data available</p>
+                  <p className="text-[10px] text-ois-text-subtle">Connect a monitoring source to track uptime</p>
                 </div>
               </Card>
             </div>
@@ -248,7 +265,13 @@ export const CMDBDetail: React.FC = () => {
                           <span className="font-mono text-xs font-semibold text-ois-primary w-36 shrink-0">{inc.publicId}</span>
                           <span className="text-xs text-ois-text flex-1 truncate">{inc.title}</span>
                           <IncidentStatusPill status={inc.status} />
-                          <span className="text-xs font-bold shrink-0" style={{ color: inc.priority === 'P1' ? '#B42318' : inc.priority === 'P2' ? '#DC6803' : '#475467' }}>
+                          <span className={cn(
+                            "text-xs font-bold shrink-0",
+                            inc.priority === 'P1' ? 'text-ois-sev-p1' :
+                            inc.priority === 'P2' ? 'text-ois-sev-p2' :
+                            inc.priority === 'P3' ? 'text-ois-sev-p3' :
+                            'text-ois-text-muted'
+                          )}>
                             {inc.priority}
                           </span>
                         </RouterLink>
@@ -260,18 +283,54 @@ export const CMDBDetail: React.FC = () => {
             })()}
 
             <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
-                   Linked Problems <Bug size={14} className="text-ois-warning" />
-                </div>
-                <div className="p-8 text-center text-xs text-ois-text-muted italic">No linked problems</div>
-              </Card>
-              <Card>
-                <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
-                    Linked KB <BookOpen size={14} className="text-ois-primary" />
-                </div>
-                <div className="p-8 text-center text-xs text-ois-text-muted italic">No linked KB articles</div>
-              </Card>
+              {(() => {
+                const ciProblems = getProblemsByCI(ci.id).concat(getProblemsByCI(ci.publicId))
+                  .filter((p, i, a) => a.findIndex(x => x.id === p.id) === i)
+                  .slice(0, 5);
+                return (
+                  <Card>
+                    <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
+                      Linked Problems ({ciProblems.length}) <Bug size={14} className="text-ois-warning" />
+                    </div>
+                    {ciProblems.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-ois-text-muted italic">No linked problems</div>
+                    ) : (
+                      <div className="divide-y divide-ois-border">
+                        {ciProblems.map(prb => (
+                          <RouterLink key={prb.id} to={`/problems/${prb.publicId}`} className="flex items-center gap-3 px-4 py-3 hover:bg-ois-surface-muted transition-colors">
+                            <span className="font-mono text-xs font-semibold text-ois-primary w-36 shrink-0">{prb.publicId}</span>
+                            <span className="text-xs text-ois-text flex-1 truncate">{prb.title}</span>
+                          </RouterLink>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })()}
+              {(() => {
+                const ciKBArticles = getKBArticlesByCI(ci.id).concat(getKBArticlesByCI(ci.publicId))
+                  .filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
+                  .slice(0, 5);
+                return (
+                  <Card>
+                    <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
+                      Linked KB ({ciKBArticles.length}) <BookOpen size={14} className="text-ois-primary" />
+                    </div>
+                    {ciKBArticles.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-ois-text-muted italic">No linked KB articles</div>
+                    ) : (
+                      <div className="divide-y divide-ois-border">
+                        {ciKBArticles.map(art => (
+                          <RouterLink key={art.id} to={`/knowledge/${art.slug}`} className="flex items-center gap-3 px-4 py-3 hover:bg-ois-surface-muted transition-colors">
+                            <span className="font-mono text-xs font-semibold text-ois-primary w-24 shrink-0">{art.publicId}</span>
+                            <span className="text-xs text-ois-text flex-1 truncate">{art.title}</span>
+                          </RouterLink>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })()}
             </div>
             <Card>
               <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
@@ -325,7 +384,7 @@ export const CMDBDetail: React.FC = () => {
                },
                { header: 'Type', accessor: (r: any) => <Badge variant="neutral" className="capitalize text-[10px]">{r.type}</Badge> },
                { header: 'Severity', accessor: (r: any) => <Badge variant={r.severity === 'P1' ? 'danger' : 'warning'} className="text-[10px] font-bold">{r.severity}</Badge> },
-               { header: 'Last Triggered', accessor: (r: any) => <span className="text-xs text-ois-text-muted">{r.lastTriggeredAt || 'Never'}</span> },
+               { header: 'Last Triggered', accessor: (r: any) => <span className="text-xs text-ois-text-muted">{r.lastTriggeredAt ? `${formatDistanceToNow(parseISO(r.lastTriggeredAt))} ago` : 'Never'}</span> },
              ]} data={ciRules} />
            </Card>
         </div>

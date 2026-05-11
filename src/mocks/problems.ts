@@ -404,3 +404,8 @@ export const getProblemById = (id: string): Problem | undefined =>
 
 export const getKnownErrors = (): Problem[] =>
   mockProblems.filter(p => p.status === 'known_error');
+
+export const getProblemsByCI = (ciId: string): Problem[] =>
+  mockProblems.filter(
+    p => p.affectedCIIds.includes(ciId) || p.affectedCIPublicIds.includes(ciId),
+  );
