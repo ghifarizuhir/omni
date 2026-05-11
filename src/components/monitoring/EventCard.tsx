@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreHorizontal, ExternalLink, MessageSquare, Shield, Clock } from 'lucide-react';
+import { MoreHorizontal, ExternalLink, MessageSquare, Shield, Clock, PlusCircle } from 'lucide-react';
 import { Event } from '../../types/monitoring';
 import { eventTypeMeta } from '../../lib/constants';
 import { cn } from '../../lib/utils';
@@ -82,6 +82,15 @@ export const EventCard: React.FC<EventCardProps> = ({ event, className }) => {
           {event.status === 'acknowledged' && (
             <button className="px-3 py-1.5 bg-ois-success text-white text-xs font-bold rounded hover:bg-ois-success-hover transition-colors">
               Resolve
+            </button>
+          )}
+          {(event.status === 'open' || event.status === 'acknowledged') && !event.linkedIncidentId && (
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate('/incidents'); }}
+              className="flex items-center gap-1 text-[11px] font-semibold text-ois-danger hover:text-red-700 px-2 py-1 rounded hover:bg-ois-danger-pale transition-colors"
+            >
+              <PlusCircle size={12} />
+              Create incident
             </button>
           )}
           <button className="p-2 text-ois-text-subtle hover:text-ois-text hover:bg-ois-bg rounded transition-all">

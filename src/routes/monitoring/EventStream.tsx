@@ -27,6 +27,7 @@ export const EventStream: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isPaused, setIsPaused] = useState(false);
+  const [frozenEvents, setFrozenEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<EventStatus | 'all'>('all');
   const [severityFilter, setSeverityFilter] = useState<Severity | 'all'>('all');
@@ -84,7 +85,17 @@ export const EventStream: React.FC = () => {
     return result;
   }, [searchQuery, statusFilter, severityFilter, sourceFilter, typeFilter, activeQuickFilter]);
 
-  const displayedEvents = filteredEvents.slice(0, visibleCount);
+  const togglePause = () => {
+    if (!isPaused) {
+      setFrozenEvents([...filteredEvents]);
+    } else {
+      setFrozenEvents([]);
+    }
+    setIsPaused(!isPaused);
+  };
+
+  const activeEvents = isPaused ? frozenEvents : filteredEvents;
+  const displayedEvents = activeEvents.slice(0, visibleCount);
 
   // Grouped by Date
   const groupedEvents = useMemo(() => {
@@ -175,7 +186,7 @@ export const EventStream: React.FC = () => {
             variant="outline" 
             size="sm" 
             className="gap-2 h-9"
-            onClick={() => setIsPaused(!isPaused)}
+            onClick={togglePause}
           >
             {isPaused ? <Play size={14} className="fill-current" /> : <Pause size={14} className="fill-current" />}
             {isPaused ? 'Resume' : 'Pause'}
@@ -217,7 +228,7 @@ export const EventStream: React.FC = () => {
                 variant="ghost" 
                 size="sm" 
                 className="text-white hover:bg-white/20 h-7 text-xs font-bold"
-                onClick={() => setIsPaused(false)}
+                onClick={togglePause}
               >
                 Resume
               </Button>
@@ -306,7 +317,7 @@ export const EventStream: React.FC = () => {
 
           {/* Event Stream List */}
           <div className="space-y-8">
-            {filteredEvents.length === 0 ? (
+            {activeEvents.length === 0 ? (
               <Card className="p-12 text-center flex flex-col items-center justify-center border-dashed border-2 border-ois-border bg-ois-bg/30">
                 <div className="p-4 bg-ois-surface rounded-full shadow-sm mb-4">
                   <List size={32} className="text-ois-text-subtle" />
@@ -341,7 +352,7 @@ export const EventStream: React.FC = () => {
               ))
             )}
 
-            {filteredEvents.length > visibleCount && (
+            {activeEvents.length > visibleCount && (
               <div className="pt-4 text-center">
                 <Button 
                   variant="outline" 
