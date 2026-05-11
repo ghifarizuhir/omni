@@ -86,6 +86,7 @@ export const MonitoringRules: React.FC = () => {
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
 
   const [testModalRule, setTestModalRule] = useState<MonitoringRule | null>(null);
+  const [testedChannels, setTestedChannels] = useState<Set<string>>(new Set());
 
   const [formData, setFormData] = useState<RuleFormData>({
     name: '',
@@ -677,7 +678,7 @@ export const MonitoringRules: React.FC = () => {
         return (
           <Modal
             isOpen={!!testModalRule}
-            onClose={() => setTestModalRule(null)}
+            onClose={() => { setTestModalRule(null); setTestedChannels(new Set()); }}
             title={`Test rule: ${testModalRule?.publicId}`}
             size="md"
           >
@@ -696,6 +697,7 @@ export const MonitoringRules: React.FC = () => {
                        {testRoute.channels.map((channel, i) => {
                          const Icon = channelIconMap[channel] ?? Bell;
                          const recipientNames = testRoute.recipients.map(r => r.targetName).join(', ');
+                         const channelId = `${channel}-${i}`;
                          return (
                            <div key={i} className="flex items-center justify-between p-4 bg-white">
                               <div className="flex items-center gap-3">
@@ -707,9 +709,18 @@ export const MonitoringRules: React.FC = () => {
                                     <p className="text-[10px] text-ois-text-muted">{recipientNames || '—'}</p>
                                  </div>
                               </div>
-                              <Button variant="outline" size="sm" className="h-8 px-4 font-bold text-[10px] bg-white border-ois-border-strong">
-                                 Test
-                              </Button>
+                              {testedChannels.has(channelId) ? (
+                                <span className="flex items-center gap-1 text-xs font-medium text-ois-success">
+                                  <CheckCircle2 size={12} /> Sent
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => setTestedChannels(prev => new Set([...prev, channelId]))}
+                                  className="text-xs font-medium text-ois-primary hover:underline"
+                                >
+                                  Test
+                                </button>
+                              )}
                            </div>
                          );
                        })}
@@ -724,10 +735,19 @@ export const MonitoringRules: React.FC = () => {
                <div className="flex items-center justify-between pt-6 border-t border-ois-border">
                   <span className="text-[10px] font-bold text-ois-text-subtle uppercase">Last test: Never</span>
                   <div className="flex items-center gap-3">
-                     <Button variant="ghost" className="h-10 font-bold text-ois-text-muted" onClick={() => setTestModalRule(null)}>
+                     <Button variant="ghost" className="h-10 font-bold text-ois-text-muted" onClick={() => { setTestModalRule(null); setTestedChannels(new Set()); }}>
                         Close
                      </Button>
-                     <Button variant="primary" className="h-10 px-8 font-bold gap-2">
+                     <Button
+                        variant="primary"
+                        className="h-10 px-8 font-bold gap-2"
+                        onClick={() => {
+                          if (testRoute) {
+                            const allIds = testRoute.channels.map((c, i) => `${c}-${i}`);
+                            setTestedChannels(new Set(allIds));
+                          }
+                        }}
+                     >
                         <Play size={16} /> Run all
                      </Button>
                   </div>
