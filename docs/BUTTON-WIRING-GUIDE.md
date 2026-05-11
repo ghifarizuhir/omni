@@ -323,13 +323,13 @@ All 24 dead buttons wired in commit `9ff9c3c`. See `src/routes/incidents/`.
 
 | Page | Button | Priority | Approach | Status |
 |------|--------|----------|----------|--------|
-| `EventDetail.tsx` | View CMDB dependency graph | 🟡 | `navigate('/cmdb/graph?ci=...')` using event's affected CI | ❌ |
-| `EventDetail.tsx` | Copy query | 🟡 | `navigator.clipboard.writeText(rule.query)` | ❌ |
-| `EventDetail.tsx` | Create Incident from alert | 🔴 | Open `CreateIncidentModal` pre-filled with event data | ❌ |
-| `EventDetail.tsx` | Add tag | 🟢 | Inline tag input (same pattern as IncidentDetail tags) | ❌ |
-| `EventStream.tsx` | Time range selector (Last 7d) | 🟡 | Local dropdown state + filter events by date (same as IncidentAnalytics date range) | ❌ |
-| `EventStream.tsx` | Export | 🟡 | CSV export of filtered events (CSV export pattern above) | ❌ |
-| `MonitoringRules.tsx` | Test channel (per channel) | 🟢 | Show a brief "Test sent ✓" inline confirmation (no real send needed in mock) | ❌ |
+| `EventDetail.tsx` | View CMDB dependency graph | 🟡 | `navigate('/cmdb/graph?ci=...')` using event's affected CI | ✅ |
+| `EventDetail.tsx` | Copy query | 🟡 | `navigator.clipboard.writeText(rule.query)` | ✅ |
+| `EventDetail.tsx` | Create Incident from alert | 🔴 | Open `CreateIncidentModal`, link incident on create | ✅ |
+| `EventDetail.tsx` | Add tag | 🟢 | Inline tag input toggle | ✅ |
+| `EventStream.tsx` | Time range selector (Last 7d) | 🟡 | Local dropdown (24h/7d/30d) + date filter on `firedAt` | ✅ |
+| `EventStream.tsx` | Export | 🟡 | CSV export of filtered events | ✅ |
+| `MonitoringRules.tsx` | Test channel (per channel) | 🟢 | `testedChannels` Set state — shows Sent ✓ after click | ✅ |
 
 ---
 
