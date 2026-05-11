@@ -337,10 +337,10 @@ All 24 dead buttons wired in commit `9ff9c3c`. See `src/routes/incidents/`.
 
 | Page | Button | Priority | Approach | Status |
 |------|--------|----------|----------|--------|
-| `ProblemDetail.tsx` | Edit description | 🟡 | Inline edit (same pattern as IncidentDetail description edit) | ❌ |
-| `ProblemDetail.tsx` | Link incidents | 🔴 | Use existing `LinkIncidentsModal` from `src/components/problems/LinkIncidentsModal.tsx` | ❌ |
-| `ProblemDetail.tsx` | Link change | 🟡 | Reuse `LinkChangeModal` | ❌ |
-| `ProblemDetail.tsx` | Suggest KB article | 🟢 | `navigate('/kb/editor?source=problem&id=...')` | ❌ |
+| `ProblemDetail.tsx` | Edit description | 🟡 | Inline edit (same pattern as IncidentDetail description edit) | ✅ |
+| `ProblemDetail.tsx` | Link incidents | 🔴 | Use existing `LinkIncidentsModal` from `src/components/problems/LinkIncidentsModal.tsx` | ✅ |
+| `ProblemDetail.tsx` | Link change | 🟡 | Reuse `LinkChangeModal` | ✅ |
+| `ProblemDetail.tsx` | Suggest KB article | 🟢 | `navigate('/kb/editor?source=problem&id=...')` | ✅ |
 
 ---
 
@@ -348,8 +348,8 @@ All 24 dead buttons wired in commit `9ff9c3c`. See `src/routes/incidents/`.
 
 | Page | Button | Priority | Approach | Status |
 |------|--------|----------|----------|--------|
-| `ChangeDetail.tsx` | Actions dropdown | 🟡 | Overflow menu: Copy ID, Copy link, Export | ❌ |
-| `ChangeDetail.tsx` | Reschedule | 🟡 | Small modal with date/time inputs, updates local `scheduledStart` / `scheduledEnd` | ❌ |
+| `ChangeDetail.tsx` | Actions dropdown | 🟡 | Overflow menu: Copy ID, Copy link | ✅ |
+| `ChangeDetail.tsx` | Reschedule | 🟡 | `RescheduleModal` with datetime inputs, updates `plannedStart` / `plannedEnd` | ✅ |
 | `CABWorkspace.tsx` | Export agenda | 🟢 | CSV export of CAB agenda (CSV export pattern above) | ❌ |
 | `CABWorkspace.tsx` | Schedule new session | 🟡 | Modal with date picker + attendees | ❌ |
 | `NewChange.tsx` | Save as draft | 🟡 | Persist form to `localStorage` keyed by a draft ID, restore on return | ❌ |
