@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Tabs } from '../../components/ui/Tabs';
+import { Modal } from '../../components/ui/Modal';
 import { cn } from '../../lib/utils';
 import { getChangeById } from '../../mocks/changes';
 import { mockScalingRecommendations } from '../../mocks/scalingRecommendations';
@@ -32,7 +33,6 @@ export const ChangeDetail: React.FC = () => {
 
   const [changeStatus, setChangeStatus] = useState(change?.status ?? 'draft');
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelled, setCancelled] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
   if (!change) {
@@ -58,6 +58,10 @@ export const ChangeDetail: React.FC = () => {
     { id: 'pir', label: 'PIR' },
     { id: 'history', label: 'History' },
   ];
+
+  const handleCloseModal = () => {
+    setShowCancelModal(false);
+  };
 
   return (
     <div className="flex gap-6 min-h-0">
@@ -492,58 +496,57 @@ export const ChangeDetail: React.FC = () => {
       </div>
 
       {/* Cancel change confirmation modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-2xl border border-ois-border w-full max-w-sm mx-4 p-6">
-            {cancelled ? (
-              <div className="text-center py-2">
-                <CheckCircle2 size={40} className="mx-auto text-ois-success mb-3" />
-                <p className="text-base font-bold text-ois-text mb-1">Change cancelled</p>
-                <p className="text-sm text-ois-text-muted mb-5">{change.publicId} has been marked as cancelled.</p>
-                <Button onClick={() => { setShowCancelModal(false); setCancelled(false); }} className="w-full">
-                  Close
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="flex-shrink-0 w-9 h-9 rounded-full bg-red-50 flex items-center justify-center">
-                    <AlertTriangle size={18} className="text-ois-danger" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-bold text-ois-text mb-1">Cancel this change?</h2>
-                    <p className="text-xs text-ois-text-muted leading-relaxed">
-                      This will mark <span className="font-semibold text-ois-text">{change.publicId}</span> as cancelled.
-                      Pending approvals will be voided and the change will no longer appear on the forward schedule.
-                      This action cannot be undone.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setShowCancelModal(false)}
-                  >
-                    Keep change
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-ois-danger hover:bg-red-600 border-ois-danger text-white"
-                    onClick={() => {
-                      setChangeStatus('cancelled');
-                      setCancelled(true);
-                    }}
-                  >
-                    Confirm cancel
-                  </Button>
-                </div>
-              </>
-            )}
+      <Modal
+        isOpen={showCancelModal}
+        onClose={handleCloseModal}
+        title="Cancel this change?"
+        size="sm"
+      >
+        {changeStatus === 'cancelled' ? (
+          <div className="text-center py-2">
+            <CheckCircle2 size={40} className="mx-auto text-ois-success mb-3" />
+            <p className="text-base font-bold text-ois-text mb-1">Change cancelled</p>
+            <p className="text-sm text-ois-text-muted mb-5">{change.publicId} has been marked as cancelled.</p>
+            <Button onClick={handleCloseModal} className="w-full">
+              Close
+            </Button>
           </div>
-        </div>
-      )}
+        ) : (
+          <>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-red-50 flex items-center justify-center">
+                <AlertTriangle size={18} className="text-ois-danger" />
+              </div>
+              <div>
+                <p className="text-xs text-ois-text-muted leading-relaxed">
+                  This will mark <span className="font-semibold text-ois-text">{change.publicId}</span> as cancelled.
+                  Pending approvals will be voided and the change will no longer appear on the forward schedule.
+                  This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={handleCloseModal}
+              >
+                Keep change
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 bg-ois-danger hover:bg-red-600 border-ois-danger text-white"
+                onClick={() => {
+                  setChangeStatus('cancelled');
+                }}
+              >
+                Confirm cancel
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
 
       {/* Right sidebar */}
       <div className="w-56 shrink-0 space-y-3">
