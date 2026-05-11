@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from '@/src/components/ui/Modal';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { cn } from '@/src/lib/utils';
 import { IncidentPriority } from '@/src/types/incident';
 import { mockUsers } from '@/src/mocks/users';
@@ -27,6 +28,13 @@ const CHANNELS = [
   { value: 'monitoring', label: 'Monitoring' },
   { value: 'integration', label: 'Integration' },
 ] as const;
+
+const ASSIGNEE_OPTIONS = [
+  { value: '', label: 'Unassigned' },
+  ...mockUsers.map(u => ({ value: u.id, label: u.name })),
+];
+
+const CHANNEL_OPTIONS = CHANNELS.map(c => ({ value: c.value, label: c.label }));
 
 export const CreateIncidentModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => {
   const [title, setTitle] = useState('');
@@ -116,30 +124,25 @@ export const CreateIncidentModal: React.FC<Props> = ({ isOpen, onClose, onCreate
         {/* Assignee */}
         <div>
           <label className="block text-sm font-medium text-ois-text mb-1">Assignee</label>
-          <select
+          <FilterDropdown
             value={assigneeId}
-            onChange={e => setAssigneeId(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-ois-border rounded-lg bg-white text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30 focus:border-ois-primary"
-          >
-            <option value="">Select user</option>
-            {mockUsers.map(u => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </select>
+            onChange={setAssigneeId}
+            options={ASSIGNEE_OPTIONS}
+            placeholder="Unassigned"
+            fullWidth
+          />
         </div>
 
         {/* Reporter channel */}
         <div>
           <label className="block text-sm font-medium text-ois-text mb-1">Reporter channel</label>
-          <select
+          <FilterDropdown
             value={channel}
-            onChange={e => setChannel(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-ois-border rounded-lg bg-white text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30 focus:border-ois-primary"
-          >
-            {CHANNELS.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+            onChange={setChannel}
+            options={CHANNEL_OPTIONS}
+            placeholder="Select channel"
+            fullWidth
+          />
         </div>
 
         {/* Actions */}
