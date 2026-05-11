@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, Check, AlertTriangle, CheckCircle, FileText,
@@ -223,10 +223,12 @@ export const NewChange: React.FC = () => {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [submitted, setSubmitted] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+  const draftSavedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSaveDraft = () => {
+    if (draftSavedTimerRef.current) clearTimeout(draftSavedTimerRef.current);
     setDraftSaved(true);
-    setTimeout(() => setDraftSaved(false), 2000);
+    draftSavedTimerRef.current = setTimeout(() => setDraftSaved(false), 2000);
   };
 
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
@@ -241,6 +243,13 @@ export const NewChange: React.FC = () => {
       return () => clearTimeout(t);
     }
   }, [submitted, navigate]);
+
+  // Cleanup draft saved timer on unmount
+  useEffect(() => {
+    return () => {
+      if (draftSavedTimerRef.current) clearTimeout(draftSavedTimerRef.current);
+    };
+  }, []);
 
   // Emergency banner
   const isEmergency = form.type === 'emergency';
