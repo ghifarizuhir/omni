@@ -370,8 +370,8 @@ All 24 dead buttons wired in commit `9ff9c3c`. See `src/routes/incidents/`.
 
 | Page | Button | Priority | Approach | Status |
 |------|--------|----------|----------|--------|
-| `ReleaseDetail.tsx` | Deploy to [environment] | 🟡 | Enable button when stage is pending; show a confirmation modal, then update stage status to `in_progress` locally | ❌ |
-| `DeploymentDetail.tsx` | Re-deploy | 🟡 | Confirm modal → set deployment status to `running` with a simulated progress update | ❌ |
+| `ReleaseDetail.tsx` | Deploy to [environment] | 🟡 | Enable button when stage is pending; show a confirmation modal, then update stage status to `in_progress` locally | ✅ |
+| `DeploymentDetail.tsx` | Re-deploy | 🟡 | Confirm modal → set deployment status to `running` with a simulated progress update | ✅ |
 
 ---
 
