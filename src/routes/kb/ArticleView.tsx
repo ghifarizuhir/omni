@@ -639,7 +639,7 @@ export const ArticleView: React.FC = () => {
               <div className="space-y-2">
                 {article.relatedCIPublicIds.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-wider mb-1">Linked CIs</p>
+                    <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-1">Linked CIs</p>
                     {article.relatedCIPublicIds.map(ci => (
                       <Link key={ci} to={`/cmdb`} className="flex items-center gap-1.5 text-[11px] text-ois-primary hover:underline py-0.5">
                         <Server size={10} className="shrink-0" /> {ci}
@@ -649,7 +649,7 @@ export const ArticleView: React.FC = () => {
                 )}
                 {article.linkedProblemIds.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-wider mb-1">Linked problems</p>
+                    <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-1">Linked problems</p>
                     {article.linkedProblemIds.map(pid => (
                       <Link key={pid} to={`/problems`} className="flex items-center gap-1.5 text-[11px] text-ois-primary hover:underline font-mono py-0.5">
                         <AlertCircle size={10} className="shrink-0" /> {pid.replace('prb-', 'PRB-').toUpperCase()}
@@ -659,7 +659,7 @@ export const ArticleView: React.FC = () => {
                 )}
                 {article.linkedIncidentIds.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-wider mb-1">Linked incidents</p>
+                    <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-1">Linked incidents</p>
                     {article.linkedIncidentIds.map(iid => (
                       <Link key={iid} to={`/incidents`} className="flex items-center gap-1.5 text-[11px] text-ois-primary hover:underline font-mono py-0.5">
                         <AlertTriangle size={10} className="shrink-0" /> {iid}

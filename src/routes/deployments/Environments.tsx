@@ -142,7 +142,7 @@ export const Environments: React.FC = () => {
           <Card>
             <div className="px-5 pt-4 pb-3 border-b border-ois-border">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-wider">
+                <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-widest">
                   Recent Deployments (Last 7 Days)
                 </h2>
                 <div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ export const Environments: React.FC = () => {
           {/* Deploy Health card */}
           <Card>
             <div className="px-4 pt-4 pb-2 border-b border-ois-border">
-              <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-wider">
+              <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-widest">
                 Deploy Health
               </h2>
             </div>
@@ -226,7 +226,7 @@ export const Environments: React.FC = () => {
           {/* Freeze Windows card */}
           <Card>
             <div className="px-4 pt-4 pb-2 border-b border-ois-border">
-              <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-wider">
+              <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-widest">
                 Freeze Windows
               </h2>
             </div>
@@ -262,7 +262,7 @@ export const Environments: React.FC = () => {
           {/* Upcoming Deployments card */}
           <Card>
             <div className="px-4 pt-4 pb-2 border-b border-ois-border">
-              <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-wider">
+              <h2 className="text-xs font-semibold text-[#344054] uppercase tracking-widest">
                 Upcoming Deployments
               </h2>
             </div>

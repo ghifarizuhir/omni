@@ -501,7 +501,7 @@ export const TestRuns: React.FC = () => {
           {/* Test Health card */}
           <Card>
             <CardBody className="p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ois-text-subtle mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ois-text-subtle mb-3">
                 Test Health
               </p>
               <div className="space-y-2">
@@ -554,7 +554,7 @@ export const TestRuns: React.FC = () => {
           {/* Flaky Tests card */}
           <Card>
             <CardBody className="p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ois-text-subtle mb-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ois-text-subtle mb-1">
                 Flaky Tests
               </p>
               {flakyCount === 0 ? (
@@ -596,7 +596,7 @@ export const TestRuns: React.FC = () => {
           {/* Failed Cases card */}
           <Card>
             <CardBody className="p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ois-text-subtle mb-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ois-text-subtle mb-1">
                 Failed Cases (last 7d)
               </p>
               {topFailureCaseEntries.length === 0 ? (

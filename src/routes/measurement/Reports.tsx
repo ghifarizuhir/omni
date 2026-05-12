@@ -197,14 +197,14 @@ export const Reports: React.FC = () => {
         <table className="w-full min-w-[800px]">
           <thead>
             <tr className="border-b border-ois-border bg-ois-surface-muted">
-              <th className="py-3 pl-4 pr-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">ID</th>
-              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Name</th>
-              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Type</th>
-              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Frequency</th>
-              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Last generated</th>
-              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Next run</th>
-              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Format</th>
-              <th className="py-3 pr-4 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Actions</th>
+              <th className="py-3 pl-4 pr-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">ID</th>
+              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Name</th>
+              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Type</th>
+              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Frequency</th>
+              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Last generated</th>
+              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Next run</th>
+              <th className="py-3 pr-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Format</th>
+              <th className="py-3 pr-4 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Actions</th>
             </tr>
           </thead>
           <tbody>

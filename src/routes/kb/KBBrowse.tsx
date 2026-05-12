@@ -505,7 +505,7 @@ export const KBBrowse: React.FC = () => {
               </p>
             ) : (
               <div className="flex items-center gap-2">
-                <p className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">
+                <p className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">
                   {catFilter !== 'all'
                     ? mockKBCategories.find(c => c.id === catFilter)?.name
                     : statusFilter.size > 0

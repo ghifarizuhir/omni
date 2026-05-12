@@ -175,7 +175,7 @@ export const ImprovementRegister: React.FC = () => {
           { label: 'Actual benefit realized', value: formatBenefitUSD(totalActual) },
         ].map(kpi => (
           <div key={kpi.label} className="border border-ois-border rounded-lg bg-ois-surface p-3">
-            <p className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider mb-1">{kpi.label}</p>
+            <p className="text-[11px] font-bold text-ois-text-subtle uppercase tracking-widest mb-1">{kpi.label}</p>
             <p className="text-xl font-bold text-ois-text">{kpi.value}</p>
           </div>
         ))}
@@ -292,7 +292,7 @@ export const ImprovementRegister: React.FC = () => {
         <div className="border border-ois-border rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-ois-surface-muted/50 border-b border-ois-border text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">
+              <tr className="bg-ois-surface-muted/50 border-b border-ois-border text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
                 <th className="px-4 py-2.5 text-left">Initiative</th>
                 <th className="px-4 py-2.5 text-left">Status</th>
                 <th className="px-4 py-2.5 text-left">Category</th>

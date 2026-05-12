@@ -341,21 +341,21 @@ export const IncidentAnalytics: React.FC = () => {
             <thead>
               <tr className="border-b border-ois-border bg-ois-surface-muted/40">
                 <th className="px-4 py-2.5 text-left">
-                  <button onClick={() => toggleCISort('publicId')} className="flex items-center text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider hover:text-ois-text transition-colors">
+                  <button onClick={() => toggleCISort('publicId')} className="flex items-center text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest hover:text-ois-text transition-colors">
                     CI <SortIcon field="publicId" />
                   </button>
                 </th>
                 <th className="px-4 py-2.5 text-left">
-                  <button onClick={() => toggleCISort('count')} className="flex items-center text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider hover:text-ois-text transition-colors">
+                  <button onClick={() => toggleCISort('count')} className="flex items-center text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest hover:text-ois-text transition-colors">
                     Incidents <SortIcon field="count" />
                   </button>
                 </th>
                 <th className="px-4 py-2.5 text-left">
-                  <button onClick={() => toggleCISort('lastIncident')} className="flex items-center text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider hover:text-ois-text transition-colors">
+                  <button onClick={() => toggleCISort('lastIncident')} className="flex items-center text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest hover:text-ois-text transition-colors">
                     Last incident <SortIcon field="lastIncident" />
                   </button>
                 </th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">Problem linked</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Problem linked</th>
                 <th className="px-4 py-2.5" />
               </tr>
             </thead>

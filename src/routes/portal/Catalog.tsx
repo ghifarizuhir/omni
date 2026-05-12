@@ -445,7 +445,7 @@ export const Catalog: React.FC = () => {
           <section>
             <div className="flex items-center gap-2 mb-4">
               <Sparkles size={14} className="text-ois-primary" />
-              <h2 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Recommended for you</h2>
+              <h2 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Recommended for you</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {recommended.map(item => <RecommendedCard key={item.id} item={item} />)}
@@ -455,7 +455,7 @@ export const Catalog: React.FC = () => {
           {/* Browse by category */}
           <section>
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Browse by category</h2>
+              <h2 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Browse by category</h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {(Object.keys(CATEGORY_META) as CatalogCategory[]).map(cat => (

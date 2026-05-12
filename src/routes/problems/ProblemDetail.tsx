@@ -19,7 +19,6 @@ import { problemStatusMeta } from '@/src/lib/constants';
 import { Button } from '@/src/components/ui/Button';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { SeverityBadge } from '@/src/components/ui/StatusSeverityBadges';
-import { Tabs } from '@/src/components/ui/Tabs';
 import { Modal } from '@/src/components/ui/Modal';
 import { ProblemStatusPill } from '@/src/components/problems/ProblemStatusPill';
 import { ProblemSourceChip } from '@/src/components/problems/ProblemSourceChip';
@@ -37,7 +36,7 @@ import { LinkChangeModal } from '@/src/components/incidents/LinkChangeModal';
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const PRIORITY_STRIPE: Record<string, string> = {
-  P1: '#B42318', P2: '#DC6803', P3: '#F79009', P4: '#12B76A',
+  P1: '#B42318', P2: '#DC6803', P3: '#F79009', P4: '#027A48',
 };
 
 function getUserById(id?: string) {
@@ -46,12 +45,14 @@ function getUserById(id?: string) {
 
 // ── Sidebar card ─────────────────────────────────────────────────────────────
 
-const SidebarSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div className="border border-ois-border rounded-lg bg-ois-surface overflow-hidden">
-    <div className="px-3 py-2 bg-ois-surface-muted/50 border-b border-ois-border">
-      <p className="text-[10px] font-bold text-ois-text-muted uppercase tracking-widest">{title}</p>
-    </div>
-    <div className="px-3 py-3 space-y-2">{children}</div>
+const SectionCard: React.FC<{ title?: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
+  <div className={cn('border border-ois-border rounded-lg bg-ois-surface overflow-hidden', className)}>
+    {title && (
+      <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
+        <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">{title}</p>
+      </div>
+    )}
+    <div className="p-4 space-y-2">{children}</div>
   </div>
 );
 
@@ -94,7 +95,7 @@ const RCASummaryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
       <div className="border border-ois-border rounded-lg p-4 bg-ois-surface">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <p className="text-xs text-ois-text-muted mb-1 font-semibold uppercase tracking-wider">
+            <p className="text-xs text-ois-text-subtle mb-1 font-semibold uppercase tracking-widest">
               Technique: {rca.technique.replace('_', ' ')}
             </p>
             <p className="text-sm text-ois-text leading-relaxed">{rca.summary}</p>
@@ -114,7 +115,7 @@ const RCASummaryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
       {/* Root causes */}
       {rca.rootCauses.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs font-bold text-ois-text uppercase tracking-wider">Root causes</h4>
+          <h4 className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Root causes</h4>
           <ol className="space-y-2">
             {rca.rootCauses.map((rc, i) => (
               <li key={i} className="flex gap-3 text-sm">
@@ -131,7 +132,7 @@ const RCASummaryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
       {/* Contributing factors */}
       {rca.contributingFactors.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs font-bold text-ois-text uppercase tracking-wider">Contributing factors</h4>
+          <h4 className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Contributing factors</h4>
           <ul className="space-y-1.5">
             {rca.contributingFactors.map((f, i) => (
               <li key={i} className="flex gap-2 text-sm text-ois-text-muted">
@@ -146,17 +147,17 @@ const RCASummaryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
       {/* Recommended actions */}
       {rca.recommendedActions.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-ois-text uppercase tracking-wider">
+          <h4 className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
             Recommended actions ({rca.recommendedActions.length})
           </h4>
           <div className="border border-ois-border rounded-lg overflow-hidden">
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-ois-surface-muted/50 border-b border-ois-border">
-                  <th className="px-3 py-2 text-left text-ois-text-muted font-semibold uppercase tracking-wider">Type</th>
-                  <th className="px-3 py-2 text-left text-ois-text-muted font-semibold uppercase tracking-wider">Description</th>
-                  <th className="px-3 py-2 text-left text-ois-text-muted font-semibold uppercase tracking-wider">Owner</th>
-                  <th className="px-3 py-2 text-left text-ois-text-muted font-semibold uppercase tracking-wider">Status</th>
+                  <th className="px-3 py-2 text-left text-ois-text-subtle font-semibold uppercase tracking-widest">Type</th>
+                  <th className="px-3 py-2 text-left text-ois-text-subtle font-semibold uppercase tracking-widest">Description</th>
+                  <th className="px-3 py-2 text-left text-ois-text-subtle font-semibold uppercase tracking-widest">Owner</th>
+                  <th className="px-3 py-2 text-left text-ois-text-subtle font-semibold uppercase tracking-widest">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ois-border">
@@ -238,7 +239,7 @@ const RelatedIncidentsTab: React.FC<{ problem: Problem; onLinkIncidents: () => v
       <div className="border border-ois-border rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-ois-surface-muted/50 border-b border-ois-border text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">
+            <tr className="bg-ois-surface-muted/50 border-b border-ois-border text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
               <th className="px-4 py-2.5 text-left">ID</th>
               <th className="px-4 py-2.5 text-left">Title</th>
               <th className="px-4 py-2.5 text-left">Priority</th>
@@ -293,7 +294,7 @@ const PatternSummaryCard: React.FC<{ problem: Problem }> = ({ problem }) => {
 
   return (
     <div className="border border-ois-border rounded-lg p-4 bg-ois-surface">
-      <h4 className="text-xs font-bold text-ois-text uppercase tracking-wider mb-3">Pattern summary</h4>
+      <h4 className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-3">Pattern summary</h4>
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
         {problem.firstIncidentDate && (
           <div>
@@ -381,6 +382,56 @@ const HistoryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
   );
 };
 
+// ── Status dropdown (nav row) ─────────────────────────────────────────────────
+
+const StatusDropdown: React.FC<{
+  status: ProblemStatus;
+  onChange: (s: ProblemStatus) => void;
+}> = ({ status, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const meta = problemStatusMeta[status];
+  const statuses: ProblemStatus[] = ['identified', 'investigating', 'known_error', 'fix_in_progress', 'closed'];
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ois-border bg-white text-sm font-medium hover:bg-ois-surface-muted transition-colors"
+        style={{ color: meta.color }}
+      >
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: meta.dot }} />
+        {meta.label}
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-ois-border rounded-lg shadow-lg z-50 overflow-hidden">
+            {statuses.map(s => {
+              const m = problemStatusMeta[s];
+              return (
+                <button
+                  key={s}
+                  onClick={() => { onChange(s); setOpen(false); }}
+                  className={cn(
+                    'flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-ois-surface-muted transition-colors',
+                    s === status && 'bg-ois-surface-muted font-semibold'
+                  )}
+                  style={{ color: m.color }}
+                >
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: m.dot }} />
+                  {m.label}
+                  {s === status && <span className="ml-auto text-xs opacity-60">current</span>}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export const ProblemDetail: React.FC = () => {
@@ -390,17 +441,13 @@ export const ProblemDetail: React.FC = () => {
   const [problem, setProblem] = useState<Problem | undefined>(
     problemId ? getProblemById(problemId) : undefined
   );
+  const [activeTab, setActiveTab] = useState('overview');
   const [promoteOpen, setPromoteOpen] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
-
-  // Modal open states
   const [linkIncidentsOpen, setLinkIncidentsOpen] = useState(false);
-  const [linkChangeOpen, setLinkChangeOpen]       = useState(false);
-
-  // Inline description edit
+  const [linkChangeOpen, setLinkChangeOpen] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
-  const [descDraft, setDescDraft]     = useState('');
+  const [descDraft, setDescDraft] = useState('');
 
   if (!problem) {
     return (
@@ -413,9 +460,6 @@ export const ProblemDetail: React.FC = () => {
   }
 
   const owner = getUserById(problem.ownerId);
-  const affectedCIs = problem.affectedCIPublicIds.map(pub =>
-    mockCIs.find(ci => ci.publicId === pub) ?? { publicId: pub, name: pub }
-  );
   const affectedServices = problem.affectedServiceIds.map(id =>
     mockServices.find(s => s.id === id)?.name ?? id
   );
@@ -425,110 +469,90 @@ export const ProblemDetail: React.FC = () => {
     setProblem(prev => prev ? {
       ...prev,
       status: 'known_error',
-      knownError: {
-        publishedAt: new Date().toISOString(),
-        publishedBy: 'u-001',
-        ...data,
-      },
+      knownError: { publishedAt: new Date().toISOString(), publishedBy: 'u-001', ...data },
     } : prev);
   };
 
   const handleStatusChange = (newStatus: ProblemStatus) => {
     setProblem(prev => prev ? { ...prev, status: newStatus } : prev);
-    setStatusOpen(false);
   };
 
   const stripeColor = PRIORITY_STRIPE[problem.severity] ?? '#475467';
   const incidents = mockIncidents.filter(i => problem.relatedIncidentIds.includes(i.publicId));
 
   const TABS = [
-    { id: 'overview',   label: 'Overview' },
-    { id: 'incidents',  label: `Related Incidents (${problem.relatedIncidentCount})` },
-    { id: 'rca',        label: 'RCA' },
+    { id: 'overview',    label: 'Overview' },
+    { id: 'incidents',   label: `Related Incidents (${problem.relatedIncidentCount})` },
+    { id: 'rca',         label: 'RCA' },
     { id: 'known-error', label: 'Known Error' },
-    { id: 'fix-plan',   label: 'Fix Plan' },
-    { id: 'history',    label: 'History' },
+    { id: 'fix-plan',    label: 'Fix Plan' },
+    { id: 'history',     label: 'History' },
+  ];
+
+  const quickActions = [
+    problem.status !== 'known_error'
+      ? { icon: ShieldAlert, label: 'Promote to known error', action: () => setPromoteOpen(true), primary: true }
+      : { icon: Edit3, label: 'Edit known error', action: () => setPromoteOpen(true), primary: false },
+    { icon: Plus, label: 'Link incidents', action: () => setLinkIncidentsOpen(true), primary: false },
+    { icon: Activity, label: 'Open RCA workspace', action: () => navigate(`/problems/${problem.publicId}/rca`), primary: false },
+    { icon: Wrench, label: 'Link change', action: () => setLinkChangeOpen(true), primary: false },
+    { icon: BookOpen, label: 'Suggest KB article', action: () => navigate(`/kb/editor?source=problem&id=${problem.publicId}&title=${encodeURIComponent(problem.title)}`), primary: false },
   ];
 
   return (
-    <div className="flex flex-col min-h-full pb-8">
-      {/* Top bar */}
-      <div className="mb-5">
-        <Link to="/problems" className="inline-flex items-center gap-1 text-xs text-ois-text-muted hover:text-ois-primary mb-3 transition-colors">
-          <ArrowLeft size={13} />
-          Problems
-        </Link>
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
 
-        <div className="flex gap-0 rounded-xl border border-ois-border overflow-hidden shadow-ois-card">
-          {/* Severity stripe */}
-          <div className="w-1 shrink-0" style={{ backgroundColor: stripeColor }} />
+      {/* Header — pinned */}
+      <div className="bg-white border-b border-ois-border shrink-0 z-30">
+        {/* Nav row */}
+        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
+          <button
+            onClick={() => navigate('/problems')}
+            className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
+          >
+            <ArrowLeft size={15} />
+            Problems
+          </button>
+          <div className="flex items-center gap-2">
+            <StatusDropdown status={problem.status} onChange={handleStatusChange} />
+            <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-ois-border bg-white text-sm text-ois-text-muted hover:bg-ois-surface-muted transition-colors">
+              <MoreVertical size={16} />
+            </button>
+          </div>
+        </div>
 
-          <div className="flex-1 px-5 py-4 bg-white">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                {/* Status + ID row */}
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="relative">
-                    <button
-                      onClick={() => setStatusOpen(!statusOpen)}
-                      className="flex items-center gap-1.5"
-                    >
-                      <ProblemStatusPill status={problem.status} />
-                      <ChevronDown size={12} className="text-ois-text-subtle" />
-                    </button>
-                    {statusOpen && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setStatusOpen(false)} />
-                        <div className="absolute left-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-lg overflow-hidden min-w-[160px]">
-                          {(['identified', 'investigating', 'known_error', 'fix_in_progress', 'closed'] as ProblemStatus[]).map(s => (
-                            <button key={s} onClick={() => handleStatusChange(s)}
-                              className={cn('w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors',
-                                problem.status === s ? 'font-semibold' : 'text-ois-text')}>
-                              {problemStatusMeta[s].label}
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <span className="font-mono text-xs font-semibold text-ois-text-muted">{problem.publicId}</span>
-                  <SeverityBadge severity={problem.severity} />
-                  <ProblemSourceChip source={problem.source} />
-                </div>
-
-                {/* Title */}
-                <h1 className="text-xl font-bold text-ois-text leading-tight truncate">{problem.title}</h1>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {problem.tags.map(t => (
-                    <span key={t} className="text-[10px] font-mono text-ois-text-subtle bg-ois-surface-muted px-1.5 py-0.5 rounded border border-ois-border">
-                      #{t}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Meta */}
-                <p className="text-xs text-ois-text-muted mt-2">
-                  Investigating since {formatRelative(problem.createdAt)}
-                  {owner && ` · owned by ${owner.name}`}
-                  {` · ${problem.relatedIncidentCount} related incident${problem.relatedIncidentCount !== 1 ? 's' : ''}`}
-                </p>
-              </div>
-
-              <button className="w-8 h-8 rounded-lg hover:bg-ois-surface-muted flex items-center justify-center text-ois-text-muted shrink-0">
-                <MoreVertical size={16} />
-              </button>
+        {/* Entity header with priority bar */}
+        <div className="flex items-start gap-0">
+          <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: stripeColor }} />
+          <div className="flex-1 px-6 py-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="font-mono text-xs font-semibold text-ois-text-muted">{problem.publicId}</span>
+              <SeverityBadge severity={problem.severity} />
+              <ProblemSourceChip source={problem.source} />
             </div>
+            <h1 className="text-xl font-bold text-ois-text leading-tight">{problem.title}</h1>
+            <div className="flex flex-wrap gap-1 mt-2">
+              {problem.tags.map(t => (
+                <span key={t} className="text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full">
+                  #{t}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-ois-text-muted mt-2">
+              Investigating since {formatRelative(problem.createdAt)}
+              {owner && ` · owned by ${owner.name}`}
+              {` · ${problem.relatedIncidentCount} related incident${problem.relatedIncidentCount !== 1 ? 's' : ''}`}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* 3-column layout */}
-      <div className="flex gap-5 flex-1 min-h-0 items-start">
+      {/* Body — three independent scroll columns */}
+      <div className="flex flex-1 min-h-0">
+
         {/* Left sidebar */}
-        <div className="w-[240px] shrink-0 space-y-3 sticky top-4">
-          <SidebarSection title="At a glance">
+        <aside className="w-[280px] shrink-0 overflow-y-auto border-r border-ois-border bg-white p-4 space-y-4">
+          <SectionCard title="At a glance">
             <MetaRow label="Status">
               <ProblemStatusPill status={problem.status} />
             </MetaRow>
@@ -552,9 +576,9 @@ export const ProblemDetail: React.FC = () => {
             <MetaRow label="Updated">
               <span className="text-ois-text">{formatRelative(problem.updatedAt)}</span>
             </MetaRow>
-          </SidebarSection>
+          </SectionCard>
 
-          <SidebarSection title={`Related (${problem.relatedIncidentCount})`}>
+          <SectionCard title={`Related (${problem.relatedIncidentCount})`}>
             <MetaRow label="Linked">
               <span className="font-semibold text-ois-text">{problem.relatedIncidentCount} incidents</span>
             </MetaRow>
@@ -568,13 +592,16 @@ export const ProblemDetail: React.FC = () => {
                 {incidents.filter(i => ['resolved', 'closed'].includes(i.status)).length}
               </span>
             </MetaRow>
-            <Link to="#incidents" className="text-xs text-ois-primary hover:underline block text-right mt-1">
+            <button
+              onClick={() => setActiveTab('incidents')}
+              className="text-xs text-ois-primary hover:underline flex items-center gap-1 mt-1"
+            >
               See tab →
-            </Link>
-          </SidebarSection>
+            </button>
+          </SectionCard>
 
           {problem.linkedChangeIds.length > 0 && (
-            <SidebarSection title="Permanent fix">
+            <SectionCard title="Permanent fix">
               {problem.linkedChangeIds.map(chgId => {
                 const chg = getChangeById(chgId);
                 return (
@@ -595,85 +622,106 @@ export const ProblemDetail: React.FC = () => {
                   </div>
                 );
               })}
-            </SidebarSection>
+            </SectionCard>
           )}
-        </div>
+        </aside>
 
-        {/* Center — tabs */}
-        <div className="flex-1 min-w-0">
-          <Tabs tabs={TABS}>
-            {/* Tab 1: Overview */}
-            <div className="space-y-4">
-              <div className="border border-ois-border rounded-lg p-4 bg-ois-surface">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h4 className="text-xs font-bold text-ois-text uppercase tracking-wider">Description</h4>
-                </div>
-                {editingDesc ? (
-                  <>
-                    <textarea
-                      rows={4}
-                      value={descDraft}
-                      onChange={e => setDescDraft(e.target.value)}
-                      className="w-full text-sm text-ois-text border border-ois-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary resize-none"
-                    />
-                    <div className="flex gap-2 mt-2">
-                      <Button variant="primary" size="sm" onClick={() => {
-                        setProblem(prev => prev ? { ...prev, description: descDraft } : prev);
-                        setEditingDesc(false);
-                      }}>
-                        Save
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setEditingDesc(false)}>Cancel</Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm text-ois-text whitespace-pre-wrap leading-relaxed">
-                      {problem!.description}
-                    </p>
-                    <button
-                      onClick={() => { setDescDraft(problem!.description); setEditingDesc(true); }}
-                      className="mt-3 flex items-center gap-1 text-xs text-ois-primary hover:underline"
-                    >
-                      <Edit3 size={12} /> Edit
-                    </button>
-                  </>
-                )}
-              </div>
+        {/* Center: pinned tab bar + scrollable content */}
+        <div className="flex flex-col flex-1 min-w-0">
+          {/* Tab bar — shrink-0 so it pins */}
+          <div className="border-b border-ois-border bg-white shrink-0 px-6">
+            <nav className="flex gap-8 overflow-x-auto scrollbar-hide">
+              {TABS.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'py-4 px-1 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === tab.id
+                      ? 'border-ois-primary text-ois-primary font-bold'
+                      : 'border-transparent text-ois-text-muted hover:text-ois-text hover:border-ois-border-strong'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
 
-              <div className="border border-ois-border rounded-lg p-4 bg-ois-surface">
-                <h4 className="text-xs font-bold text-ois-text uppercase tracking-wider mb-3">Affected services</h4>
-                <div className="space-y-1.5">
-                  {affectedServices.map(svc => (
-                    <div key={svc} className="flex items-center gap-2 text-sm">
-                      <span className="w-2 h-2 rounded-full bg-ois-danger shrink-0" />
-                      <span className="font-medium text-ois-text">{svc}</span>
-                    </div>
-                  ))}
-                  <p className="text-xs text-ois-text-muted mt-1">
-                    Affected CIs:{' '}
-                    {problem.affectedCIPublicIds.map((pub, i) => (
-                      <span key={pub}>
-                        <Link to={`/cmdb/${pub}`} className="font-mono text-ois-primary hover:underline">{pub}</Link>
-                        {i < problem.affectedCIPublicIds.length - 1 && ', '}
-                      </span>
+          {/* Only this region scrolls */}
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {/* Overview */}
+            {activeTab === 'overview' && (
+              <div className="space-y-4">
+                <SectionCard>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Description</p>
+                  </div>
+                  {editingDesc ? (
+                    <>
+                      <textarea
+                        rows={4}
+                        value={descDraft}
+                        onChange={e => setDescDraft(e.target.value)}
+                        className="w-full text-sm text-ois-text border border-ois-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary resize-none"
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <Button variant="primary" size="sm" onClick={() => {
+                          setProblem(prev => prev ? { ...prev, description: descDraft } : prev);
+                          setEditingDesc(false);
+                        }}>Save</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingDesc(false)}>Cancel</Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-ois-text whitespace-pre-wrap leading-relaxed">{problem.description}</p>
+                      <button
+                        onClick={() => { setDescDraft(problem.description); setEditingDesc(true); }}
+                        className="mt-3 flex items-center gap-1 text-xs text-ois-primary hover:underline"
+                      >
+                        <Edit3 size={12} /> Edit
+                      </button>
+                    </>
+                  )}
+                </SectionCard>
+
+                <SectionCard>
+                  <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-3">Affected services</p>
+                  <div className="space-y-1.5">
+                    {affectedServices.map(svc => (
+                      <div key={svc} className="flex items-center gap-2 text-sm">
+                        <span className="w-2 h-2 rounded-full bg-ois-danger shrink-0" />
+                        <span className="font-medium text-ois-text">{svc}</span>
+                      </div>
                     ))}
-                  </p>
-                </div>
+                    <p className="text-xs text-ois-text-muted mt-1">
+                      Affected CIs:{' '}
+                      {problem.affectedCIPublicIds.map((pub, i) => (
+                        <span key={pub}>
+                          <Link to={`/cmdb/${pub}`} className="font-mono text-ois-primary hover:underline">{pub}</Link>
+                          {i < problem.affectedCIPublicIds.length - 1 && ', '}
+                        </span>
+                      ))}
+                    </p>
+                  </div>
+                </SectionCard>
+
+                <PatternSummaryCard problem={problem} />
               </div>
+            )}
 
-              <PatternSummaryCard problem={problem} />
-            </div>
+            {/* Related Incidents */}
+            {activeTab === 'incidents' && (
+              <RelatedIncidentsTab problem={problem} onLinkIncidents={() => setLinkIncidentsOpen(true)} />
+            )}
 
-            {/* Tab 2: Related Incidents */}
-            <RelatedIncidentsTab problem={problem} onLinkIncidents={() => setLinkIncidentsOpen(true)} />
+            {/* RCA */}
+            {activeTab === 'rca' && <RCASummaryTab problem={problem} />}
 
-            {/* Tab 3: RCA */}
-            <RCASummaryTab problem={problem} />
-
-            {/* Tab 4: Known Error */}
-            <div>
-              {problem.status === 'known_error' && problem.knownError ? (
+            {/* Known Error */}
+            {activeTab === 'known-error' && (
+              problem.status === 'known_error' && problem.knownError ? (
                 <KnownErrorCard problem={problem} onEdit={() => setPromoteOpen(true)} />
               ) : (
                 <div className="flex flex-col items-center py-16 gap-3 text-center">
@@ -687,187 +735,158 @@ export const ProblemDetail: React.FC = () => {
                     Promote to Known Error
                   </Button>
                 </div>
-              )}
-            </div>
+              )
+            )}
 
-            {/* Tab 5: Fix Plan */}
-            <div className="space-y-4">
-              <div className="border border-ois-border rounded-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-surface-muted/40 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Wrench size={14} className="text-ois-text-muted" />
-                    <span className="text-xs font-bold text-ois-text uppercase tracking-wider">Linked changes</span>
-                  </div>
-                  <button className="text-xs text-ois-primary hover:underline flex items-center gap-1" onClick={() => setLinkChangeOpen(true)}>
-                    <Plus size={11} /> Link change
-                  </button>
-                </div>
-                {problem.linkedChangeIds.length > 0 ? (
-                  <div className="divide-y divide-ois-border">
-                    {problem.linkedChangeIds.map(chgId => {
-                      const chg = getChangeById(chgId);
-                      return (
-                        <div key={chgId} className="px-4 py-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-mono text-xs font-semibold text-ois-primary">{chgId}</span>
-                            <Link to={`/changes/${chgId}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
-                              <ExternalLink size={11} /> View
-                            </Link>
-                          </div>
-                          {chg && (
-                            <>
-                              <p className="text-xs text-ois-text leading-snug mb-1">{chg.title}</p>
-                              <div className="flex items-center gap-1.5">
-                                <ChangeStatusPill status={chg.status} size="sm" />
-                                <RiskBadge risk={chg.risk} size="sm" />
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-ois-text-subtle px-4 py-6 text-center">No changes linked yet</p>
-                )}
-              </div>
-
-              <div className="border border-ois-border rounded-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-surface-muted/40 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BookOpen size={14} className="text-ois-text-muted" />
-                    <span className="text-xs font-bold text-ois-text uppercase tracking-wider">Linked KB articles</span>
-                  </div>
-                  <Link
-                    to={`/kb/editor?source=problem&id=${problem.publicId}&title=${encodeURIComponent(problem.title)}`}
-                    className="text-xs text-ois-primary hover:underline flex items-center gap-1"
-                  >
-                    <Plus size={11} /> Suggest article
-                  </Link>
-                </div>
-                {problem.linkedKBArticleIds.length > 0 ? (
-                  <div className="divide-y divide-ois-border">
-                    {problem.linkedKBArticleIds.map(kbId => {
-                      const art = getArticleById(kbId);
-                      return (
-                        <div key={kbId} className="px-4 py-3 flex items-center justify-between">
-                          <span className="font-mono text-xs font-semibold text-ois-primary">{kbId}</span>
-                          {art ? (
-                            <Link to={`/kb/${art.slug}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
-                              <ExternalLink size={11} /> View
-                            </Link>
-                          ) : (
-                            <span className="text-xs text-ois-text-subtle flex items-center gap-1">
-                              <ExternalLink size={11} /> View
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-ois-text-subtle px-4 py-6 text-center">No KB articles linked yet</p>
-                )}
-              </div>
-
-              {/* Linked improvements */}
-              {(() => {
-                const linkedImps = mockImprovements.filter(
-                  imp => imp.linkedProblemPublicId === problem.publicId
-                );
-                if (linkedImps.length === 0) return null;
-                return (
-                  <div className="border border-ois-border rounded-lg overflow-hidden">
-                    <div className="px-4 py-3 border-b border-ois-border bg-ois-surface-muted/40 flex items-center gap-2">
-                      <Link2 size={14} className="text-ois-text-muted" />
-                      <span className="text-xs font-bold text-ois-text uppercase tracking-wider">Linked improvements</span>
+            {/* Fix Plan */}
+            {activeTab === 'fix-plan' && (
+              <div className="space-y-4">
+                <div className="border border-ois-border rounded-lg overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Wrench size={14} className="text-ois-text-subtle" />
+                      <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Linked changes</p>
                     </div>
+                    <button className="text-xs text-ois-primary hover:underline flex items-center gap-1" onClick={() => setLinkChangeOpen(true)}>
+                      <Plus size={11} /> Link change
+                    </button>
+                  </div>
+                  {problem.linkedChangeIds.length > 0 ? (
                     <div className="divide-y divide-ois-border">
-                      {linkedImps.map(imp => (
-                        <div key={imp.id} className="px-4 py-3 flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <ImprovementStatusPill status={imp.status} />
-                            <span className="font-mono text-xs font-semibold text-ois-primary shrink-0">{imp.publicId}</span>
-                            <span className="text-xs text-ois-text truncate">{imp.title}</span>
+                      {problem.linkedChangeIds.map(chgId => {
+                        const chg = getChangeById(chgId);
+                        return (
+                          <div key={chgId} className="px-4 py-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-mono text-xs font-semibold text-ois-primary">{chgId}</span>
+                              <Link to={`/changes/${chgId}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+                                <ExternalLink size={11} /> View
+                              </Link>
+                            </div>
+                            {chg && (
+                              <>
+                                <p className="text-xs text-ois-text leading-snug mb-1">{chg.title}</p>
+                                <div className="flex items-center gap-1.5">
+                                  <ChangeStatusPill status={chg.status} size="sm" />
+                                  <RiskBadge risk={chg.risk} size="sm" />
+                                </div>
+                              </>
+                            )}
                           </div>
-                          <Link
-                            to={`/improvement/${imp.publicId}`}
-                            className="text-xs text-ois-primary hover:underline flex items-center gap-1 shrink-0 ml-2"
-                          >
-                            <ExternalLink size={11} /> View
-                          </Link>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
+                  ) : (
+                    <p className="text-xs text-ois-text-subtle px-4 py-6 text-center">No changes linked yet</p>
+                  )}
+                </div>
+
+                <div className="border border-ois-border rounded-lg overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BookOpen size={14} className="text-ois-text-subtle" />
+                      <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Linked KB articles</p>
+                    </div>
+                    <Link
+                      to={`/kb/editor?source=problem&id=${problem.publicId}&title=${encodeURIComponent(problem.title)}`}
+                      className="text-xs text-ois-primary hover:underline flex items-center gap-1"
+                    >
+                      <Plus size={11} /> Suggest article
+                    </Link>
                   </div>
-                );
-              })()}
-            </div>
+                  {problem.linkedKBArticleIds.length > 0 ? (
+                    <div className="divide-y divide-ois-border">
+                      {problem.linkedKBArticleIds.map(kbId => {
+                        const art = getArticleById(kbId);
+                        return (
+                          <div key={kbId} className="px-4 py-3 flex items-center justify-between">
+                            <span className="font-mono text-xs font-semibold text-ois-primary">{kbId}</span>
+                            {art ? (
+                              <Link to={`/kb/${art.slug}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+                                <ExternalLink size={11} /> View
+                              </Link>
+                            ) : (
+                              <span className="text-xs text-ois-text-subtle flex items-center gap-1">
+                                <ExternalLink size={11} /> View
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-ois-text-subtle px-4 py-6 text-center">No KB articles linked yet</p>
+                  )}
+                </div>
 
-            {/* Tab 6: History */}
-            <HistoryTab problem={problem} />
+                {(() => {
+                  const linkedImps = mockImprovements.filter(imp => imp.linkedProblemPublicId === problem.publicId);
+                  if (linkedImps.length === 0) return null;
+                  return (
+                    <div className="border border-ois-border rounded-lg overflow-hidden">
+                      <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted flex items-center gap-2">
+                        <Link2 size={14} className="text-ois-text-subtle" />
+                        <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Linked improvements</p>
+                      </div>
+                      <div className="divide-y divide-ois-border">
+                        {linkedImps.map(imp => (
+                          <div key={imp.id} className="px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <ImprovementStatusPill status={imp.status} />
+                              <span className="font-mono text-xs font-semibold text-ois-primary shrink-0">{imp.publicId}</span>
+                              <span className="text-xs text-ois-text truncate">{imp.title}</span>
+                            </div>
+                            <Link
+                              to={`/improvement/${imp.publicId}`}
+                              className="text-xs text-ois-primary hover:underline flex items-center gap-1 shrink-0 ml-2"
+                            >
+                              <ExternalLink size={11} /> View
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
-          </Tabs>
+            {/* History */}
+            {activeTab === 'history' && <HistoryTab problem={problem} />}
+          </div>
         </div>
 
         {/* Right sidebar — quick actions */}
-        <div className="w-[200px] shrink-0 sticky top-4">
-          <div className="border border-ois-border rounded-lg overflow-hidden bg-ois-surface">
-            <div className="px-3 py-2 border-b border-ois-border bg-ois-surface-muted/40">
-              <p className="text-[10px] font-bold text-ois-text-muted uppercase tracking-widest">Quick actions</p>
-            </div>
-            <div className="p-3 space-y-1.5">
-              {problem.status !== 'known_error' ? (
+        <aside className="w-[280px] shrink-0 overflow-y-auto border-l border-ois-border bg-white p-4 space-y-4">
+          <SectionCard title="Quick actions">
+            <div className="space-y-1.5">
+              {quickActions.map(({ icon: Icon, label, action, primary }) => (
                 <button
-                  onClick={() => setPromoteOpen(true)}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 border border-amber-200 transition-colors flex items-center gap-2"
+                  key={label}
+                  onClick={action}
+                  className={cn(
+                    'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left',
+                    primary
+                      ? 'bg-ois-primary text-white hover:bg-ois-primary-hover'
+                      : 'border border-ois-border text-ois-text hover:bg-ois-surface-muted'
+                  )}
                 >
-                  <ShieldAlert size={13} />
-                  Promote to known error
+                  <Icon size={13} className={primary ? 'text-white' : 'text-ois-text-subtle'} />
+                  {label}
                 </button>
-              ) : (
+              ))}
+              <div className="pt-1 border-t border-ois-border">
                 <button
-                  onClick={() => setPromoteOpen(true)}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2"
+                  onClick={() => setCloseConfirmOpen(true)}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-text-muted hover:bg-ois-surface-muted"
                 >
-                  <Edit3 size={13} className="text-ois-text-muted" />
-                  Edit known error
+                  <CheckCircle2 size={13} className="text-ois-text-subtle" />
+                  Close problem
                 </button>
-              )}
-              <button
-                onClick={() => setLinkIncidentsOpen(true)}
-                className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2"
-              >
-                <Plus size={13} className="text-ois-text-muted" />
-                Link incidents
-              </button>
-              <Link to={`/problems/${problem.publicId}/rca`}
-                className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2">
-                <Activity size={13} className="text-ois-text-muted" />
-                Open RCA workspace
-              </Link>
-              <button
-                onClick={() => setLinkChangeOpen(true)}
-                className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2">
-                <Wrench size={13} className="text-ois-text-muted" />
-                Link change
-              </button>
-              <button
-                onClick={() => navigate(`/kb/editor?source=problem&id=${problem!.publicId}&title=${encodeURIComponent(problem!.title)}`)}
-                className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors flex items-center gap-2">
-                <BookOpen size={13} className="text-ois-text-muted" />
-                Suggest KB article
-              </button>
-              <button
-                className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-ois-text-muted hover:bg-ois-surface-muted border border-ois-border/50 transition-colors flex items-center gap-2 mt-2"
-                onClick={() => setCloseConfirmOpen(true)}
-              >
-                <CheckCircle2 size={13} />
-                Close problem
-              </button>
+              </div>
             </div>
-          </div>
-        </div>
+          </SectionCard>
+        </aside>
       </div>
 
       {/* Modals */}
@@ -883,7 +902,7 @@ export const ProblemDetail: React.FC = () => {
         onPromote={handlePromote}
       />
       <LinkIncidentsModal
-        problem={problem!}
+        problem={problem}
         isOpen={linkIncidentsOpen}
         onClose={() => setLinkIncidentsOpen(false)}
         onLink={newPublicIds =>
@@ -901,7 +920,7 @@ export const ProblemDetail: React.FC = () => {
       <LinkChangeModal
         isOpen={linkChangeOpen}
         onClose={() => setLinkChangeOpen(false)}
-        currentChangeIds={problem!.linkedChangeIds}
+        currentChangeIds={problem.linkedChangeIds}
         onLink={newIds =>
           setProblem(prev =>
             prev

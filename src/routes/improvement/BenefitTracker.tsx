@@ -63,7 +63,7 @@ export const BenefitTracker: React.FC = () => {
       {/* Middle: Measurement table + log button */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-ois-text uppercase tracking-wider">Benefit measurements</h2>
+          <h2 className="text-sm font-bold text-ois-text uppercase tracking-widest">Benefit measurements</h2>
           <button
             onClick={() => setShowLogModal(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ois-primary text-white text-sm font-semibold hover:bg-blue-700 transition-colors"

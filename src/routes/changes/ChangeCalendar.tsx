@@ -206,7 +206,7 @@ export const ChangeCalendar: React.FC = () => {
                   <thead>
                     <tr className="border-b border-ois-border bg-ois-bg">
                       {['ID', 'Title', 'Type', 'Status', 'Risk', 'Owner', 'Window', ''].map((h) => (
-                        <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">
+                        <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-ois-text-subtle uppercase tracking-widest">
                           {h}
                         </th>
                       ))}
@@ -235,7 +235,7 @@ export const ChangeCalendar: React.FC = () => {
         {/* This week */}
         <Card>
           <div className="px-4 py-3 border-b border-ois-border">
-            <h3 className="text-xs font-bold text-ois-text uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-xs font-bold text-ois-text uppercase tracking-widest flex items-center gap-2">
               <Clock size={12} className="text-ois-text-subtle" />
               This Week
             </h3>
@@ -247,7 +247,7 @@ export const ChangeCalendar: React.FC = () => {
               <div className="divide-y divide-ois-border">
                 {Object.entries(weekByDay).map(([day, changes]: [string, Change[]]) => (
                   <div key={day} className="px-4 py-3">
-                    <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider mb-2">
+                    <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest mb-2">
                       {day}
                     </p>
                     <div className="space-y-2">
@@ -294,7 +294,7 @@ export const ChangeCalendar: React.FC = () => {
         {awaitingApproval.length > 0 && (
           <Card>
             <div className="px-4 py-3 border-b border-ois-border">
-              <h3 className="text-xs font-bold text-ois-text uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-xs font-bold text-ois-text uppercase tracking-widest flex items-center gap-2">
                 <CheckCircle2 size={12} className="text-ois-warning" />
                 Awaiting Your Approval
               </h3>
@@ -335,7 +335,7 @@ export const ChangeCalendar: React.FC = () => {
         {activeConflicts.length > 0 && (
           <Card>
             <div className="px-4 py-3 border-b border-ois-border">
-              <h3 className="text-xs font-bold text-ois-text uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-xs font-bold text-ois-text uppercase tracking-widest flex items-center gap-2">
                 <AlertTriangle size={12} className="text-ois-danger" />
                 Active Conflicts
               </h3>

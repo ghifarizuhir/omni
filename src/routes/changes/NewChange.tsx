@@ -286,7 +286,7 @@ export const NewChange: React.FC = () => {
       )}
 
       <div>
-        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+        <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
           Title <span className="text-ois-danger">*</span>
         </label>
         <input
@@ -298,7 +298,7 @@ export const NewChange: React.FC = () => {
       </div>
 
       <div>
-        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+        <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
           Description <span className="text-ois-danger">*</span>
         </label>
         <textarea
@@ -311,7 +311,7 @@ export const NewChange: React.FC = () => {
       </div>
 
       <div>
-        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+        <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
           Justification <span className="text-ois-danger">*</span>
         </label>
         <textarea
@@ -324,7 +324,7 @@ export const NewChange: React.FC = () => {
       </div>
 
       <div>
-        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-2 block">
+        <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-2 block">
           Change Type <span className="text-ois-danger">*</span>
         </label>
         <div className="flex gap-3">
@@ -335,7 +335,7 @@ export const NewChange: React.FC = () => {
       </div>
 
       <div>
-        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+        <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
           Affected CIs
         </label>
         <TagInput
@@ -347,7 +347,7 @@ export const NewChange: React.FC = () => {
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+          <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
             Linked Problem(s)
           </label>
           <TagInput
@@ -357,7 +357,7 @@ export const NewChange: React.FC = () => {
           />
         </div>
         <div>
-          <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+          <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
             Linked Incident(s)
           </label>
           <TagInput
@@ -367,7 +367,7 @@ export const NewChange: React.FC = () => {
           />
         </div>
         <div>
-          <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+          <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
             Linked Release
           </label>
           <input
@@ -386,7 +386,7 @@ export const NewChange: React.FC = () => {
     <div className="space-y-6">
       {/* Schedule */}
       <div>
-        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-2 block">
+        <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-2 block">
           Schedule <span className="text-ois-danger">*</span>
         </label>
         <div className="grid grid-cols-2 gap-4">
@@ -416,7 +416,7 @@ export const NewChange: React.FC = () => {
       {!isStandard && (
         <>
           <div>
-            <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-2 block">
+            <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-2 block">
               Risk Level <span className="text-ois-danger">*</span>
             </label>
             <div className="flex gap-2">
@@ -456,7 +456,7 @@ export const NewChange: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+            <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
               Risk Factors <span className="text-xs font-normal text-ois-text-subtle">(min 2)</span>
             </label>
             <TagInput
@@ -467,7 +467,7 @@ export const NewChange: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-2 block">
+            <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-2 block">
               Impact Level <span className="text-ois-danger">*</span>
             </label>
             <div className="flex gap-2">
@@ -492,7 +492,7 @@ export const NewChange: React.FC = () => {
 
       {/* Implementation Plan */}
       <div>
-        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+        <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
           Implementation Plan <span className="text-ois-danger">*</span>
         </label>
         <textarea
@@ -509,7 +509,7 @@ export const NewChange: React.FC = () => {
 
       {/* Rollback Plan */}
       <div>
-        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+        <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
           Rollback Plan <span className="text-ois-danger">*</span>
         </label>
         <textarea
@@ -523,7 +523,7 @@ export const NewChange: React.FC = () => {
 
       {/* Test Plan */}
       <div>
-        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+        <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
           Test Plan
         </label>
         <textarea
@@ -558,7 +558,7 @@ export const NewChange: React.FC = () => {
         {/* Basics summary */}
         <Card>
           <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h4 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Basics</h4>
+            <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Basics</h4>
           </div>
           <CardBody>
             <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
@@ -599,7 +599,7 @@ export const NewChange: React.FC = () => {
         {/* Plan summary */}
         <Card>
           <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h4 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Plan</h4>
+            <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Plan</h4>
           </div>
           <CardBody className="space-y-3">
             <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm mb-4">
@@ -629,7 +629,7 @@ export const NewChange: React.FC = () => {
         {approvers.length > 0 && (
           <Card>
             <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-              <h4 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Routing</h4>
+              <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Routing</h4>
             </div>
             <CardBody>
               <p className="text-xs text-ois-text-muted mb-3">
@@ -658,7 +658,7 @@ export const NewChange: React.FC = () => {
         {/* Comms */}
         <Card>
           <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h4 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Communications</h4>
+            <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Communications</h4>
           </div>
           <CardBody>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -708,7 +708,7 @@ export const NewChange: React.FC = () => {
 
       <Card>
         <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-          <h4 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Change summary</h4>
+          <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Change summary</h4>
         </div>
         <CardBody>
           <dl className="space-y-3 text-sm">

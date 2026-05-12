@@ -347,7 +347,7 @@ export const AlertRouting: React.FC = () => {
                 )}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">{route.publicId}</span>
+                  <span className="font-mono text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">{route.publicId}</span>
                   <div className="flex items-center gap-1.5">
                     <div className={cn("w-2 h-2 rounded-full", route.enabled ? "bg-ois-success" : "bg-ois-border-strong")} />
                     <span className="text-[10px] font-bold text-ois-text-muted uppercase">{route.enabled ? 'Enabled' : 'Disabled'}</span>
@@ -467,7 +467,7 @@ export const AlertRouting: React.FC = () => {
                   {!collapsedSections['match'] && (
                     <div className="pl-11 space-y-6">
                       <div className="space-y-3">
-                        <p className="text-xs font-bold text-ois-text-subtle uppercase tracking-wider">Severity</p>
+                        <p className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Severity</p>
                         <div className="flex flex-wrap gap-2">
                           {(['P1', 'P2', 'P3', 'P4'] as Severity[]).map(sev => (
                             <button
@@ -488,7 +488,7 @@ export const AlertRouting: React.FC = () => {
                       </div>
 
                       <div className="space-y-3">
-                        <p className="text-xs font-bold text-ois-text-subtle uppercase tracking-wider">Sources</p>
+                        <p className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Sources</p>
                         <div className="flex flex-wrap gap-2">
                           {/* P1 Fix 1 + P3 Fix 11 — wired X, OIS tokens */}
                           {editBuffer.matchExpression.sources?.map(src => (
@@ -520,7 +520,7 @@ export const AlertRouting: React.FC = () => {
                       </div>
 
                       <div className="space-y-3">
-                        <p className="text-xs font-bold text-ois-text-subtle uppercase tracking-wider">Tags</p>
+                        <p className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Tags</p>
                         <div className="flex flex-wrap gap-2">
                           {/* P1 Fix 1 + P3 Fix 11 — wired X, OIS tokens */}
                           {editBuffer.matchExpression.tags?.map(tag => (
@@ -685,7 +685,7 @@ export const AlertRouting: React.FC = () => {
 
                                    <div className="grid grid-cols-2 gap-6">
                                       <div className="space-y-2">
-                                         <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Recipients</p>
+                                         <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">Recipients</p>
                                          <div className="space-y-1.5">
                                             {step.recipients.map(r => (
                                               <div key={r.id} className="flex items-center gap-2">
@@ -699,7 +699,7 @@ export const AlertRouting: React.FC = () => {
                                          </div>
                                       </div>
                                       <div className="space-y-2">
-                                         <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Channels</p>
+                                         <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">Channels</p>
                                          <div className="flex flex-wrap gap-2">
                                             {step.channels.map(c => (
                                               <Badge key={c} variant="neutral" className="bg-white border-ois-border text-[9px] font-bold text-ois-text-muted capitalize">
@@ -767,7 +767,7 @@ export const AlertRouting: React.FC = () => {
                              {editBuffer.quietHours?.enabled && (
                                 <div className="mt-6 grid grid-cols-2 lg:grid-cols-3 gap-6 pt-6 border-t border-ois-border">
                                    <div className="space-y-2">
-                                      <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Timezone</p>
+                                      <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">Timezone</p>
                                       {/* P2 Fix 8 — editable timezone */}
                                       <FilterDropdown
                                         value={editBuffer.quietHours?.timezone || 'UTC'}
@@ -782,7 +782,7 @@ export const AlertRouting: React.FC = () => {
                                       />
                                    </div>
                                    <div className="space-y-2">
-                                      <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Window</p>
+                                      <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">Window</p>
                                       {/* P2 Fix 8 — editable start/end time */}
                                       <div className="flex items-center gap-2">
                                          <FilterDropdown
@@ -803,7 +803,7 @@ export const AlertRouting: React.FC = () => {
                                       </div>
                                    </div>
                                    <div className="space-y-2">
-                                      <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Active days</p>
+                                      <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">Active days</p>
                                       {/* P2 Fix 8 — day toggles */}
                                       <div className="flex gap-1.5">
                                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
@@ -881,7 +881,7 @@ export const AlertRouting: React.FC = () => {
       >
         <div className="space-y-6 py-4">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-wider">
+            <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">
               Delay (minutes)
             </label>
             <input

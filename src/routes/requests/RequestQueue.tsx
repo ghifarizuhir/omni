@@ -437,7 +437,7 @@ export const RequestQueue: React.FC = () => {
             <thead className="bg-ois-surface border-b border-ois-border sticky top-0 z-10">
               <tr>
                 {['ID', 'Title', 'Status', 'Requester', 'Current step', 'Assigned to', 'Submitted', 'SLA', ''].map((h, i) => (
-                  <th key={i} className="px-4 py-3 text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider whitespace-nowrap">
+                  <th key={i} className="px-4 py-3 text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest whitespace-nowrap">
                     {h}
                   </th>
                 ))}

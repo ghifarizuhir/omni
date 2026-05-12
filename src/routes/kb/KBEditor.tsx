@@ -746,7 +746,7 @@ export const KBEditor: React.FC = () => {
             <div className="grid grid-cols-3 gap-3">
               {/* Category */}
               <div>
-                <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider block mb-1.5">Category</label>
+                <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest block mb-1.5">Category</label>
                 <FilterDropdown
                   value={state.categoryId}
                   onChange={v => set('categoryId', v)}
@@ -757,7 +757,7 @@ export const KBEditor: React.FC = () => {
               </div>
               {/* Content type */}
               <div>
-                <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider block mb-1.5">Content type</label>
+                <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest block mb-1.5">Content type</label>
                 <FilterDropdown
                   value={state.contentType}
                   onChange={v => set('contentType', v as KBContentType)}
@@ -768,7 +768,7 @@ export const KBEditor: React.FC = () => {
               </div>
               {/* Visibility */}
               <div>
-                <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider block mb-1.5">Visibility</label>
+                <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest block mb-1.5">Visibility</label>
                 <FilterDropdown
                   value={state.visibility}
                   onChange={v => set('visibility', v as KBVisibility)}
@@ -781,7 +781,7 @@ export const KBEditor: React.FC = () => {
 
             {/* Tags */}
             <div>
-              <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider block mb-1.5">Tags</label>
+              <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest block mb-1.5">Tags</label>
               <TagInput
                 tags={state.tags}
                 onAdd={t => set('tags', [...state.tags, t])}
@@ -792,7 +792,7 @@ export const KBEditor: React.FC = () => {
             {/* Linked items row */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider block mb-1.5">Linked CIs (optional)</label>
+                <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest block mb-1.5">Linked CIs (optional)</label>
                 <ChipsInput
                   chips={state.linkedCIs}
                   onAdd={v => set('linkedCIs', [...state.linkedCIs, v])}
@@ -801,7 +801,7 @@ export const KBEditor: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider block mb-1.5">Linked problems / incidents</label>
+                <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest block mb-1.5">Linked problems / incidents</label>
                 <ChipsInput
                   chips={state.linkedItems}
                   onAdd={v => set('linkedItems', [...state.linkedItems, v])}
@@ -813,7 +813,7 @@ export const KBEditor: React.FC = () => {
 
             {/* Summary */}
             <div>
-              <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider block mb-1.5">
+              <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest block mb-1.5">
                 Summary <span className="text-ois-danger">*</span>
                 <span className="font-normal normal-case text-ois-text-subtle ml-1">(1–2 sentences for search results)</span>
               </label>
@@ -851,7 +851,7 @@ export const KBEditor: React.FC = () => {
               <div className={cn('relative flex flex-col', showPreview ? 'w-1/2' : 'w-full')}>
                 {!showPreview && (
                   <div className="px-3 py-1.5 border-b border-ois-border bg-ois-surface-muted">
-                    <span className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Markdown</span>
+                    <span className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">Markdown</span>
                   </div>
                 )}
                 <textarea
@@ -868,7 +868,7 @@ export const KBEditor: React.FC = () => {
                 {slashOpen && filteredCmds.length > 0 && (
                   <div className="absolute left-4 bottom-8 z-30 bg-ois-surface border border-ois-border rounded-lg shadow-ois-dropdown w-72 overflow-hidden">
                     <div className="px-3 py-2 border-b border-ois-border bg-ois-surface-muted">
-                      <span className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Slash commands</span>
+                      <span className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">Slash commands</span>
                       {slashQuery && <span className="text-[10px] text-ois-text-muted ml-2">/{slashQuery}</span>}
                     </div>
                     <div className="max-h-56 overflow-y-auto py-1">
@@ -905,7 +905,7 @@ export const KBEditor: React.FC = () => {
               {showPreview && (
                 <div className="w-1/2 flex flex-col">
                   <div className="px-3 py-1.5 border-b border-ois-border bg-ois-surface-muted">
-                    <span className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Preview</span>
+                    <span className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">Preview</span>
                   </div>
                   <div className="flex-1 px-6 py-5 overflow-y-auto bg-white">
                     {state.title && (

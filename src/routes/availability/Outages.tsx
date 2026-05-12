@@ -282,31 +282,31 @@ export const Outages: React.FC = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-ois-border bg-ois-surface-muted">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
                   ID
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
                   Type
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
                   Service
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
                   Started
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
                   Duration
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
                   Sev
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
                   Customer?
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
                   Triggered by
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
                   Actions
                 </th>
               </tr>

@@ -9,6 +9,7 @@ import {
 import { Button } from '@/src/components/ui/Button';
 import { Modal } from '@/src/components/ui/Modal';
 import { SeverityBadge } from '@/src/components/ui/StatusSeverityBadges';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { ProblemStatusPill } from '@/src/components/problems/ProblemStatusPill';
 import { ProblemSourceChip } from '@/src/components/problems/ProblemSourceChip';
@@ -79,7 +80,7 @@ const CreateProblemModal: React.FC<CreateProblemModalProps> = ({ isOpen, onClose
 
         {/* Actions */}
         <div className="flex justify-end gap-2 pt-2 border-t border-ois-border">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button variant="primary" disabled={!title.trim()} onClick={handleCreate}>
@@ -274,28 +275,26 @@ export const ProblemList: React.FC = () => {
         </div>
 
         {/* Source filter */}
-        <select
+        <FilterDropdown
           value={sourceFilter}
-          onChange={e => setSourceFilter(e.target.value as ProblemSource | 'all')}
-          className="h-9 px-3 text-sm border border-ois-border rounded-lg bg-white text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
-        >
-          <option value="all">All sources</option>
-          {SOURCES.map(s => (
-            <option key={s} value={s}>{problemSourceMeta[s].label}</option>
-          ))}
-        </select>
+          onChange={v => setSourceFilter(v as ProblemSource | 'all')}
+          options={[
+            { value: 'all', label: 'All sources' },
+            ...SOURCES.map(s => ({ value: s, label: problemSourceMeta[s].label, count: sourceCounts[s] })),
+          ]}
+          placeholder="Source"
+        />
 
         {/* Owner filter */}
-        <select
+        <FilterDropdown
           value={ownerFilter}
-          onChange={e => setOwnerFilter(e.target.value)}
-          className="h-9 px-3 text-sm border border-ois-border rounded-lg bg-white text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
-        >
-          <option value="all">All owners</option>
-          {uniqueOwners.map(uid => (
-            <option key={uid} value={uid}>{USER_MAP[uid]?.name ?? uid}</option>
-          ))}
-        </select>
+          onChange={setOwnerFilter}
+          options={[
+            { value: 'all', label: 'All owners' },
+            ...uniqueOwners.map(uid => ({ value: uid, label: USER_MAP[uid]?.name ?? uid })),
+          ]}
+          placeholder="Owner"
+        />
 
         {hasFilters && (
           <button
@@ -317,40 +316,40 @@ export const ProblemList: React.FC = () => {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-ois-border bg-ois-surface-muted/50">
-              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
                 ID
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
                 Title
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
                 Status
               </th>
               <th
-                className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider cursor-pointer hover:text-ois-text select-none"
+                className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest cursor-pointer hover:text-ois-text select-none"
                 onClick={() => handleSort('severity')}
               >
                 <span className="flex items-center">Sev <SortIcon col="severity" /></span>
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
                 Source
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
                 Owner
               </th>
               <th
-                className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider cursor-pointer hover:text-ois-text select-none"
+                className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest cursor-pointer hover:text-ois-text select-none"
                 onClick={() => handleSort('relatedIncidentCount')}
               >
                 <span className="flex items-center">Incidents <SortIcon col="relatedIncidentCount" /></span>
               </th>
               <th
-                className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider cursor-pointer hover:text-ois-text select-none"
+                className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest cursor-pointer hover:text-ois-text select-none"
                 onClick={() => handleSort('lastIncidentDate')}
               >
                 <span className="flex items-center">Last incident <SortIcon col="lastIncidentDate" /></span>
               </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-muted uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
                 Links
               </th>
               <th className="px-4 py-3 w-10" />

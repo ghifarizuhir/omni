@@ -40,7 +40,7 @@ const FiveWhysEditor: React.FC<{
   return (
     <div className="space-y-5">
       <div className="rounded-lg border border-ois-border bg-ois-surface-muted/30 px-4 py-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-ois-text-subtle mb-1">Problem statement</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-ois-text-subtle mb-1">Problem statement</p>
         <p className="text-sm font-semibold text-ois-text">{problemTitle}</p>
       </div>
 
@@ -51,7 +51,7 @@ const FiveWhysEditor: React.FC<{
               <span className="w-6 h-6 rounded-full bg-ois-primary text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                 {idx + 1}
               </span>
-              <span className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Why?</span>
+              <span className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Why?</span>
               {fiveWhys.length > 1 && (
                 <button onClick={() => removeLevel(idx)} className="ml-auto text-ois-text-subtle hover:text-ois-danger transition-colors">
                   <X size={13} />
@@ -124,7 +124,7 @@ const FishboneEditor: React.FC<{
   return (
     <div className="space-y-5">
       <div className="space-y-1.5">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-ois-text-subtle">Problem (head)</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-ois-text-subtle">Problem (head)</p>
         <input
           type="text"
           value={fishbone.problem}
@@ -263,7 +263,7 @@ const RecommendedActionsEditor: React.FC<{
       <div className="border border-ois-border rounded-lg overflow-hidden">
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-ois-surface-muted/50 border-b border-ois-border text-ois-text-muted font-semibold uppercase tracking-wider">
+            <tr className="bg-ois-surface-muted/50 border-b border-ois-border text-ois-text-subtle font-semibold uppercase tracking-widest">
               <th className="px-3 py-2.5 text-left w-28">Type</th>
               <th className="px-3 py-2.5 text-left">Description</th>
               <th className="px-3 py-2.5 text-left w-32">Owner</th>

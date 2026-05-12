@@ -634,7 +634,7 @@ export const DeploymentsQueue: React.FC = () => {
       <Modal isOpen={manualDeployOpen} onClose={() => setManualDeployOpen(false)} title="Manual deploy" size="md">
         <div className="py-4 space-y-4">
           <div>
-            <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+            <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
               Component <span className="text-ois-danger">*</span>
             </label>
             <FilterDropdown
@@ -649,7 +649,7 @@ export const DeploymentsQueue: React.FC = () => {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+            <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
               Environment <span className="text-ois-danger">*</span>
             </label>
             <FilterDropdown
@@ -664,7 +664,7 @@ export const DeploymentsQueue: React.FC = () => {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+            <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
               Artifact ref <span className="text-ois-danger">*</span>
             </label>
             <input
@@ -676,7 +676,7 @@ export const DeploymentsQueue: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+              <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
                 Strategy <span className="text-ois-danger">*</span>
               </label>
               <FilterDropdown
@@ -694,7 +694,7 @@ export const DeploymentsQueue: React.FC = () => {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+              <label className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-1.5 block">
                 Branch
               </label>
               <input

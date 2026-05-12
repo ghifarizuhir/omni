@@ -330,7 +330,7 @@ export const PortalHome: React.FC = () => {
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-ois-border">
             <div className="flex items-center gap-2">
               <ClipboardList size={15} className="text-ois-primary" />
-              <span className="text-xs font-bold text-ois-text uppercase tracking-wider">Your active requests</span>
+              <span className="text-xs font-bold text-ois-text uppercase tracking-widest">Your active requests</span>
               {activeRequests.length > 0 && (
                 <span className="text-[10px] font-bold bg-ois-primary text-white px-1.5 py-0.5 rounded-full leading-none">
                   {activeRequests.length}
@@ -396,7 +396,7 @@ export const PortalHome: React.FC = () => {
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-ois-border">
             <div className="flex items-center gap-2">
               <BookMarked size={15} className="text-ois-success" />
-              <span className="text-xs font-bold text-ois-text uppercase tracking-wider">Articles for you</span>
+              <span className="text-xs font-bold text-ois-text uppercase tracking-widest">Articles for you</span>
             </div>
             <Link
               to="/kb"

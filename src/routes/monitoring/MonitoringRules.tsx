@@ -529,11 +529,11 @@ export const MonitoringRules: React.FC = () => {
            </Badge>
          ))}
          <div className="flex items-center gap-4 ml-auto px-4 py-1.5 bg-ois-bg rounded-lg border border-ois-border">
-            <span className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Avg fires (30d): {statsStrip.avgFires}</span>
+            <span className="text-[11px] font-bold text-ois-text-muted uppercase tracking-widest">Avg fires (30d): {statsStrip.avgFires}</span>
             <span className="w-px h-3 bg-ois-border" />
-            <span className="text-[11px] font-bold text-ois-danger uppercase tracking-wider">Noisy: {statsStrip.noisy}</span>
+            <span className="text-[11px] font-bold text-ois-danger uppercase tracking-widest">Noisy: {statsStrip.noisy}</span>
             <span className="w-px h-3 bg-ois-border" />
-            <span className="text-[11px] font-bold text-ois-text-subtle uppercase tracking-wider">Never fired: {statsStrip.neverFired}</span>
+            <span className="text-[11px] font-bold text-ois-text-subtle uppercase tracking-widest">Never fired: {statsStrip.neverFired}</span>
          </div>
       </div>
 

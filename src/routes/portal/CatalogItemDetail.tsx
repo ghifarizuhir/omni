@@ -76,7 +76,7 @@ function renderDescription(text: string) {
     }
     // Heading (## or **text**)
     if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
-      return <p key={i} className="text-xs font-bold text-ois-text uppercase tracking-wider mt-3">{trimmed.slice(2, -2)}</p>;
+      return <p key={i} className="text-xs font-bold text-ois-text uppercase tracking-widest mt-3">{trimmed.slice(2, -2)}</p>;
     }
     return <p key={i} className="text-sm text-ois-text-muted leading-relaxed">{renderInline(trimmed)}</p>;
   });
@@ -588,7 +588,7 @@ export const CatalogItemDetail: React.FC = () => {
           {/* Left: Description */}
           <div className="space-y-5">
             <div className="bg-ois-surface border border-ois-border rounded-ois-card shadow-ois-card p-6">
-              <h2 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-4">About this request</h2>
+              <h2 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-4">About this request</h2>
               <div className="space-y-2">
                 {renderDescription(item.description)}
               </div>
@@ -597,7 +597,7 @@ export const CatalogItemDetail: React.FC = () => {
             {/* Linked KB articles */}
             {linkedArticles.length > 0 && (
               <div className="bg-ois-surface border border-ois-border rounded-ois-card shadow-ois-card p-5">
-                <h2 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-3 flex items-center gap-2">
+                <h2 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
                   <BookOpen size={13} className="text-ois-success" /> Helpful articles
                 </h2>
                 <div className="space-y-2">
@@ -629,7 +629,7 @@ export const CatalogItemDetail: React.FC = () => {
           {/* Right: Workflow preview + meta */}
           <div className="space-y-4">
             <div className="bg-ois-surface border border-ois-border rounded-ois-card shadow-ois-card p-5">
-              <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-4">What happens next</h3>
+              <h3 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-4">What happens next</h3>
               <div>
                 {item.workflowTemplate.map((step, i) => (
                   <WorkflowNode key={step.id} step={step} index={i} total={item.workflowTemplate.length} />
@@ -645,7 +645,7 @@ export const CatalogItemDetail: React.FC = () => {
 
             {ownerTeam && (
               <div className="bg-ois-surface border border-ois-border rounded-ois-card shadow-ois-card p-5">
-                <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-3">Owned by</h3>
+                <h3 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-3">Owned by</h3>
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-ois-primary-pale flex items-center justify-center">
                     <Users size={14} className="text-ois-primary" />
@@ -660,7 +660,7 @@ export const CatalogItemDetail: React.FC = () => {
 
             {recentlyFulfilled > 0 && (
               <div className="bg-ois-surface border border-ois-border rounded-ois-card shadow-ois-card p-5">
-                <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-2">Recently fulfilled</h3>
+                <h3 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-2">Recently fulfilled</h3>
                 <p className="text-sm text-ois-text">
                   <span className="font-bold">{recentlyFulfilled}</span> similar request{recentlyFulfilled !== 1 ? 's' : ''} in last 30 days
                 </p>
@@ -741,7 +741,7 @@ export const CatalogItemDetail: React.FC = () => {
 
             {/* Form responses */}
             <div className="p-6 space-y-4">
-              <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Form responses</h3>
+              <h3 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Form responses</h3>
               <div className="divide-y divide-ois-border rounded-lg border border-ois-border overflow-hidden">
                 {visibleFields.filter(f => f.type !== 'checkbox' || values[f.id] !== false).map(field => (
                   <div key={field.id} className="flex items-start gap-4 px-4 py-3 text-sm">
@@ -755,7 +755,7 @@ export const CatalogItemDetail: React.FC = () => {
 
               {/* Workflow */}
               <div className="mt-5">
-                <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-3">Workflow</h3>
+                <h3 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest mb-3">Workflow</h3>
                 <div className="space-y-1">
                   {item.workflowTemplate.map((wf, i) => (
                     <div key={wf.id} className="flex items-center gap-3 text-sm">
