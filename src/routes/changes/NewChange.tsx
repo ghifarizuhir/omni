@@ -557,7 +557,7 @@ export const NewChange: React.FC = () => {
 
         {/* Basics summary */}
         <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+          <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
             <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Basics</h4>
           </div>
           <CardBody>
@@ -598,7 +598,7 @@ export const NewChange: React.FC = () => {
 
         {/* Plan summary */}
         <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+          <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
             <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Plan</h4>
           </div>
           <CardBody className="space-y-3">
@@ -628,7 +628,7 @@ export const NewChange: React.FC = () => {
         {/* Routing */}
         {approvers.length > 0 && (
           <Card>
-            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+            <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
               <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Routing</h4>
             </div>
             <CardBody>
@@ -657,7 +657,7 @@ export const NewChange: React.FC = () => {
 
         {/* Comms */}
         <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+          <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
             <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Communications</h4>
           </div>
           <CardBody>
@@ -707,7 +707,7 @@ export const NewChange: React.FC = () => {
       </div>
 
       <Card>
-        <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
+        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
           <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Change summary</h4>
         </div>
         <CardBody>
