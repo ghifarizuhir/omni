@@ -1,5 +1,4 @@
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, RotateCcw, CheckCircle2, AlertTriangle, AlertOctagon, Wrench } from 'lucide-react';
+import { RotateCcw, CheckCircle2, AlertTriangle, AlertOctagon, Wrench } from 'lucide-react';
 import { mockStatusPageEntries, mockStatusPageIncidents } from '@/src/mocks';
 import { deriveOverallStatus } from '@/src/components/status/StatusHero';
 import { ServiceStatusRow } from '@/src/components/status/ServiceStatusRow';
@@ -14,7 +13,6 @@ const STATUS_ICON = {
 };
 
 export default function StatusPage() {
-  const navigate = useNavigate();
   const entries = [...mockStatusPageEntries].sort((a, b) => a.displayOrder - b.displayOrder);
   const activeIncidents = mockStatusPageIncidents.filter(i => i.status !== 'resolved');
   const overall = deriveOverallStatus(entries);
@@ -34,13 +32,11 @@ export default function StatusPage() {
 
         {/* Nav row */}
         <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
-          >
-            <ArrowLeft size={15} />
-            Platform
-          </button>
+          <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
+            <span className="font-medium text-ois-text-muted">Platform</span>
+            <span>·</span>
+            <span>Service Status</span>
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-ois-text-subtle">2026-05-08 08:52 UTC</span>
             <span className="flex items-center gap-1.5 rounded-full bg-ois-primary-pale px-2.5 py-1 text-xs font-medium text-ois-primary">

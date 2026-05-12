@@ -3,8 +3,7 @@ import {
   Pause, Play, Download, Search,
   RotateCcw, List, ChevronDown,
   Activity, Clock, AlertTriangle,
-  MessageSquare, ArrowLeft,
-  BarChart3, X,
+  MessageSquare, BarChart3, X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isToday, isYesterday, parseISO, subDays, isAfter } from 'date-fns';
@@ -170,13 +169,11 @@ export const EventStream: React.FC = () => {
 
         {/* Nav row */}
         <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
-          <button
-            onClick={() => navigate('/events')}
-            className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
-          >
-            <ArrowLeft size={15} />
-            Monitoring
-          </button>
+          <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
+            <span className="font-medium text-ois-text-muted">Monitoring</span>
+            <span>·</span>
+            <span>Event Stream</span>
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={togglePause}>
               {isPaused
