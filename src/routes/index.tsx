@@ -67,6 +67,7 @@ import { ReportBuilder } from './measurement/ReportBuilder';
 import { MetricCatalog } from './measurement/MetricCatalog';
 import { Inbox } from './platform/Inbox';
 import NotificationPreferences from './platform/NotificationPreferences';
+import Notifications from './platform/Notifications';
 import { OnCall } from './platform/OnCall';
 import { OnCallSchedule } from './platform/OnCallSchedule';
 import { OnCallOverrides } from './platform/OnCallOverrides';
@@ -153,6 +154,7 @@ export const routes: RouteObject[] = [
       // Doc 6 — Platform Features
       { path: 'inbox',                          element: <Inbox /> },
       { path: 'notifications/preferences',      element: <NotificationPreferences /> },
+      { path: 'notifications',                  element: <Notifications /> },
       { path: 'on-call',                        element: <OnCall /> },
       { path: 'on-call/schedule',               element: <OnCallSchedule /> },
       { path: 'on-call/overrides',              element: <OnCallOverrides /> },
