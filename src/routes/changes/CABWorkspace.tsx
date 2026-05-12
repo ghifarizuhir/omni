@@ -149,7 +149,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
 
       {/* Description */}
       <Card>
-        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg flex items-center justify-between">
+        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted flex items-center justify-between">
           <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Description</h3>
           <button className="text-xs text-ois-primary hover:underline" onClick={() => navigate(`/changes/${change.publicId}`)}>
             Full detail →
@@ -162,7 +162,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
 
       {/* Risk */}
       <Card>
-        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg">
+        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
           <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Risk Assessment</h3>
         </div>
         <CardBody>
@@ -190,7 +190,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
 
       {/* Conflict analysis */}
       <Card>
-        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg">
+        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
           <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Conflict Analysis</h3>
         </div>
         <CardBody>
@@ -219,7 +219,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
       {/* Linked context */}
       {(change.linkedProblemIds.length > 0 || change.linkedIncidentIds.length > 0 || change.linkedReleasePublicId) && (
         <Card>
-          <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg">
+          <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
             <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Linked Context</h3>
           </div>
           <CardBody>
@@ -249,7 +249,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
 
       {/* Voting table */}
       <Card>
-        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg">
+        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
           <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Voting</h3>
         </div>
         <div className="overflow-x-auto">
@@ -299,7 +299,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-ois-border bg-ois-bg flex items-center justify-between text-xs">
+        <div className="px-4 py-3 border-t border-ois-border bg-ois-surface-muted flex items-center justify-between text-xs">
           <span className="text-ois-text-muted">Result: {approved} approve · {total - approved} pending</span>
           <span className="text-ois-text-muted">Required: all {total} voting members must approve</span>
         </div>
@@ -307,7 +307,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
 
       {/* Discussion */}
       <Card>
-        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg">
+        <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
           <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Discussion Notes</h3>
         </div>
         <CardBody>
