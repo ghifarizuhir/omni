@@ -16,6 +16,7 @@ import {
 import { ImprovementRow } from '@/src/components/improvement/ImprovementRow';
 import { ImprovementStatus, ImprovementCategory, ImprovementPriority } from '@/src/types/improvement';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
+import { Button } from '@/src/components/ui/Button';
 
 const TODAY = '2026-05-10';
 const LOGGED_IN_USER = 'u-001';
@@ -141,177 +142,177 @@ export const ImprovementRegister: React.FC = () => {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Action row */}
-      <div className="shrink-0 flex items-center justify-end gap-2 px-6 py-2.5 border-b border-ois-border bg-ois-surface">
-        <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ois-primary text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+      <div className="shrink-0 flex items-center justify-end px-6 py-2.5 border-b border-ois-border bg-ois-surface">
+        <Button variant="primary" size="sm" className="gap-1.5">
           <Plus size={14} /> New initiative
-        </button>
+        </Button>
       </div>
 
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-screen-2xl mx-auto px-6 py-5 space-y-6 pb-12">
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: 'Portfolio value (est.)', value: formatBenefitUSD(totalEstimated) },
-          { label: 'In progress', value: String(inProgressCount) },
-          { label: 'Completed (12 months)', value: String(completedCount) },
-          { label: 'Actual benefit realized', value: formatBenefitUSD(totalActual) },
-        ].map(kpi => (
-          <div key={kpi.label} className="border border-ois-border rounded-lg bg-ois-surface p-3">
-            <p className="text-[11px] font-bold text-ois-text-subtle uppercase tracking-widest mb-1">{kpi.label}</p>
-            <p className="text-xl font-bold text-ois-text">{kpi.value}</p>
+          {/* KPI strip */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: 'Portfolio value (est.)', value: formatBenefitUSD(totalEstimated) },
+              { label: 'In progress', value: String(inProgressCount) },
+              { label: 'Completed (12 months)', value: String(completedCount) },
+              { label: 'Actual benefit realized', value: formatBenefitUSD(totalActual) },
+            ].map(kpi => (
+              <div key={kpi.label} className="border border-ois-border rounded-lg bg-ois-surface p-3">
+                <p className="text-[11px] font-bold text-ois-text-subtle uppercase tracking-widest mb-1">{kpi.label}</p>
+                <p className="text-xl font-bold text-ois-text">{kpi.value}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ois-text-muted" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search initiatives..."
-            className="pl-8 pr-3 py-1.5 text-sm border border-ois-border rounded-lg bg-ois-surface focus:outline-none focus:ring-1 focus:ring-ois-primary w-52"
-          />
-        </div>
-        <FilterDropdown
-          value={statusFilter}
-          onChange={v => setStatusFilter(v)}
-          options={[
-            { value: '', label: 'All statuses' },
-            ...ALL_STATUSES.map(s => ({ value: s, label: improvementStatusMeta[s].label })),
-          ]}
-          placeholder="All statuses"
-        />
-        <FilterDropdown
-          value={categoryFilter}
-          onChange={v => setCategoryFilter(v)}
-          options={[
-            { value: '', label: 'All categories' },
-            ...ALL_CATEGORIES.map(c => ({ value: c, label: improvementCategoryMeta[c].label })),
-          ]}
-          placeholder="All categories"
-        />
-        <FilterDropdown
-          value={priorityFilter}
-          onChange={v => setPriorityFilter(v)}
-          options={[
-            { value: '', label: 'All priorities' },
-            ...ALL_PRIORITIES.map(p => ({ value: p, label: improvementPriorityMeta[p].label })),
-          ]}
-          placeholder="All priorities"
-        />
-        <FilterDropdown
-          value={ownerFilter}
-          onChange={v => setOwnerFilter(v)}
-          options={[
-            { value: '', label: 'All owners' },
-            ...ownerOptions.map(([id, name]) => ({ value: id, label: name })),
-          ]}
-          placeholder="All owners"
-        />
-        {hasFilters && (
-          <button onClick={handleReset} className="inline-flex items-center gap-1 text-xs text-ois-text-muted hover:text-ois-danger transition-colors">
-            <X size={12} /> Reset
-          </button>
-        )}
-      </div>
-
-      {/* Quick filter chips */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { id: 'high-critical', label: `🔥 High/Critical (${highCriticalCount})` },
-          { id: 'overdue', label: `⏱ Overdue target (${overdueCount})` },
-          { id: 'my', label: `📡 My initiatives (${myInitiativesCount})` },
-          { id: 'high-roi', label: `💰 High ROI (${highROICount})` },
-        ].map(chip => (
-          <button
-            key={chip.id}
-            onClick={() => setQuickFilter(quickFilter === chip.id ? null : chip.id)}
-            className={cn(
-              'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
-              quickFilter === chip.id
-                ? 'bg-ois-primary text-white border-ois-primary'
-                : 'bg-ois-surface text-ois-text-muted border-ois-border hover:border-ois-primary hover:text-ois-primary'
+          {/* Filter bar */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ois-text-muted" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search initiatives..."
+                className="pl-8 pr-3 py-1.5 text-sm border border-ois-border rounded-lg bg-ois-surface focus:outline-none focus:ring-1 focus:ring-ois-primary w-52"
+              />
+            </div>
+            <FilterDropdown
+              value={statusFilter}
+              onChange={v => setStatusFilter(v)}
+              options={[
+                { value: '', label: 'All statuses' },
+                ...ALL_STATUSES.map(s => ({ value: s, label: improvementStatusMeta[s].label })),
+              ]}
+              placeholder="All statuses"
+            />
+            <FilterDropdown
+              value={categoryFilter}
+              onChange={v => setCategoryFilter(v)}
+              options={[
+                { value: '', label: 'All categories' },
+                ...ALL_CATEGORIES.map(c => ({ value: c, label: improvementCategoryMeta[c].label })),
+              ]}
+              placeholder="All categories"
+            />
+            <FilterDropdown
+              value={priorityFilter}
+              onChange={v => setPriorityFilter(v)}
+              options={[
+                { value: '', label: 'All priorities' },
+                ...ALL_PRIORITIES.map(p => ({ value: p, label: improvementPriorityMeta[p].label })),
+              ]}
+              placeholder="All priorities"
+            />
+            <FilterDropdown
+              value={ownerFilter}
+              onChange={v => setOwnerFilter(v)}
+              options={[
+                { value: '', label: 'All owners' },
+                ...ownerOptions.map(([id, name]) => ({ value: id, label: name })),
+              ]}
+              placeholder="All owners"
+            />
+            {hasFilters && (
+              <button onClick={handleReset} className="inline-flex items-center gap-1 text-xs text-ois-text-muted hover:text-ois-danger transition-colors">
+                <X size={12} /> Reset
+              </button>
             )}
-          >
-            {chip.label}
-          </button>
-        ))}
-      </div>
+          </div>
 
-      {/* Status tabs */}
-      <div className="flex gap-1 border-b border-ois-border overflow-x-auto">
-        <button
-          onClick={() => setActiveStatusTab('all')}
-          className={cn(
-            'px-3 py-2 text-xs font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors',
-            activeStatusTab === 'all'
-              ? 'border-ois-primary text-ois-primary'
-              : 'border-transparent text-ois-text-muted hover:text-ois-text'
-          )}
-        >
-          All {statusTabCounts.all}
-        </button>
-        {ALL_STATUSES.filter(s => (statusTabCounts[s] ?? 0) > 0).map(s => (
-          <button
-            key={s}
-            onClick={() => setActiveStatusTab(s)}
-            className={cn(
-              'px-3 py-2 text-xs font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors capitalize',
-              activeStatusTab === s
-                ? 'border-ois-primary text-ois-primary'
-                : 'border-transparent text-ois-text-muted hover:text-ois-text'
-            )}
-          >
-            {improvementStatusMeta[s].label} {statusTabCounts[s]}
-          </button>
-        ))}
-      </div>
+          {/* Quick filter chips */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'high-critical', label: `🔥 High/Critical (${highCriticalCount})` },
+              { id: 'overdue', label: `⏱ Overdue target (${overdueCount})` },
+              { id: 'my', label: `📡 My initiatives (${myInitiativesCount})` },
+              { id: 'high-roi', label: `💰 High ROI (${highROICount})` },
+            ].map(chip => (
+              <button
+                key={chip.id}
+                onClick={() => setQuickFilter(quickFilter === chip.id ? null : chip.id)}
+                className={cn(
+                  'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
+                  quickFilter === chip.id
+                    ? 'bg-ois-primary text-white border-ois-primary'
+                    : 'bg-ois-surface text-ois-text-muted border-ois-border hover:border-ois-primary hover:text-ois-primary'
+                )}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
 
-      {/* Data table */}
-      {filtered.length > 0 ? (
-        <div className="border border-ois-border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-ois-surface-muted/50 border-b border-ois-border text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
-                <th className="px-4 py-2.5 text-left">Initiative</th>
-                <th className="px-4 py-2.5 text-left">Status</th>
-                <th className="px-4 py-2.5 text-left">Category</th>
-                <th className="px-4 py-2.5 text-left">Priority</th>
-                <th className="px-4 py-2.5 text-left">Progress</th>
-                <th className="px-4 py-2.5 text-left">Est. Benefit</th>
-                <th className="px-4 py-2.5 text-left">Owner</th>
-                <th className="px-4 py-2.5 text-left">Target</th>
-                <th className="px-2 py-2.5" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ois-border">
-              {filtered.map(imp => (
-                <ImprovementRow
-                  key={imp.id}
-                  initiative={imp}
-                  onOpen={() => { navigate(`/improvement/${imp.publicId}`); }}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center border border-ois-border rounded-lg bg-ois-surface">
-          <p className="text-sm font-medium text-ois-text">No initiatives match.</p>
-          <div className="flex gap-2">
-            <button onClick={handleReset} className="text-sm text-ois-primary hover:underline">Reset filters</button>
-            <span className="text-ois-text-muted">or</span>
-            <button className="inline-flex items-center gap-1 text-sm font-semibold text-ois-primary hover:underline">
-              <Plus size={14} /> Add initiative
+          {/* Status tabs */}
+          <div className="flex gap-1 border-b border-ois-border overflow-x-auto">
+            <button
+              onClick={() => setActiveStatusTab('all')}
+              className={cn(
+                'px-3 py-2 text-xs font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors',
+                activeStatusTab === 'all'
+                  ? 'border-ois-primary text-ois-primary'
+                  : 'border-transparent text-ois-text-muted hover:text-ois-text'
+              )}
+            >
+              All {statusTabCounts.all}
             </button>
+            {ALL_STATUSES.filter(s => (statusTabCounts[s] ?? 0) > 0).map(s => (
+              <button
+                key={s}
+                onClick={() => setActiveStatusTab(s)}
+                className={cn(
+                  'px-3 py-2 text-xs font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors capitalize',
+                  activeStatusTab === s
+                    ? 'border-ois-primary text-ois-primary'
+                    : 'border-transparent text-ois-text-muted hover:text-ois-text'
+                )}
+              >
+                {improvementStatusMeta[s].label} {statusTabCounts[s]}
+              </button>
+            ))}
           </div>
-        </div>
-      )}
+
+          {/* Data table */}
+          {filtered.length > 0 ? (
+            <div className="border border-ois-border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-ois-surface-muted/50 border-b border-ois-border text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">
+                    <th className="px-4 py-2.5 text-left">Initiative</th>
+                    <th className="px-4 py-2.5 text-left">Status</th>
+                    <th className="px-4 py-2.5 text-left">Category</th>
+                    <th className="px-4 py-2.5 text-left">Priority</th>
+                    <th className="px-4 py-2.5 text-left">Progress</th>
+                    <th className="px-4 py-2.5 text-left">Est. Benefit</th>
+                    <th className="px-4 py-2.5 text-left">Owner</th>
+                    <th className="px-4 py-2.5 text-left">Target</th>
+                    <th className="px-2 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ois-border">
+                  {filtered.map(imp => (
+                    <ImprovementRow
+                      key={imp.id}
+                      initiative={imp}
+                      onOpen={() => { navigate(`/improvement/${imp.publicId}`); }}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center border border-ois-border rounded-lg bg-ois-surface">
+              <p className="text-sm font-medium text-ois-text">No initiatives match.</p>
+              <div className="flex gap-2">
+                <button onClick={handleReset} className="text-sm text-ois-primary hover:underline">Reset filters</button>
+                <span className="text-ois-text-muted">or</span>
+                <button className="inline-flex items-center gap-1 text-sm font-semibold text-ois-primary hover:underline">
+                  <Plus size={14} /> Add initiative
+                </button>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
