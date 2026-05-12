@@ -126,10 +126,10 @@ export const ReleasePipeline: React.FC = () => {
         {/* Pipeline grid */}
         <Card className="overflow-hidden">
           {/* Column headers */}
-          <div className="grid border-b border-ois-border bg-ois-bg" style={{ gridTemplateColumns: '220px 1fr 1fr 1fr' }}>
-            <div className="px-4 py-3 text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Release</div>
+          <div className="grid border-b border-ois-border bg-ois-surface-muted" style={{ gridTemplateColumns: '220px 1fr 1fr 1fr' }}>
+            <div className="px-4 py-2.5 text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Release</div>
             {ENVS.map((env) => (
-              <div key={env} className="px-4 py-3 text-[11px] font-bold text-ois-text-muted uppercase tracking-wider border-l border-ois-border capitalize">
+              <div key={env} className="px-4 py-2.5 text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest border-l border-ois-border capitalize">
                 {env}
               </div>
             ))}
@@ -195,10 +195,10 @@ export const ReleasePipeline: React.FC = () => {
       {/* Right sidebar */}
       <div className="w-56 shrink-0 space-y-3">
         <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider flex items-center gap-1.5">
+          <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
+            <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest flex items-center gap-1.5">
               <TrendingUp size={11} /> Pipeline Health
-            </h3>
+            </p>
           </div>
           <CardBody>
             <dl className="space-y-2 text-xs">

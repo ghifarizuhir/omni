@@ -303,10 +303,10 @@ export const EventDetail: React.FC = () => {
         <div className="lg:col-span-6 space-y-6">
           {/* Affected CIs Card */}
           <Card className="border-ois-border overflow-hidden">
-             <CardHeader className="bg-ois-surface-muted/30 border-b border-ois-border px-5 py-4">
-                <h3 className="text-sm font-bold text-ois-text flex items-center gap-2 leading-none">
+             <CardHeader className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
+                <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest flex items-center gap-2">
                    <Database size={16} className="text-ois-primary" /> Affected Infrastructure ({affectedCIs.length})
-                </h3>
+                </p>
              </CardHeader>
              <CardBody className="p-0">
                 <div className="divide-y divide-ois-border">
@@ -354,10 +354,10 @@ export const EventDetail: React.FC = () => {
 
           {/* Triggered by Rule Card */}
           <Card className="border-ois-border">
-            <CardHeader className="bg-ois-surface-muted/30 border-b border-ois-border px-5 py-4 flex items-center justify-between">
-                <h3 className="text-sm font-bold text-ois-text flex items-center gap-2 leading-none">
+            <CardHeader className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted flex items-center justify-between">
+                <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest flex items-center gap-2">
                    <Shield size={16} className="text-ois-primary" /> Triggered by Monitoring Rule
-                </h3>
+                </p>
                 {rule && <Badge variant="neutral" className="bg-emerald-50 text-emerald-700 border-emerald-100">{rule.enabled ? 'Active' : 'Disabled'}</Badge>}
             </CardHeader>
             <CardBody className="p-5">
@@ -414,10 +414,10 @@ export const EventDetail: React.FC = () => {
 
           {/* Linked Incident Card */}
           <Card className="border-ois-border">
-             <CardHeader className="bg-ois-surface-muted/30 border-b border-ois-border px-5 py-4">
-                <h3 className="text-sm font-bold text-ois-text flex items-center gap-2 leading-none">
+             <CardHeader className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
+                <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest flex items-center gap-2">
                    <AlertTriangle size={16} className="text-ois-danger" /> Linked Incident
-                </h3>
+                </p>
              </CardHeader>
              <CardBody className="p-5">
                 {incident ? (
@@ -460,10 +460,10 @@ export const EventDetail: React.FC = () => {
 
           {/* Related Events Card */}
           <Card className="border-ois-border">
-             <CardHeader className="bg-ois-surface-muted/30 border-b border-ois-border px-5 py-4">
-                <h3 className="text-sm font-bold text-ois-text flex items-center gap-2 leading-none">
+             <CardHeader className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
+                <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest flex items-center gap-2">
                    <Layers size={16} className="text-ois-primary" /> Related Events
-                </h3>
+                </p>
              </CardHeader>
              <CardBody className="p-0">
                 <div className="p-4 bg-ois-primary-pale border-b border-ois-border">
@@ -512,10 +512,10 @@ export const EventDetail: React.FC = () => {
         <div className="lg:col-span-4 space-y-6">
           {/* Event Timeline Card */}
           <Card className="border-ois-border">
-             <CardHeader className="bg-ois-surface-muted/30 border-b border-ois-border px-5 py-4">
-                <h3 className="text-sm font-bold text-ois-text flex items-center gap-2 leading-none">
+             <CardHeader className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
+                <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest flex items-center gap-2">
                    <History size={16} className="text-ois-primary" /> Event Timeline
-                </h3>
+                </p>
              </CardHeader>
              <CardBody className="p-6">
                 <EventTimeline entries={timelineEvents} />
@@ -542,10 +542,10 @@ export const EventDetail: React.FC = () => {
 
           {/* Raw Payload Card */}
           <Card className="border-ois-border overflow-hidden">
-             <div 
+             <div
                role="button"
                tabIndex={0}
-               className="w-full bg-ois-surface-muted/30 border-b border-ois-border px-5 py-4 flex items-center justify-between hover:bg-ois-surface-muted/50 transition-colors cursor-pointer"
+               className="w-full px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted flex items-center justify-between hover:bg-ois-surface-muted/80 transition-colors cursor-pointer"
                onClick={() => setShowRawPayload(!showRawPayload)}
                onKeyDown={(e) => {
                  if (e.key === 'Enter' || e.key === ' ') {
@@ -556,7 +556,7 @@ export const EventDetail: React.FC = () => {
              >
                 <div className="flex items-center gap-2">
                    <FileJson size={16} className="text-ois-primary" />
-                   <h3 className="text-sm font-bold text-ois-text">Raw event payload</h3>
+                   <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Raw event payload</p>
                 </div>
                 <div className="flex items-center gap-3">
                    <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold text-ois-primary p-0 hover:bg-transparent" onClick={(e) => {

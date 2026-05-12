@@ -176,10 +176,10 @@ export const Dashboard: React.FC = () => {
 
       {/* Section A: Service Health Strip */}
       <Card>
-        <CardHeader className="flex items-center justify-between border-b border-ois-border px-5 py-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-ois-text-muted uppercase tracking-wider">
+        <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
+          <div className="flex items-center gap-2">
             <Activity size={16} className="text-ois-primary" />
-            Service Health
+            <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Service Health</p>
           </div>
           <Link to="/status" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
             View status page <ArrowRight size={12} />
@@ -280,9 +280,9 @@ export const Dashboard: React.FC = () => {
         )}
 
         <Card className="lg:col-span-3">
-          <CardHeader className="flex items-center justify-between border-b border-ois-border">
-            <div className="flex items-center gap-2 font-bold text-ois-text">
-              Active Incidents
+          <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Active Incidents</p>
               <Badge variant="neutral" className="ml-1 bg-ois-surface-muted text-ois-text-muted">
                 {filteredActiveIncidents.length}
               </Badge>
@@ -333,9 +333,9 @@ export const Dashboard: React.FC = () => {
 
         {/* Section C - Right: Action Required Preview (40%) */}
         <Card className="lg:col-span-2">
-          <CardHeader className="flex items-center justify-between border-b border-ois-border">
-            <div className="flex items-center gap-2 font-bold text-ois-text">
-              Action Required
+          <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Action Required</p>
             </div>
             <Link to="/inbox" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
               Open Inbox <ArrowRight size={12} />
@@ -380,9 +380,9 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Section D - Left: Change Calendar */}
         <Card>
-          <CardHeader className="flex items-center justify-between border-b border-ois-border">
-            <div className="flex items-center gap-2 font-bold text-ois-text text-[14px]">
-              Change Calendar — Next 7 days
+          <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Change Calendar — Next 7 days</p>
             </div>
             <Link to="/changes/calendar" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
               Calendar <ArrowRight size={12} />
@@ -433,9 +433,9 @@ export const Dashboard: React.FC = () => {
         {/* Section D - Right: On-Call + Improvements */}
         <div className="space-y-6">
           <Card>
-            <CardHeader className="flex items-center justify-between border-b border-ois-border">
-              <div className="flex items-center gap-2 font-bold text-ois-text text-[14px]">
-                On-Call Right Now
+            <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
+              <div className="flex items-center gap-2">
+                <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">On-Call Right Now</p>
               </div>
               <Link to="/on-call" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
                 View schedule <ArrowRight size={12} />
@@ -465,9 +465,9 @@ export const Dashboard: React.FC = () => {
           </Card>
 
           <Card>
-            <CardHeader className="flex items-center justify-between border-b border-ois-border">
-              <div className="flex items-center gap-2 font-bold text-ois-text text-[14px]">
-                Improvement Pipeline
+            <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
+              <div className="flex items-center gap-2">
+                <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Improvement Pipeline</p>
                 <Badge variant="neutral" className="ml-1 bg-ois-surface-muted text-ois-text-muted">
                   {mockImprovements.filter(i => i.status === 'in_progress').length} active
                 </Badge>
