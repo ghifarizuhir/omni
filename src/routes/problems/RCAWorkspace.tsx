@@ -11,6 +11,7 @@ import { RCAAnalysis, RCATechnique, Problem } from '@/src/types/problem';
 import { rcaTechniqueMeta } from '@/src/lib/constants';
 import { Button } from '@/src/components/ui/Button';
 import { Avatar } from '@/src/components/ui/Avatar';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { formatDate, formatRelative } from '@/src/lib/format';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -275,16 +276,18 @@ const RecommendedActionsEditor: React.FC<{
             {actions.map((action, idx) => (
               <tr key={idx} className="group">
                 <td className="px-3 py-2.5">
-                  <select
+                  <FilterDropdown
                     value={action.type}
-                    onChange={e => update(idx, { type: e.target.value as RecommendedAction['type'] })}
-                    className="text-xs border border-ois-border rounded px-1.5 py-1 bg-white focus:outline-none"
+                    onChange={v => update(idx, { type: v as RecommendedAction['type'] })}
+                    options={[
+                      { value: 'corrective', label: 'corrective' },
+                      { value: 'preventive', label: 'preventive' },
+                      { value: 'detective', label: 'detective' },
+                    ]}
+                    placeholder="corrective"
+                    className="text-xs"
                     style={{ color: ACTION_TYPE_COLOR[action.type] }}
-                  >
-                    <option value="corrective">corrective</option>
-                    <option value="preventive">preventive</option>
-                    <option value="detective">detective</option>
-                  </select>
+                  />
                 </td>
                 <td className="px-3 py-2.5">
                   <input
@@ -299,27 +302,31 @@ const RecommendedActionsEditor: React.FC<{
                   )}
                 </td>
                 <td className="px-3 py-2.5">
-                  <select
+                  <FilterDropdown
                     value={action.owner ?? ''}
-                    onChange={e => update(idx, { owner: e.target.value || undefined })}
-                    className="text-xs border border-ois-border rounded px-1.5 py-1 bg-white focus:outline-none w-full"
-                  >
-                    <option value="">Unassigned</option>
-                    {mockUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                  </select>
+                    onChange={v => update(idx, { owner: v || undefined })}
+                    options={[
+                      { value: '', label: 'Unassigned' },
+                      ...mockUsers.map(u => ({ value: u.id, label: u.name })),
+                    ]}
+                    placeholder="Unassigned"
+                    className="text-xs w-full"
+                  />
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex items-center gap-1.5">
                     {STATUS_ICON[action.status]}
-                    <select
+                    <FilterDropdown
                       value={action.status}
-                      onChange={e => update(idx, { status: e.target.value as RecommendedAction['status'] })}
-                      className="text-xs border-none bg-transparent focus:outline-none"
-                    >
-                      <option value="open">open</option>
-                      <option value="in_progress">in progress</option>
-                      <option value="done">done</option>
-                    </select>
+                      onChange={v => update(idx, { status: v as RecommendedAction['status'] })}
+                      options={[
+                        { value: 'open', label: 'open' },
+                        { value: 'in_progress', label: 'in progress' },
+                        { value: 'done', label: 'done' },
+                      ]}
+                      placeholder="open"
+                      className="text-xs"
+                    />
                   </div>
                 </td>
                 <td className="px-3 py-2.5">

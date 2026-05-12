@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, Plus, BookOpen, X, Link2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { KnownErrorCard } from '@/src/components/problems/KnownErrorCard';
 import { getKnownErrors } from '@/src/mocks/problems';
 import { mockIncidents } from '@/src/mocks/incidents';
@@ -109,27 +110,27 @@ export const KEDB: React.FC = () => {
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <select
+        <FilterDropdown
           value={serviceFilter}
-          onChange={e => setServiceFilter(e.target.value)}
-          className="h-9 px-3 text-sm border border-ois-border rounded-lg bg-white text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
-        >
-          <option value="all">All services</option>
-          {relevantServiceIds.map(id => {
-            const svc = mockServices.find(s => s.id === id);
-            return <option key={id} value={id}>{svc?.name ?? id}</option>;
-          })}
-        </select>
+          onChange={setServiceFilter}
+          options={[
+            { value: 'all', label: 'All services' },
+            ...relevantServiceIds.map(id => {
+              const svc = mockServices.find(s => s.id === id);
+              return { value: id, label: svc?.name ?? id };
+            }),
+          ]}
+          placeholder="All services"
+          className="h-9 text-sm"
+        />
 
-        <select
+        <FilterDropdown
           value={effectivenessFilter}
-          onChange={e => setEffectivenessFilter(e.target.value)}
-          className="h-9 px-3 text-sm border border-ois-border rounded-lg bg-white text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
-        >
-          {EFFECTIVENESS_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+          onChange={setEffectivenessFilter}
+          options={EFFECTIVENESS_OPTIONS}
+          placeholder="All effectiveness"
+          className="h-9 text-sm"
+        />
 
         {hasFilters && (
           <button
@@ -238,18 +239,19 @@ const ApplyWorkaroundButton: React.FC<{ problemPublicId: string }> = ({ problemP
 
   return (
     <div className="flex items-center gap-2 bg-white border border-ois-border rounded-lg px-3 py-2 shadow-sm">
-      <select
+      <FilterDropdown
         value={incidentId}
-        onChange={e => setIncidentId(e.target.value)}
-        className="text-xs border border-ois-border rounded-lg bg-white px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary text-ois-text"
-      >
-        <option value="">Select incident…</option>
-        {recentIncidents.map(inc => (
-          <option key={inc.id} value={inc.publicId}>
-            {inc.publicId} — {inc.title.slice(0, 50)}{inc.title.length > 50 ? '…' : ''}
-          </option>
-        ))}
-      </select>
+        onChange={setIncidentId}
+        options={[
+          { value: '', label: 'Select incident…' },
+          ...recentIncidents.map(inc => ({
+            value: inc.publicId,
+            label: `${inc.publicId} — ${inc.title.slice(0, 50)}${inc.title.length > 50 ? '…' : ''}`,
+          })),
+        ]}
+        placeholder="Select incident…"
+        className="text-xs"
+      />
       <Link
         to={incidentId ? `/incidents/${incidentId}` : '#'}
         className={cn(
