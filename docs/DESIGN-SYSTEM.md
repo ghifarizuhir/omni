@@ -32,6 +32,7 @@ This document is the single source of truth for design decisions in the Omni Int
    - [Nav Row Pattern](#nav-row-pattern)
    - [Priority Color Bar](#priority-color-bar)
    - [Full-Height Flex Layout](#full-height-flex-layout)
+   - [Module Layout Pattern](#module-layout-pattern)
 4. [Interaction Patterns](#interaction-patterns)
    - [Filter Chips](#filter-chips)
    - [Status Dropdown with Dot Indicators](#status-dropdown-with-dot-indicators)
@@ -837,6 +838,208 @@ Use when a page must fill the full viewport below the TopBar (height `3.5rem = 5
 ```
 
 The `-m-6` negates the `p-6` that `AppShell` applies to its `<main>` outlet. Required for detail pages and any full-bleed layout.
+
+---
+
+### Module Layout Pattern
+
+Use when a product area has **3 or more closely related sub-pages** that share module-level state or context (e.g. live health, a common title). The module collapses to a **single sidebar entry** and exposes its sub-pages as tabs in a shared header.
+
+**Decision rule:**
+
+| Condition | Pattern |
+|-----------|---------|
+| 3+ sub-pages sharing module context (live status, shared title) | Module Layout + tabs |
+| Sub-pages are independent tools with unrelated concerns | Separate sidebar items |
+| Single detail entity (one incident, one CI) | 3-Column Detail Layout |
+
+**Implemented example:** `src/routes/monitoring/MonitoringLayout.tsx` (Overview, Event Stream, Rules, Alert Routing, Coverage all share the live severity header).
+
+#### Structure
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ▌ Module title           live stat · live stat · live stat │  accent strip + title block
+├─────────────────────────────────────────────────────────────┤
+│  Tab A  │  Tab B  │  Tab C  │  Tab D  │  Tab E             │  tab bar (NavLink)
+├─────────────────────────────────────────────────────────────┤
+│  [optional per-tab action row]                              │  shrink-0, border-b
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Tab content (<Outlet />)                                   │  flex-1, min-h-0
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Layout file
+
+Create one `<ModuleName>Layout.tsx` per module. It owns the shared header and renders `<Outlet />` for tab content. Each tab's page file renders only its own content — no wrapper, no header.
+
+```tsx
+import { NavLink, Outlet } from 'react-router-dom';
+import { Activity, Radio, Shield } from 'lucide-react';
+import { cn } from '../../lib/utils';
+
+const TABS = [
+  { label: 'Overview',     to: '/monitoring',         icon: Activity, end: true },
+  { label: 'Event Stream', to: '/monitoring/events',  icon: Radio },
+  { label: 'Rules',        to: '/monitoring/rules',   icon: Shield },
+];
+
+export const MonitoringLayout: React.FC = () => {
+  // Derive accent color from live module state
+  const accentColor = p1Active ? '#B42318' : p2Active ? '#DC6803' : '#1F4FD4';
+
+  return (
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+
+      {/* Shared header — shrink-0, never scrolls */}
+      <div className="bg-ois-surface border-b border-ois-border shrink-0 z-30">
+
+        {/* Title block with accent strip */}
+        <div className="flex items-stretch">
+          <div className="w-1 shrink-0 transition-colors duration-500" style={{ backgroundColor: accentColor }} />
+          <div className="flex-1 px-6 py-4">
+            <h1 className="text-xl font-bold text-ois-text">Module Name</h1>
+            <div className="flex items-center gap-3 mt-1 text-xs text-ois-text-muted">
+              {/* live metadata — counts, status, last-updated */}
+            </div>
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <nav className="flex px-4 overflow-x-auto scrollbar-hide">
+          {TABS.map(tab => (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              end={tab.end}
+              className={({ isActive }) => cn(
+                'flex items-center gap-2 px-3 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                isActive
+                  ? 'border-ois-primary text-ois-primary'
+                  : 'border-transparent text-ois-text-muted hover:text-ois-text hover:border-ois-border-strong'
+              )}
+            >
+              <tab.icon size={14} />
+              {tab.label}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+
+      {/* Tab content — flex-1 min-h-0 so children can control their own scroll */}
+      <div className="flex-1 min-h-0">
+        <Outlet />
+      </div>
+    </div>
+  );
+};
+```
+
+#### Routing
+
+Nest all module routes under the layout component. The index route renders the overview tab.
+
+```tsx
+{ path: 'monitoring', element: <MonitoringLayout />, children: [
+  { index: true,      element: <MonitoringOverview /> },
+  { path: 'events',   element: <EventStream /> },
+  { path: 'rules',    element: <MonitoringRules /> },
+  { path: 'routing',  element: <AlertRouting /> },
+  { path: 'coverage', element: <CoverageReport /> },
+]},
+// Detail pages that live outside the tab layout stay as siblings
+{ path: 'monitoring/events/:id', element: <EventDetail /> },
+```
+
+#### Tab content pages
+
+Each tab page fills `flex-1 min-h-0` from the layout's Outlet. Pages that scroll use `overflow-y-auto`; pages with fixed-height split panels use `flex-1 min-h-0`.
+
+```tsx
+// Scrollable tab content
+export const MonitoringRules: React.FC = () => (
+  <div className="flex flex-col flex-1 min-h-0">
+    {/* Action row (optional) */}
+    <div className="shrink-0 flex items-center justify-end px-6 py-2.5 border-b border-ois-border bg-ois-surface">
+      <Button variant="primary" size="sm">New rule</Button>
+    </div>
+    {/* Scrollable body */}
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-7xl mx-auto px-6 py-5 space-y-5 pb-20">
+        {/* content */}
+      </div>
+    </div>
+    {/* Modals — fixed-positioned, safe anywhere in the tree */}
+  </div>
+);
+
+// Split-panel tab content (no outer scroll)
+export const AlertRouting: React.FC = () => (
+  <div className="flex flex-col flex-1 min-h-0">
+    <div className="shrink-0 flex items-center justify-end px-6 py-2.5 border-b border-ois-border bg-ois-surface">
+      <Button variant="primary" size="sm">New route</Button>
+    </div>
+    <div className="flex gap-6 flex-1 min-h-0 px-6 py-5">
+      {/* left column */}
+      {/* right column */}
+    </div>
+  </div>
+);
+```
+
+#### Action Row Pattern
+
+When a tab has a primary page-level action (create, export, re-analyze), place it in a slim action row at the top of the tab content — not in the shared module header.
+
+```tsx
+<div className="shrink-0 flex items-center justify-end gap-2 px-6 py-2.5 border-b border-ois-border bg-ois-surface">
+  <Button variant="ghost" size="sm" className="gap-1.5">
+    <RefreshCw size={13} /> Re-analyze
+  </Button>
+  <Button variant="primary" size="sm" className="gap-1.5">
+    <Plus size={13} /> New item
+  </Button>
+</div>
+```
+
+**Rules:**
+- Max one `primary` button per action row
+- Secondary actions use `ghost` or `outline`
+- Left side of the row can hold a status summary or filter count (e.g. "12 of 40 shown")
+- Never put destructive actions in the action row — they belong in row-level menus
+
+#### Accent Strip — Semantic Color Logic
+
+The 4px left accent strip on the module header communicates live health at a glance. Derive its color from live data, not from the route or page type.
+
+| Module state | Accent color | Token |
+|---|---|---|
+| P1 active / critical gaps / major outage | `#B42318` | sev-p1 |
+| P2 active / degraded / warnings | `#DC6803` | sev-p2 |
+| All clear / operational | `#12B76A` | ois-success |
+| Informational / no severity concept | `#1F4FD4` | ois-primary |
+
+```tsx
+// Pattern: derive from live data, update on each render
+const accentColor =
+  p1Count > 0 ? '#B42318' :
+  p2Count > 0 ? '#DC6803' :
+  '#1F4FD4';
+```
+
+#### Sidebar
+
+A module using this pattern contributes **one sidebar item** pointing to the module root (`/monitoring`). Sub-pages are not listed in the sidebar — the tab bar is the navigation mechanism within the module.
+
+```tsx
+<SidebarSection label="Monitoring" collapsed={collapsed}>
+  <SidebarItem icon={<Activity size={18} />} label="Monitoring" to="/monitoring" collapsed={collapsed} />
+  {/* Status Page is a separate concern — listed as a peer, not a tab */}
+  <SidebarItem icon={<CircleDot size={18} />} label="Status Page" to="/status" collapsed={collapsed} />
+</SidebarSection>
+```
 
 ---
 
