@@ -3,9 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, MoreHorizontal, Check, X, Clock, Shield,
   Zap, CheckCircle2, ChevronRight, BookOpen, AlertCircle,
-  MessageCircle, Link2, Package, Database, User, Tag,
-  FileText, Users, UserCheck, Ban, Send, Info,
-  Eye, ExternalLink, AlertTriangle,
+  MessageCircle, Package,
+  FileText, UserCheck, Ban, Send,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative, formatDate } from '@/src/lib/format';
@@ -14,7 +14,6 @@ import { getCatalogItemById } from '@/src/mocks/catalogItems';
 import { getArticleBySlug } from '@/src/mocks/kbArticles';
 import { mockUsers, currentUser } from '@/src/mocks/users';
 import { Avatar } from '@/src/components/ui/Avatar';
-import { Tabs } from '@/src/components/ui/Tabs';
 import { Modal } from '@/src/components/ui/Modal';
 import {
   ServiceRequest, WorkflowStepInstance, CatalogCategory,
@@ -24,6 +23,24 @@ import {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const NOW = new Date('2026-05-09T10:00:00Z').getTime();
+
+const CATEGORY_COLOR: Record<CatalogCategory, string> = {
+  access:        '#1F4FD4',
+  equipment:     '#DC6803',
+  software:      '#0BA5EC',
+  communication: '#6941C6',
+  personnel:     '#027A48',
+  general:       '#475467',
+};
+
+const TABS = [
+  { id: 'overview',  label: 'Overview' },
+  { id: 'form',      label: 'Form responses' },
+  { id: 'activity',  label: 'Activity' },
+  { id: 'comments',  label: 'Comments' },
+  { id: 'linked',    label: 'Linked items' },
+] as const;
+type TabId = typeof TABS[number]['id'];
 
 const STATUS_META: Record<RequestStatus, { label: string; dot: string; text: string; bg: string; border: string }> = {
   draft:          { label: 'Draft',          dot: 'bg-ois-text-subtle', text: 'text-ois-text-muted',  bg: 'bg-ois-surface-muted',  border: 'border-ois-border' },
@@ -86,9 +103,11 @@ const WorkflowStepper: React.FC<{
   onApprove: (stepId: string) => void;
   onReject:  (stepId: string) => void;
 }> = ({ steps, onApprove, onReject }) => (
-  <div className="bg-ois-surface border border-ois-border rounded-ois-card shadow-ois-card p-6 mb-6 overflow-x-auto">
+  <div className="overflow-x-auto">
+    {/* Centering wrapper — justify-center when content fits, scrollable when it overflows */}
+    <div className="flex justify-center min-w-full">
     {/* Node row */}
-    <div className="flex items-start min-w-max gap-0">
+    <div className="flex items-start gap-0">
       {steps.map((step, i) => {
         const done     = step.status === 'completed';
         const active   = step.status === 'active';
@@ -196,6 +215,7 @@ const WorkflowStepper: React.FC<{
         );
       })}
     </div>
+    </div>
   </div>
 );
 
@@ -294,7 +314,7 @@ const RejectModal: React.FC<{
 const SideCard: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
   <div className={cn('border border-ois-border rounded-lg bg-ois-surface overflow-hidden', className)}>
     <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
-      <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest">{title}</p>
+      <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">{title}</p>
     </div>
     <div className="p-4">{children}</div>
   </div>
@@ -343,6 +363,7 @@ export const RequestDetail: React.FC = () => {
   const [rejectStep,  setRejectStep]  = useState<string | null>(null);
   const [approved,    setApproved]    = useState(false);
   const [comment,     setComment]     = useState('');
+  const [activeTab,   setActiveTab]   = useState<TabId>('overview');
 
   const req = useMemo(() => getRequestById(requestId ?? ''), [requestId]);
   const catalogItem = useMemo(() => req ? getCatalogItemById(req.catalogItemId) : null, [req]);
@@ -570,43 +591,55 @@ export const RequestDetail: React.FC = () => {
   );
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  return (
-    <div className="-mt-6 -mx-6 flex flex-col min-h-full">
+  const stripeColor = CATEGORY_COLOR[req.catalogCategory];
 
-      {/* ── TOP BAR ───────────────────────────────────────────────────── */}
-      <div className="px-6 pt-4 pb-4 border-b border-ois-border bg-ois-surface shrink-0">
-        {/* Breadcrumb row */}
-        <div className="flex items-center justify-between mb-3">
+  return (
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+
+      {/* ── PINNED HEADER ─────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-ois-border shrink-0 z-30">
+
+        {/* Nav row */}
+        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
           <button
             onClick={() => navigate('/requests')}
-            className="flex items-center gap-1.5 text-xs font-medium text-ois-text-muted hover:text-ois-primary transition-colors"
+            className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
           >
-            <ArrowLeft size={14} /> Queue
+            <ArrowLeft size={15} /> Queue
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ois-border text-xs font-medium text-ois-text-muted hover:bg-ois-surface-muted transition-colors">
-            <MoreHorizontal size={15} /> Actions
-          </button>
+          <div className="flex items-center gap-2">
+            <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border', statusMeta.bg, statusMeta.text, statusMeta.border)}>
+              <span className={cn('w-1.5 h-1.5 rounded-full', statusMeta.dot)} />
+              {statusMeta.label}
+            </span>
+            <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-ois-border bg-white text-sm text-ois-text-muted hover:bg-ois-surface-muted transition-colors">
+              <MoreHorizontal size={16} />
+            </button>
+          </div>
         </div>
 
-        {/* Status + title */}
-        <div className="flex items-start gap-3 flex-wrap">
-          <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold shrink-0', statusMeta.bg, statusMeta.text, statusMeta.border, 'border')}>
-            <span className={cn('w-1.5 h-1.5 rounded-full', statusMeta.dot)} />
-            {statusMeta.label}
-          </span>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-extrabold text-ois-text leading-tight">
-              <span className="font-mono text-sm text-ois-text-muted font-normal mr-2">{req.publicId}</span>
-              {req.title}
-            </h1>
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+        {/* Entity header with category stripe */}
+        <div className="flex items-start gap-0">
+          <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: stripeColor }} />
+          <div className="flex-1 px-6 py-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="font-mono text-xs font-semibold text-ois-text-muted">{req.publicId}</span>
+              <span className="text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full capitalize">
+                {req.catalogCategory}
+              </span>
+              <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded-full capitalize', req.priority === 'high' ? 'text-ois-danger bg-ois-danger-pale' : req.priority === 'normal' ? 'text-ois-text bg-ois-surface-muted border border-ois-border' : 'text-ois-text-muted bg-ois-surface-muted border border-ois-border')}>
+                {req.priority} priority
+              </span>
+            </div>
+            <h1 className="text-xl font-bold text-ois-text leading-tight">{req.title}</h1>
+            <div className="flex flex-wrap gap-1 mt-2">
               {req.tags.map(tag => (
-                <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-ois-surface-muted border border-ois-border text-ois-text-subtle">
-                  {tag}
+                <span key={tag} className="text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full">
+                  #{tag}
                 </span>
               ))}
             </div>
-            <p className="text-xs text-ois-text-muted mt-1.5">
+            <p className="text-xs text-ois-text-muted mt-2">
               Submitted {req.submittedAt ? formatRelative(req.submittedAt) : '—'} by{' '}
               <span className="font-semibold text-ois-text">{req.requesterName}</span>
               {req.requesterTeamId && <span className="text-ois-text-subtle"> · {req.requesterTeamId}</span>}
@@ -619,8 +652,8 @@ export const RequestDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* ── WORKFLOW STEPPER (full width) ─────────────────────────────── */}
-      <div className="px-6 pt-5">
+      {/* ── WORKFLOW STEPPER (full-width pinned band) ──────────────────── */}
+      <div className="px-6 py-4 bg-white border-b border-ois-border shrink-0 overflow-x-auto">
         <WorkflowStepper
           steps={req.workflow.steps}
           onApprove={id => setApproveStep(id)}
@@ -628,11 +661,11 @@ export const RequestDetail: React.FC = () => {
         />
       </div>
 
-      {/* ── THREE-COLUMN BODY ─────────────────────────────────────────── */}
-      <div className="flex-1 grid grid-cols-[260px_1fr_260px] divide-x divide-ois-border">
+      {/* ── BODY: LEFT SIDEBAR + CENTER + RIGHT SIDEBAR ───────────────── */}
+      <div className="flex flex-1 min-h-0">
 
         {/* ── LEFT SIDEBAR ──────────────────────────────────────────────── */}
-        <aside className="sticky top-0 max-h-screen overflow-y-auto p-4 space-y-4">
+        <aside className="w-[280px] shrink-0 overflow-y-auto border-r border-ois-border bg-white p-4 space-y-4">
 
           <SideCard title="At a glance">
             <dl className="space-y-2.5 text-xs">
@@ -662,7 +695,6 @@ export const RequestDetail: React.FC = () => {
                 <span className="text-ois-text-muted">Elapsed</span>
                 <span className="font-semibold text-ois-text">{slaElapsedLabel(req)}</span>
               </div>
-              {/* Progress bar */}
               <div className="h-2 rounded-full bg-ois-surface-muted overflow-hidden">
                 <div
                   className={cn('h-full rounded-full transition-all', req.slaBreached ? 'bg-ois-danger' : slaElapsed > 75 ? 'bg-ois-warning' : 'bg-ois-primary')}
@@ -671,7 +703,6 @@ export const RequestDetail: React.FC = () => {
               </div>
               <div className="text-[10px] text-ois-text-subtle text-right">{slaElapsed}%</div>
 
-              {/* Active step SLA */}
               {req.workflow.steps.find(s => s.status === 'active') && (
                 <div className="mt-2 pt-2 border-t border-ois-border">
                   <div className="text-[10px] text-ois-text-subtle mb-0.5">Current step</div>
@@ -692,27 +723,32 @@ export const RequestDetail: React.FC = () => {
           </SideCard>
         </aside>
 
-        {/* ── CENTER: TABS ──────────────────────────────────────────────── */}
-        <main className="p-5 min-w-0 overflow-y-auto">
-          <Tabs
-            tabs={[
-              { id: 'overview',  label: 'Overview' },
-              { id: 'form',      label: 'Form responses' },
-              { id: 'activity',  label: 'Activity' },
-              { id: 'comments',  label: `Comments (${req.commentCount})` },
-              { id: 'linked',    label: 'Linked items' },
-            ]}
-          >
-            {OverviewTab}
-            {FormTab}
-            {ActivityTab}
-            {CommentsTab}
-            {LinkedTab}
-          </Tabs>
-        </main>
+        {/* ── CENTER: PINNED TAB BAR + SCROLLABLE CONTENT ───────────────── */}
+        <div className="flex flex-col flex-1 min-w-0">
+          <div className="border-b border-ois-border bg-white shrink-0 px-6">
+            <nav className="flex gap-8 overflow-x-auto scrollbar-hide">
+              {TABS.map(tab => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  className={cn('py-4 px-1 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === tab.id
+                      ? 'border-ois-primary text-ois-primary font-bold'
+                      : 'border-transparent text-ois-text-muted hover:text-ois-text hover:border-ois-border-strong')}>
+                  {tab.label}{tab.id === 'comments' ? ` (${req.commentCount})` : ''}
+                </button>
+              ))}
+            </nav>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {activeTab === 'overview'  && OverviewTab}
+            {activeTab === 'form'      && FormTab}
+            {activeTab === 'activity'  && ActivityTab}
+            {activeTab === 'comments'  && CommentsTab}
+            {activeTab === 'linked'    && LinkedTab}
+          </div>
+        </div>
 
         {/* ── RIGHT SIDEBAR ─────────────────────────────────────────────── */}
-        <aside className="sticky top-0 max-h-screen overflow-y-auto p-4 space-y-4">
+        <aside className="w-[280px] shrink-0 overflow-y-auto border-l border-ois-border bg-white p-4 space-y-4">
 
           <SideCard title="Quick actions">
             <div className="space-y-1.5">
@@ -722,7 +758,7 @@ export const RequestDetail: React.FC = () => {
                     const step = req.workflow.steps.find(isApprover);
                     if (step) setApproveStep(step.id);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-ois-success-pale text-ois-success text-xs font-bold hover:bg-green-100 transition-colors"
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left bg-ois-primary text-white hover:bg-ois-primary-hover"
                 >
                   <Check size={13} /> Approve
                 </button>
@@ -733,7 +769,7 @@ export const RequestDetail: React.FC = () => {
                     const step = req.workflow.steps.find(isApprover);
                     if (step) setRejectStep(step.id);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-ois-danger-pale text-ois-danger text-xs font-bold hover:bg-red-100 transition-colors"
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-text hover:bg-ois-surface-muted"
                 >
                   <X size={13} /> Reject
                 </button>
@@ -747,14 +783,18 @@ export const RequestDetail: React.FC = () => {
                 { icon: MessageCircle, label: 'Request info from user' },
                 { icon: UserCheck,     label: 'Reassign current step' },
                 { icon: MessageCircle, label: 'Add comment' },
-                { icon: Ban,           label: 'Cancel request', cls: 'text-ois-text-subtle hover:text-ois-danger hover:bg-ois-danger-pale' },
-              ].map(({ icon: Icon, label, cls }) => (
+              ].map(({ icon: Icon, label }) => (
                 <button key={label}
-                  className={cn('w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text-muted hover:bg-ois-surface-muted transition-colors text-left', cls)}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted transition-colors text-left border border-ois-border"
                 >
                   <Icon size={13} className="shrink-0" /> {label}
                 </button>
               ))}
+              <div className="pt-1 border-t border-ois-border">
+                <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-danger hover:bg-ois-danger-pale">
+                  <Ban size={13} className="shrink-0" /> Cancel request
+                </button>
+              </div>
             </div>
           </SideCard>
 
