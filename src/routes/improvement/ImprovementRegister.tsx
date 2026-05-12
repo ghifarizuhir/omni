@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Plus, Search, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import {
   mockImprovements,
@@ -139,32 +139,17 @@ export const ImprovementRegister: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* Page header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">Continual Improvement Register</h1>
-          <p className="text-sm text-ois-text-muted mt-1">
-            {mockImprovements.length} initiatives · {inProgressCount} in progress · {formatBenefitUSD(totalEstimated)} estimated annual benefit portfolio
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link to="/improvement/kanban" className="inline-flex items-center gap-1 text-sm font-semibold text-ois-primary hover:underline">
-            Kanban <ArrowRight size={14} />
-          </Link>
-          <span className="text-ois-border-strong">·</span>
-          <Link to="/improvement/heatmap" className="inline-flex items-center gap-1 text-sm font-semibold text-ois-primary hover:underline">
-            Heatmap <ArrowRight size={14} />
-          </Link>
-          <span className="text-ois-border-strong">·</span>
-          <Link to="/improvement/benefits" className="inline-flex items-center gap-1 text-sm font-semibold text-ois-primary hover:underline">
-            Benefits <ArrowRight size={14} />
-          </Link>
-          <button className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ois-primary text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
-            <Plus size={14} /> New initiative
-          </button>
-        </div>
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Action row */}
+      <div className="shrink-0 flex items-center justify-end gap-2 px-6 py-2.5 border-b border-ois-border bg-ois-surface">
+        <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ois-primary text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+          <Plus size={14} /> New initiative
+        </button>
       </div>
+
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-screen-2xl mx-auto px-6 py-5 space-y-6 pb-12">
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -327,6 +312,9 @@ export const ImprovementRegister: React.FC = () => {
           </div>
         </div>
       )}
+
+        </div>
+      </div>
     </div>
   );
 };
