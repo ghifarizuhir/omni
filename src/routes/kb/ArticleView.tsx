@@ -118,11 +118,11 @@ function renderMarkdown(body: string): React.ReactNode[] {
   const flushList = () => {
     if (!listBuffer.length) return;
     nodes.push(
-      <ul key={`ul-${nodes.length}`} className="my-3 space-y-1.5 pl-1">
+      <ul key={`ul-${nodes.length}`} className="my-4 space-y-2 pl-0">
         {listBuffer.map((item, j) => (
-          <li key={j} className="flex items-start gap-2.5 text-[14.5px] text-ois-text-muted leading-relaxed">
-            <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-ois-primary shrink-0" />
-            <span>{renderInline(item)}</span>
+          <li key={j} className="flex items-start gap-3">
+            <span className="mt-[9px] w-1.5 h-1.5 rounded-full bg-ois-primary shrink-0" />
+            <span className="text-[15px] leading-[1.8] text-ois-text-muted">{renderInline(item)}</span>
           </li>
         ))}
       </ul>
