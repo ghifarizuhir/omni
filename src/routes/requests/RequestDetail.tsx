@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, MoreHorizontal, Check, X, Clock, Shield,
@@ -368,17 +368,187 @@ const NotFound: React.FC = () => (
   </div>
 );
 
+// ── Request info modal ────────────────────────────────────────────────────────
+
+const RequestInfoModal: React.FC<{
+  requesterName: string;
+  onConfirm: (msg: string) => void;
+  onClose: () => void;
+}> = ({ requesterName, onConfirm, onClose }) => {
+  const [msg, setMsg] = useState('');
+  return (
+    <Modal isOpen onClose={onClose} title="Request info from user" size="sm">
+      <div className="space-y-4">
+        <p className="text-sm text-ois-text-muted">
+          Send a message to <span className="font-semibold text-ois-text">{requesterName}</span> asking for clarification. The request will be paused until they respond.
+        </p>
+        <div>
+          <label className="text-xs font-semibold text-ois-text-muted block mb-1.5">Message <span className="text-ois-danger">*</span></label>
+          <textarea
+            rows={4}
+            value={msg}
+            onChange={e => setMsg(e.target.value)}
+            placeholder="Please provide more details about…"
+            className="w-full rounded-lg border border-ois-border-strong px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
+          />
+        </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-ois-border-strong text-sm font-semibold text-ois-text hover:bg-ois-surface-muted transition-colors">Cancel</button>
+          <button onClick={() => msg.trim() && onConfirm(msg)} disabled={!msg.trim()}
+            className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-ois-primary text-white text-sm font-bold hover:bg-ois-primary-hover disabled:opacity-50 disabled:pointer-events-none transition-colors">
+            <Send size={14} /> Send message
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// ── Reassign modal ────────────────────────────────────────────────────────────
+
+const ReassignModal: React.FC<{
+  currentAssignee?: string;
+  onConfirm: (userId: string, userName: string) => void;
+  onClose: () => void;
+}> = ({ currentAssignee, onConfirm, onClose }) => {
+  const [selected, setSelected] = useState<string>('');
+  const candidates = mockUsers.filter(u => u.name !== currentAssignee);
+  return (
+    <Modal isOpen onClose={onClose} title="Reassign current step" size="sm">
+      <div className="space-y-4">
+        <p className="text-sm text-ois-text-muted">Choose a new assignee for the active workflow step.</p>
+        <div className="border border-ois-border rounded-lg overflow-hidden divide-y divide-ois-border max-h-56 overflow-y-auto">
+          {candidates.map(u => (
+            <button key={u.id} onClick={() => setSelected(u.id)}
+              className={cn('flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors',
+                selected === u.id ? 'bg-ois-primary-pale' : 'hover:bg-ois-surface-muted')}>
+              <Avatar name={u.name} size="xs" />
+              <div className="flex-1 min-w-0">
+                <div className={cn('text-xs font-semibold', selected === u.id ? 'text-ois-primary' : 'text-ois-text')}>{u.name}</div>
+                <div className="text-[10px] text-ois-text-subtle">{u.role ?? u.email}</div>
+              </div>
+              {selected === u.id && <Check size={13} className="text-ois-primary shrink-0" />}
+            </button>
+          ))}
+        </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-ois-border-strong text-sm font-semibold text-ois-text hover:bg-ois-surface-muted transition-colors">Cancel</button>
+          <button onClick={() => { const u = candidates.find(c => c.id === selected); if (u) onConfirm(u.id, u.name); }} disabled={!selected}
+            className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-ois-primary text-white text-sm font-bold hover:bg-ois-primary-hover disabled:opacity-50 disabled:pointer-events-none transition-colors">
+            <UserCheck size={14} /> Reassign
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// ── Cancel modal ──────────────────────────────────────────────────────────────
+
+const CancelModal: React.FC<{
+  reqId: string;
+  onConfirm: (reason: string) => void;
+  onClose: () => void;
+}> = ({ reqId, onConfirm, onClose }) => {
+  const [reason, setReason] = useState('');
+  const valid = reason.trim().length >= 10;
+  return (
+    <Modal isOpen onClose={onClose} title={`Cancel ${reqId}`} size="sm">
+      <div className="space-y-4">
+        <p className="text-sm text-ois-text-muted">This will cancel the request and notify all stakeholders. This action cannot be undone.</p>
+        <div>
+          <label className="text-xs font-semibold text-ois-text-muted block mb-1.5">Reason <span className="text-ois-danger">*</span></label>
+          <textarea
+            rows={3}
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            placeholder="Explain why this request is being cancelled…"
+            className={cn('w-full rounded-lg border px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2',
+              valid ? 'border-ois-border-strong focus:ring-ois-primary/20 focus:border-ois-primary'
+                    : reason.length > 0 ? 'border-ois-danger focus:ring-ois-danger/20' : 'border-ois-border-strong focus:ring-ois-primary/20 focus:border-ois-primary')}
+          />
+          <div className={cn('text-[11px] mt-1', valid ? 'text-ois-success' : 'text-ois-text-subtle')}>
+            {valid ? <><Check size={10} className="inline mr-0.5" />{reason.length} / 10 minimum</> : <>{reason.length} / 10 minimum</>}
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-ois-border-strong text-sm font-semibold text-ois-text hover:bg-ois-surface-muted transition-colors">Keep request</button>
+          <button onClick={() => valid && onConfirm(reason)} disabled={!valid}
+            className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-ois-danger text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none transition-colors">
+            <Ban size={14} /> Cancel request
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// ── Add watcher modal ─────────────────────────────────────────────────────────
+
+const AddWatcherModal: React.FC<{
+  existingIds: Set<string>;
+  onConfirm: (userId: string, userName: string) => void;
+  onClose: () => void;
+}> = ({ existingIds, onConfirm, onClose }) => {
+  const [selected, setSelected] = useState<string>('');
+  const candidates = mockUsers.filter(u => !existingIds.has(u.id));
+  return (
+    <Modal isOpen onClose={onClose} title="Add watcher" size="sm">
+      <div className="space-y-4">
+        <p className="text-sm text-ois-text-muted">Watchers receive notifications when the request status changes.</p>
+        <div className="border border-ois-border rounded-lg overflow-hidden divide-y divide-ois-border max-h-56 overflow-y-auto">
+          {candidates.length === 0 && (
+            <p className="px-4 py-3 text-sm text-ois-text-subtle italic">All users are already watching.</p>
+          )}
+          {candidates.map(u => (
+            <button key={u.id} onClick={() => setSelected(u.id)}
+              className={cn('flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors',
+                selected === u.id ? 'bg-ois-primary-pale' : 'hover:bg-ois-surface-muted')}>
+              <Avatar name={u.name} size="xs" />
+              <div className="flex-1 min-w-0">
+                <div className={cn('text-xs font-semibold', selected === u.id ? 'text-ois-primary' : 'text-ois-text')}>{u.name}</div>
+                <div className="text-[10px] text-ois-text-subtle">{u.role ?? u.email}</div>
+              </div>
+              {selected === u.id && <Check size={13} className="text-ois-primary shrink-0" />}
+            </button>
+          ))}
+        </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-ois-border-strong text-sm font-semibold text-ois-text hover:bg-ois-surface-muted transition-colors">Cancel</button>
+          <button onClick={() => { const u = candidates.find(c => c.id === selected); if (u) onConfirm(u.id, u.name); }} disabled={!selected || candidates.length === 0}
+            className="px-5 py-2 rounded-lg bg-ois-primary text-white text-sm font-bold hover:bg-ois-primary-hover disabled:opacity-50 disabled:pointer-events-none transition-colors">
+            Add watcher
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export const RequestDetail: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
 
-  const [approveStep, setApproveStep] = useState<string | null>(null);
-  const [rejectStep,  setRejectStep]  = useState<string | null>(null);
-  const [approved,    setApproved]    = useState(false);
-  const [comment,     setComment]     = useState('');
-  const [activeTab,   setActiveTab]   = useState<TabId>('overview');
+  const [approveStep,      setApproveStep]      = useState<string | null>(null);
+  const [rejectStep,       setRejectStep]       = useState<string | null>(null);
+  const [approved,         setApproved]         = useState(false);
+  const [comment,          setComment]          = useState('');
+  const [activeTab,        setActiveTab]        = useState<TabId>('overview');
+  const [showRequestInfo,  setShowRequestInfo]  = useState(false);
+  const [showReassign,     setShowReassign]     = useState(false);
+  const [showCancel,       setShowCancel]       = useState(false);
+  const [showAddWatcher,   setShowAddWatcher]   = useState(false);
+  const [postedComments,   setPostedComments]   = useState<{ id: string; author: string; text: string; ts: string }[]>([]);
+  const [activeStepAssignee, setActiveStepAssignee] = useState<string | undefined>(undefined);
+  const [extraWatcherIds,  setExtraWatcherIds]  = useState<string[]>([]);
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const jumpToComments = useCallback(() => {
+    setActiveTab('comments');
+    setTimeout(() => commentTextareaRef.current?.focus(), 50);
+  }, []);
 
   const req = useMemo(() => getRequestById(requestId ?? ''), [requestId]);
   const catalogItem = useMemo(() => req ? getCatalogItemById(req.catalogItemId) : null, [req]);
@@ -397,8 +567,14 @@ export const RequestDetail: React.FC = () => {
     const ids = new Set<string>();
     ids.add(req.requesterId);
     req.workflow.steps.forEach(s => { if (s.assigneeId) ids.add(s.assigneeId); });
+    extraWatcherIds.forEach(id => ids.add(id));
     return Array.from(ids).map(id => mockUsers.find(u => u.id === id)).filter(Boolean);
-  }, [req]);
+  }, [req, extraWatcherIds]);
+
+  const watcherIdSet = useMemo(() => new Set(watchers.map(u => u!.id)), [watchers]);
+
+  const activeStep = req.workflow.steps.find(s => s.status === 'active');
+  const activeStepCurrentAssignee = activeStepAssignee ?? activeStep?.assigneeName;
 
   // ── Overview tab ────────────────────────────────────────────────────────────
   const OverviewTab = (
@@ -530,16 +706,32 @@ export const RequestDetail: React.FC = () => {
   // ── Comments tab ─────────────────────────────────────────────────────────────
   const CommentsTab = (
     <div className="space-y-4">
-      {/* Empty state - no comments yet */}
-      <div className="flex flex-col items-center py-8 text-center">
-        <p className="text-sm text-ois-text-subtle">No comments yet.</p>
-      </div>
+      {/* Posted comments */}
+      {postedComments.length === 0 && (
+        <div className="flex flex-col items-center py-8 text-center">
+          <MessageCircle size={28} className="text-ois-text-subtle mb-2" />
+          <p className="text-sm text-ois-text-subtle">No comments yet.</p>
+        </div>
+      )}
+      {postedComments.map(c => (
+        <div key={c.id} className="flex gap-3">
+          <Avatar name={c.author} size="sm" className="shrink-0" />
+          <div className="flex-1 bg-ois-surface-muted border border-ois-border rounded-lg px-3 py-2.5">
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="text-xs font-semibold text-ois-text">{c.author}</span>
+              <span className="text-[10px] text-ois-text-subtle">{formatRelative(c.ts)}</span>
+            </div>
+            <p className="text-sm text-ois-text whitespace-pre-wrap">{c.text}</p>
+          </div>
+        </div>
+      ))}
 
       {/* New comment box */}
       <div className="flex gap-3 pt-2 border-t border-ois-border">
         <Avatar name={currentUser.name} size="sm" className="shrink-0" />
         <div className="flex-1">
           <textarea
+            ref={commentTextareaRef}
             rows={3}
             value={comment}
             onChange={e => setComment(e.target.value)}
@@ -549,7 +741,16 @@ export const RequestDetail: React.FC = () => {
           <div className="flex justify-end mt-2">
             <button
               disabled={!comment.trim()}
-              onClick={() => setComment('')}
+              onClick={() => {
+                if (!comment.trim()) return;
+                setPostedComments(prev => [...prev, {
+                  id: `c-${Date.now()}`,
+                  author: currentUser.name,
+                  text: comment.trim(),
+                  ts: new Date().toISOString(),
+                }]);
+                setComment('');
+              }}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-ois-primary text-white text-xs font-semibold hover:bg-ois-primary-hover disabled:opacity-40 disabled:pointer-events-none transition-colors"
             >
               <Send size={12} /> Post comment
@@ -748,7 +949,7 @@ export const RequestDetail: React.FC = () => {
                     activeTab === tab.id
                       ? 'border-ois-primary text-ois-primary font-bold'
                       : 'border-transparent text-ois-text-muted hover:text-ois-text hover:border-ois-border-strong')}>
-                  {tab.label}{tab.id === 'comments' ? ` (${req.commentCount})` : ''}
+                  {tab.label}{tab.id === 'comments' ? ` (${req.commentCount + postedComments.length})` : ''}
                 </button>
               ))}
             </nav>
@@ -794,19 +995,28 @@ export const RequestDetail: React.FC = () => {
                   <CheckCircle2 size={13} /> Approved
                 </div>
               )}
-              {[
-                { icon: MessageCircle, label: 'Request info from user' },
-                { icon: UserCheck,     label: 'Reassign current step' },
-                { icon: MessageCircle, label: 'Add comment' },
-              ].map(({ icon: Icon, label }) => (
-                <button key={label}
-                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted transition-colors text-left border border-ois-border"
-                >
-                  <Icon size={13} className="shrink-0" /> {label}
-                </button>
-              ))}
+              <button
+                onClick={() => setShowRequestInfo(true)}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted transition-colors text-left border border-ois-border"
+              >
+                <MessageCircle size={13} className="shrink-0" /> Request info from user
+              </button>
+              <button
+                onClick={() => setShowReassign(true)}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted transition-colors text-left border border-ois-border"
+              >
+                <UserCheck size={13} className="shrink-0" /> Reassign current step
+              </button>
+              <button
+                onClick={jumpToComments}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted transition-colors text-left border border-ois-border"
+              >
+                <MessageCircle size={13} className="shrink-0" /> Add comment
+              </button>
               <div className="pt-1 border-t border-ois-border">
-                <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-danger hover:bg-ois-danger-pale">
+                <button
+                  onClick={() => setShowCancel(true)}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-danger hover:bg-ois-danger-pale">
                   <Ban size={13} className="shrink-0" /> Cancel request
                 </button>
               </div>
@@ -822,7 +1032,7 @@ export const RequestDetail: React.FC = () => {
                   {u.id === req.requesterId && <span className="text-[10px] text-ois-text-subtle">(req.)</span>}
                 </div>
               ))}
-              <button className="flex items-center gap-1.5 text-xs text-ois-primary hover:underline mt-1">
+              <button onClick={() => setShowAddWatcher(true)} className="flex items-center gap-1.5 text-xs text-ois-primary hover:underline mt-1">
                 <span className="w-5 h-5 rounded-full border-2 border-dashed border-ois-primary flex items-center justify-center text-ois-primary">
                   +
                 </span>
@@ -849,6 +1059,47 @@ export const RequestDetail: React.FC = () => {
           reqId={req.publicId}
           onClose={() => setRejectStep(null)}
           onConfirm={_reason => { setRejectStep(null); navigate('/requests'); }}
+        />
+      )}
+
+      {showRequestInfo && (
+        <RequestInfoModal
+          requesterName={req.requesterName}
+          onClose={() => setShowRequestInfo(false)}
+          onConfirm={_msg => {
+            setShowRequestInfo(false);
+            jumpToComments();
+          }}
+        />
+      )}
+
+      {showReassign && (
+        <ReassignModal
+          currentAssignee={activeStepCurrentAssignee}
+          onClose={() => setShowReassign(false)}
+          onConfirm={(_id, name) => {
+            setActiveStepAssignee(name);
+            setShowReassign(false);
+          }}
+        />
+      )}
+
+      {showCancel && (
+        <CancelModal
+          reqId={req.publicId}
+          onClose={() => setShowCancel(false)}
+          onConfirm={_reason => { setShowCancel(false); navigate('/requests'); }}
+        />
+      )}
+
+      {showAddWatcher && (
+        <AddWatcherModal
+          existingIds={watcherIdSet}
+          onClose={() => setShowAddWatcher(false)}
+          onConfirm={(id, _name) => {
+            setExtraWatcherIds(prev => [...prev, id]);
+            setShowAddWatcher(false);
+          }}
         />
       )}
     </div>
