@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, AlertTriangle, CheckCircle2, Clock,
-  ExternalLink, Tag, ClipboardCheck, History, ChevronDown,
+  ExternalLink, Tag, ClipboardCheck, History, MoreHorizontal,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { Card, CardBody } from '../../components/ui/Card';
-import { Tabs } from '../../components/ui/Tabs';
 import { Modal } from '../../components/ui/Modal';
 import { cn } from '../../lib/utils';
 import { getChangeById } from '../../mocks/changes';
@@ -20,12 +18,26 @@ import { PIRPanel } from '../../components/changes/PIRPanel';
 import { RescheduleModal } from '../../components/changes/RescheduleModal';
 import { formatDate, formatRelative } from '../../lib/format';
 
-const riskStripe: Record<string, string> = {
-  low: 'bg-emerald-400',
-  medium: 'bg-amber-400',
-  high: 'bg-red-500',
-  critical: 'bg-red-700',
+const RISK_COLOR: Record<string, string> = {
+  low: '#12B76A', medium: '#F79009', high: '#F04438', critical: '#B42318',
 };
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+const SectionCard: React.FC<{ title?: string; children: React.ReactNode; className?: string }> = ({
+  title, children, className,
+}) => (
+  <div className={cn('border border-ois-border rounded-lg bg-ois-surface overflow-hidden', className)}>
+    {title && (
+      <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
+        <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">{title}</p>
+      </div>
+    )}
+    <div className="p-4">{children}</div>
+  </div>
+);
+
+// ── Main component ─────────────────────────────────────────────────────────────
 
 export const ChangeDetail: React.FC = () => {
   const { changeId } = useParams<{ changeId: string }>();
@@ -68,15 +80,98 @@ export const ChangeDetail: React.FC = () => {
   };
 
   return (
-    <div className="flex gap-6 min-h-0">
-      {/* Left sidebar */}
-      <div className="w-64 shrink-0 space-y-3">
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">At a glance</h3>
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+
+      {/* ── Pinned header ─────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-ois-border shrink-0 z-30">
+        {/* Nav row */}
+        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
+          <button
+            onClick={() => navigate('/changes')}
+            className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
+          >
+            <ArrowLeft size={15} /> Calendar
+          </button>
+          <div className="flex items-center gap-2">
+            <ChangeStatusPill status={changeStatus} />
+            <div className="relative">
+              <button
+                onClick={() => setActionsOpen(v => !v)}
+                className="px-2.5 py-1.5 rounded-lg border border-ois-border bg-white text-sm text-ois-text-muted hover:bg-ois-surface-muted transition-colors"
+              >
+                <MoreHorizontal size={15} />
+              </button>
+              {actionsOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setActionsOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[180px]">
+                    {[
+                      {
+                        label: 'Copy change ID',
+                        action: () => navigator.clipboard.writeText(change!.publicId),
+                      },
+                      {
+                        label: 'Copy link',
+                        action: () => navigator.clipboard.writeText(window.location.href),
+                      },
+                    ].map(item => (
+                      <button
+                        key={item.label}
+                        onClick={() => { item.action(); setActionsOpen(false); }}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors text-ois-text"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-          <CardBody className="p-0">
-            <dl className="divide-y divide-ois-border text-xs">
+        </div>
+
+        {/* Entity header with risk stripe */}
+        <div className="flex items-start gap-0">
+          <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: RISK_COLOR[change.risk] }} />
+          <div className="flex-1 px-6 py-4">
+            {/* ID + chips */}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-mono text-sm font-bold text-ois-primary">{change.publicId}</span>
+              <ChangeTypeChip type={change.type} size="sm" />
+              <RiskBadge risk={change.risk} score={change.riskScore} size="sm" />
+            </div>
+            {/* Title */}
+            <h1 className="text-xl font-bold text-ois-text leading-snug mb-2">{change.title}</h1>
+            {/* Tags as rounded-full pills */}
+            {change.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {change.tags.map((t) => (
+                  <span key={t} className="text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* Meta line */}
+            <div className="flex items-center gap-4 text-xs text-ois-text-muted">
+              <span className="flex items-center gap-1">
+                <Clock size={11} />
+                {change.implementationWindow}
+              </span>
+              <span>Owner: <span className="font-medium text-ois-text">{change.ownerName}</span></span>
+              <span>Created {formatRelative(change.createdAt)} by {change.requesterName}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Three-column body ──────────────────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0">
+
+        {/* Left sidebar */}
+        <aside className="w-[280px] shrink-0 overflow-y-auto border-r border-ois-border bg-white p-4 space-y-4">
+          <SectionCard title="At a glance">
+            <dl className="divide-y divide-ois-border text-xs -mx-4 -mb-4">
               {[
                 { label: 'Status', value: <ChangeStatusPill status={changeStatus} size="sm" /> },
                 { label: 'Type', value: <ChangeTypeChip type={change.type} size="sm" /> },
@@ -92,16 +187,11 @@ export const ChangeDetail: React.FC = () => {
                 </div>
               ))}
             </dl>
-          </CardBody>
-        </Card>
+          </SectionCard>
 
-        {/* Risk factors */}
-        {change.riskFactors.length > 0 && (
-          <Card>
-            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-              <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Risk Factors</h3>
-            </div>
-            <CardBody>
+          {/* Risk factors */}
+          {change.riskFactors.length > 0 && (
+            <SectionCard title="Risk Factors">
               <ul className="space-y-1.5">
                 {change.riskFactors.map((f) => (
                   <li key={f} className="text-xs text-ois-text flex items-start gap-1.5">
@@ -110,16 +200,11 @@ export const ChangeDetail: React.FC = () => {
                   </li>
                 ))}
               </ul>
-            </CardBody>
-          </Card>
-        )}
+            </SectionCard>
+          )}
 
-        {/* Approvals progress */}
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Approvals</h3>
-          </div>
-          <CardBody>
+          {/* Approvals progress */}
+          <SectionCard title="Approvals">
             <div className="flex gap-1 mb-2">
               {change.approvals.map((a, i) => (
                 <div
@@ -144,392 +229,348 @@ export const ChangeDetail: React.FC = () => {
                 <Clock size={9} /> CAB Thu May 9 10:00 UTC
               </p>
             )}
-          </CardBody>
-        </Card>
-      </div>
+          </SectionCard>
+        </aside>
 
-      {/* Main content */}
-      <div className="flex-1 min-w-0 space-y-4">
-        {/* Top bar */}
-        <div className="flex items-center justify-between">
-          <Link to="/changes" className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text">
-            <ArrowLeft size={16} /> Calendar
-          </Link>
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setActionsOpen(v => !v)}
-              className="gap-1.5"
-            >
-              Actions
-              <ChevronDown size={14} />
-            </Button>
-            {actionsOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setActionsOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[180px]">
-                  {[
-                    {
-                      label: 'Copy change ID',
-                      action: () => navigator.clipboard.writeText(change!.publicId),
-                    },
-                    {
-                      label: 'Copy link',
-                      action: () => navigator.clipboard.writeText(window.location.href),
-                    },
-                  ].map(item => (
-                    <button
-                      key={item.label}
-                      onClick={() => { item.action(); setActionsOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors text-ois-text"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </>
+        {/* Center — tab bar + scrollable content */}
+        <div className="flex flex-col flex-1 min-w-0">
+          {/* Tab bar — shrink-0 pinned */}
+          <div className="border-b border-ois-border bg-white shrink-0 px-6">
+            <nav className="flex gap-8 overflow-x-auto scrollbar-hide">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'py-4 px-1 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === tab.id
+                      ? 'border-ois-primary text-ois-primary font-bold'
+                      : 'border-transparent text-ois-text-muted hover:text-ois-text hover:border-ois-border-strong',
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Scrollable tab content */}
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+
+            {/* Overview */}
+            {activeTab === 'overview' && (
+              <div className="space-y-4">
+                <SectionCard title="Description">
+                  <p className="text-sm text-ois-text leading-relaxed">{change.description}</p>
+                </SectionCard>
+                <SectionCard title="Justification">
+                  <p className="text-sm text-ois-text leading-relaxed">{change.justification}</p>
+                </SectionCard>
+                <SectionCard title="Affected Scope">
+                  <div className="flex gap-4 mb-3 text-xs text-ois-text-muted">
+                    <span>{change.affectedCIIds.length} CIs</span>
+                    <span>{change.affectedServiceIds.length} service(s)</span>
+                  </div>
+                  {change.affectedCIPublicIds.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {change.affectedCIPublicIds.map((ci) => (
+                        <Link key={ci} to={`/cmdb/${ci}`} className="font-mono text-xs bg-ois-bg border border-ois-border px-2 py-1 rounded-lg text-ois-primary hover:border-ois-primary transition-colors">
+                          {ci}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </SectionCard>
+                <SectionCard title="Schedule">
+                  <div className="space-y-2 text-sm">
+                    <p className="flex items-center gap-2">
+                      <Clock size={14} className="text-ois-text-subtle" />
+                      <span className="font-medium text-ois-text">{change.implementationWindow}</span>
+                    </p>
+                    <p className="text-xs text-ois-text-muted">
+                      Planned: {formatDate(change.plannedStart, 'MMM d, HH:mm')} – {formatDate(change.plannedEnd, 'HH:mm')} UTC
+                    </p>
+                    {change.freezeWindow && (
+                      <p className="text-xs text-amber-600 font-semibold flex items-center gap-1">
+                        <AlertTriangle size={11} /> Within freeze window — exception approved
+                      </p>
+                    )}
+                    <p className="text-xs text-ois-text-muted">
+                      Conflict status:{' '}
+                      {activeConflicts.length === 0
+                        ? <span className="text-ois-success font-semibold">✓ No conflicts</span>
+                        : <span className="text-ois-warning font-semibold">{activeConflicts.length} conflict(s) detected</span>}
+                    </p>
+                  </div>
+                </SectionCard>
+              </div>
             )}
+
+            {/* Plans */}
+            {activeTab === 'plans' && (
+              <div className="space-y-4">
+                {[
+                  { label: 'Implementation Plan', content: change.implementationPlan },
+                  { label: 'Rollback Plan', content: change.rollbackPlan },
+                  { label: 'Test Plan', content: change.testPlan },
+                ].map(({ label, content }) => (
+                  <SectionCard key={label} title={label}>
+                    <pre className="text-xs text-ois-text font-mono whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
+                      {content || <span className="text-ois-text-subtle italic">Not yet provided</span>}
+                    </pre>
+                  </SectionCard>
+                ))}
+              </div>
+            )}
+
+            {/* Approvals */}
+            {activeTab === 'approvals' && (
+              <SectionCard title="Required Approvals">
+                <div className="flex items-center justify-between mb-4">
+                  <span />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => navigate('/changes/cab')}
+                  >
+                    Open CAB workspace <ExternalLink size={11} />
+                  </Button>
+                </div>
+                <ApprovalMatrix
+                  approvals={change.approvals}
+                  changeId={change.id}
+                  cabSessionDate={change.cabSessionId ? 'Thursday May 9, 10:00 UTC' : undefined}
+                />
+              </SectionCard>
+            )}
+
+            {/* Conflicts */}
+            {activeTab === 'conflicts' && (
+              <div className="space-y-3">
+                {change.conflicts.length === 0 ? (
+                  <SectionCard>
+                    <div className="py-10 text-center">
+                      <CheckCircle2 size={32} className="mx-auto text-ois-success mb-3" />
+                      <p className="text-sm font-bold text-ois-text">No conflicts detected</p>
+                      <p className="text-xs text-ois-text-muted mt-1">
+                        This change has been validated against the FSC and freeze windows.
+                      </p>
+                      <p className="text-[10px] text-ois-text-subtle mt-2">Last checked: 4 minutes ago</p>
+                    </div>
+                  </SectionCard>
+                ) : (
+                  <>
+                    {activeConflicts.length > 0 && (
+                      <p className="text-sm font-semibold text-ois-warning flex items-center gap-1.5">
+                        <AlertTriangle size={14} /> {activeConflicts.length} active conflict(s)
+                      </p>
+                    )}
+                    {change.conflicts.map((cf) => (
+                      <div
+                        key={cf.id}
+                        className={cn(
+                          'border border-ois-border rounded-lg bg-ois-surface overflow-hidden',
+                          cf.resolvedAt && 'opacity-70',
+                        )}
+                      >
+                        <div className={cn(
+                          'px-4 py-3 border-b border-ois-border flex items-center gap-2',
+                          cf.severity === 'blocking' ? 'bg-red-50' : 'bg-amber-50',
+                        )}>
+                          <AlertTriangle size={14} className={cf.severity === 'blocking' ? 'text-ois-danger' : 'text-amber-600'} />
+                          <h3 className="text-sm font-bold text-ois-text capitalize">
+                            {cf.type.replace(/_/g, ' ')} Conflict
+                          </h3>
+                          <Badge variant={cf.severity === 'blocking' ? 'danger' : 'warning'} className="text-[10px] ml-auto">
+                            {cf.severity}
+                          </Badge>
+                          {cf.resolvedAt && <Badge variant="success" className="text-[10px]">Resolved</Badge>}
+                        </div>
+                        <div className="p-4">
+                          <p className="text-sm text-ois-text mb-3">{cf.description}</p>
+                          {cf.conflictsWith.length > 0 && (
+                            <p className="text-xs text-ois-text-muted mb-2">
+                              Conflicts with: {cf.conflictsWith.map((id) => (
+                                <Link key={id} to={`/changes/${id}`} className="text-ois-primary hover:underline font-mono ml-1">{id}</Link>
+                              ))}
+                            </p>
+                          )}
+                          <div className="text-[11px] text-ois-text-subtle space-y-0.5">
+                            <p>Detected: {formatDate(cf.detectedAt, 'MMM d, HH:mm')} UTC</p>
+                            {cf.resolvedAt && <p>Resolved: {formatDate(cf.resolvedAt, 'MMM d, HH:mm')} UTC</p>}
+                            {cf.resolutionNote && (
+                              <p className="text-ois-text-muted mt-1 italic">"{cf.resolutionNote}"</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Linked */}
+            {activeTab === 'linked' && (
+              <div className="space-y-3">
+                {change.linkedProblemIds.length > 0 && (
+                  <SectionCard title={`Problems (${change.linkedProblemIds.length})`}>
+                    <div className="divide-y divide-ois-border -mx-4 -mb-4">
+                      {change.linkedProblemIds.map((id) => (
+                        <Link key={id} to={`/problems/${id}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg transition-colors">
+                          <span className="font-mono text-sm font-bold text-ois-primary">{id}</span>
+                          <ExternalLink size={13} className="text-ois-text-subtle" />
+                        </Link>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+                {change.linkedIncidentIds.length > 0 && (
+                  <SectionCard title={`Incidents (${change.linkedIncidentIds.length})`}>
+                    <div className="divide-y divide-ois-border -mx-4 -mb-4">
+                      {change.linkedIncidentIds.map((id) => (
+                        <Link key={id} to={`/incidents/${id}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg transition-colors">
+                          <span className="font-mono text-sm font-bold text-ois-primary">{id}</span>
+                          <ExternalLink size={13} className="text-ois-text-subtle" />
+                        </Link>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+                {change.linkedReleasePublicId && (
+                  <SectionCard title="Release">
+                    <Link to={`/releases/${change.linkedReleasePublicId}`} className="flex items-center justify-between hover:opacity-80">
+                      <span className="font-mono text-sm font-bold text-ois-primary">{change.linkedReleasePublicId}</span>
+                      <ExternalLink size={13} className="text-ois-text-subtle" />
+                    </Link>
+                  </SectionCard>
+                )}
+                {change.linkedKBSlugs.length > 0 && (
+                  <SectionCard title="KB Articles">
+                    <div className="divide-y divide-ois-border -mx-4 -mb-4">
+                      {change.linkedKBSlugs.map((slug) => (
+                        <Link key={slug} to={`/kb/${slug}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg transition-colors">
+                          <span className="font-mono text-xs text-ois-primary">{slug}</span>
+                          <ExternalLink size={13} className="text-ois-text-subtle" />
+                        </Link>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+
+                {/* Capacity recommendations resolved by this change */}
+                {(() => {
+                  const resolved = mockScalingRecommendations.filter(
+                    r => r.implementedViaChangeId === change.id ||
+                         r.implementedViaChangeId === change.publicId
+                  );
+                  if (resolved.length === 0) return null;
+                  return (
+                    <SectionCard title={`Capacity Recommendations (${resolved.length})`}>
+                      <p className="text-xs text-ois-text-muted mb-3">This change implements the following capacity actions</p>
+                      <div className="divide-y divide-ois-border -mx-4 -mb-4">
+                        {resolved.map(rec => (
+                          <div key={rec.id} className="flex items-center justify-between px-4 py-3">
+                            <div>
+                              <span className="font-mono text-xs font-bold text-ois-primary">{rec.publicId}</span>
+                              <p className="text-xs text-ois-text mt-0.5">{rec.suggestedAction}</p>
+                              <p className="text-xs text-ois-text-muted">{rec.estimatedImpact}</p>
+                            </div>
+                            <Link to="/capacity" className="text-xs text-ois-primary hover:underline flex items-center gap-1 ml-4">
+                              Capacity <ExternalLink size={12} />
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </SectionCard>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* PIR */}
+            {activeTab === 'pir' && (
+              <SectionCard title="Post-Implementation Review">
+                {!isImplemented || !change.pir ? (
+                  <div className="py-8 text-center">
+                    <ClipboardCheck size={32} className="mx-auto text-ois-text-subtle mb-3" />
+                    <p className="text-sm font-bold text-ois-text">PIR not yet conducted</p>
+                    <p className="text-xs text-ois-text-muted mt-1">
+                      {isImplemented
+                        ? 'No PIR has been filed for this change.'
+                        : 'This change has not been implemented. PIR will be available after closure.'}
+                    </p>
+                  </div>
+                ) : (
+                  <PIRPanel pir={change.pir} />
+                )}
+              </SectionCard>
+            )}
+
+            {/* History */}
+            {activeTab === 'history' && (
+              <SectionCard title="Audit History">
+                <div className="py-8 text-center">
+                  <History size={32} className="mx-auto text-ois-text-subtle mb-3" />
+                  <p className="text-sm font-bold text-ois-text">No history available</p>
+                  <p className="text-xs text-ois-text-muted mt-1">
+                    Audit log tracking is coming soon. Full change history will be recorded here.
+                  </p>
+                </div>
+              </SectionCard>
+            )}
+
           </div>
         </div>
 
-        {/* Header card */}
-        <Card className="overflow-hidden">
-          {/* Risk stripe */}
-          <div className={cn('h-1.5', riskStripe[change.risk])} />
-          <CardBody className="p-5">
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-mono text-sm font-bold text-ois-primary">{change.publicId}</span>
-                  <ChangeTypeChip type={change.type} size="sm" />
-                  <RiskBadge risk={change.risk} score={change.riskScore} size="sm" />
-                </div>
-                <h1 className="text-xl font-bold text-ois-text leading-snug">{change.title}</h1>
-              </div>
-              <ChangeStatusPill status={changeStatus} />
-            </div>
-
-            {/* Tags */}
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {change.tags.map((t) => (
-                <span key={t} className="inline-flex items-center gap-1 bg-ois-bg border border-ois-border text-[10px] font-medium text-ois-text-muted px-2 py-0.5 rounded-full">
-                  <Tag size={9} />{t}
-                </span>
+        {/* Right sidebar */}
+        <aside className="w-[280px] shrink-0 overflow-y-auto border-l border-ois-border bg-white p-4 space-y-4">
+          <SectionCard title="Quick Actions">
+            <div className="space-y-2">
+              {[
+                { label: 'Approve change',     action: () => setActiveTab('approvals'), primary: true },
+                { label: 'Open CAB workspace', action: () => navigate('/changes/cab'),  primary: false },
+                { label: 'Reschedule',         action: () => setRescheduleOpen(true),   primary: false },
+              ].map(({ label, action, primary }) => (
+                <button key={label} onClick={action}
+                  className={cn(
+                    'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left',
+                    primary
+                      ? 'bg-ois-primary text-white hover:bg-ois-primary-hover'
+                      : 'border border-ois-border text-ois-text hover:bg-ois-surface-muted',
+                  )}>
+                  {label}
+                </button>
               ))}
+              {/* Cancel change — separated with divider */}
+              <div className="pt-1 border-t border-ois-border">
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-danger hover:bg-ois-danger-pale"
+                >
+                  Cancel change
+                </button>
+              </div>
             </div>
+          </SectionCard>
 
-            <div className="flex items-center gap-4 text-xs text-ois-text-muted">
-              <span className="flex items-center gap-1">
-                <Clock size={11} />
-                {change.implementationWindow}
-              </span>
-              <span>Owner: <span className="font-medium text-ois-text">{change.ownerName}</span></span>
-              <span>Created {formatRelative(change.createdAt)} by {change.requesterName}</span>
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Tabs */}
-        <Tabs tabs={tabs} activeTabId={activeTab} onChange={setActiveTab}>
-          {/* Overview */}
-          <div className="space-y-4">
-            <Card>
-              <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                <h3 className="text-sm font-bold text-ois-text">Description</h3>
-              </div>
-              <CardBody>
-                <p className="text-sm text-ois-text leading-relaxed">{change.description}</p>
-              </CardBody>
-            </Card>
-            <Card>
-              <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                <h3 className="text-sm font-bold text-ois-text">Justification</h3>
-              </div>
-              <CardBody>
-                <p className="text-sm text-ois-text leading-relaxed">{change.justification}</p>
-              </CardBody>
-            </Card>
-            <Card>
-              <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                <h3 className="text-sm font-bold text-ois-text">Affected Scope</h3>
-              </div>
-              <CardBody>
-                <div className="flex gap-4 mb-3 text-xs text-ois-text-muted">
-                  <span>{change.affectedCIIds.length} CIs</span>
-                  <span>{change.affectedServiceIds.length} service(s)</span>
-                </div>
-                {change.affectedCIPublicIds.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {change.affectedCIPublicIds.map((ci) => (
-                      <Link key={ci} to={`/cmdb/${ci}`} className="font-mono text-xs bg-ois-bg border border-ois-border px-2 py-1 rounded-lg text-ois-primary hover:border-ois-primary transition-colors">
-                        {ci}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </CardBody>
-            </Card>
-            <Card>
-              <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                <h3 className="text-sm font-bold text-ois-text">Schedule</h3>
-              </div>
-              <CardBody>
-                <div className="space-y-2 text-sm">
-                  <p className="flex items-center gap-2">
-                    <Clock size={14} className="text-ois-text-subtle" />
-                    <span className="font-medium text-ois-text">{change.implementationWindow}</span>
-                  </p>
-                  <p className="text-xs text-ois-text-muted">
-                    Planned: {formatDate(change.plannedStart, 'MMM d, HH:mm')} – {formatDate(change.plannedEnd, 'HH:mm')} UTC
-                  </p>
-                  {change.freezeWindow && (
-                    <p className="text-xs text-amber-600 font-semibold flex items-center gap-1">
-                      <AlertTriangle size={11} /> Within freeze window — exception approved
-                    </p>
-                  )}
-                  <p className="text-xs text-ois-text-muted">
-                    Conflict status:{' '}
-                    {activeConflicts.length === 0
-                      ? <span className="text-ois-success font-semibold">✓ No conflicts</span>
-                      : <span className="text-ois-warning font-semibold">{activeConflicts.length} conflict(s) detected</span>}
-                  </p>
-                </div>
-              </CardBody>
-            </Card>
-          </div>
-
-          {/* Plans */}
-          <div className="space-y-4">
-            {[
-              { label: 'Implementation Plan', content: change.implementationPlan },
-              { label: 'Rollback Plan', content: change.rollbackPlan },
-              { label: 'Test Plan', content: change.testPlan },
-            ].map(({ label, content }) => (
-              <Card key={label}>
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                  <h3 className="text-sm font-bold text-ois-text">{label}</h3>
-                </div>
-                <CardBody>
-                  <pre className="text-xs text-ois-text font-mono whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
-                    {content || <span className="text-ois-text-subtle italic">Not yet provided</span>}
-                  </pre>
-                </CardBody>
-              </Card>
-            ))}
-          </div>
-
-          {/* Approvals */}
-          <Card>
-            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg flex items-center justify-between">
-              <h3 className="text-sm font-bold text-ois-text">Required Approvals</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                onClick={() => navigate('/changes/cab')}
-              >
-                Open CAB workspace <ExternalLink size={11} />
-              </Button>
-            </div>
-            <CardBody>
-              <ApprovalMatrix
-                approvals={change.approvals}
-                changeId={change.id}
-                cabSessionDate={change.cabSessionId ? 'Thursday May 9, 10:00 UTC' : undefined}
-              />
-            </CardBody>
-          </Card>
-
-          {/* Conflicts */}
-          <div className="space-y-3">
-            {change.conflicts.length === 0 ? (
-              <Card>
-                <CardBody className="py-10 text-center">
-                  <CheckCircle2 size={32} className="mx-auto text-ois-success mb-3" />
-                  <p className="text-sm font-bold text-ois-text">No conflicts detected</p>
-                  <p className="text-xs text-ois-text-muted mt-1">
-                    This change has been validated against the FSC and freeze windows.
-                  </p>
-                  <p className="text-[10px] text-ois-text-subtle mt-2">Last checked: 4 minutes ago</p>
-                </CardBody>
-              </Card>
-            ) : (
-              <>
-                {activeConflicts.length > 0 && (
-                  <p className="text-sm font-semibold text-ois-warning flex items-center gap-1.5">
-                    <AlertTriangle size={14} /> {activeConflicts.length} active conflict(s)
-                  </p>
-                )}
-                {change.conflicts.map((cf) => (
-                  <Card key={cf.id} className={cf.resolvedAt ? 'opacity-70' : ''}>
-                    <div className={cn(
-                      'px-4 py-3 border-b border-ois-border flex items-center gap-2',
-                      cf.severity === 'blocking' ? 'bg-red-50' : 'bg-amber-50',
-                    )}>
-                      <AlertTriangle size={14} className={cf.severity === 'blocking' ? 'text-ois-danger' : 'text-amber-600'} />
-                      <h3 className="text-sm font-bold text-ois-text capitalize">
-                        {cf.type.replace(/_/g, ' ')} Conflict
-                      </h3>
-                      <Badge variant={cf.severity === 'blocking' ? 'danger' : 'warning'} className="text-[10px] ml-auto">
-                        {cf.severity}
-                      </Badge>
-                      {cf.resolvedAt && <Badge variant="success" className="text-[10px]">Resolved</Badge>}
+          <SectionCard title="Watchers">
+            <div className="space-y-2">
+              {[change.ownerName, ...change.approvals.map((a) => a.approverName)]
+                .filter((v, i, a) => a.indexOf(v) === i)
+                .slice(0, 5)
+                .map((name) => (
+                  <div key={name} className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-ois-primary/10 text-ois-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                      {name.split(' ').map((n) => n[0]).join('')}
                     </div>
-                    <CardBody>
-                      <p className="text-sm text-ois-text mb-3">{cf.description}</p>
-                      {cf.conflictsWith.length > 0 && (
-                        <p className="text-xs text-ois-text-muted mb-2">
-                          Conflicts with: {cf.conflictsWith.map((id) => (
-                            <Link key={id} to={`/changes/${id}`} className="text-ois-primary hover:underline font-mono ml-1">{id}</Link>
-                          ))}
-                        </p>
-                      )}
-                      <div className="text-[11px] text-ois-text-subtle space-y-0.5">
-                        <p>Detected: {formatDate(cf.detectedAt, 'MMM d, HH:mm')} UTC</p>
-                        {cf.resolvedAt && <p>Resolved: {formatDate(cf.resolvedAt, 'MMM d, HH:mm')} UTC</p>}
-                        {cf.resolutionNote && (
-                          <p className="text-ois-text-muted mt-1 italic">"{cf.resolutionNote}"</p>
-                        )}
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))}
-              </>
-            )}
-          </div>
-
-          {/* Linked */}
-          <div className="space-y-3">
-            {change.linkedProblemIds.length > 0 && (
-              <Card>
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                  <h3 className="text-sm font-bold text-ois-text">Problems ({change.linkedProblemIds.length})</h3>
-                </div>
-                <CardBody className="p-0">
-                  {change.linkedProblemIds.map((id) => (
-                    <Link key={id} to={`/problems/${id}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg border-b border-ois-border last:border-0 transition-colors">
-                      <span className="font-mono text-sm font-bold text-ois-primary">{id}</span>
-                      <ExternalLink size={13} className="text-ois-text-subtle" />
-                    </Link>
-                  ))}
-                </CardBody>
-              </Card>
-            )}
-            {change.linkedIncidentIds.length > 0 && (
-              <Card>
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                  <h3 className="text-sm font-bold text-ois-text">Incidents ({change.linkedIncidentIds.length})</h3>
-                </div>
-                <CardBody className="p-0">
-                  {change.linkedIncidentIds.map((id) => (
-                    <Link key={id} to={`/incidents/${id}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg border-b border-ois-border last:border-0 transition-colors">
-                      <span className="font-mono text-sm font-bold text-ois-primary">{id}</span>
-                      <ExternalLink size={13} className="text-ois-text-subtle" />
-                    </Link>
-                  ))}
-                </CardBody>
-              </Card>
-            )}
-            {change.linkedReleasePublicId && (
-              <Card>
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                  <h3 className="text-sm font-bold text-ois-text">Release</h3>
-                </div>
-                <CardBody>
-                  <Link to={`/releases/${change.linkedReleasePublicId}`} className="flex items-center justify-between hover:opacity-80">
-                    <span className="font-mono text-sm font-bold text-ois-primary">{change.linkedReleasePublicId}</span>
-                    <ExternalLink size={13} className="text-ois-text-subtle" />
-                  </Link>
-                </CardBody>
-              </Card>
-            )}
-            {change.linkedKBSlugs.length > 0 && (
-              <Card>
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                  <h3 className="text-sm font-bold text-ois-text">KB Articles</h3>
-                </div>
-                <CardBody className="p-0">
-                  {change.linkedKBSlugs.map((slug) => (
-                    <Link key={slug} to={`/kb/${slug}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg border-b border-ois-border last:border-0 transition-colors">
-                      <span className="font-mono text-xs text-ois-primary">{slug}</span>
-                      <ExternalLink size={13} className="text-ois-text-subtle" />
-                    </Link>
-                  ))}
-                </CardBody>
-              </Card>
-            )}
-
-            {/* Capacity recommendations resolved by this change */}
-            {(() => {
-              const resolved = mockScalingRecommendations.filter(
-                r => r.implementedViaChangeId === change.id ||
-                     r.implementedViaChangeId === change.publicId
-              );
-              if (resolved.length === 0) return null;
-              return (
-                <Card>
-                  <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                    <h3 className="text-sm font-bold text-ois-text">Capacity Recommendations ({resolved.length})</h3>
-                    <p className="text-xs text-ois-text-muted mt-0.5">This change implements the following capacity actions</p>
+                    <span className="text-xs text-ois-text truncate">{name}</span>
                   </div>
-                  <CardBody className="p-0">
-                    {resolved.map(rec => (
-                      <div key={rec.id} className="flex items-center justify-between px-4 py-3 border-b border-ois-border last:border-0">
-                        <div>
-                          <span className="font-mono text-xs font-bold text-ois-primary">{rec.publicId}</span>
-                          <p className="text-xs text-ois-text mt-0.5">{rec.suggestedAction}</p>
-                          <p className="text-xs text-ois-text-muted">{rec.estimatedImpact}</p>
-                        </div>
-                        <Link to="/capacity" className="text-xs text-ois-primary hover:underline flex items-center gap-1 ml-4">
-                          Capacity <ExternalLink size={12} />
-                        </Link>
-                      </div>
-                    ))}
-                  </CardBody>
-                </Card>
-              );
-            })()}
-          </div>
-
-          {/* PIR */}
-          <Card>
-            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-              <h3 className="text-sm font-bold text-ois-text">Post-Implementation Review</h3>
+                ))}
             </div>
-            <CardBody>
-              {!isImplemented || !change.pir ? (
-                <div className="py-8 text-center">
-                  <ClipboardCheck size={32} className="mx-auto text-ois-text-subtle mb-3" />
-                  <p className="text-sm font-bold text-ois-text">PIR not yet conducted</p>
-                  <p className="text-xs text-ois-text-muted mt-1">
-                    {isImplemented
-                      ? 'No PIR has been filed for this change.'
-                      : 'This change has not been implemented. PIR will be available after closure.'}
-                  </p>
-                </div>
-              ) : (
-                <PIRPanel pir={change.pir} />
-              )}
-            </CardBody>
-          </Card>
-
-          {/* History */}
-          <Card>
-            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-              <h3 className="text-sm font-bold text-ois-text">Audit History</h3>
-            </div>
-            <CardBody>
-              <div className="py-8 text-center">
-                <History size={32} className="mx-auto text-ois-text-subtle mb-3" />
-                <p className="text-sm font-bold text-ois-text">No history available</p>
-                <p className="text-xs text-ois-text-muted mt-1">
-                  Audit log tracking is coming soon. Full change history will be recorded here.
-                </p>
-              </div>
-            </CardBody>
-          </Card>
-        </Tabs>
+          </SectionCard>
+        </aside>
       </div>
 
       {/* Cancel change confirmation modal */}
@@ -596,59 +637,6 @@ export const ChangeDetail: React.FC = () => {
           )
         }
       />
-
-      {/* Right sidebar */}
-      <div className="w-56 shrink-0 space-y-3">
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Quick Actions</h3>
-          </div>
-          <CardBody className="p-0">
-            <div className="divide-y divide-ois-border">
-              {[
-                { label: 'Approve change', primary: true, onClick: () => setActiveTab('approvals') },
-                { label: 'Open CAB workspace', onClick: () => navigate('/changes/cab') },
-                { label: 'Reschedule', onClick: () => setRescheduleOpen(true) },
-                { label: 'Cancel change', danger: true, onClick: () => setShowCancelModal(true) },
-              ].map(({ label, primary, danger, onClick }) => (
-                <button
-                  key={label}
-                  onClick={onClick}
-                  className={cn(
-                    'w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors',
-                    primary && 'text-ois-primary',
-                    danger && 'text-ois-danger',
-                    !primary && !danger && 'text-ois-text',
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Watchers</h3>
-          </div>
-          <CardBody>
-            <div className="space-y-2">
-              {[change.ownerName, ...change.approvals.map((a) => a.approverName)]
-                .filter((v, i, a) => a.indexOf(v) === i)
-                .slice(0, 5)
-                .map((name) => (
-                  <div key={name} className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-ois-primary/10 text-ois-primary text-[10px] font-bold flex items-center justify-center shrink-0">
-                      {name.split(' ').map((n) => n[0]).join('')}
-                    </div>
-                    <span className="text-xs text-ois-text truncate">{name}</span>
-                  </div>
-                ))}
-            </div>
-          </CardBody>
-        </Card>
-      </div>
     </div>
   );
 };
