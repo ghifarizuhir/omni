@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, Plus, Trash2, AlertTriangle, Mail, Phone, MessageSquare } from 'lucide-react';
+import { Camera, Plus, Trash2, AlertTriangle, Mail, Phone, MessageSquare, User, Bell, KeyRound, Palette, Plug } from 'lucide-react';
 import { AppearanceSettings } from '../../components/platform/AppearanceSettings';
 import { IntegrationCard } from '../../components/platform/IntegrationCard';
 import { ProfileForm } from '../../components/platform/ProfileForm';
@@ -19,21 +19,21 @@ type PanelId = 'profile' | 'notifications' | 'api-tokens' | 'appearance' | 'inte
 
 const NAV_SECTIONS: Array<{
   heading: string;
-  items: Array<{ label: string; panel: PanelId }>;
+  items: Array<{ label: string; panel: PanelId; icon: React.ReactNode }>;
 }> = [
   {
     heading: 'Account',
     items: [
-      { label: 'Profile',       panel: 'profile' },
-      { label: 'Notifications', panel: 'notifications' },
-      { label: 'API tokens',    panel: 'api-tokens' },
+      { label: 'Profile',       panel: 'profile',        icon: <User size={14} /> },
+      { label: 'Notifications', panel: 'notifications',  icon: <Bell size={14} /> },
+      { label: 'API tokens',    panel: 'api-tokens',     icon: <KeyRound size={14} /> },
     ],
   },
   {
     heading: 'Workspace',
     items: [
-      { label: 'Appearance',    panel: 'appearance' },
-      { label: 'Integrations',  panel: 'integrations' },
+      { label: 'Appearance',   panel: 'appearance',    icon: <Palette size={14} /> },
+      { label: 'Integrations', panel: 'integrations',  icon: <Plug size={14} /> },
     ],
   },
 ];
@@ -319,7 +319,7 @@ export const Settings: React.FC = () => {
   const [activePanel, setActivePanel] = useState<PanelId>('profile');
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
       {/* Page header */}
       <div className="shrink-0 border-b border-ois-border bg-ois-surface px-8 py-5">
         <h1 className="text-xl font-bold text-ois-text tracking-tight">Settings</h1>
@@ -329,11 +329,11 @@ export const Settings: React.FC = () => {
       </div>
 
       <div className="flex flex-1 min-h-0">
-        {/* Left nav */}
-        <aside className="w-48 shrink-0 border-r border-ois-border bg-ois-surface py-6 px-3 space-y-6 overflow-y-auto">
+        {/* Left nav — fixed height, never scrolls */}
+        <aside className="w-52 shrink-0 border-r border-ois-border bg-ois-surface flex flex-col py-6 px-3 space-y-6">
           {NAV_SECTIONS.map(section => (
             <div key={section.heading}>
-              <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest px-2 mb-1.5">
+              <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest px-3 mb-1.5">
                 {section.heading}
               </p>
               <ul className="space-y-0.5">
@@ -342,12 +342,19 @@ export const Settings: React.FC = () => {
                     <button
                       onClick={() => setActivePanel(item.panel)}
                       className={cn(
-                        'block w-full text-left px-2 py-1.5 text-sm rounded-md transition-colors',
+                        'relative flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-colors',
                         activePanel === item.panel
                           ? 'bg-ois-primary-pale text-ois-primary font-medium'
                           : 'text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text'
                       )}
                     >
+                      {/* Active indicator bar */}
+                      {activePanel === item.panel && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-ois-primary rounded-full" />
+                      )}
+                      <span className={activePanel === item.panel ? 'text-ois-primary' : 'text-ois-text-subtle'}>
+                        {item.icon}
+                      </span>
                       {item.label}
                     </button>
                   </li>
@@ -357,8 +364,8 @@ export const Settings: React.FC = () => {
           ))}
         </aside>
 
-        {/* Panel content */}
-        <main className="flex-1 overflow-y-auto py-8 px-8">
+        {/* Panel content — scrollable, sits on page bg for depth */}
+        <main className="flex-1 overflow-y-auto bg-ois-bg px-10 py-8">
           {PANELS[activePanel]}
         </main>
       </div>
