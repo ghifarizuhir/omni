@@ -59,6 +59,7 @@ import { ImprovementDetail } from './improvement/ImprovementDetail';
 import { ImprovementKanban } from './improvement/ImprovementKanban';
 import { ImprovementHeatmap } from './improvement/ImprovementHeatmap';
 import { BenefitTracker } from './improvement/BenefitTracker';
+import { ImprovementsLayout } from './improvement/ImprovementsLayout';
 import { BIAMatrixPage } from './continuity/BIAMatrix';
 import { DRPlans } from './continuity/DRPlans';
 import { DRTests } from './continuity/DRTests';
@@ -151,11 +152,14 @@ export const routes: RouteObject[] = [
       { path: 'reports/builder',                 element: <ReportBuilder /> },
       { path: 'reports',                         element: <Reports /> },
       { path: 'metrics/catalog',                 element: <MetricCatalog /> },
-      { path: 'improvement',                    element: <ImprovementRegister /> },
-      { path: 'improvement/kanban',             element: <ImprovementKanban /> },
-      { path: 'improvement/heatmap',            element: <ImprovementHeatmap /> },
-      { path: 'improvement/benefits',           element: <BenefitTracker /> },
-      { path: 'improvement/:initiativeId',      element: <ImprovementDetail /> },
+      { path: 'improvement', element: <ImprovementsLayout />, children: [
+        { index: true,        element: <ImprovementRegister /> },
+        { path: 'kanban',     element: <ImprovementKanban /> },
+        { path: 'heatmap',    element: <ImprovementHeatmap /> },
+        { path: 'benefits',   element: <BenefitTracker /> },
+      ]},
+      // Detail page lives outside the tab layout
+      { path: 'improvement/:initiativeId', element: <ImprovementDetail /> },
       // Doc 6 — Platform Features
       { path: 'inbox',                          element: <Inbox /> },
       { path: 'notifications/preferences',      element: <NotificationPreferences /> },
