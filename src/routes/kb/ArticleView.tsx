@@ -100,6 +100,15 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ lang, code }) => {
   );
 };
 
+type CalloutType = 'note' | 'warning' | 'danger' | 'tip';
+
+function detectCalloutType(firstLine: string): CalloutType {
+  if (/^\*\*(Warning|Caution)/i.test(firstLine)) return 'warning';
+  if (/^\*\*(Danger|Critical|Do NOT)/i.test(firstLine)) return 'danger';
+  if (/^\*\*(Tip|Recommended)/i.test(firstLine)) return 'tip';
+  return 'note';
+}
+
 function renderMarkdown(body: string): React.ReactNode[] {
   const lines = body.split('\n');
   const nodes: React.ReactNode[] = [];
@@ -170,17 +179,30 @@ function renderMarkdown(body: string): React.ReactNode[] {
         quoteLines.push(lines[i].slice(2));
         i++;
       }
-      const isNote    = quoteLines.some(l => l.startsWith('**Note') || l.startsWith('**When') || l.startsWith('**ARCHIVED') || l.startsWith('**DRAFT'));
-      const isWarning = quoteLines.some(l => l.startsWith('**Note:') || l.includes('ARCHIVED') || l.includes('DRAFT'));
+      const calloutType = detectCalloutType(quoteLines[0] ?? '');
+      const cm = {
+        note:    { label: 'NOTE',    border: '#1F4FD4', bg: 'bg-ois-primary-pale', iconCls: 'text-ois-primary', Icon: Info },
+        warning: { label: 'WARNING', border: '#F79009', bg: 'bg-ois-warning-pale', iconCls: 'text-ois-warning', Icon: AlertTriangle },
+        danger:  { label: 'DANGER',  border: '#F04438', bg: 'bg-ois-danger-pale',  iconCls: 'text-ois-danger',  Icon: ShieldAlert },
+        tip:     { label: 'TIP',     border: '#12B76A', bg: 'bg-ois-success-pale', iconCls: 'text-ois-success', Icon: Lightbulb },
+      }[calloutType];
+      const CalloutIcon = cm.Icon;
       nodes.push(
-        <blockquote key={`bq-${nodes.length}`} className={cn(
-          'my-4 pl-4 border-l-4 rounded-r-lg py-3 pr-4',
-          isWarning ? 'border-ois-warning bg-ois-warning-pale' : 'border-ois-primary bg-ois-primary-pale',
-        )}>
-          {quoteLines.map((ql, j) => (
-            <p key={j} className="text-sm text-ois-text leading-relaxed">{renderInline(ql)}</p>
-          ))}
-        </blockquote>
+        <div
+          key={`bq-${nodes.length}`}
+          className={cn('border-l-4 rounded-r-lg px-4 py-3.5 my-5', cm.bg)}
+          style={{ borderLeftColor: cm.border }}
+        >
+          <div className={cn('flex items-center gap-1.5 mb-1.5', cm.iconCls)}>
+            <CalloutIcon size={13} />
+            <span className="text-[10px] font-bold uppercase tracking-widest">{cm.label}</span>
+          </div>
+          <div className="space-y-1">
+            {quoteLines.map((ql, j) => (
+              <p key={j} className="text-[13.5px] leading-relaxed text-ois-text">{renderInline(ql)}</p>
+            ))}
+          </div>
+        </div>
       );
       continue;
     }
