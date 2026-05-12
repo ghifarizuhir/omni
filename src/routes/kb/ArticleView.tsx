@@ -250,6 +250,47 @@ function renderMarkdown(body: string): React.ReactNode[] {
       continue;
     }
 
+    // ── Table
+    if (line.startsWith('|')) {
+      flushList();
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].startsWith('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      const parseRow = (row: string) =>
+        row.split('|').slice(1, -1).map(cell => cell.trim());
+      const headers = parseRow(tableLines[0] ?? '');
+      const dataRows = tableLines.slice(2).map(parseRow);
+      nodes.push(
+        <div key={`tbl-${nodes.length}`} className="overflow-x-auto my-6 rounded-lg border border-ois-border">
+          <table className="w-full text-[13.5px] border-collapse">
+            <thead>
+              <tr>
+                {headers.map((h, hi) => (
+                  <th key={hi} className="bg-ois-surface-muted text-ois-text-subtle font-semibold uppercase text-[10px] tracking-widest px-4 py-2.5 text-left border-b border-ois-border whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ois-border">
+              {dataRows.map((row, ri) => (
+                <tr key={ri} className={ri % 2 === 1 ? 'bg-ois-surface-muted/40' : ''}>
+                  {row.map((cell, ci) => (
+                    <td key={ci} className="px-4 py-2.5 text-ois-text">
+                      {renderInline(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
     // ── Blank line
     if (line.trim() === '') {
       flushList();
