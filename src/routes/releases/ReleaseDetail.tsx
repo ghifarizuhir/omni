@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreVertical, ExternalLink, Tag, Check, Loader2, X, Clock, Lock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, MoreVertical, ExternalLink, Check, Loader2, X, Clock, Lock, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { Card, CardBody } from '../../components/ui/Card';
-import { Tabs } from '../../components/ui/Tabs';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { cn } from '../../lib/utils';
@@ -15,6 +13,10 @@ import { stageStatusMeta, riskMeta } from '../../lib/constants';
 import { ReleaseStage, ReleaseStatus } from '../../types/release';
 import { formatDate } from '../../lib/format';
 
+const RELEASE_TYPE_COLOR: Record<string, string> = {
+  major: '#B42318', minor: '#DC6803', patch: '#027A48', hotfix: '#F04438',
+};
+
 interface ToastState { message: string; variant: 'success' | 'danger' | 'info' }
 const Toast: React.FC<ToastState> = ({ message, variant }) => (
   <div className={cn(
@@ -25,6 +27,19 @@ const Toast: React.FC<ToastState> = ({ message, variant }) => (
   )}>
     {variant === 'success' && <CheckCircle2 size={15} />}
     {message}
+  </div>
+);
+
+const SectionCard: React.FC<{ title?: string; children: React.ReactNode; className?: string }> = ({
+  title, children, className,
+}) => (
+  <div className={cn('border border-ois-border rounded-lg bg-ois-surface overflow-hidden', className)}>
+    {title && (
+      <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
+        <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">{title}</p>
+      </div>
+    )}
+    <div className="p-4">{children}</div>
   </div>
 );
 
@@ -137,15 +152,61 @@ export const ReleaseDetail: React.FC = () => {
   ];
 
   return (
-    <div className="flex gap-6 min-h-0">
-      {/* Left sidebar */}
-      <div className="w-60 shrink-0 space-y-3">
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">At a glance</h3>
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+
+      {/* ── Pinned header ─────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-ois-border shrink-0 z-30">
+        {/* Nav row */}
+        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
+          <button
+            onClick={() => navigate('/releases')}
+            className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
+          >
+            <ArrowLeft size={15} /> Releases
+          </button>
+          <div className="flex items-center gap-2">
+            <ReleaseStatusPill status={localStatus ?? release.status} />
+            <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-ois-border bg-white text-sm text-ois-text-muted hover:bg-ois-surface-muted transition-colors">
+              <MoreVertical size={16} />
+            </button>
           </div>
-          <CardBody className="p-0">
-            <dl className="divide-y divide-ois-border text-xs">
+        </div>
+
+        {/* Entity header with release type stripe */}
+        <div className="flex items-start gap-0">
+          <div className="w-1 self-stretch shrink-0"
+            style={{ backgroundColor: RELEASE_TYPE_COLOR[release.type] ?? '#475467' }} />
+          <div className="flex-1 px-6 py-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="font-mono text-xs font-semibold text-ois-text-muted">{release.publicId}</span>
+              <ReleaseTypeChip type={release.type} />
+            </div>
+            <h1 className="text-xl font-bold text-ois-text">
+              {release.componentName} {release.version}
+              {release.name && <span className="font-normal text-ois-text-muted text-base"> — {release.name}</span>}
+            </h1>
+            <div className="flex flex-wrap gap-1 mt-2">
+              {release.tags.map(t => (
+                <span key={t} className="text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full">
+                  {t}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-ois-text-muted mt-2">
+              Release manager: <span className="font-medium text-ois-text">{release.releaseManagerName}</span> ·
+              Planned {formatDate(release.plannedReleaseDate, 'MMM d, HH:mm')} UTC
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Three-column body ──────────────────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0">
+
+        {/* Left sidebar — 280px */}
+        <aside className="w-[280px] shrink-0 overflow-y-auto border-r border-ois-border bg-white p-4 space-y-4">
+          <SectionCard title="At a glance">
+            <dl className="divide-y divide-ois-border text-xs -mx-4 -mb-4">
               {[
                 { label: 'Status', value: <ReleaseStatusPill status={localStatus ?? release.status} size="sm" /> },
                 { label: 'Type', value: <ReleaseTypeChip type={release.type} size="sm" /> },
@@ -160,274 +221,228 @@ export const ReleaseDetail: React.FC = () => {
                 </div>
               ))}
             </dl>
-          </CardBody>
-        </Card>
+          </SectionCard>
 
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Pipeline</h3>
-          </div>
-          <CardBody>
+          <SectionCard title="Pipeline">
             <StagesMiniStepper stages={release.stages} currentStageIndex={release.currentStageIndex} size="sm" />
-          </CardBody>
-        </Card>
+          </SectionCard>
 
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Composition</h3>
-          </div>
-          <CardBody>
+          <SectionCard title="Composition">
             <div className="space-y-1 text-xs text-ois-text-muted">
               <p>{release.composition.changes.length} change(s)</p>
               <p>{release.composition.problemsFixed.length} problem(s) fixed</p>
               <p>{release.composition.incidentsResolved.length} incident(s) resolved</p>
             </div>
-          </CardBody>
-        </Card>
-      </div>
+          </SectionCard>
+        </aside>
 
-      {/* Main */}
-      <div className="flex-1 min-w-0 space-y-4">
-        <div className="flex items-center justify-between">
-          <Link to="/releases" className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text">
-            <ArrowLeft size={16} /> Releases
-          </Link>
-          <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
-            <MoreVertical size={14} /> Actions
-          </Button>
+        {/* Center — tab bar + scrollable content */}
+        <div className="flex flex-col flex-1 min-w-0">
+          {/* Tab bar — shrink-0 pinned */}
+          <div className="border-b border-ois-border bg-white shrink-0 px-6">
+            <nav className="flex gap-8 overflow-x-auto scrollbar-hide">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'py-4 px-1 text-sm font-medium border-b-2 whitespace-nowrap transition-colors',
+                    activeTab === tab.id
+                      ? 'border-ois-primary text-ois-primary font-bold'
+                      : 'border-transparent text-ois-text-muted hover:text-ois-text hover:border-ois-border-strong',
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Scrollable tab content */}
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+
+            {/* Overview */}
+            {activeTab === 'overview' && (
+              <div className="space-y-4">
+                <SectionCard title="Description">
+                  <p className="text-sm text-ois-text leading-relaxed">{release.description}</p>
+                </SectionCard>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Changes', value: release.composition.changes.length },
+                    { label: 'Problems fixed', value: release.composition.problemsFixed.length },
+                    { label: 'Incidents resolved', value: release.composition.incidentsResolved.length },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="bg-ois-bg rounded-xl p-3 text-center border border-ois-border">
+                      <p className="text-2xl font-bold text-ois-text">{value}</p>
+                      <p className="text-xs text-ois-text-muted mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Composition */}
+            {activeTab === 'composition' && (
+              <div className="space-y-4">
+                {release.composition.changes.length > 0 && (
+                  <SectionCard title={`Changes (${release.composition.changes.length})`}>
+                    <div className="divide-y divide-ois-border -mx-4 -mb-4">
+                      {release.composition.changes.map((c) => (
+                        <Link key={c.publicId} to={`/changes/${c.publicId}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg transition-colors">
+                          <div>
+                            <span className="font-mono text-xs font-bold text-ois-primary">{c.publicId}</span>
+                            <span className="text-sm text-ois-text ml-3">{c.title}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="capitalize text-xs text-ois-text-muted">{c.type}</span>
+                            <span className="text-xs font-semibold capitalize" style={{ color: riskMeta[c.risk].color }}>{c.risk}</span>
+                            <ExternalLink size={12} className="text-ois-text-subtle" />
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+                {release.composition.problemsFixed.length > 0 && (
+                  <SectionCard title="Problems Fixed">
+                    <div className="divide-y divide-ois-border -mx-4 -mb-4">
+                      {release.composition.problemsFixed.map((p) => (
+                        <Link key={p.publicId} to={`/problems/${p.publicId}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg transition-colors">
+                          <span className="font-mono text-xs font-bold text-ois-primary">{p.publicId}</span>
+                          <span className="text-sm text-ois-text">{p.title}</span>
+                          <ExternalLink size={12} className="text-ois-text-subtle" />
+                        </Link>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+                {release.composition.incidentsResolved.length > 0 && (
+                  <SectionCard title="Incidents Resolved">
+                    <div className="divide-y divide-ois-border -mx-4 -mb-4">
+                      {release.composition.incidentsResolved.map((inc) => (
+                        <Link key={inc.publicId} to={`/incidents/${inc.publicId}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg transition-colors">
+                          <span className="font-mono text-xs font-bold text-ois-primary">{inc.publicId}</span>
+                          <span className="text-sm text-ois-text">{inc.title}</span>
+                          <ExternalLink size={12} className="text-ois-text-subtle" />
+                        </Link>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+                {release.composition.prerequisites.length > 0 && (
+                  <SectionCard title="Prerequisites">
+                    <div className="space-y-2">
+                      {release.composition.prerequisites.map((p, i) => (
+                        <div key={i} className="flex items-center gap-3 text-sm">
+                          <span className={cn('text-base', p.status === 'met' ? 'text-ois-success' : p.status === 'blocked' ? 'text-ois-danger' : 'text-ois-text-subtle')}>
+                            {p.status === 'met' ? '✓' : p.status === 'blocked' ? '✗' : '⏱'}
+                          </span>
+                          <span className="text-ois-text">{p.reference}</span>
+                          <Badge variant={p.status === 'met' ? 'success' : p.status === 'blocked' ? 'danger' : 'neutral'} className="text-[9px] ml-auto capitalize">
+                            {p.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+              </div>
+            )}
+
+            {/* Pipeline */}
+            {activeTab === 'pipeline' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  {localStages.map((stage, i) => (
+                    <StageCard
+                      key={stage.id}
+                      stage={stage}
+                      isCurrent={i === release.currentStageIndex}
+                      onDeploy={stage.status === 'pending' ? () => setDeployIdx(i) : undefined}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            {activeTab === 'notes' && (
+              <SectionCard title="Release Notes">
+                <pre className="text-sm text-ois-text font-sans whitespace-pre-wrap leading-relaxed">{release.releaseNotes}</pre>
+                {release.internalNotes && (
+                  <div className="mt-4 pt-4 border-t border-ois-border">
+                    <p className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-2">Internal Notes</p>
+                    <p className="text-sm text-ois-text-muted">{release.internalNotes}</p>
+                  </div>
+                )}
+              </SectionCard>
+            )}
+
+            {/* Feature Flags */}
+            {activeTab === 'flags' && (
+              <SectionCard title={`Feature Flags (${release.featureFlags.length})`}>
+                {release.featureFlags.length === 0 ? (
+                  <p className="text-sm text-ois-text-subtle italic">No feature flags for this release.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {release.featureFlags.map((f) => (
+                      <div key={f.key} className="p-3 bg-ois-bg rounded-lg border border-ois-border">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-mono text-xs font-bold text-ois-primary">{f.key}</span>
+                          <Badge variant={f.enabledByDefault ? 'success' : 'neutral'} className="text-[10px]">
+                            {f.enabledByDefault ? 'Enabled' : 'Disabled'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-ois-text">{f.description}</p>
+                        {f.targeting && <p className="text-[10px] text-ois-text-subtle mt-1">Targeting: {f.targeting}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+            )}
+
+            {/* History */}
+            {activeTab === 'history' && (
+              <SectionCard title="Audit History">
+                <p className="text-sm text-ois-text-subtle italic">
+                  No history available — Audit log tracking is coming soon.
+                </p>
+              </SectionCard>
+            )}
+
+          </div>
         </div>
 
-        {/* Header */}
-        <Card>
-          <CardBody className="p-5">
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-mono text-sm font-bold text-ois-primary">{release.publicId}</span>
-                  <ReleaseTypeChip type={release.type} />
-                </div>
-                <h1 className="text-xl font-bold text-ois-text">
-                  {release.componentName} {release.version}
-                  {release.name && <span className="font-normal text-ois-text-muted text-base"> — {release.name}</span>}
-                </h1>
-              </div>
-              <ReleaseStatusPill status={localStatus ?? release.status} />
-            </div>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {release.tags.map((t) => (
-                <span key={t} className="inline-flex items-center gap-1 bg-ois-bg border border-ois-border text-[10px] font-medium text-ois-text-muted px-2 py-0.5 rounded-full">
-                  <Tag size={9} />{t}
-                </span>
-              ))}
-            </div>
-            <p className="text-xs text-ois-text-muted">
-              Release manager: <span className="font-medium text-ois-text">{release.releaseManagerName}</span> ·
-              Planned {formatDate(release.plannedReleaseDate, 'MMM d, HH:mm')} UTC
-            </p>
-          </CardBody>
-        </Card>
-
-        <Tabs tabs={tabs} activeTabId={activeTab} onChange={setActiveTab}>
-          {/* Overview */}
-          <div className="space-y-4">
-            <Card>
-              <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                <h3 className="text-sm font-bold text-ois-text">Description</h3>
-              </div>
-              <CardBody>
-                <p className="text-sm text-ois-text leading-relaxed">{release.description}</p>
-              </CardBody>
-            </Card>
-            <div className="grid grid-cols-3 gap-3">
+        {/* Right sidebar — 280px */}
+        <aside className="w-[280px] shrink-0 overflow-y-auto border-l border-ois-border bg-white p-4 space-y-4">
+          <SectionCard title="Quick Actions">
+            <div className="space-y-1.5">
               {[
-                { label: 'Changes', value: release.composition.changes.length },
-                { label: 'Problems fixed', value: release.composition.problemsFixed.length },
-                { label: 'Incidents resolved', value: release.composition.incidentsResolved.length },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-ois-bg rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-ois-text">{value}</p>
-                  <p className="text-xs text-ois-text-muted mt-0.5">{label}</p>
-                </div>
+                { label: 'Promote to staging', action: () => setPromoteModalOpen(true), primary: true },
+                { label: 'Lock composition',   action: () => {},                         primary: false },
+                { label: 'Add change',         action: () => {},                         primary: false },
+              ].map(({ label, action, primary }) => (
+                <button key={label} onClick={action}
+                  className={cn(
+                    'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left',
+                    primary
+                      ? 'bg-ois-primary text-white hover:bg-ois-primary-hover'
+                      : 'border border-ois-border text-ois-text hover:bg-ois-surface-muted',
+                  )}>
+                  {label}
+                </button>
               ))}
+              <div className="pt-1 border-t border-ois-border">
+                <button onClick={() => setCancelModalOpen(true)}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-danger hover:bg-ois-danger-pale">
+                  Cancel release
+                </button>
+              </div>
             </div>
-          </div>
-
-          {/* Composition */}
-          <div className="space-y-4">
-            {release.composition.changes.length > 0 && (
-              <Card>
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                  <h3 className="text-sm font-bold text-ois-text">Changes ({release.composition.changes.length})</h3>
-                </div>
-                <CardBody className="p-0">
-                  {release.composition.changes.map((c) => (
-                    <Link key={c.publicId} to={`/changes/${c.publicId}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg border-b border-ois-border last:border-0 transition-colors">
-                      <div>
-                        <span className="font-mono text-xs font-bold text-ois-primary">{c.publicId}</span>
-                        <span className="text-sm text-ois-text ml-3">{c.title}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="capitalize text-xs text-ois-text-muted">{c.type}</span>
-                        <span className="text-xs font-semibold capitalize" style={{ color: riskMeta[c.risk].color }}>{c.risk}</span>
-                        <ExternalLink size={12} className="text-ois-text-subtle" />
-                      </div>
-                    </Link>
-                  ))}
-                </CardBody>
-              </Card>
-            )}
-            {release.composition.problemsFixed.length > 0 && (
-              <Card>
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                  <h3 className="text-sm font-bold text-ois-text">Problems Fixed</h3>
-                </div>
-                <CardBody className="p-0">
-                  {release.composition.problemsFixed.map((p) => (
-                    <Link key={p.publicId} to={`/problems/${p.publicId}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg border-b border-ois-border last:border-0 transition-colors">
-                      <span className="font-mono text-xs font-bold text-ois-primary">{p.publicId}</span>
-                      <span className="text-sm text-ois-text">{p.title}</span>
-                      <ExternalLink size={12} className="text-ois-text-subtle" />
-                    </Link>
-                  ))}
-                </CardBody>
-              </Card>
-            )}
-            {release.composition.incidentsResolved.length > 0 && (
-              <Card>
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                  <h3 className="text-sm font-bold text-ois-text">Incidents Resolved</h3>
-                </div>
-                <CardBody className="p-0">
-                  {release.composition.incidentsResolved.map((inc) => (
-                    <Link key={inc.publicId} to={`/incidents/${inc.publicId}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg border-b border-ois-border last:border-0 transition-colors">
-                      <span className="font-mono text-xs font-bold text-ois-primary">{inc.publicId}</span>
-                      <span className="text-sm text-ois-text">{inc.title}</span>
-                      <ExternalLink size={12} className="text-ois-text-subtle" />
-                    </Link>
-                  ))}
-                </CardBody>
-              </Card>
-            )}
-            {release.composition.prerequisites.length > 0 && (
-              <Card>
-                <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-                  <h3 className="text-sm font-bold text-ois-text">Prerequisites</h3>
-                </div>
-                <CardBody className="space-y-2">
-                  {release.composition.prerequisites.map((p, i) => (
-                    <div key={i} className="flex items-center gap-3 text-sm">
-                      <span className={cn('text-base', p.status === 'met' ? 'text-ois-success' : p.status === 'blocked' ? 'text-ois-danger' : 'text-ois-text-subtle')}>
-                        {p.status === 'met' ? '✓' : p.status === 'blocked' ? '✗' : '⏱'}
-                      </span>
-                      <span className="text-ois-text">{p.reference}</span>
-                      <Badge variant={p.status === 'met' ? 'success' : p.status === 'blocked' ? 'danger' : 'neutral'} className="text-[9px] ml-auto capitalize">
-                        {p.status}
-                      </Badge>
-                    </div>
-                  ))}
-                </CardBody>
-              </Card>
-            )}
-          </div>
-
-          {/* Pipeline */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
-              {localStages.map((stage, i) => (
-                <StageCard
-                  key={stage.id}
-                  stage={stage}
-                  isCurrent={i === release.currentStageIndex}
-                  onDeploy={stage.status === 'pending' ? () => setDeployIdx(i) : undefined}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Notes */}
-          <Card>
-            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-              <h3 className="text-sm font-bold text-ois-text">Release Notes</h3>
-            </div>
-            <CardBody>
-              <pre className="text-sm text-ois-text font-sans whitespace-pre-wrap leading-relaxed">{release.releaseNotes}</pre>
-              {release.internalNotes && (
-                <div className="mt-4 pt-4 border-t border-ois-border">
-                  <p className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-2">Internal Notes</p>
-                  <p className="text-sm text-ois-text-muted">{release.internalNotes}</p>
-                </div>
-              )}
-            </CardBody>
-          </Card>
-
-          {/* Feature flags */}
-          <Card>
-            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-              <h3 className="text-sm font-bold text-ois-text">Feature Flags ({release.featureFlags.length})</h3>
-            </div>
-            <CardBody>
-              {release.featureFlags.length === 0 ? (
-                <p className="text-sm text-ois-text-subtle italic">No feature flags for this release.</p>
-              ) : (
-                <div className="space-y-3">
-                  {release.featureFlags.map((f) => (
-                    <div key={f.key} className="p-3 bg-ois-bg rounded-lg border border-ois-border">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-mono text-xs font-bold text-ois-primary">{f.key}</span>
-                        <Badge variant={f.enabledByDefault ? 'success' : 'neutral'} className="text-[10px]">
-                          {f.enabledByDefault ? 'Enabled' : 'Disabled'}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-ois-text">{f.description}</p>
-                      {f.targeting && <p className="text-[10px] text-ois-text-subtle mt-1">Targeting: {f.targeting}</p>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardBody>
-          </Card>
-
-          {/* History */}
-          <Card>
-            <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-              <h3 className="text-sm font-bold text-ois-text">Audit History</h3>
-            </div>
-            <CardBody>
-              <p className="text-sm text-ois-text-subtle italic">
-                No history available — Audit log tracking is coming soon.
-              </p>
-            </CardBody>
-          </Card>
-        </Tabs>
-      </div>
-
-      {/* Right sidebar */}
-      <div className="w-52 shrink-0 space-y-3">
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Quick Actions</h3>
-          </div>
-          <CardBody className="p-0">
-            <button className="w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors border-b border-ois-border text-ois-text">
-              Lock composition
-            </button>
-            <button
-              className="w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors border-b border-ois-border text-ois-text"
-              onClick={() => setPromoteModalOpen(true)}
-            >
-              Promote to staging
-            </button>
-            <button
-              className="w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors border-b border-ois-border text-ois-danger"
-              onClick={() => setCancelModalOpen(true)}
-            >
-              Cancel release
-            </button>
-            <button className="w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-ois-bg transition-colors text-ois-text">
-              Add change
-            </button>
-          </CardBody>
-        </Card>
+          </SectionCard>
+        </aside>
       </div>
 
       {/* Promote to staging modal */}
