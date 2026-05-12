@@ -4,7 +4,7 @@ import {
   ArrowLeft, Edit3, Share2, MoreHorizontal, ThumbsUp, ThumbsDown,
   BookOpen, Eye, Clock, Tag, AlertTriangle, FileWarning,
   ChevronRight, Copy, Check, X, ExternalLink, Send,
-  Server, AlertCircle, BookMarked,
+  Server, AlertCircle, BookMarked, Info, Lightbulb, ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatDate, formatRelative } from '@/src/lib/format';
@@ -15,13 +15,13 @@ import { KBArticle, KBContentType, KBStatus } from '@/src/types/knowledge';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CONTENT_TYPE_META: Record<KBContentType, { label: string; color: string; bg: string }> = {
-  how_to:              { label: 'How-To',       color: 'text-ois-primary',  bg: 'bg-ois-primary-pale' },
-  troubleshooting:     { label: 'Troubleshoot', color: 'text-ois-warning',  bg: 'bg-ois-warning-pale' },
-  runbook:             { label: 'Runbook',       color: 'text-ois-success',  bg: 'bg-ois-success-pale' },
-  reference:           { label: 'Reference',     color: 'text-ois-info',     bg: 'bg-ois-info-pale' },
-  faq:                 { label: 'FAQ',           color: 'text-purple-600',   bg: 'bg-purple-50' },
-  incident_postmortem: { label: 'Postmortem',    color: 'text-ois-danger',   bg: 'bg-ois-danger-pale' },
+const CONTENT_TYPE_META: Record<KBContentType, { label: string; color: string; bg: string; stripe: string }> = {
+  how_to:              { label: 'How-To',       color: 'text-ois-primary',  bg: 'bg-ois-primary-pale',  stripe: '#1F4FD4' },
+  troubleshooting:     { label: 'Troubleshoot', color: 'text-ois-warning',  bg: 'bg-ois-warning-pale',  stripe: '#F79009' },
+  runbook:             { label: 'Runbook',       color: 'text-ois-success',  bg: 'bg-ois-success-pale',  stripe: '#12B76A' },
+  reference:           { label: 'Reference',     color: 'text-ois-info',     bg: 'bg-ois-info-pale',     stripe: '#0BA5EC' },
+  faq:                 { label: 'FAQ',           color: 'text-purple-600',   bg: 'bg-purple-50',         stripe: '#7C3AED' },
+  incident_postmortem: { label: 'Postmortem',    color: 'text-ois-danger',   bg: 'bg-ois-danger-pale',   stripe: '#F04438' },
 };
 
 // ── ToC helpers ───────────────────────────────────────────────────────────────
@@ -446,122 +446,116 @@ export const ArticleView: React.FC = () => {
   const rendered    = useMemo(() => renderMarkdown(article.body), [article.body]);
 
   return (
-    <div className="-mt-6 -mx-6 flex flex-col min-h-full">
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
 
-      {/* ── STICKY TOP BAR ────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-3 bg-ois-surface border-b border-ois-border shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={() => navigate('/kb')}
-            className="flex items-center gap-1.5 text-xs font-medium text-ois-text-muted hover:text-ois-primary transition-colors shrink-0"
-          >
-            <ArrowLeft size={14} /> KB
-          </button>
-          <span className="text-ois-border-strong shrink-0">/</span>
-          {category && <span className="text-xs text-ois-text-muted shrink-0">{category.name}</span>}
-          <span className="text-ois-border-strong shrink-0">/</span>
-          <span className={cn('inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0', ctMeta.bg, ctMeta.color)}>
-            {ctMeta.label}
-          </span>
-          <span className="font-mono text-[10px] text-ois-text-subtle shrink-0">{article.publicId}</span>
-        </div>
+      {/* ─── Top header ─────────────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-ois-border shrink-0 z-30">
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={() => navigate(`/kb/editor/${article.slug}`)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ois-border text-xs font-semibold text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text transition-colors"
-          >
-            <Edit3 size={13} /> Edit
-          </button>
-          <button
-            onClick={handleShare}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ois-border text-xs font-semibold text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text transition-colors"
-          >
-            {copied ? <><Check size={13} className="text-ois-success" /> Copied</> : <><Share2 size={13} /> Share</>}
-          </button>
-          <button className="p-1.5 rounded-lg border border-ois-border text-ois-text-muted hover:bg-ois-surface-muted transition-colors">
-            <MoreHorizontal size={15} />
-          </button>
-        </div>
-      </div>
+        {/* Nav row */}
+        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => navigate('/kb')}
+              className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors shrink-0"
+            >
+              <ArrowLeft size={15} /> Knowledge Base
+            </button>
+            {category && (
+              <>
+                <span className="text-ois-border-strong shrink-0">/</span>
+                <span className="text-sm text-ois-text-muted shrink-0 truncate max-w-[160px]">{category.name}</span>
+              </>
+            )}
+          </div>
 
-      {/* ── BODY ──────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden">
-
-        {/* Article column */}
-        <div className="flex-1 overflow-y-auto px-6 py-8">
-          <div className="max-w-[720px] mx-auto">
-
-            {/* Status banners */}
-            <StatusBanner status={article.status} />
-
-            {/* Title */}
-            <h1 className="text-[28px] font-extrabold text-ois-text leading-tight mb-4 tracking-tight">
-              {article.title}
-            </h1>
-
-            {/* Meta row */}
-            <div className="flex items-center flex-wrap gap-3 text-xs text-ois-text-muted mb-3">
-              <span>By <span className="font-semibold text-ois-text">{article.authorName}</span></span>
-              <span>·</span>
-              <span>Last updated {formatDate(article.updatedAt, 'MMM d, yyyy')}</span>
-              {article.reviewedAt && (
-                <>
-                  <span>·</span>
-                  <span>Reviewed {formatDate(article.reviewedAt, 'MMM d')}</span>
-                </>
-              )}
-              {article.reviewDueAt && (
-                <>
-                  <span>·</span>
-                  <span>Next review {formatDate(article.reviewDueAt, 'MMM d')}</span>
-                </>
-              )}
-            </div>
-
-            {/* Engagement row */}
-            <div className="flex items-center gap-4 text-xs text-ois-text-subtle mb-3 flex-wrap">
-              {article.viewCount > 0 && (
-                <span className="flex items-center gap-1"><Eye size={12} /> {article.viewCount.toLocaleString()} views</span>
-              )}
-              {totalVotes > 0 && (
-                <span className="flex items-center gap-1">
-                  <ThumbsUp size={12} />
-                  {helpfulCount} helpful · {unhelpfulCount} unhelpful
-                </span>
-              )}
-              {article.averageReadTimeSeconds > 0 && (
-                <span className="flex items-center gap-1">
-                  <Clock size={12} />
-                  {Math.ceil(article.averageReadTimeSeconds / 60)} min read
-                </span>
-              )}
-              {article.version > 1 && (
-                <span>v{article.version}</span>
-              )}
-            </div>
-
-            {/* Tags */}
-            <div className="flex items-center gap-1.5 flex-wrap mb-6">
-              {article.tags.map(tag => (
-                <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-ois-surface-muted border border-ois-border text-ois-text-subtle">
-                  {tag}
-                </span>
-              ))}
-            </div>
-
-            <hr className="border-ois-border mb-6" />
-
-            {/* Rendered markdown body */}
-            <div ref={articleRef} className="prose-sm max-w-none">
-              {rendered}
-            </div>
-
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => navigate(`/kb/editor/${article.slug}`)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ois-border text-xs font-semibold text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text transition-colors"
+            >
+              <Edit3 size={13} /> Edit
+            </button>
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ois-border text-xs font-semibold text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text transition-colors"
+            >
+              {copied ? <><Check size={13} className="text-ois-success" /> Copied</> : <><Share2 size={13} /> Share</>}
+            </button>
+            <button className="p-1.5 rounded-lg border border-ois-border text-ois-text-muted hover:bg-ois-surface-muted transition-colors">
+              <MoreHorizontal size={15} />
+            </button>
           </div>
         </div>
 
-        {/* ── RIGHT RAIL ────────────────────────────────────────────────── */}
-        <aside className="w-[240px] shrink-0 border-l border-ois-border overflow-y-auto py-5 px-4 space-y-4">
+        {/* Article header — content-type stripe + metadata */}
+        <div className="flex items-start gap-0">
+          <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: ctMeta.stripe }} />
+          <div className="flex-1 px-6 py-4">
+            {/* Content type + status badges */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className={cn('inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full', ctMeta.bg, ctMeta.color)}>
+                <BookMarked size={9} /> {ctMeta.label}
+              </span>
+              {article.status !== 'published' && (
+                <span className={cn(
+                  'inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full',
+                  article.status === 'archived'  ? 'bg-ois-warning-pale text-ois-warning' :
+                  article.status === 'draft'      ? 'bg-ois-surface-muted text-ois-text-muted border border-ois-border' :
+                  article.status === 'in_review'  ? 'bg-ois-info-pale text-ois-info' :
+                  'bg-ois-danger-pale text-ois-danger'
+                )}>
+                  {article.status.replace('_', ' ').toUpperCase()}
+                </span>
+              )}
+            </div>
+            {/* ID + title */}
+            <p className="font-mono text-xs text-ois-text-subtle mb-1">{article.publicId}</p>
+            <h1 className="text-xl font-bold text-ois-text leading-tight">{article.title}</h1>
+            {/* Tags */}
+            {article.tags.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                {article.tags.map(tag => (
+                  <span key={tag} className="inline-flex items-center gap-1 text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full">
+                    <Tag size={9} />{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* Meta row */}
+            <div className="flex items-center gap-3 mt-2.5 text-xs text-ois-text-subtle flex-wrap">
+              <span>By <span className="font-medium text-ois-text">{article.authorName}</span></span>
+              <span>· Updated {formatDate(article.updatedAt, 'MMM d, yyyy')}</span>
+              {article.averageReadTimeSeconds > 0 && (
+                <span className="flex items-center gap-1">
+                  · <Clock size={11} /> {Math.ceil(article.averageReadTimeSeconds / 60)} min read
+                </span>
+              )}
+              {article.viewCount > 0 && (
+                <span className="flex items-center gap-1">
+                  · <Eye size={11} /> {article.viewCount.toLocaleString()} views
+                </span>
+              )}
+              {article.version > 1 && <span>· v{article.version}</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Body: two independent-scroll columns ─────────────────────────────── */}
+      <div className="flex flex-1 min-h-0">
+
+        {/* Main article content */}
+        <div className="flex-1 overflow-y-auto px-8 py-6">
+          <div className="max-w-[720px] mx-auto">
+            <StatusBanner status={article.status} />
+            <div ref={articleRef} className="prose-sm max-w-none">
+              {rendered}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Right rail ────────────────────────────────────────────────── */}
+        <aside className="w-[240px] shrink-0 border-l border-ois-border overflow-y-auto py-5 px-4 space-y-4 bg-white">
 
           {/* Was this helpful? */}
           <SideCard title="Was this helpful?">
