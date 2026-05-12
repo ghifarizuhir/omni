@@ -419,21 +419,18 @@ export const ReleaseDetail: React.FC = () => {
         <aside className="w-[280px] shrink-0 overflow-y-auto border-l border-ois-border bg-white p-4 space-y-4">
           <SectionCard title="Quick Actions">
             <div className="space-y-1.5">
-              {[
-                { label: 'Promote to staging', action: () => setPromoteModalOpen(true), primary: true },
-                { label: 'Lock composition',   action: () => {},                         primary: false },
-                { label: 'Add change',         action: () => {},                         primary: false },
-              ].map(({ label, action, primary }) => (
-                <button key={label} onClick={action}
-                  className={cn(
-                    'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left',
-                    primary
-                      ? 'bg-ois-primary text-white hover:bg-ois-primary-hover'
-                      : 'border border-ois-border text-ois-text hover:bg-ois-surface-muted',
-                  )}>
-                  {label}
-                </button>
-              ))}
+              <button onClick={() => setPromoteModalOpen(true)}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left bg-ois-primary text-white hover:bg-ois-primary-hover">
+                Promote to staging
+              </button>
+              <button disabled
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-left border border-ois-border text-ois-text opacity-40 cursor-not-allowed">
+                Lock composition
+              </button>
+              <button disabled
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-left border border-ois-border text-ois-text opacity-40 cursor-not-allowed">
+                Add change
+              </button>
               <div className="pt-1 border-t border-ois-border">
                 <button onClick={() => setCancelModalOpen(true)}
                   className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-danger hover:bg-ois-danger-pale">
