@@ -245,7 +245,13 @@ function renderMarkdown(body: string): React.ReactNode[] {
     // ── Horizontal rule
     if (line.match(/^---+$/)) {
       flushList();
-      nodes.push(<hr key={`hr-${nodes.length}`} className="my-6 border-ois-border" />);
+      nodes.push(
+        <div key={`hr-${nodes.length}`} className="my-8 flex items-center gap-4">
+          <div className="flex-1 h-px bg-ois-border" />
+          <span className="text-ois-text-subtle text-xs">·</span>
+          <div className="flex-1 h-px bg-ois-border" />
+        </div>
+      );
       i++;
       continue;
     }
@@ -301,7 +307,7 @@ function renderMarkdown(body: string): React.ReactNode[] {
     // ── Paragraph
     flushList();
     nodes.push(
-      <p key={`p-${nodes.length}`} className="text-[14.5px] text-ois-text-muted leading-relaxed my-2">
+      <p key={`p-${nodes.length}`} className="text-[15px] text-ois-text-muted leading-[1.8] my-4">
         {renderInline(line)}
       </p>
     );
@@ -616,7 +622,7 @@ export const ArticleView: React.FC = () => {
 
         {/* Main article content */}
         <div className="flex-1 overflow-y-auto px-8 py-6">
-          <div className="max-w-[720px] mx-auto">
+          <div className="max-w-[740px] mx-auto">
             <StatusBanner status={article.status} />
             <div ref={articleRef} className="prose-sm max-w-none">
               {rendered}
