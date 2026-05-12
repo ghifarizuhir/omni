@@ -19,7 +19,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, className }) => {
   const typeMeta = eventTypeMeta[event.type];
 
   const handleCardClick = () => {
-    navigate(`/events/${event.publicId}`);
+    navigate(`/monitoring/events/${event.publicId}`);
   };
 
   const stopProp = (e: React.MouseEvent) => {

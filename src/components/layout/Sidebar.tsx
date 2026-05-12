@@ -165,12 +165,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
                 </SidebarSection>
 
                 <SidebarSection label="Monitoring" collapsed={collapsed}>
-                  <SidebarItem icon={<Activity size={18} />} label="Overview" to="/monitoring" collapsed={collapsed} />
-                  <SidebarItem icon={<Radio size={18} />} label="Event Stream" to="/events" collapsed={collapsed} />
-                  <SidebarItem icon={<Shield size={18} />} label="Rules" to="/monitoring/rules" collapsed={collapsed} />
-                  <SidebarItem icon={<GitBranch size={18} />} label="Alert Routing" to="/monitoring/routing" collapsed={collapsed} />
-                  <SidebarItem icon={<CircleDot size={18} />} label="Coverage" to="/monitoring/coverage" collapsed={collapsed} />
-                  <SidebarItem icon={<Zap size={18} />} label="Status Page" to="/status" collapsed={collapsed} />
+                  <SidebarItem icon={<Activity size={18} />} label="Monitoring" to="/monitoring" collapsed={collapsed} />
+                  <SidebarItem icon={<CircleDot size={18} />} label="Status Page" to="/status" collapsed={collapsed} />
                 </SidebarSection>
 
                 <SidebarSection label="Measurement" collapsed={collapsed}>

@@ -60,67 +60,10 @@ export const MonitoringOverview: React.FC = () => {
     };
   }, []);
 
-  // ── Accent color from live severity ─────────────────────────────────────
-  const accentColor =
-    kpis.p1Open > 0 ? '#B42318' :
-    kpis.p2Open > 0 ? '#DC6803' :
-    '#12B76A';
-
   const feedEvents = activeEvents.slice(0, 8);
 
   return (
-    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
-
-      {/* ── Header ── */}
-      <div className="bg-ois-surface border-b border-ois-border shrink-0 z-30">
-
-        {/* Nav row */}
-        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
-          <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
-            <span className="font-medium text-ois-text-muted">Monitoring</span>
-            <span>·</span>
-            <span>Overview</span>
-          </div>
-          <button
-            onClick={() => navigate('/events')}
-            className="flex items-center gap-1.5 text-xs font-medium text-ois-primary hover:underline transition-colors"
-          >
-            Open Event Stream <ArrowRight size={12} />
-          </button>
-        </div>
-
-        {/* Title block */}
-        <div className="flex items-stretch">
-          <div className="w-1 shrink-0 transition-colors duration-500" style={{ backgroundColor: accentColor }} />
-          <div className="flex-1 px-6 py-4">
-            <h1 className="text-xl font-bold text-ois-text">Monitoring</h1>
-            <div className="flex items-center gap-3 mt-1 text-xs text-ois-text-muted flex-wrap">
-              <span className="font-semibold text-ois-text">{kpis.active} active</span>
-              {kpis.p1Open > 0 && (
-                <>
-                  <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-                  <span className="font-semibold text-ois-danger">{kpis.p1Open} P1 open</span>
-                </>
-              )}
-              {kpis.p2Open > 0 && (
-                <>
-                  <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-                  <span className="font-semibold text-ois-warning">{kpis.p2Open} P2 open</span>
-                </>
-              )}
-              {kpis.unacknowledged > 0 && (
-                <>
-                  <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-                  <span>{kpis.unacknowledged} unacknowledged</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Body ── */}
-      <div className="flex flex-1 min-h-0">
+    <div className="flex flex-1 min-h-0">
 
         {/* Main column */}
         <div className="flex-1 min-w-0 overflow-y-auto px-6 py-5 space-y-5">
@@ -171,12 +114,12 @@ export const MonitoringOverview: React.FC = () => {
                   <EventCard
                     key={event.id}
                     event={event}
-                    onClick={() => navigate(`/events/${event.publicId}`)}
+                    onClick={() => navigate(`/monitoring/events/${event.publicId}`)}
                   />
                 ))}
                 {activeEvents.length > feedEvents.length && (
                   <Link
-                    to="/events"
+                    to="/monitoring/events"
                     className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-ois-card border border-ois-border bg-ois-surface text-xs font-medium text-ois-primary hover:bg-ois-surface-muted transition-colors"
                   >
                     View all {activeEvents.length} active events <ArrowRight size={12} />
@@ -271,7 +214,6 @@ export const MonitoringOverview: React.FC = () => {
           </div>
 
         </aside>
-      </div>
     </div>
   );
 };

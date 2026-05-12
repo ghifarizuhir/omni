@@ -7,6 +7,7 @@ import { CMDBList } from './cmdb/CMDBList';
 import { CMDBDetail } from './cmdb/CMDBDetail';
 import { CMDBGraph } from './cmdb/CMDBGraph';
 import { CMDBAudit } from './cmdb/CMDBAudit';
+import { MonitoringLayout } from './monitoring/MonitoringLayout';
 import { MonitoringOverview } from './monitoring/MonitoringOverview';
 import { EventStream } from './monitoring/EventStream';
 import { EventDetail } from './monitoring/EventDetail';
@@ -89,13 +90,15 @@ export const routes: RouteObject[] = [
       { path: 'cmdb/graph',                     element: <CMDBGraph /> },
       { path: 'cmdb/audit',                     element: <CMDBAudit /> },
       { path: 'cmdb/:ciId',                     element: <CMDBDetail /> },
-      // Doc 2 — Monitoring
-      { path: 'monitoring',                     element: <MonitoringOverview /> },
-      { path: 'events',                         element: <EventStream /> },
-      { path: 'events/:id',                     element: <EventDetail /> },
-      { path: 'monitoring/rules',               element: <MonitoringRules /> },
-      { path: 'monitoring/routing',             element: <AlertRouting /> },
-      { path: 'monitoring/coverage',            element: <CoverageReport /> },
+      // Doc 2 — Monitoring (tab layout)
+      { path: 'monitoring', element: <MonitoringLayout />, children: [
+        { index: true,           element: <MonitoringOverview /> },
+        { path: 'events',        element: <EventStream /> },
+        { path: 'rules',         element: <MonitoringRules /> },
+        { path: 'routing',       element: <AlertRouting /> },
+        { path: 'coverage',      element: <CoverageReport /> },
+      ]},
+      { path: 'monitoring/events/:id',          element: <EventDetail /> },
       // Doc 3 — Operational Response
       { path: 'incidents',                         element: <IncidentQueue /> },
       { path: 'incidents/analytics',               element: <IncidentAnalytics /> },

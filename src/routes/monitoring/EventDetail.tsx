@@ -192,7 +192,7 @@ export const EventDetail: React.FC = () => {
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
       {/* Header Navigation */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <Link to="/events" className="flex items-center gap-2 text-sm font-bold text-ois-text-muted hover:text-ois-primary transition-colors">
+        <Link to="/monitoring/events" className="flex items-center gap-2 text-sm font-bold text-ois-text-muted hover:text-ois-primary transition-colors">
           <ArrowLeft size={16} /> Back to events
         </Link>
         <div className="flex items-center gap-2">

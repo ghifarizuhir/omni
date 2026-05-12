@@ -184,14 +184,8 @@ export const CoverageReport: React.FC = () => {
     }
   };
 
-  const coverageAccent = criticalGaps.length > 0 ? '#B42318'
-    : coverageData.filter(d => d.rules.length === 0).length > 0 ? '#DC6803'
-    : '#12B76A';
-
-  const coveredCount = coverageData.filter(d => d.rules.length > 0).length;
-
   return (
-    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+    <div className="flex flex-col flex-1 min-h-0">
 
       {/* Toast — fixed */}
       {toastMessage && (
@@ -200,39 +194,14 @@ export const CoverageReport: React.FC = () => {
         </div>
       )}
 
-      {/* ── Header ── */}
-      <div className="bg-ois-surface border-b border-ois-border shrink-0 z-30">
-        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
-          <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
-            <span className="font-medium text-ois-text-muted">Monitoring</span>
-            <span>·</span>
-            <span>Coverage</span>
-          </div>
-          <Button variant="primary" size="sm" className="gap-1.5">
-            <RefreshCw size={13} /> Re-analyze
-          </Button>
-        </div>
-        <div className="flex items-stretch">
-          <div className="w-1 shrink-0" style={{ backgroundColor: coverageAccent }} />
-          <div className="flex-1 px-6 py-4">
-            <h1 className="text-xl font-bold text-ois-text">Monitoring Coverage</h1>
-            <div className="flex items-center gap-3 mt-1 text-xs text-ois-text-muted flex-wrap">
-              <span className="font-medium text-ois-text">{coverageData.length} CIs total</span>
-              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-              <span className="text-ois-success">{coveredCount} with rules</span>
-              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-              <span className="text-ois-text-muted">{coverageData.length - coveredCount} without rules</span>
-              {criticalGaps.length > 0 && (
-                <>
-                  <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-                  <span className="font-semibold text-ois-danger">{criticalGaps.length} critical gaps</span>
-                </>
-              )}
-              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-              <span className="text-ois-text-subtle">Last analyzed: 4m ago</span>
-            </div>
-          </div>
-        </div>
+      {/* ── Action row ── */}
+      <div className="shrink-0 flex items-center justify-end gap-2 px-6 py-2.5 border-b border-ois-border bg-ois-surface">
+        <Button variant="ghost" size="sm" className="gap-1.5 text-ois-text-muted">
+          <RefreshCw size={13} /> Re-analyze
+        </Button>
+        <Button variant="primary" size="sm">
+          Export Report
+        </Button>
       </div>
 
       {/* ── Body ── */}

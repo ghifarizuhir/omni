@@ -298,43 +298,23 @@ export const AlertRouting: React.FC = () => {
   };
 
   return (
-    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+    <div className="flex flex-col flex-1 min-h-0">
 
-      {/* Toast — fixed, works anywhere in tree */}
+      {/* Toast — fixed */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-ois-text text-white px-5 py-3 rounded-xl shadow-xl text-sm font-semibold animate-in fade-in slide-in-from-bottom-2 duration-200">
           {toast}
         </div>
       )}
 
-      {/* ── Header ── */}
-      <div className="bg-ois-surface border-b border-ois-border shrink-0 z-30">
-        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
-          <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
-            <span className="font-medium text-ois-text-muted">Monitoring</span>
-            <span>·</span>
-            <span>Alert Routing</span>
-          </div>
-          <Button variant="primary" size="sm" className="gap-1.5" onClick={handleNewRoute}>
-            <Plus size={13} /> New route
-          </Button>
-        </div>
-        <div className="flex items-stretch">
-          <div className="w-1 shrink-0 bg-ois-primary" />
-          <div className="flex-1 px-6 py-4">
-            <h1 className="text-xl font-bold text-ois-text">Alert Routing</h1>
-            <div className="flex items-center gap-3 mt-1 text-xs text-ois-text-muted flex-wrap">
-              <span className="font-medium text-ois-text">{routes.length} routes</span>
-              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-              <span>{mockMonitoringRules.length} rules using these routes</span>
-              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-              <span>{totalChannelCount} channels configured</span>
-            </div>
-          </div>
-        </div>
+      {/* ── Action row ── */}
+      <div className="shrink-0 flex items-center justify-end px-6 py-2.5 border-b border-ois-border bg-ois-surface">
+        <Button variant="primary" size="sm" className="gap-1.5" onClick={handleNewRoute}>
+          <Plus size={13} /> New route
+        </Button>
       </div>
 
-      {/* ── Body: split panel, fills remaining height ── */}
+      {/* ── Body: split panel ── */}
       <div className="flex gap-6 flex-1 min-h-0 px-6 py-5">
         {/* Left Column - Route List */}
         <div className="w-[400px] flex flex-col gap-4 overflow-hidden">

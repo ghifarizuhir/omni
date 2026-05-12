@@ -79,14 +79,6 @@ export const EventStream: React.FC = () => {
     return result;
   }, [timeRange, searchQuery, statusFilter, severityFilter, sourceFilter, typeFilter, activeQuickFilter, isPaused, frozenEvents]);
 
-  // Derive accent color from live severity of active events
-  const accentColor = useMemo(() => {
-    const active = filteredEvents.filter(e => e.status === 'open' || e.status === 'acknowledged');
-    if (active.some(e => e.severity === 'P1')) return '#B42318';
-    if (active.some(e => e.severity === 'P2')) return '#DC6803';
-    return '#1F4FD4';
-  }, [filteredEvents]);
-
   const togglePause = () => {
     if (!isPaused) setFrozenEvents([...filteredEvents]);
     else setFrozenEvents([]);
@@ -162,86 +154,57 @@ export const EventStream: React.FC = () => {
   };
 
   return (
-    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+    <div className="flex flex-col flex-1 min-h-0">
 
-      {/* ── Header ── */}
-      <div className="bg-ois-surface border-b border-ois-border shrink-0 z-30">
-
-        {/* Nav row */}
-        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
-          <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
-            <span className="font-medium text-ois-text-muted">Monitoring</span>
-            <span>·</span>
-            <span>Event Stream</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={togglePause}>
-              {isPaused
-                ? <><Play size={13} className="fill-current" /> Resume</>
-                : <><Pause size={13} className="fill-current" /> Pause</>}
-            </Button>
-            <div className="relative">
-              <Button variant="outline" size="sm" className="gap-1" onClick={() => setTimeRangeOpen(v => !v)}>
-                {TIME_RANGE_LABELS[timeRange]}
-                <ChevronDown size={13} className={cn('transition-transform', timeRangeOpen && 'rotate-180')} />
-              </Button>
-              {timeRangeOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setTimeRangeOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[140px]">
-                    {(Object.entries(TIME_RANGE_LABELS) as [TimeRange, string][]).map(([key, label]) => (
-                      <button
-                        key={key}
-                        onClick={() => { setTimeRange(key); setTimeRangeOpen(false); }}
-                        className={cn(
-                          'w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors',
-                          timeRange === key ? 'font-semibold text-ois-primary' : 'text-ois-text'
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
-              <Download size={13} /> Export
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 lg:hidden"
-              onClick={() => setShowStatsDrawer(true)}
-            >
-              <BarChart3 size={13} /> Stats
-            </Button>
-          </div>
-        </div>
-
-        {/* Page header — accent strip + title + meta */}
-        <div className="flex items-stretch">
-          <div className="w-1 shrink-0 transition-colors duration-500" style={{ backgroundColor: accentColor }} />
-          <div className="flex-1 px-6 py-4">
-            <h1 className="text-xl font-bold text-ois-text">Event Stream</h1>
-            <div className="flex items-center gap-3 mt-1 text-xs text-ois-text-muted flex-wrap">
-              <span>{mockEvents.length} events in {TIME_RANGE_LABELS[timeRange].toLowerCase()}</span>
+      {/* ── Action row ── */}
+      <div className="shrink-0 flex items-center justify-between px-6 py-2 border-b border-ois-border bg-ois-surface">
+        <div className="flex items-center gap-3 text-xs text-ois-text-muted">
+          <span>{mockEvents.length} events in {TIME_RANGE_LABELS[timeRange].toLowerCase()}</span>
+          {p1p2Count > 0 && (
+            <>
               <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-              <span className="font-medium text-ois-text">{openCount} open</span>
-              {p1p2Count > 0 && (
-                <>
-                  <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-                  <span className="font-semibold text-ois-danger">{p1p2Count} P1/P2 unacknowledged</span>
-                </>
-              )}
-              {isPaused && (
-                <>
-                  <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-                  <span className="font-semibold text-ois-warning">Stream paused</span>
-                </>
-              )}
-            </div>
+              <span className="font-semibold text-ois-danger">{p1p2Count} P1/P2 open</span>
+            </>
+          )}
+          {isPaused && <span className="font-semibold text-ois-warning">· paused</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={togglePause}>
+            {isPaused
+              ? <><Play size={13} className="fill-current" /> Resume</>
+              : <><Pause size={13} className="fill-current" /> Pause</>}
+          </Button>
+          <div className="relative">
+            <Button variant="outline" size="sm" className="gap-1" onClick={() => setTimeRangeOpen(v => !v)}>
+              {TIME_RANGE_LABELS[timeRange]}
+              <ChevronDown size={13} className={cn('transition-transform', timeRangeOpen && 'rotate-180')} />
+            </Button>
+            {timeRangeOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setTimeRangeOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[140px]">
+                  {(Object.entries(TIME_RANGE_LABELS) as [TimeRange, string][]).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => { setTimeRange(key); setTimeRangeOpen(false); }}
+                      className={cn(
+                        'w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors',
+                        timeRange === key ? 'font-semibold text-ois-primary' : 'text-ois-text'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
+            <Download size={13} /> Export
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 lg:hidden" onClick={() => setShowStatsDrawer(true)}>
+            <BarChart3 size={13} /> Stats
+          </Button>
         </div>
       </div>
 
@@ -368,7 +331,7 @@ export const EventStream: React.FC = () => {
                       <div className="flex-1 h-px bg-ois-border" />
                     </div>
                     {events.map(event => (
-                      <EventCard key={event.id} event={event} onClick={() => navigate(`/events/${event.publicId}`)} />
+                      <EventCard key={event.id} event={event} onClick={() => navigate(`/monitoring/events/${event.publicId}`)} />
                     ))}
                   </div>
                 ))
