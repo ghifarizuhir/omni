@@ -1,29 +1,10 @@
 import React, { useState } from 'react';
-import { Check, CheckCheck, Bell, User as UserIcon, MessageSquare, AlertCircle, Info, Settings } from 'lucide-react';
+import { Check, Bell, MessageSquare, Settings, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { cn } from '@/src/lib/utils';
 import { mockNotifications } from '@/src/mocks';
-import { getArticleById } from '@/src/mocks/kbArticles';
 import { formatRelative } from '@/src/lib/format';
-import { motion } from 'motion/react';
-
-function resolveNotificationUrl(sourceModule: string | undefined, sourceRef: string | undefined, notificationId?: string): string | null {
-  if (!sourceModule) return null;
-  // ntf-011 is a capacity threshold alert — link to Reports
-  if (notificationId === 'ntf-011') return '/reports';
-  if (!sourceRef) return null;
-  if (sourceModule === 'kb') {
-    const art = getArticleById(sourceRef);
-    return art ? `/kb/${art.slug}` : null;
-  }
-  if (sourceModule === 'incident') return `/incidents/${sourceRef}`;
-  if (sourceModule === 'problem') return `/problems/${sourceRef}`;
-  if (sourceModule === 'request') return `/requests/${sourceRef}`;
-  if (sourceModule === 'change') return `/changes/${sourceRef}`;
-  if (sourceModule === 'release') return `/releases/${sourceRef}`;
-  return null;
-}
 
 interface NotificationDropdownProps {
   onClose: () => void;
@@ -55,7 +36,9 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
 
       <div className="flex border-b border-ois-border">
         <Tab active={filter === 'all'} onClick={() => setFilter('all')}>All</Tab>
-        <Tab active={filter === 'unread'} onClick={() => setFilter('unread')}>Unread {unreadCount > 0 && `(${unreadCount})`}</Tab>
+        <Tab active={filter === 'unread'} onClick={() => setFilter('unread')}>
+          Unread {unreadCount > 0 && `(${unreadCount})`}
+        </Tab>
         <Tab active={filter === 'mentions'} onClick={() => setFilter('mentions')}>Mentions</Tab>
       </div>
 
@@ -65,42 +48,42 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
             <div
               key={notification.id}
               onClick={() => {
-                const url = resolveNotificationUrl(notification.sourceModule, notification.sourceRef, notification.id);
-                if (url) { onClose(); navigate(url); }
+                if (notification.url) { onClose(); navigate(notification.url); }
               }}
               className={cn(
-                "p-4 hover:bg-ois-surface-muted transition-colors flex gap-3 relative",
-                resolveNotificationUrl(notification.sourceModule, notification.sourceRef, notification.id) ? "cursor-pointer" : "cursor-default",
-                !notification.readAt && "bg-ois-primary-pale/30"
+                'p-4 hover:bg-ois-surface-muted transition-colors flex gap-3 relative',
+                notification.url ? 'cursor-pointer' : 'cursor-default',
+                !notification.readAt && 'bg-ois-primary-pale/30'
               )}
             >
               {!notification.readAt && (
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-ois-primary" />
               )}
-              
+
               <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                notification.type === 'mention' ? "bg-ois-info-pale text-ois-info" :
-                notification.type === 'update' ? "bg-ois-success-pale text-ois-success" :
-                notification.type === 'system' ? "bg-ois-surface-muted text-ois-text-subtle" :
-                "bg-ois-warning-pale text-ois-warning"
+                'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
+                notification.type === 'mention' ? 'bg-ois-info-pale text-ois-info' :
+                notification.type === 'update'  ? 'bg-ois-success-pale text-ois-success' :
+                notification.type === 'system'  ? 'bg-ois-surface-muted text-ois-text-subtle' :
+                'bg-ois-warning-pale text-ois-warning'
               )}>
                 {notification.type === 'mention' ? <MessageSquare size={14} /> :
-                 notification.type === 'update' ? <Check size={14} /> :
-                 notification.type === 'system' ? <Settings size={14} /> :
+                 notification.type === 'update'  ? <Check size={14} /> :
+                 notification.type === 'system'  ? <Settings size={14} /> :
                  <Info size={14} />}
               </div>
 
               <div className="flex flex-col gap-0.5">
                 <div className="flex items-center gap-2">
-                  <span className={cn("text-sm font-semibold", !notification.readAt ? "text-ois-text" : "text-ois-text-muted")}>
+                  <span className={cn('text-sm font-semibold', !notification.readAt ? 'text-ois-text' : 'text-ois-text-muted')}>
                     {notification.title}
                   </span>
                   {!notification.readAt && <span className="w-2 h-2 rounded-full bg-ois-primary" />}
                 </div>
                 <p className="text-sm text-ois-text-muted leading-tight">{notification.body}</p>
                 <div className="text-[11px] text-ois-text-subtle font-medium mt-1 uppercase tracking-wider">
-                  {formatRelative(notification.createdAt)} {notification.sourceRef && `• ${notification.sourceRef}`}
+                  {formatRelative(notification.createdAt)}
+                  {notification.sourceRef && ` • ${notification.sourceRef}`}
                 </div>
               </div>
             </div>
@@ -114,18 +97,25 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
       </div>
 
       <div className="p-3 bg-ois-surface-muted text-center border-t border-ois-border">
-        <button className="text-xs font-bold text-ois-primary hover:underline" onClick={() => { navigate('/inbox'); onClose(); }}>View all notifications</button>
+        <button
+          className="text-xs font-bold text-ois-primary hover:underline"
+          onClick={() => { navigate('/notifications'); onClose(); }}
+        >
+          View all notifications
+        </button>
       </div>
     </div>
   );
 };
 
-const Tab: React.FC<{ active: boolean, onClick: () => void, children: React.ReactNode }> = ({ active, onClick, children }) => (
-  <button 
+const Tab: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
+  <button
     onClick={onClick}
     className={cn(
-      "flex-1 py-2 text-xs font-semibold border-b-2 transition-all",
-      active ? "border-ois-primary text-ois-primary bg-ois-primary-pale/10" : "border-transparent text-ois-text-muted hover:text-ois-text hover:bg-ois-surface-muted"
+      'flex-1 py-2 text-xs font-semibold border-b-2 transition-all',
+      active
+        ? 'border-ois-primary text-ois-primary bg-ois-primary-pale/10'
+        : 'border-transparent text-ois-text-muted hover:text-ois-text hover:bg-ois-surface-muted'
     )}
   >
     {children}
