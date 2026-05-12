@@ -54,7 +54,7 @@ export function UptimeHistoryBar({ uptime90d, serviceId }: UptimeHistoryBarProps
               onMouseLeave={() => setTooltip(null)}
             >
               {tooltip === i && (
-                <div className="absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white shadow">
+                <div className="absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md bg-ois-text px-2 py-1 text-xs text-white shadow-md pointer-events-none">
                   Day {90 - i}
                 </div>
               )}
@@ -62,7 +62,7 @@ export function UptimeHistoryBar({ uptime90d, serviceId }: UptimeHistoryBarProps
           );
         })}
       </div>
-      <span className="w-14 shrink-0 text-right text-xs font-medium text-gray-500">
+      <span className="w-14 shrink-0 text-right text-xs font-medium text-ois-text-muted tabular-nums">
         {uptime90d.toFixed(2)}%
       </span>
     </div>

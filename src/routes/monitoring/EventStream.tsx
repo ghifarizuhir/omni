@@ -126,42 +126,19 @@ export const EventStream: React.FC = () => {
     return groups;
   }, [displayedEvents]);
 
-  // Stats Logic
+  // Stats Logic — shape matches EventStreamStatsRail's interface
   const stats = useMemo(() => {
-    const last24h = new Date();
-    last24h.setDate(last24h.getDate() - 1);
-    const recentEvents = mockEvents.filter(e => new Date(e.firedAt) > last24h);
-
-    const sourceCounts: Record<string, number> = {};
-    recentEvents.forEach(e => {
-      sourceCounts[e.source] = (sourceCounts[e.source] || 0) + 1;
-    });
-
-    const ruleFires: Record<string, number> = {};
-    recentEvents.forEach(e => {
-      if (e.rulePublicId) {
-        ruleFires[e.rulePublicId] = (ruleFires[e.rulePublicId] || 0) + 1;
-      }
-    });
-
-    const ciEvents: Record<string, number> = {};
-    recentEvents.forEach(e => {
-      e.affectedCIPublicIds.forEach(id => {
-        ciEvents[id] = (ciEvents[id] || 0) + 1;
-      });
-    });
-
+    const events = isPaused ? frozenEvents : mockEvents;
     return {
-      total24h: recentEvents.length,
-      active24h: recentEvents.filter(e => e.status === 'open' || e.status === 'acknowledged').length,
-      p1_24h: recentEvents.filter(e => e.severity === 'P1').length,
-      p2_24h: recentEvents.filter(e => e.severity === 'P2').length,
-      autoResolved24h: recentEvents.filter(e => e.resolvedBy === 'system').length,
-      sources: (Object.entries(sourceCounts) as [string, number][]).sort((a, b) => b[1] - a[1]),
-      noisyRules: (Object.entries(ruleFires) as [string, number][]).sort((a, b) => b[1] - a[1]).slice(0, 3),
-      topCIs: (Object.entries(ciEvents) as [string, number][]).sort((a, b) => b[1] - a[1]).slice(0, 4)
+      total: events.length,
+      open: events.filter(e => e.status === 'open').length,
+      acknowledged: events.filter(e => e.status === 'acknowledged').length,
+      resolved: events.filter(e => e.status === 'resolved').length,
+      exception: events.filter(e => e.type === 'exception').length,
+      warning: events.filter(e => e.type === 'warning').length,
+      informational: events.filter(e => e.type === 'informational').length,
     };
-  }, []);
+  }, [isPaused, frozenEvents]);
 
   const formatDateHeader = (dateStr: string) => {
     const date = parseISO(dateStr);
@@ -188,13 +165,13 @@ export const EventStream: React.FC = () => {
       {/* Page Header */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ois-text">Event Stream</h1>
-          <div className="flex items-center gap-3 mt-1 text-sm font-medium text-ois-text-muted">
-            <span>{mockEvents.length} events in last 7 days</span>
+          <h1 className="text-xl font-bold text-ois-text">Event Stream</h1>
+          <div className="flex items-center gap-3 mt-1 text-sm text-ois-text-muted">
+            <span>{mockEvents.length} events in {TIME_RANGE_LABELS[timeRange].toLowerCase()}</span>
             <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-            <span>{mockEvents.filter(e => e.status === 'open').length} active</span>
+            <span className="font-medium">{mockEvents.filter(e => e.status === 'open').length} open</span>
             <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-            <span className="text-ois-danger">5 P1/P2 unacknowledged</span>
+            <span className="font-medium text-ois-danger">{mockEvents.filter(e => (e.severity === 'P1' || e.severity === 'P2') && e.status === 'open').length} P1/P2 unacknowledged</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -305,18 +282,18 @@ export const EventStream: React.FC = () => {
         {/* Main Stream Area */}
         <div className="flex-1 min-w-0 space-y-6">
           {/* Filters Card */}
-          <Card className="p-4 border-ois-border">
+          <Card className="p-4">
             <div className="flex flex-wrap gap-3">
               <div className="relative flex-1 min-w-[240px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ois-text-subtle" size={16} />
-                <Input 
-                  placeholder="Search title, message, payload, CI..." 
-                  className="pl-10 h-10 bg-ois-bg/50 border-ois-border-strong focus:bg-white"
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ois-text-subtle" size={15} />
+                <Input
+                  placeholder="Search title, message, CI ID…"
+                  className="pl-9 h-9 text-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <FilterDropdown
                   value={statusFilter}
                   onChange={(v) => setStatusFilter(v as EventStatus | 'all')}
@@ -327,7 +304,7 @@ export const EventStream: React.FC = () => {
                     { value: 'resolved', label: 'Resolved' },
                     { value: 'suppressed', label: 'Suppressed' },
                   ]}
-                  placeholder="Any Status"
+                  placeholder="Status"
                 />
                 <FilterDropdown
                   value={severityFilter}
@@ -339,78 +316,70 @@ export const EventStream: React.FC = () => {
                     { value: 'P3', label: 'P3 — Medium' },
                     { value: 'P4', label: 'P4 — Low' },
                   ]}
-                  placeholder="Any Severity"
+                  placeholder="Severity"
                 />
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-10 text-ois-text-muted hover:text-ois-danger"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-ois-text-muted hover:text-ois-danger gap-1.5"
                   onClick={resetFilters}
                 >
-                  <RotateCcw size={14} className="mr-2" /> Reset
+                  <RotateCcw size={13} /> Reset
                 </Button>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-ois-border">
+            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-ois-border">
+              <span className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest self-center mr-1">Quick:</span>
               {[
-                { id: 'active-p1p2', label: 'Active P1/P2', icon: AlertTriangle, count: 5, color: 'text-ois-danger' },
-                { id: 'exceptions', label: 'Exceptions', icon: Activity, count: 10 },
-                { id: 'warnings', label: 'Warnings', icon: AlertTriangle, count: 25 },
-                { id: 'info', label: 'Informational', icon: MessageSquare, count: 15 },
-                { id: 'last24h', label: 'Last 24h', icon: Clock, count: 18 }
+                { id: 'active-p1p2', label: 'Active P1/P2', icon: AlertTriangle, count: mockEvents.filter(e => (e.severity === 'P1' || e.severity === 'P2') && (e.status === 'open' || e.status === 'acknowledged')).length },
+                { id: 'exceptions', label: 'Exceptions', icon: Activity, count: mockEvents.filter(e => e.type === 'exception').length },
+                { id: 'warnings', label: 'Warnings', icon: AlertTriangle, count: mockEvents.filter(e => e.type === 'warning').length },
+                { id: 'info', label: 'Informational', icon: MessageSquare, count: mockEvents.filter(e => e.type === 'informational').length },
+                { id: 'last24h', label: 'Last 24h', icon: Clock, count: mockEvents.filter(e => isAfter(parseISO(e.firedAt), subDays(new Date('2026-05-09'), 1))).length },
               ].map(chip => (
                 <button
                   key={chip.id}
                   onClick={() => toggleQuickFilter(chip.id)}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all",
-                    activeQuickFilter === chip.id 
-                      ? "bg-ois-primary text-white border-ois-primary" 
-                      : "bg-white text-ois-text-muted border-ois-border hover:border-ois-border-strong hover:bg-ois-bg"
+                    "flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-colors",
+                    activeQuickFilter === chip.id
+                      ? "bg-ois-primary text-white border-ois-primary"
+                      : "bg-white text-ois-text-muted border-ois-border hover:border-ois-border-strong hover:text-ois-text"
                   )}
                 >
-                  <chip.icon size={12} className={cn(activeQuickFilter === chip.id ? "text-white" : chip.color)} />
+                  <chip.icon size={11} />
                   {chip.label}
-                  <span className={cn(
-                    "ml-1 opacity-60",
-                    activeQuickFilter === chip.id ? "text-white" : ""
-                  )}>({chip.count})</span>
+                  <span className="opacity-70 tabular-nums">{chip.count}</span>
                 </button>
               ))}
             </div>
           </Card>
 
           {/* Event Stream List */}
-          <div className="space-y-8">
+          <div className="space-y-6">
             {activeEvents.length === 0 ? (
-              <Card className="p-12 text-center flex flex-col items-center justify-center border-dashed border-2 border-ois-border bg-ois-bg/30">
-                <div className="p-4 bg-ois-surface rounded-full shadow-sm mb-4">
-                  <List size={32} className="text-ois-text-subtle" />
-                </div>
-                <h3 className="text-lg font-bold text-ois-text">No events found</h3>
-                <p className="text-sm text-ois-text-muted mt-1 max-w-sm">
-                  Try adjusting your filters or search terms. Your current criteria don't match any events in the stream.
-                </p>
-                <Button variant="outline" size="sm" className="mt-6 font-bold" onClick={resetFilters}>
-                  <RotateCcw size={14} className="mr-2" /> Reset all filters
+              <div className="text-center py-12">
+                <List size={36} className="mx-auto text-ois-text-subtle mb-3" />
+                <p className="text-sm font-medium text-ois-text-muted">No events match your filters.</p>
+                <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters}>
+                  <RotateCcw size={13} className="mr-1.5" /> Reset filters
                 </Button>
-              </Card>
+              </div>
             ) : (
               (Object.entries(groupedEvents) as [string, Event[]][]).map(([date, events]) => (
-                <div key={date} className="space-y-4">
-                  <div className="flex items-center gap-4 py-2 sticky top-0 z-10 bg-ois-bg/80 backdrop-blur-sm">
-                    <div className="flex-1 h-px bg-ois-border-strong" />
-                    <span className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-widest whitespace-nowrap">
+                <div key={date} className="space-y-3">
+                  <div className="flex items-center gap-3 sticky top-0 z-10 bg-ois-bg/90 backdrop-blur-sm py-1.5">
+                    <div className="flex-1 h-px bg-ois-border" />
+                    <span className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest whitespace-nowrap">
                       {formatDateHeader(date)}
                     </span>
-                    <div className="flex-1 h-px bg-ois-border-strong" />
+                    <div className="flex-1 h-px bg-ois-border" />
                   </div>
-
                   {events.map((event) => (
-                    <EventCard 
-                      key={event.id} 
-                      event={event} 
+                    <EventCard
+                      key={event.id}
+                      event={event}
                       onClick={() => navigate(`/events/${event.publicId}`)}
                     />
                   ))}
@@ -419,13 +388,14 @@ export const EventStream: React.FC = () => {
             )}
 
             {activeEvents.length > visibleCount && (
-              <div className="pt-4 text-center">
-                <Button 
-                  variant="outline" 
-                  className="font-bold border-ois-border-strong w-full sm:w-auto h-11 px-8"
+              <div className="pt-2 text-center">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full sm:w-auto"
                   onClick={() => setVisibleCount(prev => prev + 25)}
                 >
-                  Load 25 more events
+                  Load 25 more events <span className="ml-1.5 text-ois-text-subtle tabular-nums">({activeEvents.length - visibleCount} remaining)</span>
                 </Button>
               </div>
             )}
@@ -461,28 +431,24 @@ export const EventStream: React.FC = () => {
                   <X size={20} />
                 </Button>
               </div>
-              <div className="space-y-6">
-                 {/* Reusing existing cards design here but simplified for drawer */}
-                 <div className="space-y-4">
-                    <Card className="p-4">
-                       <h3 className="text-xs font-bold text-ois-text mb-4 uppercase tracking-widest text-ois-text-subtle">Last 24h Summary</h3>
-                       <div className="space-y-3">
-                          <StatRow label="Total events" value={stats.total24h} />
-                          <StatRow label="Active" value={stats.active24h} />
-                          <StatRow label="P1" value={stats.p1_24h} color="text-ois-danger" />
-                          <StatRow label="P2" value={stats.p2_24h} color="text-ois-warning" />
-                        </div>
-                    </Card>
-                    
-                    <Card className="p-4">
-                       <h3 className="text-xs font-bold text-ois-text mb-4 uppercase tracking-widest text-ois-text-subtle">Noisy Rules</h3>
-                       <div className="space-y-3">
-                          {stats.noisyRules.map(([rule, count]) => (
-                            <StatRow key={rule} label={rule} value={`${count} fires`} />
-                          ))}
-                       </div>
-                    </Card>
-                 </div>
+              <div className="space-y-4">
+                <Card className="p-4">
+                  <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-3">Status</p>
+                  <div className="space-y-2.5">
+                    <StatRow label="Total" value={stats.total} />
+                    <StatRow label="Open" value={stats.open} color="text-ois-danger" />
+                    <StatRow label="Acknowledged" value={stats.acknowledged} color="text-ois-warning" />
+                    <StatRow label="Resolved" value={stats.resolved} color="text-ois-success" />
+                  </div>
+                </Card>
+                <Card className="p-4">
+                  <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-3">By Type</p>
+                  <div className="space-y-2.5">
+                    <StatRow label="Exception" value={stats.exception} color="text-ois-danger" />
+                    <StatRow label="Warning" value={stats.warning} color="text-ois-warning" />
+                    <StatRow label="Informational" value={stats.informational} />
+                  </div>
+                </Card>
               </div>
             </motion.div>
           </>

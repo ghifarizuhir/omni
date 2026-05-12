@@ -1,10 +1,11 @@
+import { CheckCircle2, ArrowRight } from 'lucide-react';
+
 const pastIncidents = [
   {
     id: 'pi-001',
     date: 'May 7',
     serviceName: 'Payment Service',
     title: 'Intermittent payment failures during peak traffic',
-    status: 'Resolved',
     duration: '1h 14m',
   },
   {
@@ -12,7 +13,6 @@ const pastIncidents = [
     date: 'May 5',
     serviceName: 'Authentication',
     title: 'SSO login failures for enterprise accounts',
-    status: 'Resolved',
     duration: '23m',
   },
   {
@@ -20,7 +20,6 @@ const pastIncidents = [
     date: 'May 2',
     serviceName: 'Search',
     title: 'Search index rebuild caused elevated response times',
-    status: 'Resolved',
     duration: '2h 08m',
   },
 ];
@@ -28,32 +27,28 @@ const pastIncidents = [
 export function PastIncidentSummary() {
   return (
     <div>
-      <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-ois-card border border-ois-border bg-ois-surface shadow-ois-card divide-y divide-ois-border">
         {pastIncidents.map(incident => (
-          <div key={incident.id} className="flex items-center justify-between gap-4 px-5 py-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-3">
-                <span className="shrink-0 text-xs font-medium text-gray-400 w-10">
-                  {incident.date}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-900">{incident.title}</p>
-                  <p className="text-xs text-gray-500">{incident.serviceName}</p>
-                </div>
+          <div key={incident.id} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-ois-surface-muted transition-colors">
+            <div className="min-w-0 flex-1 flex items-center gap-4">
+              <span className="shrink-0 text-xs font-medium text-ois-text-subtle w-10">{incident.date}</span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-ois-text">{incident.title}</p>
+                <p className="text-xs text-ois-text-muted mt-0.5">{incident.serviceName}</p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                {incident.status}
+              <span className="flex items-center gap-1 rounded-full bg-ois-success-pale px-2.5 py-0.5 text-xs font-medium text-ois-success">
+                <CheckCircle2 size={10} /> Resolved
               </span>
-              <span className="text-xs text-gray-400">{incident.duration}</span>
+              <span className="text-xs text-ois-text-subtle tabular-nums">{incident.duration}</span>
             </div>
           </div>
         ))}
       </div>
       <div className="mt-4 text-center">
-        <button className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">
-          View all past incidents →
+        <button className="inline-flex items-center gap-1.5 text-sm font-medium text-ois-primary hover:underline">
+          View all past incidents <ArrowRight size={13} />
         </button>
       </div>
     </div>

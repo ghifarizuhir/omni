@@ -77,7 +77,7 @@ export function StatusHero({ entries }: StatusHeroProps) {
           {affectedCount} service{affectedCount !== 1 ? 's' : ''} affected
         </p>
       )}
-      <p className="mt-3 text-xs text-gray-500">
+      <p className="mt-3 text-xs" style={{ color: `${overall.textColor}99` }}>
         Last updated at {lastUpdatedAt} by {lastUpdatedBy}
       </p>
     </div>
