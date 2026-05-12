@@ -391,7 +391,7 @@ export const Dashboard: React.FC = () => {
           <div className="p-4 space-y-6">
             {Object.entries(groupedChanges).sort().map(([label, changes]) => (
               <div key={label}>
-                <div className="text-[11px] font-bold text-ois-text-subtle tracking-wider mb-3">{label}</div>
+                <div className="text-[11px] font-semibold text-ois-text-subtle tracking-widest mb-3">{label}</div>
                 <div className="space-y-3">
                   {changes.map(change => (
                     <div key={change.id} className="group">

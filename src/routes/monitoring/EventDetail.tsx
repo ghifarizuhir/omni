@@ -256,7 +256,7 @@ export const EventDetail: React.FC = () => {
                      <Badge variant="neutral" className="bg-ois-surface-muted text-ois-text-muted text-[10px] uppercase font-bold border-ois-border">
                         {event.type}
                      </Badge>
-                     <span className="text-xs font-bold text-ois-text-subtle uppercase tracking-wider">{event.source}</span>
+                     <span className="text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">{event.source}</span>
                      <span className="text-xs font-mono font-bold text-ois-text-subtle">·</span>
                      <span className="text-xs font-mono font-bold text-ois-text-subtle">{event.publicId}</span>
                   </div>
@@ -286,11 +286,11 @@ export const EventDetail: React.FC = () => {
                </div>
                <div className="flex items-center gap-4 px-6 py-4 bg-ois-bg rounded-xl border border-ois-border self-start">
                   <div className="text-center px-4 border-r border-ois-border">
-                     <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider mb-1">Severity</p>
+                     <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-1">Severity</p>
                      <EventSeverityBadge severity={event.severity} />
                   </div>
                   <div className="text-center px-4">
-                     <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider mb-1">Impacted CIs</p>
+                     <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-1">Impacted CIs</p>
                      <span className="text-xl font-bold text-ois-text">{event.affectedCIPublicIds.length}</span>
                   </div>
                </div>

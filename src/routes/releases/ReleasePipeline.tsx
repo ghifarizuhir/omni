@@ -140,7 +140,7 @@ export const ReleasePipeline: React.FC = () => {
            displayed.some((r) => r.status === 'released') && (
             <div className="grid" style={{ gridTemplateColumns: '220px 1fr 1fr 1fr' }}>
               <div className="col-span-4 px-4 py-2 bg-ois-bg border-b border-ois-border">
-                <span className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Active</span>
+                <span className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest">Active</span>
               </div>
             </div>
           )}
@@ -154,7 +154,7 @@ export const ReleasePipeline: React.FC = () => {
                 <React.Fragment key={release.id}>
                   {isFirstReleased && (
                     <div className="px-4 py-2 bg-ois-bg">
-                      <span className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Released within last 14 days</span>
+                      <span className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest">Released within last 14 days</span>
                     </div>
                   )}
                   <div className="grid hover:bg-ois-bg/40 transition-colors" style={{ gridTemplateColumns: '220px 1fr 1fr 1fr' }}>
@@ -220,7 +220,7 @@ export const ReleasePipeline: React.FC = () => {
         {readyCount > 0 && (
           <Card>
             <div className="px-4 py-3 border-b border-ois-border bg-amber-50">
-              <h3 className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h3 className="text-[11px] font-semibold text-amber-800 uppercase tracking-widest flex items-center gap-1.5">
                 <AlertTriangle size={10} /> Production Approval
               </h3>
             </div>

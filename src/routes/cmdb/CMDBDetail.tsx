@@ -234,7 +234,7 @@ export const CMDBDetail: React.FC = () => {
               <div className="space-y-6">
                 <Card>
                   <div className="p-4 border-b border-ois-border bg-ois-surface-muted/20">
-                    <h3 className="text-sm font-bold text-ois-text uppercase tracking-wider opacity-60">Specifications</h3>
+                    <h3 className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Specifications</h3>
                   </div>
                   <div className="p-4 grid grid-cols-2 gap-y-4 gap-x-8">
                     {Object.entries(ci.attributes).filter(([k]) => k !== 'kind').map(([k, v]) => (
@@ -249,7 +249,7 @@ export const CMDBDetail: React.FC = () => {
                 </Card>
                 <Card>
                   <div className="p-4 border-b border-ois-border bg-ois-surface-muted/20 flex justify-between items-center">
-                    <h3 className="text-sm font-bold text-ois-text uppercase tracking-wider opacity-60">Activity</h3>
+                    <h3 className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Activity</h3>
                     <button onClick={() => navigate(`/cmdb/audit?ci=${ci.publicId}`)} className="text-[10px] font-bold text-ois-primary uppercase hover:underline">View All</button>
                   </div>
                   <div className="p-4 scale-95 origin-top">
@@ -258,7 +258,7 @@ export const CMDBDetail: React.FC = () => {
                 </Card>
                 <Card>
                   <div className="p-4 border-b border-ois-border bg-ois-surface-muted/20">
-                    <h3 className="text-sm font-bold text-ois-text uppercase tracking-wider opacity-60">Health Snapshot</h3>
+                    <h3 className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Health Snapshot</h3>
                   </div>
                   <div className="p-6 flex flex-col items-center justify-center gap-2 text-center">
                     <Activity size={24} className="text-ois-text-subtle opacity-40" />
@@ -327,7 +327,7 @@ export const CMDBDetail: React.FC = () => {
               const recent = unique.filter(i => ['resolved', 'closed'].includes(i.status)).slice(0, 3);
               return (
                 <Card>
-                  <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider">
+                  <div className="p-3 border-b border-ois-border flex justify-between items-center font-semibold text-xs uppercase tracking-widest">
                     <span className="flex items-center gap-2 text-ois-text-muted opacity-80">
                       <AlertCircle size={14} className="text-ois-danger" />
                       Open Incidents ({open.length})
@@ -373,7 +373,7 @@ export const CMDBDetail: React.FC = () => {
                 .slice(0, 5);
               return (
                 <Card>
-                  <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
+                  <div className="p-3 border-b border-ois-border flex justify-between items-center font-semibold text-xs uppercase tracking-widest">
                     Linked Changes <ShieldCheck size={14} className="text-ois-info" />
                   </div>
                   {ciChanges.length === 0 ? (
@@ -405,7 +405,7 @@ export const CMDBDetail: React.FC = () => {
                 .slice(0, 5);
               return (
                 <Card>
-                  <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
+                  <div className="p-3 border-b border-ois-border flex justify-between items-center font-semibold text-xs uppercase tracking-widest">
                     Linked Problems ({ciProblems.length}) <Bug size={14} className="text-ois-warning" />
                   </div>
                   {ciProblems.length === 0 ? (
@@ -431,7 +431,7 @@ export const CMDBDetail: React.FC = () => {
                 .slice(0, 5);
               return (
                 <Card>
-                  <div className="p-3 border-b border-ois-border flex justify-between items-center font-bold text-xs uppercase tracking-wider opacity-60">
+                  <div className="p-3 border-b border-ois-border flex justify-between items-center font-semibold text-xs uppercase tracking-widest">
                     Linked KB ({ciKBArticles.length}) <BookOpen size={14} className="text-ois-primary" />
                   </div>
                   {ciKBArticles.length === 0 ? (

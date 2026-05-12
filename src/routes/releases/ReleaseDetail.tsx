@@ -372,7 +372,7 @@ export const ReleaseDetail: React.FC = () => {
                 <pre className="text-sm text-ois-text font-sans whitespace-pre-wrap leading-relaxed">{release.releaseNotes}</pre>
                 {release.internalNotes && (
                   <div className="mt-4 pt-4 border-t border-ois-border">
-                    <p className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-2">Internal Notes</p>
+                    <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-2">Internal Notes</p>
                     <p className="text-sm text-ois-text-muted">{release.internalNotes}</p>
                   </div>
                 )}

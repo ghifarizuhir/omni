@@ -198,7 +198,7 @@ export const CoverageReport: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-ois-text tracking-tight mb-2">Monitoring Coverage</h1>
           <p className="text-sm font-medium text-ois-text-muted mb-3 italic">Are your critical assets being watched?</p>
-          <div className="flex items-center gap-4 text-xs font-bold text-ois-text-muted uppercase tracking-wider">
+          <div className="flex items-center gap-4 text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
             <span>{coverageData.length} CIs total</span>
             <span className="w-1 h-1 rounded-full bg-ois-border" />
             <span className="text-ois-success">{coverageData.filter(d => d.rules.length > 0).length} with rules</span>
@@ -241,7 +241,7 @@ export const CoverageReport: React.FC = () => {
                             {getCIIcon(row.ci.type)}
                           </div>
                           <div>
-                            <p className="font-mono text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">{row.ci.publicId}</p>
+                            <p className="font-mono text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest">{row.ci.publicId}</p>
                             <h4 className="text-sm font-bold text-ois-text">{row.ci.name}</h4>
                           </div>
                         </div>
