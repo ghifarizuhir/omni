@@ -148,10 +148,10 @@ function renderMarkdown(body: string): React.ReactNode[] {
       const text  = headingMatch[2];
       const id    = slugify(text);
       const cls =
-        level === 1 ? 'text-2xl font-extrabold text-ois-text mt-8 mb-3 scroll-mt-20' :
-        level === 2 ? 'text-[17px] font-bold text-ois-text mt-7 mb-2.5 scroll-mt-20 border-b border-ois-border pb-2' :
-        level === 3 ? 'text-[15px] font-bold text-ois-text mt-5 mb-2 scroll-mt-20' :
-                      'text-sm font-bold text-ois-text mt-4 mb-1.5 scroll-mt-20';
+        level === 1 ? 'text-2xl font-extrabold text-ois-text mt-10 mb-4 scroll-mt-20' :
+        level === 2 ? 'text-[19px] font-bold text-ois-text mt-10 mb-4 scroll-mt-20 border-b border-ois-border pb-3' :
+        level === 3 ? 'text-[16px] font-semibold text-ois-text mt-7 mb-3 scroll-mt-20 border-l-4 border-ois-primary pl-3' :
+                      'text-[13px] font-bold uppercase tracking-widest text-ois-text-subtle mt-5 mb-2 scroll-mt-20';
       const Tag = (`h${level}` as 'h1' | 'h2' | 'h3' | 'h4');
       nodes.push(
         <Tag key={`h-${nodes.length}`} id={id} className={cls}>
