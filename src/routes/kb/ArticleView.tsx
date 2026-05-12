@@ -81,19 +81,19 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ lang, code }) => {
     setTimeout(() => setCopied(false), 1800);
   };
   return (
-    <div className="relative group my-5 rounded-lg overflow-hidden border border-ois-border">
+    <div className="relative group my-6 rounded-lg overflow-hidden border border-ois-border">
       {lang && (
-        <div className="flex items-center justify-between px-4 py-2 bg-[#1e1e2e] border-b border-white/10">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-[#181825] border-b border-white/10">
           <span className="text-[11px] font-mono text-white/50">{lang}</span>
           <button
             onClick={copy}
-            className="flex items-center gap-1 text-[10px] text-white/40 hover:text-white/80 transition-colors"
+            className="flex items-center gap-1 text-[11px] text-white/40 hover:text-white/80 transition-colors"
           >
-            {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
+            {copied ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
           </button>
         </div>
       )}
-      <pre className="bg-[#1e1e2e] text-[#cdd6f4] text-[12.5px] leading-relaxed px-5 py-4 overflow-x-auto font-mono m-0">
+      <pre className="bg-[#1e1e2e] text-[#cdd6f4] text-[13px] leading-relaxed px-5 py-5 overflow-x-auto font-mono m-0">
         <code>{code}</code>
       </pre>
     </div>
