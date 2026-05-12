@@ -53,7 +53,7 @@ function LinkedCard({
       <div className="flex items-center gap-3">
         <span className="text-ois-primary opacity-70 group-hover:opacity-100">{icon}</span>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-ois-text-subtle">{label}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-ois-text-subtle">{label}</p>
           <p className="font-mono text-sm font-bold text-ois-text mt-0.5">{publicId}</p>
         </div>
       </div>
@@ -251,8 +251,7 @@ export const DeploymentDetail: React.FC = () => {
   }
   historyEvents.sort((a, b) => a.time.localeCompare(b.time));
 
-  const handleRollbackConfirm = (reason: string) => {
-    console.log('Rollback confirmed:', reason);
+  const handleRollbackConfirm = (_reason: string) => {
     setRollbackOpen(false);
   };
 
@@ -466,7 +465,7 @@ export const DeploymentDetail: React.FC = () => {
                   )}
                   {linkedTestRun && (
                     <div className="rounded-xl border border-ois-border px-5 py-4 bg-white">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-ois-text-subtle mb-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-ois-text-subtle mb-1">
                         Test Run
                       </p>
                       <div className="flex items-center justify-between flex-wrap gap-2">
