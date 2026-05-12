@@ -26,7 +26,7 @@ const BASE_TABS = [
 function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <tr className="border-b border-ois-border last:border-0">
-      <td className="py-3 pr-6 text-xs font-semibold text-ois-text-muted uppercase tracking-wide whitespace-nowrap w-40 align-top">
+      <td className="py-3 pr-6 text-xs font-semibold text-ois-text-subtle uppercase tracking-widest whitespace-nowrap w-40 align-top">
         {label}
       </td>
       <td className="py-3 text-sm text-ois-text break-all align-top">{children}</td>
@@ -257,295 +257,303 @@ export const DeploymentDetail: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-ois-bg pb-20">
-      {/* ── Top nav bar ──────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 bg-white border-b border-ois-border px-6 py-3 flex items-center justify-between">
-        <Link
-          to="/deployments"
-          className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
-        >
-          <ArrowLeft size={15} />
-          Deployments
-        </Link>
-        <div className="relative">
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+      {/* ── Pinned header ────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-ois-border shrink-0 z-30">
+        {/* Nav row */}
+        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
           <button
-            onClick={() => setActionsOpen((v) => !v)}
-            className="flex items-center gap-1 text-ois-text-muted hover:text-ois-text p-2 rounded-lg hover:bg-ois-bg border border-transparent hover:border-ois-border transition-colors"
+            onClick={() => navigate('/deployments')}
+            className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
           >
-            <MoreVertical size={16} />
+            <ArrowLeft size={15} /> Deployments
           </button>
-          {actionsOpen && (
-            <div
-              className="absolute right-0 top-full mt-1 bg-white border border-ois-border rounded-xl shadow-lg w-48 py-1 z-30"
-              onMouseLeave={() => setActionsOpen(false)}
-            >
+          <div className="flex items-center gap-2">
+            <div className="relative">
               <button
-                className="w-full text-left px-4 py-2.5 text-sm text-ois-text hover:bg-ois-bg transition-colors"
-                onClick={() => { setActionsOpen(false); }}
+                onClick={() => setActionsOpen((v) => !v)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-ois-border bg-white text-sm text-ois-text-muted hover:bg-ois-surface-muted transition-colors"
               >
-                Copy deployment ID
+                <MoreVertical size={16} />
               </button>
-              <button
-                className="w-full text-left px-4 py-2.5 text-sm text-ois-text hover:bg-ois-bg transition-colors"
-                onClick={() => { setActionsOpen(false); }}
-              >
-                Export logs
-              </button>
-              {(deployment.status === 'running' || deployment.status === 'success') && (
-                <button
-                  className="w-full text-left px-4 py-2.5 text-sm text-ois-sev-p1 hover:bg-ois-danger-pale transition-colors"
-                  onClick={() => { setActionsOpen(false); setRollbackOpen(true); }}
+              {actionsOpen && (
+                <div
+                  className="absolute right-0 top-full mt-1 bg-white border border-ois-border rounded-xl shadow-lg w-48 py-1 z-30"
+                  onMouseLeave={() => setActionsOpen(false)}
                 >
-                  Rollback
-                </button>
+                  <button
+                    className="w-full text-left px-4 py-2.5 text-sm text-ois-text hover:bg-ois-bg transition-colors"
+                    onClick={() => { setActionsOpen(false); }}
+                  >
+                    Copy deployment ID
+                  </button>
+                  <button
+                    className="w-full text-left px-4 py-2.5 text-sm text-ois-text hover:bg-ois-bg transition-colors"
+                    onClick={() => { setActionsOpen(false); }}
+                  >
+                    Export logs
+                  </button>
+                  {(deployment.status === 'running' || deployment.status === 'success') && (
+                    <button
+                      className="w-full text-left px-4 py-2.5 text-sm text-ois-sev-p1 hover:bg-ois-danger-pale transition-colors"
+                      onClick={() => { setActionsOpen(false); setRollbackOpen(true); }}
+                    >
+                      Rollback
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-          )}
+          </div>
         </div>
-      </div>
-
-      <div className="max-w-[1440px] mx-auto px-6 py-6 flex flex-col gap-6">
-        {/* ── Hero ─────────────────────────────────────────────────────── */}
+        {/* DeploymentHero — the entity header */}
         <DeploymentHero
           deployment={effectiveDeployment}
           onRollback={() => setRollbackOpen(true)}
           onRedeploy={() => setRedeployOpen(true)}
         />
-
-        {/* ── 2-column main ─────────────────────────────────────────────── */}
-        <div className="flex gap-6">
-          {/* Left 60% — stages */}
-          <div className="flex-[3] min-w-0">
-            <div className="bg-white rounded-xl border border-ois-border p-5">
-              <p className="text-xs font-bold uppercase tracking-wide text-ois-text-muted mb-4">
-                Pipeline Stages
-              </p>
-              <DeploymentStages
-                stages={deployment.stages}
-                currentStageIndex={deployment.currentStageIndex}
-              />
-            </div>
-          </div>
-
-          {/* Right 40% — logs */}
-          <div className="flex-[2] min-w-0">
-            <LogPanel logs={logs} deploymentId={deployment.id} />
-          </div>
-        </div>
-
-        {/* ── Full-width tabs ───────────────────────────────────────────── */}
-        {(() => {
-          // Manifest tab is only shown if the deployment has actual YAML content.
-          // manifestRef is just a file path — not renderable YAML — so exclude the tab
-          // unless a future field (e.g. manifestYaml) is present on the deployment.
-          const manifestYaml = deployment.manifestYaml;
-          const showManifest = typeof deployment.manifestYaml === 'string';
-          const tabs = BASE_TABS.filter(t => t.id !== 'manifest' || showManifest);
-
-          return (
-        <div className="bg-white rounded-xl border border-ois-border p-6">
-          <Tabs tabs={tabs}>
-            {/* ── Overview ── */}
-            <div>
-              <table className="w-full border-collapse">
-                <tbody>
-                  <MetaRow label="Component">
-                    <span className="font-semibold">{deployment.componentName}</span>
-                  </MetaRow>
-                  <MetaRow label="Version">
-                    <span className="font-mono text-xs bg-ois-surface-muted text-ois-text-muted rounded px-2 py-0.5">
-                      {deployment.artifactRef.includes(':')
-                        ? deployment.artifactRef.split(':').pop()
-                        : deployment.artifactRef}
-                    </span>
-                  </MetaRow>
-                  <MetaRow label="Artifact">
-                    <span className="font-mono text-xs text-ois-text-muted">{deployment.artifactRef}</span>
-                  </MetaRow>
-                  <MetaRow label="Commit">
-                    <span className="font-mono text-xs bg-ois-surface-muted text-ois-text-muted rounded px-1.5 py-0.5 mr-2">
-                      {deployment.commitSha}
-                    </span>
-                    {deployment.commitMessage && (
-                      <span className="text-xs text-ois-text-muted">{deployment.commitMessage}</span>
-                    )}
-                  </MetaRow>
-                  <MetaRow label="Branch">
-                    <span className="font-mono text-xs text-ois-text-muted">{deployment.branch}</span>
-                  </MetaRow>
-                  {deployment.targetCIIds.length > 0 && (
-                    <MetaRow label="Target CIs">
-                      <div className="flex flex-wrap gap-1.5">
-                        {deployment.targetCIIds.map((ci) => (
-                          <Link
-                            key={ci}
-                            to={`/cmdb/${ci}`}
-                            className="font-mono text-xs bg-ois-primary-pale text-ois-primary rounded px-2 py-0.5 hover:bg-ois-primary hover:text-white transition-colors"
-                          >
-                            {ci}
-                          </Link>
-                        ))}
-                      </div>
-                    </MetaRow>
-                  )}
-                  {deployment.pipelineUrl && (
-                    <MetaRow label="Pipeline Run">
-                      <a
-                        href={`https://${deployment.pipelineUrl}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-mono text-xs text-ois-primary hover:underline"
-                      >
-                        {deployment.pipelineRunId} →
-                      </a>
-                    </MetaRow>
-                  )}
-                  {deployment.manifestRef && (
-                    <MetaRow label="Manifest">
-                      <span className="font-mono text-xs text-ois-text-muted">{deployment.manifestRef}</span>
-                    </MetaRow>
-                  )}
-                  {deployment.tags.length > 0 && (
-                    <MetaRow label="Tags">
-                      <div className="flex flex-wrap gap-1.5">
-                        {deployment.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="text-xs bg-ois-surface-muted text-ois-text-muted rounded-full px-2.5 py-0.5 font-medium"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </MetaRow>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* ── Manifest (only rendered when showManifest is true) ── */}
-            {showManifest && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-ois-text-muted">
-                  Kubernetes Manifest
-                </p>
-                {deployment.manifestRef && (
-                  <span className="font-mono text-[11px] text-ois-text-subtle">{deployment.manifestRef}</span>
-                )}
-              </div>
-              <pre className="bg-[#0D1117] text-[#C9D1D9] rounded-xl p-5 text-xs font-mono leading-relaxed overflow-x-auto border border-[#30363D] whitespace-pre">
-                {manifestYaml}
-              </pre>
-            </div>
-            )}
-
-            {/* ── Linked Items ── */}
-            <div className="flex flex-col gap-4">
-              {deployment.linkedReleasePublicId && (
-                <LinkedCard
-                  publicId={deployment.linkedReleasePublicId}
-                  label="Release"
-                  href={`/releases/${deployment.linkedReleaseId ?? deployment.linkedReleasePublicId}`}
-                  icon={<Layers size={18} />}
-                />
-              )}
-              {deployment.linkedChangePublicId && (
-                <LinkedCard
-                  publicId={deployment.linkedChangePublicId}
-                  label="Change Request"
-                  href={`/changes/${deployment.linkedChangeId ?? deployment.linkedChangePublicId}`}
-                  icon={<Package size={18} />}
-                />
-              )}
-              {linkedTestRun && (
-                <div className="rounded-xl border border-ois-border px-5 py-4 bg-white">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-ois-text-subtle mb-1">
-                    Test Run
-                  </p>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <p className="font-mono text-sm font-bold text-ois-text">{linkedTestRun.publicId}</p>
-                      <p className="text-xs text-ois-text-muted mt-0.5">{linkedTestRun.testPlanName}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={cn(
-                          'text-xs font-semibold px-2.5 py-1 rounded-full',
-                          linkedTestRun.status === 'passed'
-                            ? 'bg-ois-success-pale text-ois-sev-p4'
-                            : linkedTestRun.status === 'failed'
-                            ? 'bg-ois-danger-pale text-ois-sev-p1'
-                            : linkedTestRun.status === 'running'
-                            ? 'bg-ois-primary-pale text-ois-primary'
-                            : 'bg-ois-surface-muted text-ois-text-muted',
-                        )}
-                      >
-                        {linkedTestRun.status.toUpperCase()}
-                      </span>
-                      <span className="text-xs text-ois-text-muted">
-                        {linkedTestRun.passedCount}/{linkedTestRun.totalCases} passed
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {!deployment.linkedReleasePublicId && !deployment.linkedChangePublicId && !linkedTestRun && (
-                <div className="py-10 text-center text-sm text-ois-text-subtle">
-                  No linked items for this deployment.
-                </div>
-              )}
-            </div>
-
-            {/* ── Triggered Incidents ── */}
-            <div>
-              {deployment.triggeredIncidentIds.length === 0 ? (
-                <div className="py-12 flex flex-col items-center gap-2 text-center">
-                  <CheckCircle2 size={32} className="text-ois-success opacity-70" />
-                  <p className="text-sm font-semibold text-ois-text">No incidents triggered</p>
-                  <p className="text-xs text-ois-text-subtle">This deployment has not triggered any incidents.</p>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {deployment.triggeredIncidentIds.map((incId) => (
-                    <Link
-                      key={incId}
-                      to={`/incidents/${incId}`}
-                      className="font-mono text-sm font-bold text-ois-sev-p1 bg-ois-danger-pale border border-ois-danger/20 rounded-lg px-3 py-2 hover:bg-ois-danger hover:text-white transition-colors"
-                    >
-                      {incId} →
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ── History ── */}
-            <div>
-              {historyEvents.length === 0 ? (
-                <p className="text-sm text-ois-text-subtle py-8 text-center">No history events available.</p>
-              ) : (
-                <div className="pt-2">
-                  {historyEvents.map((evt, i) => (
-                    <React.Fragment key={i}>
-                      <HistoryItem time={evt.time} label={evt.label} detail={evt.detail} color={evt.color} />
-                    </React.Fragment>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Tabs>
-        </div>
-          );
-        })()}
       </div>
 
-      {/* ── Sticky bottom action bar ─────────────────────────────────────── */}
-      <StickyActionBar
-        deployment={effectiveDeployment}
-        onRollback={() => setRollbackOpen(true)}
-        onRedeploy={() => setRedeployOpen(true)}
-      />
+      {/* ── Body — scrollable content + sticky action bar ────────────── */}
+      <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-[1440px] mx-auto px-6 py-6 flex flex-col gap-6">
+            {/* ── 2-column main ─────────────────────────────────────────────── */}
+            <div className="flex gap-6">
+              {/* Left 60% — stages */}
+              <div className="flex-[3] min-w-0">
+                <div className="bg-white rounded-xl border border-ois-border p-5">
+                  <p className="text-xs font-bold uppercase tracking-widest text-ois-text-subtle mb-4">
+                    Pipeline Stages
+                  </p>
+                  <DeploymentStages
+                    stages={deployment.stages}
+                    currentStageIndex={deployment.currentStageIndex}
+                  />
+                </div>
+              </div>
+
+              {/* Right 40% — logs */}
+              <div className="flex-[2] min-w-0">
+                <LogPanel logs={logs} deploymentId={deployment.id} />
+              </div>
+            </div>
+
+            {/* ── Full-width tabs ───────────────────────────────────────────── */}
+            {(() => {
+              // Manifest tab is only shown if the deployment has actual YAML content.
+              // manifestRef is just a file path — not renderable YAML — so exclude the tab
+              // unless a future field (e.g. manifestYaml) is present on the deployment.
+              const manifestYaml = deployment.manifestYaml;
+              const showManifest = typeof deployment.manifestYaml === 'string';
+              const tabs = BASE_TABS.filter(t => t.id !== 'manifest' || showManifest);
+
+              return (
+            <div className="bg-white rounded-xl border border-ois-border p-6">
+              <Tabs tabs={tabs}>
+                {/* ── Overview ── */}
+                <div>
+                  <table className="w-full border-collapse">
+                    <tbody>
+                      <MetaRow label="Component">
+                        <span className="font-semibold">{deployment.componentName}</span>
+                      </MetaRow>
+                      <MetaRow label="Version">
+                        <span className="font-mono text-xs bg-ois-surface-muted text-ois-text-muted rounded px-2 py-0.5">
+                          {deployment.artifactRef.includes(':')
+                            ? deployment.artifactRef.split(':').pop()
+                            : deployment.artifactRef}
+                        </span>
+                      </MetaRow>
+                      <MetaRow label="Artifact">
+                        <span className="font-mono text-xs text-ois-text-muted">{deployment.artifactRef}</span>
+                      </MetaRow>
+                      <MetaRow label="Commit">
+                        <span className="font-mono text-xs bg-ois-surface-muted text-ois-text-muted rounded px-1.5 py-0.5 mr-2">
+                          {deployment.commitSha}
+                        </span>
+                        {deployment.commitMessage && (
+                          <span className="text-xs text-ois-text-muted">{deployment.commitMessage}</span>
+                        )}
+                      </MetaRow>
+                      <MetaRow label="Branch">
+                        <span className="font-mono text-xs text-ois-text-muted">{deployment.branch}</span>
+                      </MetaRow>
+                      {deployment.targetCIIds.length > 0 && (
+                        <MetaRow label="Target CIs">
+                          <div className="flex flex-wrap gap-1.5">
+                            {deployment.targetCIIds.map((ci) => (
+                              <Link
+                                key={ci}
+                                to={`/cmdb/${ci}`}
+                                className="font-mono text-xs bg-ois-primary-pale text-ois-primary rounded px-2 py-0.5 hover:bg-ois-primary hover:text-white transition-colors"
+                              >
+                                {ci}
+                              </Link>
+                            ))}
+                          </div>
+                        </MetaRow>
+                      )}
+                      {deployment.pipelineUrl && (
+                        <MetaRow label="Pipeline Run">
+                          <a
+                            href={`https://${deployment.pipelineUrl}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-mono text-xs text-ois-primary hover:underline"
+                          >
+                            {deployment.pipelineRunId} →
+                          </a>
+                        </MetaRow>
+                      )}
+                      {deployment.manifestRef && (
+                        <MetaRow label="Manifest">
+                          <span className="font-mono text-xs text-ois-text-muted">{deployment.manifestRef}</span>
+                        </MetaRow>
+                      )}
+                      {deployment.tags.length > 0 && (
+                        <MetaRow label="Tags">
+                          <div className="flex flex-wrap gap-1.5">
+                            {deployment.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-xs bg-ois-surface-muted text-ois-text-muted rounded-full px-2.5 py-0.5 font-medium"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </MetaRow>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ── Manifest (only rendered when showManifest is true) ── */}
+                {showManifest && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-bold uppercase tracking-widest text-ois-text-subtle">
+                      Kubernetes Manifest
+                    </p>
+                    {deployment.manifestRef && (
+                      <span className="font-mono text-[11px] text-ois-text-subtle">{deployment.manifestRef}</span>
+                    )}
+                  </div>
+                  <pre className="bg-[#0D1117] text-[#C9D1D9] rounded-xl p-5 text-xs font-mono leading-relaxed overflow-x-auto border border-[#30363D] whitespace-pre">
+                    {manifestYaml}
+                  </pre>
+                </div>
+                )}
+
+                {/* ── Linked Items ── */}
+                <div className="flex flex-col gap-4">
+                  {deployment.linkedReleasePublicId && (
+                    <LinkedCard
+                      publicId={deployment.linkedReleasePublicId}
+                      label="Release"
+                      href={`/releases/${deployment.linkedReleaseId ?? deployment.linkedReleasePublicId}`}
+                      icon={<Layers size={18} />}
+                    />
+                  )}
+                  {deployment.linkedChangePublicId && (
+                    <LinkedCard
+                      publicId={deployment.linkedChangePublicId}
+                      label="Change Request"
+                      href={`/changes/${deployment.linkedChangeId ?? deployment.linkedChangePublicId}`}
+                      icon={<Package size={18} />}
+                    />
+                  )}
+                  {linkedTestRun && (
+                    <div className="rounded-xl border border-ois-border px-5 py-4 bg-white">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-ois-text-subtle mb-1">
+                        Test Run
+                      </p>
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                          <p className="font-mono text-sm font-bold text-ois-text">{linkedTestRun.publicId}</p>
+                          <p className="text-xs text-ois-text-muted mt-0.5">{linkedTestRun.testPlanName}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={cn(
+                              'text-xs font-semibold px-2.5 py-1 rounded-full',
+                              linkedTestRun.status === 'passed'
+                                ? 'bg-ois-success-pale text-ois-sev-p4'
+                                : linkedTestRun.status === 'failed'
+                                ? 'bg-ois-danger-pale text-ois-sev-p1'
+                                : linkedTestRun.status === 'running'
+                                ? 'bg-ois-primary-pale text-ois-primary'
+                                : 'bg-ois-surface-muted text-ois-text-muted',
+                            )}
+                          >
+                            {linkedTestRun.status.toUpperCase()}
+                          </span>
+                          <span className="text-xs text-ois-text-muted">
+                            {linkedTestRun.passedCount}/{linkedTestRun.totalCases} passed
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {!deployment.linkedReleasePublicId && !deployment.linkedChangePublicId && !linkedTestRun && (
+                    <div className="py-10 text-center text-sm text-ois-text-subtle">
+                      No linked items for this deployment.
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Triggered Incidents ── */}
+                <div>
+                  {deployment.triggeredIncidentIds.length === 0 ? (
+                    <div className="py-12 flex flex-col items-center gap-2 text-center">
+                      <CheckCircle2 size={32} className="text-ois-success opacity-70" />
+                      <p className="text-sm font-semibold text-ois-text">No incidents triggered</p>
+                      <p className="text-xs text-ois-text-subtle">This deployment has not triggered any incidents.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {deployment.triggeredIncidentIds.map((incId) => (
+                        <Link
+                          key={incId}
+                          to={`/incidents/${incId}`}
+                          className="font-mono text-sm font-bold text-ois-sev-p1 bg-ois-danger-pale border border-ois-danger/20 rounded-lg px-3 py-2 hover:bg-ois-danger hover:text-white transition-colors"
+                        >
+                          {incId} →
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── History ── */}
+                <div>
+                  {historyEvents.length === 0 ? (
+                    <p className="text-sm text-ois-text-subtle py-8 text-center">No history events available.</p>
+                  ) : (
+                    <div className="pt-2">
+                      {historyEvents.map((evt, i) => (
+                        <React.Fragment key={i}>
+                          <HistoryItem time={evt.time} label={evt.label} detail={evt.detail} color={evt.color} />
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Tabs>
+            </div>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* ── Sticky bottom action bar ─────────────────────────────────────── */}
+        <StickyActionBar
+          deployment={effectiveDeployment}
+          onRollback={() => setRollbackOpen(true)}
+          onRedeploy={() => setRedeployOpen(true)}
+        />
+      </div>
 
       {/* ── Redeploy confirm modal ───────────────────────────────────────── */}
       <Modal
