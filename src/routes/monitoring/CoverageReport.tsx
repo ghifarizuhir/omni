@@ -184,47 +184,60 @@ export const CoverageReport: React.FC = () => {
     }
   };
 
+  const coverageAccent = criticalGaps.length > 0 ? '#B42318'
+    : coverageData.filter(d => d.rules.length === 0).length > 0 ? '#DC6803'
+    : '#12B76A';
+
+  const coveredCount = coverageData.filter(d => d.rules.length > 0).length;
+
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 pb-20">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
-        <span className="font-medium text-ois-text-muted">Monitoring</span>
-        <span>·</span>
-        <span>Coverage</span>
-      </div>
-      {/* Toast */}
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+
+      {/* Toast — fixed */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-ois-text text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-lg animate-in slide-in-from-bottom-4 duration-200">
           {toastMessage}
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-ois-text tracking-tight mb-2">Monitoring Coverage</h1>
-          <p className="text-sm font-medium text-ois-text-muted mb-3 italic">Are your critical assets being watched?</p>
-          <div className="flex items-center gap-4 text-xs font-semibold text-ois-text-subtle uppercase tracking-widest">
-            <span>{coverageData.length} CIs total</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border" />
-            <span className="text-ois-success">{coverageData.filter(d => d.rules.length > 0).length} with rules</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border" />
-            <span className="text-ois-danger">{coverageData.filter(d => d.rules.length === 0).length} without rules</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border" />
-            <span className="text-ois-danger underline decoration-2">{criticalGaps.length} critical gaps</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border" />
-            <span className="text-ois-text-subtle lowercase font-medium">Last analyzed: 4m ago</span>
+      {/* ── Header ── */}
+      <div className="bg-ois-surface border-b border-ois-border shrink-0 z-30">
+        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
+          <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
+            <span className="font-medium text-ois-text-muted">Monitoring</span>
+            <span>·</span>
+            <span>Coverage</span>
+          </div>
+          <Button variant="primary" size="sm" className="gap-1.5">
+            <RefreshCw size={13} /> Re-analyze
+          </Button>
+        </div>
+        <div className="flex items-stretch">
+          <div className="w-1 shrink-0" style={{ backgroundColor: coverageAccent }} />
+          <div className="flex-1 px-6 py-4">
+            <h1 className="text-xl font-bold text-ois-text">Monitoring Coverage</h1>
+            <div className="flex items-center gap-3 mt-1 text-xs text-ois-text-muted flex-wrap">
+              <span className="font-medium text-ois-text">{coverageData.length} CIs total</span>
+              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+              <span className="text-ois-success">{coveredCount} with rules</span>
+              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+              <span className="text-ois-text-muted">{coverageData.length - coveredCount} without rules</span>
+              {criticalGaps.length > 0 && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+                  <span className="font-semibold text-ois-danger">{criticalGaps.length} critical gaps</span>
+                </>
+              )}
+              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+              <span className="text-ois-text-subtle">Last analyzed: 4m ago</span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-           <Button variant="ghost" className="h-10 gap-2 font-bold text-ois-text-muted">
-             <RefreshCw size={16} /> Re-analyze
-           </Button>
-           <Button variant="primary" className="h-10 px-6 font-bold shadow-sm">
-             Export Report
-           </Button>
-        </div>
       </div>
+
+      {/* ── Body ── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-[1600px] mx-auto px-6 py-5 space-y-8 pb-20">
 
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1 space-y-8">
@@ -543,6 +556,8 @@ export const CoverageReport: React.FC = () => {
             </div>
           </div>
         </aside>
+      </div>
+        </div>
       </div>
     </div>
   );

@@ -408,41 +408,46 @@ export const MonitoringRules: React.FC = () => {
     }
   ];
 
+  const accentColor = stats.avgSNR < 0.5 ? '#B42318' : stats.avgSNR < 0.8 ? '#DC6803' : '#1F4FD4';
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-20">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle -mb-2">
-        <span className="font-medium text-ois-text-muted">Monitoring</span>
-        <span>·</span>
-        <span>Rules</span>
-      </div>
-      {/* Page Header */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-bold text-ois-text tracking-tight mb-2">Monitoring Rules</h1>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-medium text-ois-text-muted">
-            <span className="flex items-center gap-1.5"><Shield size={16} /> {stats.totalCount} rules</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border" />
-            <span className="text-ois-success">{stats.enabledCount} enabled</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border" />
-            <span className="text-ois-text-subtle">{stats.disabledCount} disabled</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border" />
-            <span className="flex items-center gap-1.5">Avg Signal/Noise: <span className={cn(
-              "font-bold",
-              stats.avgSNR >= 0.8 ? "text-ois-success" : stats.avgSNR >= 0.5 ? "text-ois-warning" : "text-ois-danger"
-            )}>{Math.round(stats.avgSNR * 100)}%</span></span>
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+
+      {/* ── Header ── */}
+      <div className="bg-ois-surface border-b border-ois-border shrink-0 z-30">
+        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
+          <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
+            <span className="font-medium text-ois-text-muted">Monitoring</span>
+            <span>·</span>
+            <span>Rules</span>
+          </div>
+          <Button variant="primary" size="sm" className="gap-1.5" onClick={() => handleOpenWizard()}>
+            <Plus size={13} /> New rule
+          </Button>
+        </div>
+        <div className="flex items-stretch">
+          <div className="w-1 shrink-0" style={{ backgroundColor: accentColor }} />
+          <div className="flex-1 px-6 py-4">
+            <h1 className="text-xl font-bold text-ois-text">Monitoring Rules</h1>
+            <div className="flex items-center gap-3 mt-1 text-xs text-ois-text-muted flex-wrap">
+              <span className="font-medium text-ois-text">{stats.totalCount} rules</span>
+              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+              <span className="text-ois-success">{stats.enabledCount} enabled</span>
+              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+              <span className="text-ois-text-subtle">{stats.disabledCount} disabled</span>
+              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+              <span>Signal/Noise <span className={cn(
+                'font-semibold',
+                stats.avgSNR >= 0.8 ? 'text-ois-success' : stats.avgSNR >= 0.5 ? 'text-ois-warning' : 'text-ois-danger'
+              )}>{Math.round(stats.avgSNR * 100)}%</span></span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-           <Button
-             variant="primary"
-             className="h-10 px-6 font-bold gap-2 shadow-sm"
-             onClick={() => handleOpenWizard()}
-           >
-              <Plus size={18} /> New rule
-           </Button>
-        </div>
       </div>
+
+      {/* ── Body ── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-6 py-5 space-y-5 pb-20">
 
       {/* Filter Bar */}
       <Card className="p-4 border-ois-border bg-white/50 backdrop-blur-sm">
@@ -581,6 +586,9 @@ export const MonitoringRules: React.FC = () => {
           </div>
         )}
       </Card>
+
+        </div>
+      </div>
 
       {/* Create/Edit Wizard Modal */}
       <Modal 

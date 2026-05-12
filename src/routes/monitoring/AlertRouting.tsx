@@ -298,38 +298,44 @@ export const AlertRouting: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-6 pb-20">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
-        <span className="font-medium text-ois-text-muted">Monitoring</span>
-        <span>·</span>
-        <span>Alert Routing</span>
-      </div>
-      {/* Toast */}
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+
+      {/* Toast — fixed, works anywhere in tree */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-ois-text text-white px-5 py-3 rounded-xl shadow-xl text-sm font-semibold animate-in fade-in slide-in-from-bottom-2 duration-200">
           {toast}
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-ois-text tracking-tight mb-2">Alert Routing</h1>
-          <div className="flex items-center gap-4 text-sm font-medium text-ois-text-muted">
-            <span>{routes.length} routes</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border" />
-            <span>{mockMonitoringRules.length} rules using these routes</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border" />
-            <span>{totalChannelCount} channels configured</span>
+      {/* ── Header ── */}
+      <div className="bg-ois-surface border-b border-ois-border shrink-0 z-30">
+        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
+          <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
+            <span className="font-medium text-ois-text-muted">Monitoring</span>
+            <span>·</span>
+            <span>Alert Routing</span>
+          </div>
+          <Button variant="primary" size="sm" className="gap-1.5" onClick={handleNewRoute}>
+            <Plus size={13} /> New route
+          </Button>
+        </div>
+        <div className="flex items-stretch">
+          <div className="w-1 shrink-0 bg-ois-primary" />
+          <div className="flex-1 px-6 py-4">
+            <h1 className="text-xl font-bold text-ois-text">Alert Routing</h1>
+            <div className="flex items-center gap-3 mt-1 text-xs text-ois-text-muted flex-wrap">
+              <span className="font-medium text-ois-text">{routes.length} routes</span>
+              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+              <span>{mockMonitoringRules.length} rules using these routes</span>
+              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+              <span>{totalChannelCount} channels configured</span>
+            </div>
           </div>
         </div>
-        <Button variant="primary" onClick={handleNewRoute} className="h-10 px-6 font-bold gap-2 shadow-sm">
-          <Plus size={18} /> New route
-        </Button>
       </div>
 
-      <div className="flex gap-6 h-[calc(100vh-220px)] min-h-[600px]">
+      {/* ── Body: split panel, fills remaining height ── */}
+      <div className="flex gap-6 flex-1 min-h-0 px-6 py-5">
         {/* Left Column - Route List */}
         <div className="w-[400px] flex flex-col gap-4 overflow-hidden">
           <div className="relative">
