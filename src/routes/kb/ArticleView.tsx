@@ -223,11 +223,18 @@ function renderMarkdown(body: string): React.ReactNode[] {
         i++;
       }
       nodes.push(
-        <ol key={`ol-${nodes.length}`} className="my-3 space-y-1.5 pl-1">
+        <ol key={`ol-${nodes.length}`} className="my-4 pl-0">
           {orderedItems.map((item, j) => (
-            <li key={j} className="flex items-start gap-2.5 text-[14.5px] text-ois-text-muted leading-relaxed">
-              <span className="mt-0.5 w-5 h-5 rounded-full bg-ois-primary-pale text-ois-primary text-[10px] font-bold flex items-center justify-center shrink-0">{j + 1}</span>
-              <span>{renderInline(item)}</span>
+            <li key={j} className="relative flex items-start gap-4 pb-5">
+              {j < orderedItems.length - 1 && (
+                <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-ois-border" />
+              )}
+              <span className="w-6 h-6 rounded-full bg-ois-primary text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5 z-10">
+                {j + 1}
+              </span>
+              <span className="text-[15px] leading-[1.8] text-ois-text-muted flex-1 pt-0.5">
+                {renderInline(item)}
+              </span>
             </li>
           ))}
         </ol>
