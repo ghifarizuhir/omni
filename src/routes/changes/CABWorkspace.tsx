@@ -16,6 +16,21 @@ import { RiskBadge } from '../../components/changes/RiskBadge';
 import { ChangeTypeChip } from '../../components/changes/ChangeTypeChip';
 import { formatDate } from '../../lib/format';
 
+// ─── SectionCard ──────────────────────────────────────────────────────────────
+
+const SectionCard: React.FC<{ title?: string; children: React.ReactNode; className?: string }> = ({
+  title, children, className,
+}) => (
+  <div className={cn('border border-ois-border rounded-lg bg-ois-surface overflow-hidden', className)}>
+    {title && (
+      <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
+        <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">{title}</p>
+      </div>
+    )}
+    <div className="p-4">{children}</div>
+  </div>
+);
+
 // CAB agenda: in_review changes
 const AGENDA = mockChanges.filter((c) => c.status === 'in_review');
 const CURRENT_USER = 'u-001'; // Sarah Chen
@@ -55,7 +70,7 @@ const CastVoteModal: React.FC<CastVoteModalProps> = ({ change, approval, onClose
         </div>
 
         <div>
-          <p className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-3">Decision</p>
+          <p className="text-xs font-bold text-ois-text-muted uppercase tracking-widest mb-3">Decision</p>
           <div className="space-y-2">
             {(['approve', 'approve_with_conditions', 'reject', 'abstain'] as CABVote[]).map((v) => {
               const meta = cabVoteMeta[v];
@@ -75,7 +90,7 @@ const CastVoteModal: React.FC<CastVoteModalProps> = ({ change, approval, onClose
         </div>
 
         <div>
-          <p className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5">
+          <p className="text-xs font-bold text-ois-text-muted uppercase tracking-widest mb-1.5">
             Rationale
             {(decision === 'reject' || decision === 'approve_with_conditions') && <span className="text-ois-danger ml-1">*</span>}
           </p>
@@ -135,7 +150,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
       {/* Description */}
       <Card>
         <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg flex items-center justify-between">
-          <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Description</h3>
+          <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Description</h3>
           <button className="text-xs text-ois-primary hover:underline" onClick={() => navigate(`/changes/${change.publicId}`)}>
             Full detail →
           </button>
@@ -148,7 +163,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
       {/* Risk */}
       <Card>
         <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg">
-          <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Risk Assessment</h3>
+          <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Risk Assessment</h3>
         </div>
         <CardBody>
           <div className="flex items-center gap-3 mb-3">
@@ -176,7 +191,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
       {/* Conflict analysis */}
       <Card>
         <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg">
-          <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Conflict Analysis</h3>
+          <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Conflict Analysis</h3>
         </div>
         <CardBody>
           {change.conflicts.length === 0 ? (
@@ -205,7 +220,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
       {(change.linkedProblemIds.length > 0 || change.linkedIncidentIds.length > 0 || change.linkedReleasePublicId) && (
         <Card>
           <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Linked Context</h3>
+            <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Linked Context</h3>
           </div>
           <CardBody>
             <dl className="space-y-2 text-xs">
@@ -235,7 +250,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
       {/* Voting table */}
       <Card>
         <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg">
-          <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Voting</h3>
+          <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Voting</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -293,7 +308,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
       {/* Discussion */}
       <Card>
         <div className="px-4 py-2.5 border-b border-ois-border bg-ois-bg">
-          <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-wider">Discussion Notes</h3>
+          <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Discussion Notes</h3>
         </div>
         <CardBody>
           <textarea
@@ -342,7 +357,7 @@ const ScheduleSessionModal: React.FC<{
   <Modal isOpen={isOpen} onClose={onClose} title="Schedule new CAB session" size="md">
     <div className="py-4 space-y-5">
       <div>
-        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
+        <label className="text-xs font-bold text-ois-text-muted uppercase tracking-widest mb-1.5 block">
           Session date & time (UTC) <span className="text-ois-danger">*</span>
         </label>
         <input
@@ -353,7 +368,7 @@ const ScheduleSessionModal: React.FC<{
         />
       </div>
       <div>
-        <p className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-2">Attendees</p>
+        <p className="text-xs font-bold text-ois-text-muted uppercase tracking-widest mb-2">Attendees</p>
         <div className="space-y-2">
           {SESSION.members.map(m => (
             <label key={m.id} className="flex items-center gap-2.5 cursor-pointer">
@@ -455,14 +470,11 @@ export const CABWorkspace: React.FC = () => {
   }
 
   return (
-    <div className="flex gap-5 min-h-0">
+    <div className="-m-6 flex bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
       {/* Agenda sidebar */}
-      <div className="w-60 shrink-0 space-y-3">
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Agenda</h3>
-          </div>
-          <div className="divide-y divide-ois-border">
+      <aside className="w-[280px] shrink-0 overflow-y-auto border-r border-ois-border bg-white p-4 space-y-4">
+        <SectionCard title="Agenda">
+          <div className="divide-y divide-ois-border -m-4">
             {AGENDA.map((c, i) => {
               const approved = c.approvals.filter((a) =>
                 getVote(c.id, a.id) === 'approve' || (a.decision !== 'pending' && a.decision === 'approve'),
@@ -502,11 +514,11 @@ export const CABWorkspace: React.FC = () => {
               );
             })}
           </div>
-        </Card>
-      </div>
+        </SectionCard>
+      </aside>
 
       {/* Center: voting card */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-y-auto p-6">
         {/* Toolbar */}
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -603,67 +615,48 @@ export const CABWorkspace: React.FC = () => {
       </div>
 
       {/* Right: Session info */}
-      <div className="w-56 shrink-0 space-y-3">
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider flex items-center gap-1.5">
-              <Users size={11} /> Session
-            </h3>
-          </div>
-          <CardBody>
-            <p className="text-xs font-semibold text-ois-text mb-1">{SESSION.date}</p>
-            <p className="text-[11px] text-ois-text-muted mb-3">
-              {sessionStarted ? '⏱ In progress' : 'Not started'} · {AGENDA.length} changes · {SESSION.members.length} members
-            </p>
-            <div className="space-y-2">
-              {SESSION.members.map((m) => (
-                <div key={m.id} className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-ois-primary/10 text-ois-primary text-[9px] font-bold flex items-center justify-center shrink-0">
-                    {m.name.split(' ').map((n) => n[0]).join('')}
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium text-ois-text">{m.name}</p>
-                    <p className="text-[9px] text-ois-text-subtle">{m.role}</p>
-                  </div>
+      <aside className="w-[280px] shrink-0 overflow-y-auto border-l border-ois-border bg-white p-4 space-y-4">
+        <SectionCard title="Session">
+          <p className="text-xs font-semibold text-ois-text mb-1">{SESSION.date}</p>
+          <p className="text-[11px] text-ois-text-muted mb-3">
+            {sessionStarted ? '⏱ In progress' : 'Not started'} · {AGENDA.length} changes · {SESSION.members.length} members
+          </p>
+          <div className="space-y-2">
+            {SESSION.members.map((m) => (
+              <div key={m.id} className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-ois-primary/10 text-ois-primary text-[9px] font-bold flex items-center justify-center shrink-0">
+                  {m.name.split(' ').map((n) => n[0]).join('')}
                 </div>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-amber-50">
-            <h3 className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
-              <AlertTriangle size={10} /> Freeze Windows
-            </h3>
-          </div>
-          <CardBody>
-            <p className="text-xs text-ois-text font-medium">⚠ Active until May 11:</p>
-            <p className="text-[11px] text-ois-text-muted mt-1">Marketing campaign (P1/P2 changes only)</p>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <div className="px-4 py-3 border-b border-ois-border bg-ois-bg">
-            <h3 className="text-[11px] font-bold text-ois-text-muted uppercase tracking-wider">Stats This Quarter</h3>
-          </div>
-          <CardBody>
-            <dl className="space-y-2 text-xs">
-              {[
-                { label: 'Changes reviewed', value: '47' },
-                { label: 'Approval rate', value: '89%' },
-                { label: 'Avg discussion', value: '8 min' },
-                { label: 'Failed PIRs', value: '2' },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between">
-                  <dt className="text-ois-text-muted">{label}</dt>
-                  <dd className="font-bold text-ois-text">{value}</dd>
+                <div>
+                  <p className="text-[11px] font-medium text-ois-text">{m.name}</p>
+                  <p className="text-[9px] text-ois-text-subtle">{m.role}</p>
                 </div>
-              ))}
-            </dl>
-          </CardBody>
-        </Card>
-      </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Freeze Windows">
+          <p className="text-xs text-ois-text font-medium">⚠ Active until May 11:</p>
+          <p className="text-[11px] text-ois-text-muted mt-1">Marketing campaign (P1/P2 changes only)</p>
+        </SectionCard>
+
+        <SectionCard title="Stats This Quarter">
+          <dl className="space-y-2 text-xs">
+            {[
+              { label: 'Changes reviewed', value: '47' },
+              { label: 'Approval rate', value: '89%' },
+              { label: 'Avg discussion', value: '8 min' },
+              { label: 'Failed PIRs', value: '2' },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex justify-between">
+                <dt className="text-ois-text-muted">{label}</dt>
+                <dd className="font-bold text-ois-text">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </SectionCard>
+      </aside>
 
       {/* Vote modal */}
       {votingFor && selected && (
