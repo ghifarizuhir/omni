@@ -5,6 +5,7 @@ import { mockImprovements, getTotalActualBenefitUSD } from '@/src/mocks/improvem
 import { BubbleMatrix } from '@/src/components/improvement/HeatmapView/BubbleMatrix';
 import { PortfolioSummaryStrip } from '@/src/components/improvement/HeatmapView/PortfolioSummaryStrip';
 import { HeatmapGapAnalysis } from '@/src/components/improvement/HeatmapView/HeatmapGapAnalysis';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 export const ImprovementHeatmap: React.FC = () => {
   const totalActual = getTotalActualBenefitUSD();
@@ -47,35 +48,38 @@ export const ImprovementHeatmap: React.FC = () => {
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-2 items-center">
-        <select
+        <FilterDropdown
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="text-sm border border-ois-border rounded-lg bg-ois-surface px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ois-primary"
-        >
-          <option value="active">Active (not completed/cancelled)</option>
-          <option value="all">All statuses</option>
-          <option value="in_progress">In Progress</option>
-          <option value="approved">Approved</option>
-          <option value="completed">Completed</option>
-        </select>
-        <select
+          onChange={v => setStatusFilter(v)}
+          options={[
+            { value: 'active', label: 'Active (not completed/cancelled)' },
+            { value: 'all', label: 'All statuses' },
+            { value: 'in_progress', label: 'In Progress' },
+            { value: 'approved', label: 'Approved' },
+            { value: 'completed', label: 'Completed' },
+          ]}
+          placeholder="Active (not completed/cancelled)"
+        />
+        <FilterDropdown
           value={sizeBy}
-          onChange={e => setSizeBy(e.target.value)}
-          className="text-sm border border-ois-border rounded-lg bg-ois-surface px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ois-primary"
-        >
-          <option value="benefit">Size by: Est. Benefit</option>
-          <option value="effort">Size by: Effort (days)</option>
-          <option value="roi">Size by: ROI %</option>
-        </select>
-        <select
+          onChange={v => setSizeBy(v)}
+          options={[
+            { value: 'benefit', label: 'Size by: Est. Benefit' },
+            { value: 'effort', label: 'Size by: Effort (days)' },
+            { value: 'roi', label: 'Size by: ROI %' },
+          ]}
+          placeholder="Size by: Est. Benefit"
+        />
+        <FilterDropdown
           value={colorBy}
-          onChange={e => setColorBy(e.target.value)}
-          className="text-sm border border-ois-border rounded-lg bg-ois-surface px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ois-primary"
-        >
-          <option value="priority">Color by: Priority</option>
-          <option value="category">Color by: Category</option>
-          <option value="status">Color by: Status</option>
-        </select>
+          onChange={v => setColorBy(v)}
+          options={[
+            { value: 'priority', label: 'Color by: Priority' },
+            { value: 'category', label: 'Color by: Category' },
+            { value: 'status', label: 'Color by: Status' },
+          ]}
+          placeholder="Color by: Priority"
+        />
       </div>
 
       {/* Main two-column layout */}

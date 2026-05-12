@@ -14,6 +14,7 @@ import { DeploymentTriggerChip } from '../../components/deployments/DeploymentTr
 import { RollbackModal } from '../../components/deployments/DeploymentDetail/RollbackModal';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -392,66 +393,68 @@ export const DeploymentsQueue: React.FC = () => {
         </div>
 
         {/* Status */}
-        <select
+        <FilterDropdown
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as DeploymentStatus | '')}
-          className="rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm text-[#344054] focus:outline-none focus:ring-2 focus:ring-[#1F4FD4]/30"
-        >
-          <option value="">Status</option>
-          {(['pending', 'running', 'success', 'failed', 'rolled_back', 'cancelled', 'rolling_back'] as DeploymentStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {s.replace('_', ' ')} ({statusCounts[s] ?? 0})
-            </option>
-          ))}
-        </select>
+          onChange={v => setStatusFilter(v as DeploymentStatus | '')}
+          options={[
+            { value: '', label: 'Status' },
+            ...(['pending', 'running', 'success', 'failed', 'rolled_back', 'cancelled', 'rolling_back'] as DeploymentStatus[]).map(s => ({
+              value: s,
+              label: `${s.replace('_', ' ')} (${statusCounts[s] ?? 0})`,
+            })),
+          ]}
+          placeholder="Status"
+        />
 
         {/* Environment */}
-        <select
+        <FilterDropdown
           value={envFilter}
-          onChange={(e) => setEnvFilter(e.target.value as Environment | '')}
-          className="rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm text-[#344054] focus:outline-none focus:ring-2 focus:ring-[#1F4FD4]/30"
-        >
-          <option value="">Environment</option>
-          {(['development', 'staging', 'production', 'dr'] as Environment[]).map((e) => (
-            <option key={e} value={e}>{e}</option>
-          ))}
-        </select>
+          onChange={v => setEnvFilter(v as Environment | '')}
+          options={[
+            { value: '', label: 'Environment' },
+            ...(['development', 'staging', 'production', 'dr'] as Environment[]).map(e => ({ value: e, label: e })),
+          ]}
+          placeholder="Environment"
+        />
 
         {/* Component */}
-        <select
+        <FilterDropdown
           value={componentFilter}
-          onChange={(e) => setComponentFilter(e.target.value)}
-          className="rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm text-[#344054] focus:outline-none focus:ring-2 focus:ring-[#1F4FD4]/30"
-        >
-          <option value="">Component</option>
-          {uniqueComponents.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+          onChange={v => setComponentFilter(v)}
+          options={[
+            { value: '', label: 'Component' },
+            ...uniqueComponents.map(c => ({ value: c, label: c })),
+          ]}
+          placeholder="Component"
+        />
 
         {/* Strategy */}
-        <select
+        <FilterDropdown
           value={strategyFilter}
-          onChange={(e) => setStrategyFilter(e.target.value as DeploymentStrategy | '')}
-          className="rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm text-[#344054] focus:outline-none focus:ring-2 focus:ring-[#1F4FD4]/30"
-        >
-          <option value="">Strategy</option>
-          {(['rolling', 'blue_green', 'canary', 'big_bang', 'phased'] as DeploymentStrategy[]).map((s) => (
-            <option key={s} value={s}>{s.replace('_', ' ')}</option>
-          ))}
-        </select>
+          onChange={v => setStrategyFilter(v as DeploymentStrategy | '')}
+          options={[
+            { value: '', label: 'Strategy' },
+            ...(['rolling', 'blue_green', 'canary', 'big_bang', 'phased'] as DeploymentStrategy[]).map(s => ({
+              value: s,
+              label: s.replace('_', ' '),
+            })),
+          ]}
+          placeholder="Strategy"
+        />
 
         {/* Trigger */}
-        <select
+        <FilterDropdown
           value={triggerFilter}
-          onChange={(e) => setTriggerFilter(e.target.value as DeploymentTrigger | '')}
-          className="rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm text-[#344054] focus:outline-none focus:ring-2 focus:ring-[#1F4FD4]/30"
-        >
-          <option value="">Trigger</option>
-          {(['manual', 'cicd_pipeline', 'scheduled', 'auto_promotion'] as DeploymentTrigger[]).map((t) => (
-            <option key={t} value={t}>{t.replace('_', ' ')}</option>
-          ))}
-        </select>
+          onChange={v => setTriggerFilter(v as DeploymentTrigger | '')}
+          options={[
+            { value: '', label: 'Trigger' },
+            ...(['manual', 'cicd_pipeline', 'scheduled', 'auto_promotion'] as DeploymentTrigger[]).map(t => ({
+              value: t,
+              label: t.replace('_', ' '),
+            })),
+          ]}
+          placeholder="Trigger"
+        />
 
         {hasFilters && (
           <button
@@ -634,29 +637,31 @@ export const DeploymentsQueue: React.FC = () => {
             <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
               Component <span className="text-ois-danger">*</span>
             </label>
-            <select
+            <FilterDropdown
               value={mdComponent}
-              onChange={e => setMdComponent(e.target.value)}
-              className="w-full h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
-            >
-              <option value="">Select component…</option>
-              {uniqueComponents.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+              onChange={v => setMdComponent(v)}
+              options={[
+                { value: '', label: 'Select component…' },
+                ...uniqueComponents.map(c => ({ value: c, label: c })),
+              ]}
+              placeholder="Select component…"
+              fullWidth
+            />
           </div>
           <div>
             <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
               Environment <span className="text-ois-danger">*</span>
             </label>
-            <select
+            <FilterDropdown
               value={mdEnv}
-              onChange={e => setMdEnv(e.target.value as Environment)}
-              className="w-full h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
-            >
-              <option value="">Select environment…</option>
-              {(['development', 'staging', 'production', 'dr'] as Environment[]).map(e => (
-                <option key={e} value={e}>{e}</option>
-              ))}
-            </select>
+              onChange={v => setMdEnv(v as Environment | '')}
+              options={[
+                { value: '', label: 'Select environment…' },
+                ...(['development', 'staging', 'production', 'dr'] as Environment[]).map(e => ({ value: e, label: e })),
+              ]}
+              placeholder="Select environment…"
+              fullWidth
+            />
           </div>
           <div>
             <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
@@ -674,16 +679,19 @@ export const DeploymentsQueue: React.FC = () => {
               <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">
                 Strategy <span className="text-ois-danger">*</span>
               </label>
-              <select
+              <FilterDropdown
                 value={mdStrategy}
-                onChange={e => setMdStrategy(e.target.value as DeploymentStrategy)}
-                className="w-full h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
-              >
-                <option value="">Select…</option>
-                {(['rolling', 'blue_green', 'canary', 'big_bang', 'phased'] as DeploymentStrategy[]).map(s => (
-                  <option key={s} value={s}>{s.replace('_', ' ')}</option>
-                ))}
-              </select>
+                onChange={v => setMdStrategy(v as DeploymentStrategy | '')}
+                options={[
+                  { value: '', label: 'Select…' },
+                  ...(['rolling', 'blue_green', 'canary', 'big_bang', 'phased'] as DeploymentStrategy[]).map(s => ({
+                    value: s,
+                    label: s.replace('_', ' '),
+                  })),
+                ]}
+                placeholder="Select…"
+                fullWidth
+              />
             </div>
             <div>
               <label className="text-xs font-bold text-ois-text-muted uppercase tracking-wider mb-1.5 block">

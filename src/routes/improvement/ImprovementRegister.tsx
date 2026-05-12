@@ -15,6 +15,7 @@ import {
 } from '@/src/lib/constants';
 import { ImprovementRow } from '@/src/components/improvement/ImprovementRow';
 import { ImprovementStatus, ImprovementCategory, ImprovementPriority } from '@/src/types/improvement';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 const TODAY = '2026-05-10';
 const LOGGED_IN_USER = 'u-001';
@@ -191,46 +192,42 @@ export const ImprovementRegister: React.FC = () => {
             className="pl-8 pr-3 py-1.5 text-sm border border-ois-border rounded-lg bg-ois-surface focus:outline-none focus:ring-1 focus:ring-ois-primary w-52"
           />
         </div>
-        <select
+        <FilterDropdown
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="text-sm border border-ois-border rounded-lg bg-ois-surface px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ois-primary"
-        >
-          <option value="">All statuses</option>
-          {ALL_STATUSES.map(s => (
-            <option key={s} value={s}>{improvementStatusMeta[s].label}</option>
-          ))}
-        </select>
-        <select
+          onChange={v => setStatusFilter(v)}
+          options={[
+            { value: '', label: 'All statuses' },
+            ...ALL_STATUSES.map(s => ({ value: s, label: improvementStatusMeta[s].label })),
+          ]}
+          placeholder="All statuses"
+        />
+        <FilterDropdown
           value={categoryFilter}
-          onChange={e => setCategoryFilter(e.target.value)}
-          className="text-sm border border-ois-border rounded-lg bg-ois-surface px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ois-primary"
-        >
-          <option value="">All categories</option>
-          {ALL_CATEGORIES.map(c => (
-            <option key={c} value={c}>{improvementCategoryMeta[c].label}</option>
-          ))}
-        </select>
-        <select
+          onChange={v => setCategoryFilter(v)}
+          options={[
+            { value: '', label: 'All categories' },
+            ...ALL_CATEGORIES.map(c => ({ value: c, label: improvementCategoryMeta[c].label })),
+          ]}
+          placeholder="All categories"
+        />
+        <FilterDropdown
           value={priorityFilter}
-          onChange={e => setPriorityFilter(e.target.value)}
-          className="text-sm border border-ois-border rounded-lg bg-ois-surface px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ois-primary"
-        >
-          <option value="">All priorities</option>
-          {ALL_PRIORITIES.map(p => (
-            <option key={p} value={p}>{improvementPriorityMeta[p].label}</option>
-          ))}
-        </select>
-        <select
+          onChange={v => setPriorityFilter(v)}
+          options={[
+            { value: '', label: 'All priorities' },
+            ...ALL_PRIORITIES.map(p => ({ value: p, label: improvementPriorityMeta[p].label })),
+          ]}
+          placeholder="All priorities"
+        />
+        <FilterDropdown
           value={ownerFilter}
-          onChange={e => setOwnerFilter(e.target.value)}
-          className="text-sm border border-ois-border rounded-lg bg-ois-surface px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ois-primary"
-        >
-          <option value="">All owners</option>
-          {ownerOptions.map(([id, name]) => (
-            <option key={id} value={id}>{name}</option>
-          ))}
-        </select>
+          onChange={v => setOwnerFilter(v)}
+          options={[
+            { value: '', label: 'All owners' },
+            ...ownerOptions.map(([id, name]) => ({ value: id, label: name })),
+          ]}
+          placeholder="All owners"
+        />
         {hasFilters && (
           <button onClick={handleReset} className="inline-flex items-center gap-1 text-xs text-ois-text-muted hover:text-ois-danger transition-colors">
             <X size={12} /> Reset

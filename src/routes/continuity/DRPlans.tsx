@@ -6,6 +6,7 @@ import { mockDRPlans } from '@/src/mocks/drPlans';
 import { DRPlan, DRPlanStatus } from '@/src/types/continuity';
 import { DRPlanCard } from '@/src/components/continuity/DRPlanCard';
 import { DRTestRunnerWizard } from '@/src/components/continuity/DRTestRunner/DRTestRunnerWizard';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 const TODAY = new Date('2026-05-10');
 
@@ -221,35 +222,29 @@ export const DRPlans: React.FC = () => {
               />
             </div>
 
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as DRPlanStatus | 'all')}
-                className="appearance-none pl-3 pr-7 py-1.5 text-sm border border-ois-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ois-primary/30 cursor-pointer"
-              >
-                <option value="all">All statuses ({mockDRPlans.length})</option>
-                <option value="active">Active ({statusCounts['active'] ?? 0})</option>
-                <option value="approved">Approved ({statusCounts['approved'] ?? 0})</option>
-                <option value="under_review">Under review ({statusCounts['under_review'] ?? 0})</option>
-                <option value="draft">Draft ({statusCounts['draft'] ?? 0})</option>
-                <option value="retired">Retired ({statusCounts['retired'] ?? 0})</option>
-              </select>
-              <ChevronRight size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none rotate-90" />
-            </div>
+            <FilterDropdown
+              value={statusFilter}
+              onChange={v => setStatusFilter(v as DRPlanStatus | 'all')}
+              options={[
+                { value: 'all', label: `All statuses (${mockDRPlans.length})` },
+                { value: 'active', label: `Active (${statusCounts['active'] ?? 0})` },
+                { value: 'approved', label: `Approved (${statusCounts['approved'] ?? 0})` },
+                { value: 'under_review', label: `Under review (${statusCounts['under_review'] ?? 0})` },
+                { value: 'draft', label: `Draft (${statusCounts['draft'] ?? 0})` },
+                { value: 'retired', label: `Retired (${statusCounts['retired'] ?? 0})` },
+              ]}
+              placeholder="All statuses"
+            />
 
-            <div className="relative">
-              <select
-                value={serviceFilter}
-                onChange={(e) => setServiceFilter(e.target.value)}
-                className="appearance-none pl-3 pr-7 py-1.5 text-sm border border-ois-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ois-primary/30 cursor-pointer"
-              >
-                <option value="all">All services</option>
-                {ALL_SERVICES.map((svc) => (
-                  <option key={svc} value={svc}>{svc}</option>
-                ))}
-              </select>
-              <ChevronRight size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none rotate-90" />
-            </div>
+            <FilterDropdown
+              value={serviceFilter}
+              onChange={v => setServiceFilter(v)}
+              options={[
+                { value: 'all', label: 'All services' },
+                ...ALL_SERVICES.map(svc => ({ value: svc, label: svc })),
+              ]}
+              placeholder="All services"
+            />
 
             {hasFilters && (
               <button

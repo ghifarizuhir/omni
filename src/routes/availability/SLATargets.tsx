@@ -6,6 +6,7 @@ import { mockSLABreaches } from '@/src/mocks/slaBreaches';
 import { mockServices } from '@/src/mocks/services';
 import { SLACard as SLACardBase } from '@/src/components/availability/SLACard';
 import { Button } from '@/src/components/ui/Button';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { AvailabilitySLAStatus, SLATarget, SLABreach } from '@/src/types';
 
 const SLACard: React.FC<{ sla: SLATarget; breach?: SLABreach }> = (props) => (
@@ -83,28 +84,24 @@ export const SLATargets: React.FC = () => {
           />
         </div>
 
-        <select
+        <FilterDropdown
           value={serviceFilter}
-          onChange={(e) => setServiceFilter(e.target.value)}
-          className="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
-        >
-          {serviceOptions.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+          onChange={v => setServiceFilter(v)}
+          options={serviceOptions.map(s => ({ value: s.id, label: s.name }))}
+          placeholder="All Services"
+        />
 
-        <select
+        <FilterDropdown
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-          className="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
-        >
-          <option value="all">All Statuses</option>
-          <option value="meeting">Meeting</option>
-          <option value="at_risk">At Risk</option>
-          <option value="breached">Breached</option>
-        </select>
+          onChange={v => setStatusFilter(v as StatusFilter)}
+          options={[
+            { value: 'all', label: 'All Statuses' },
+            { value: 'meeting', label: 'Meeting' },
+            { value: 'at_risk', label: 'At Risk' },
+            { value: 'breached', label: 'Breached' },
+          ]}
+          placeholder="All Statuses"
+        />
 
         {hasFilters && (
           <button

@@ -6,6 +6,7 @@ import { mockBenefitMeasurements } from '@/src/mocks/benefitMeasurements';
 import { improvementCategoryMeta, improvementPriorityMeta } from '@/src/lib/constants';
 import { KanbanBoard } from '@/src/components/improvement/KanbanBoard/KanbanBoard';
 import { ImprovementCategory, ImprovementPriority } from '@/src/types/improvement';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 const ALL_CATEGORIES: ImprovementCategory[] = [
   'reliability', 'performance', 'security', 'process', 'cost', 'compliance', 'customer_experience', 'developer_experience',
@@ -70,36 +71,33 @@ export const ImprovementKanban: React.FC = () => {
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-2 items-center">
-        <select
+        <FilterDropdown
           value={categoryFilter}
-          onChange={e => setCategoryFilter(e.target.value)}
-          className="text-sm border border-ois-border rounded-lg bg-ois-surface px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ois-primary"
-        >
-          <option value="">All categories</option>
-          {ALL_CATEGORIES.map(c => (
-            <option key={c} value={c}>{improvementCategoryMeta[c].label}</option>
-          ))}
-        </select>
-        <select
+          onChange={v => setCategoryFilter(v)}
+          options={[
+            { value: '', label: 'All categories' },
+            ...ALL_CATEGORIES.map(c => ({ value: c, label: improvementCategoryMeta[c].label })),
+          ]}
+          placeholder="All categories"
+        />
+        <FilterDropdown
           value={ownerFilter}
-          onChange={e => setOwnerFilter(e.target.value)}
-          className="text-sm border border-ois-border rounded-lg bg-ois-surface px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ois-primary"
-        >
-          <option value="">All owners</option>
-          {ownerOptions.map(([id, name]) => (
-            <option key={id} value={id}>{name}</option>
-          ))}
-        </select>
-        <select
+          onChange={v => setOwnerFilter(v)}
+          options={[
+            { value: '', label: 'All owners' },
+            ...ownerOptions.map(([id, name]) => ({ value: id, label: name })),
+          ]}
+          placeholder="All owners"
+        />
+        <FilterDropdown
           value={priorityFilter}
-          onChange={e => setPriorityFilter(e.target.value)}
-          className="text-sm border border-ois-border rounded-lg bg-ois-surface px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ois-primary"
-        >
-          <option value="">All priorities</option>
-          {ALL_PRIORITIES.map(p => (
-            <option key={p} value={p}>{improvementPriorityMeta[p].label}</option>
-          ))}
-        </select>
+          onChange={v => setPriorityFilter(v)}
+          options={[
+            { value: '', label: 'All priorities' },
+            ...ALL_PRIORITIES.map(p => ({ value: p, label: improvementPriorityMeta[p].label })),
+          ]}
+          placeholder="All priorities"
+        />
         {hasFilters && (
           <button onClick={handleReset} className="inline-flex items-center gap-1 text-xs text-ois-text-muted hover:text-ois-danger transition-colors">
             <X size={12} /> Reset

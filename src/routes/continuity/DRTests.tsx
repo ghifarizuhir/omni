@@ -8,6 +8,7 @@ import { DRTestRun, DRTestStatus, DRTestType } from '@/src/types/continuity';
 import { DRTestCard } from '@/src/components/continuity/DRTestCard';
 import { LiveDRTestPanel } from '@/src/components/continuity/LiveDRTestPanel';
 import { DRTestRunnerWizard } from '@/src/components/continuity/DRTestRunner/DRTestRunnerWizard';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString('en-US', {
@@ -265,49 +266,37 @@ export const DRTests: React.FC = () => {
                 />
               </div>
 
-              <div className="relative">
-                <select
-                  value={planFilter}
-                  onChange={(e) => setPlanFilter(e.target.value)}
-                  className="appearance-none pl-3 pr-7 py-1.5 text-sm border border-ois-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ois-primary/30 cursor-pointer"
-                >
-                  <option value="all">All plans</option>
-                  {ALL_PLAN_OPTIONS.map((pid) => (
-                    <option key={pid} value={pid}>{pid}</option>
-                  ))}
-                </select>
-                <ChevronRight size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none rotate-90" />
-              </div>
+              <FilterDropdown
+                value={planFilter}
+                onChange={v => setPlanFilter(v)}
+                options={[
+                  { value: 'all', label: 'All plans' },
+                  ...ALL_PLAN_OPTIONS.map(pid => ({ value: pid, label: pid })),
+                ]}
+                placeholder="All plans"
+              />
 
-              <div className="relative">
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value as DRTestType | 'all')}
-                  className="appearance-none pl-3 pr-7 py-1.5 text-sm border border-ois-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ois-primary/30 cursor-pointer"
-                >
-                  {TEST_TYPE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-                <ChevronRight size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none rotate-90" />
-              </div>
+              <FilterDropdown
+                value={typeFilter}
+                onChange={v => setTypeFilter(v as DRTestType | 'all')}
+                options={TEST_TYPE_OPTIONS.map(opt => ({ value: opt.value, label: opt.label }))}
+                placeholder="All types"
+              />
 
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as DRTestStatus | 'all')}
-                  className="appearance-none pl-3 pr-7 py-1.5 text-sm border border-ois-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ois-primary/30 cursor-pointer"
-                >
-                  <option value="all">All statuses</option>
-                  <option value="planned">Planned</option>
-                  <option value="in_progress">In progress</option>
-                  <option value="passed">Passed</option>
-                  <option value="passed_with_issues">Passed with issues</option>
-                  <option value="failed">Failed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-                <ChevronRight size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none rotate-90" />
-              </div>
+              <FilterDropdown
+                value={statusFilter}
+                onChange={v => setStatusFilter(v as DRTestStatus | 'all')}
+                options={[
+                  { value: 'all', label: 'All statuses' },
+                  { value: 'planned', label: 'Planned' },
+                  { value: 'in_progress', label: 'In progress' },
+                  { value: 'passed', label: 'Passed' },
+                  { value: 'passed_with_issues', label: 'Passed with issues' },
+                  { value: 'failed', label: 'Failed' },
+                  { value: 'cancelled', label: 'Cancelled' },
+                ]}
+                placeholder="All statuses"
+              />
 
               {hasFilters && (
                 <button

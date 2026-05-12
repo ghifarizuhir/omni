@@ -16,6 +16,7 @@ import { ChangeTypeChip } from '../../components/changes/ChangeTypeChip';
 import { RiskBadge } from '../../components/changes/RiskBadge';
 import { formatDate } from '../../lib/format';
 import { Change, ChangeStatus, RiskLevel } from '../../types/change';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 type ViewMode = 'calendar' | 'board' | 'list';
 
@@ -171,31 +172,33 @@ export const ChangeCalendar: React.FC = () => {
                   className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-ois-border bg-white text-ois-text placeholder:text-ois-text-subtle focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
                 />
               </div>
-              <select
+              <FilterDropdown
                 value={listStatusFilter}
-                onChange={(e) => setListStatusFilter(e.target.value as ChangeStatus | '')}
-                className="text-xs rounded-lg border border-ois-border bg-white text-ois-text px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-              >
-                <option value="">All statuses</option>
-                <option value="draft">Draft</option>
-                <option value="submitted">Submitted</option>
-                <option value="in_review">In review</option>
-                <option value="approved">Approved</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="implementing">Implementing</option>
-                <option value="implemented">Implemented</option>
-              </select>
-              <select
+                onChange={v => setListStatusFilter(v as ChangeStatus | '')}
+                options={[
+                  { value: '', label: 'All statuses' },
+                  { value: 'draft', label: 'Draft' },
+                  { value: 'submitted', label: 'Submitted' },
+                  { value: 'in_review', label: 'In review' },
+                  { value: 'approved', label: 'Approved' },
+                  { value: 'scheduled', label: 'Scheduled' },
+                  { value: 'implementing', label: 'Implementing' },
+                  { value: 'implemented', label: 'Implemented' },
+                ]}
+                placeholder="All statuses"
+              />
+              <FilterDropdown
                 value={listRiskFilter}
-                onChange={(e) => setListRiskFilter(e.target.value as RiskLevel | '')}
-                className="text-xs rounded-lg border border-ois-border bg-white text-ois-text px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-              >
-                <option value="">All risk levels</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
+                onChange={v => setListRiskFilter(v as RiskLevel | '')}
+                options={[
+                  { value: '', label: 'All risk levels' },
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                  { value: 'critical', label: 'Critical' },
+                ]}
+                placeholder="All risk levels"
+              />
             </div>
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">

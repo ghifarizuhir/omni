@@ -13,6 +13,7 @@ import { OutageTypeChip } from '@/src/components/availability/OutageTypeChip';
 import { OutageVolumeBarChart } from '@/src/components/availability/OutageVolumeBarChart';
 import { OutageCausesPieChart } from '@/src/components/availability/OutageCausesPieChart';
 import { OutageDetailDrawer } from '@/src/components/availability/OutageDetailDrawer';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 function formatDuration(minutes?: number): string {
   if (!minutes) return '—';
@@ -122,51 +123,49 @@ export const Outages: React.FC = () => {
           />
         </div>
 
-        <select
+        <FilterDropdown
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
-          className="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
-        >
-          <option value="all">All Types</option>
-          <option value="unplanned">Unplanned</option>
-          <option value="planned">Planned</option>
-          <option value="partial">Partial</option>
-          <option value="detected_only">Detected Only</option>
-        </select>
+          onChange={v => setTypeFilter(v as TypeFilter)}
+          options={[
+            { value: 'all', label: 'All Types' },
+            { value: 'unplanned', label: 'Unplanned' },
+            { value: 'planned', label: 'Planned' },
+            { value: 'partial', label: 'Partial' },
+            { value: 'detected_only', label: 'Detected Only' },
+          ]}
+          placeholder="All Types"
+        />
 
-        <select
+        <FilterDropdown
           value={serviceFilter}
-          onChange={(e) => setServiceFilter(e.target.value)}
-          className="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
-        >
-          {serviceOptions.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+          onChange={v => setServiceFilter(v)}
+          options={serviceOptions.map(s => ({ value: s.id, label: s.name }))}
+          placeholder="All Services"
+        />
 
-        <select
+        <FilterDropdown
           value={severityFilter}
-          onChange={(e) => setSeverityFilter(e.target.value)}
-          className="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
-        >
-          <option value="all">All Severities</option>
-          <option value="P1">P1</option>
-          <option value="P2">P2</option>
-          <option value="P3">P3</option>
-          <option value="P4">P4</option>
-        </select>
+          onChange={v => setSeverityFilter(v)}
+          options={[
+            { value: 'all', label: 'All Severities' },
+            { value: 'P1', label: 'P1' },
+            { value: 'P2', label: 'P2' },
+            { value: 'P3', label: 'P3' },
+            { value: 'P4', label: 'P4' },
+          ]}
+          placeholder="All Severities"
+        />
 
-        <select
+        <FilterDropdown
           value={customerFacingFilter}
-          onChange={(e) => setCustomerFacingFilter(e.target.value)}
-          className="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
-        >
-          <option value="all">Customer-facing: All</option>
-          <option value="yes">Customer-facing: Yes</option>
-          <option value="no">Customer-facing: No</option>
-        </select>
+          onChange={v => setCustomerFacingFilter(v)}
+          options={[
+            { value: 'all', label: 'Customer-facing: All' },
+            { value: 'yes', label: 'Customer-facing: Yes' },
+            { value: 'no', label: 'Customer-facing: No' },
+          ]}
+          placeholder="Customer-facing: All"
+        />
 
         {hasFilters && (
           <button

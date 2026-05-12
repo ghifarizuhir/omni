@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, Calendar } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
@@ -6,6 +6,7 @@ import { EnvironmentCard } from '../../components/deployments/EnvironmentCard';
 import { RecentDeploymentsTable } from '../../components/deployments/RecentDeploymentsTable';
 import { mockEnvironments } from '../../mocks/environments';
 import { mockDeployments } from '../../mocks/deployments';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 // ─── Calculation helpers ──────────────────────────────────────────────────────
 
@@ -93,6 +94,8 @@ const recentDeployments = [...last7d].sort((a, b) =>
 
 export const Environments: React.FC = () => {
   const prodHealth = prodEnv?.health ?? 'healthy';
+  const [envTableFilter, setEnvTableFilter] = useState('');
+  const [statusTableFilter, setStatusTableFilter] = useState('');
 
   return (
     <div className="p-6 space-y-6">
@@ -143,23 +146,29 @@ export const Environments: React.FC = () => {
                   Recent Deployments (Last 7 Days)
                 </h2>
                 <div className="flex items-center gap-3">
-                  <select className="text-xs border border-ois-border-strong rounded-md px-2 py-1 text-ois-text-muted bg-white focus:outline-none focus:ring-1 focus:ring-ois-primary">
-                    <option>All envs</option>
-                    {mockEnvironments.map(e => (
-                      <option key={e.id} value={e.name}>
-                        {e.displayName}
-                      </option>
-                    ))}
-                  </select>
-                  <select className="text-xs border border-ois-border-strong rounded-md px-2 py-1 text-ois-text-muted bg-white focus:outline-none focus:ring-1 focus:ring-ois-primary">
-                    <option>All statuses</option>
-                    <option>success</option>
-                    <option>failed</option>
-                    <option>running</option>
-                    <option>pending</option>
-                    <option>rolled_back</option>
-                    <option>cancelled</option>
-                  </select>
+                  <FilterDropdown
+                    value={envTableFilter}
+                    onChange={v => setEnvTableFilter(v)}
+                    options={[
+                      { value: '', label: 'All envs' },
+                      ...mockEnvironments.map(e => ({ value: e.name, label: e.displayName })),
+                    ]}
+                    placeholder="All envs"
+                  />
+                  <FilterDropdown
+                    value={statusTableFilter}
+                    onChange={v => setStatusTableFilter(v)}
+                    options={[
+                      { value: '', label: 'All statuses' },
+                      { value: 'success', label: 'success' },
+                      { value: 'failed', label: 'failed' },
+                      { value: 'running', label: 'running' },
+                      { value: 'pending', label: 'pending' },
+                      { value: 'rolled_back', label: 'rolled_back' },
+                      { value: 'cancelled', label: 'cancelled' },
+                    ]}
+                    placeholder="All statuses"
+                  />
                   <Link
                     to="/deployments"
                     className="text-xs text-ois-primary hover:underline flex items-center gap-1"

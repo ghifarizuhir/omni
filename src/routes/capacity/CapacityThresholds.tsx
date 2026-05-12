@@ -6,6 +6,7 @@ import { NewThresholdModal } from '@/src/components/capacity/NewThresholdModal';
 import { mockCapacityMetrics } from '@/src/mocks/capacityMetrics';
 import { mockCapacityThresholds } from '@/src/mocks/capacityThresholds';
 import { CapacityThresholdSeverity } from '@/src/types/capacity';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 type StatusFilter = 'all' | 'enabled' | 'disabled';
 
@@ -89,26 +90,28 @@ export default function CapacityThresholds() {
           />
         </div>
 
-        <select
+        <FilterDropdown
           value={severityFilter}
-          onChange={e => setSeverityFilter(e.target.value as CapacityThresholdSeverity | 'all')}
-          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value="all">Severity ▾</option>
-          <option value="info">Info</option>
-          <option value="warning">Warning</option>
-          <option value="critical">Critical</option>
-        </select>
+          onChange={v => setSeverityFilter(v as CapacityThresholdSeverity | 'all')}
+          options={[
+            { value: 'all', label: 'Severity' },
+            { value: 'info', label: 'Info' },
+            { value: 'warning', label: 'Warning' },
+            { value: 'critical', label: 'Critical' },
+          ]}
+          placeholder="Severity"
+        />
 
-        <select
+        <FilterDropdown
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value as StatusFilter)}
-          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value="all">Status ▾</option>
-          <option value="enabled">Enabled</option>
-          <option value="disabled">Disabled</option>
-        </select>
+          onChange={v => setStatusFilter(v as StatusFilter)}
+          options={[
+            { value: 'all', label: 'Status' },
+            { value: 'enabled', label: 'Enabled' },
+            { value: 'disabled', label: 'Disabled' },
+          ]}
+          placeholder="Status"
+        />
 
         <button
           onClick={handleReset}
