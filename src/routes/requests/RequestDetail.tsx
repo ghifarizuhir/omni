@@ -8,7 +8,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { formatRelative, formatDate } from '@/src/lib/format';
+import { formatRelative } from '@/src/lib/format';
 import { getRequestById } from '@/src/mocks/serviceRequests';
 import { getCatalogItemById } from '@/src/mocks/catalogItems';
 import { getArticleBySlug } from '@/src/mocks/kbArticles';
@@ -104,117 +104,132 @@ const WorkflowStepper: React.FC<{
   onReject:  (stepId: string) => void;
 }> = ({ steps, onApprove, onReject }) => (
   <div className="overflow-x-auto">
-    {/* Centering wrapper — justify-center when content fits, scrollable when it overflows */}
     <div className="flex justify-center min-w-full">
-    {/* Node row */}
-    <div className="flex items-start gap-0">
-      {steps.map((step, i) => {
-        const done     = step.status === 'completed';
-        const active   = step.status === 'active';
-        const rejected = step.status === 'rejected';
-        const skipped  = step.status === 'skipped';
-        const pending  = step.status === 'pending';
-        const canAct   = isApprover(step);
+      <div className="flex items-center gap-0 py-1">
+        {steps.map((step, i) => {
+          const done     = step.status === 'completed';
+          const active   = step.status === 'active';
+          const rejected = step.status === 'rejected';
+          const skipped  = step.status === 'skipped';
+          const pending  = step.status === 'pending';
+          const canAct   = isApprover(step);
+          const prevDone = i > 0 && steps[i - 1].status === 'completed';
 
-        const typeIcon =
-          step.type === 'automated' ? <Zap size={14} /> :
-          step.type === 'approval'  ? <Shield size={14} /> :
-          <CheckCircle2 size={14} />;
+          const TypeIcon =
+            step.type === 'automated' ? Zap :
+            step.type === 'approval'  ? Shield :
+            CheckCircle2;
 
-        return (
-          <React.Fragment key={step.id}>
-            {/* Connector line (before node, skip for first) */}
-            {i > 0 && (
-              <div className={cn(
-                'flex-1 h-0.5 min-w-[40px] max-w-[80px] mt-[19px] transition-all',
-                steps[i - 1].status === 'completed' ? 'bg-ois-success' : 'border-t-2 border-dashed border-ois-border-strong',
-              )} />
-            )}
-
-            {/* Node + labels */}
-            <div className="flex flex-col items-center gap-2 min-w-[90px] max-w-[120px]">
-              {/* Circle */}
-              <div className={cn(
-                'w-10 h-10 rounded-full flex items-center justify-center text-white transition-all',
-                done     && 'bg-ois-success',
-                active   && 'bg-ois-primary ring-4 ring-ois-primary/20 animate-pulse',
-                rejected && 'bg-ois-danger',
-                skipped  && 'bg-ois-border text-ois-text-subtle',
-                pending  && 'bg-ois-surface border-2 border-ois-border-strong text-ois-text-subtle',
-              )}>
-                {done     ? <Check size={18} /> :
-                 rejected ? <X size={18} /> :
-                 skipped  ? <span className="text-xs font-bold">—</span> :
-                 typeIcon}
-              </div>
-
-              {/* Step name */}
-              <span className={cn(
-                'text-[11px] font-semibold text-center leading-tight',
-                active   && 'text-ois-primary',
-                done     && 'text-ois-success',
-                rejected && 'text-ois-danger line-through',
-                skipped  && 'text-ois-text-subtle line-through',
-                pending  && 'text-ois-text-muted',
-              )}>
-                {step.name}
-              </span>
-
-              {/* Status sub-label */}
-              <span className={cn(
-                'text-[10px] font-medium',
-                active   && 'text-ois-primary',
-                done     && 'text-ois-success',
-                rejected && 'text-ois-danger',
-                (pending || skipped) && 'text-ois-text-subtle',
-              )}>
-                {done     ? 'Done' :
-                 active   ? 'Active' :
-                 rejected ? 'Rejected' :
-                 skipped  ? 'Skipped' :
-                 'Pending'}
-              </span>
-
-              {/* Assignee */}
-              {step.assigneeName && !done && !skipped && (
-                <span className="text-[10px] text-ois-text-muted text-center leading-tight">
-                  {step.assigneeName.split(' ')[0]}
-                </span>
-              )}
-
-              {/* SLA */}
-              {active && step.startedAt && (
-                <span className={cn(
-                  'text-[10px] font-semibold flex items-center gap-0.5',
-                  step.slaStatus === 'breached' ? 'text-ois-danger' :
-                  step.slaStatus === 'warning'  ? 'text-ois-warning' : 'text-ois-text-subtle',
-                )}>
-                  <Clock size={9} /> {stepSlaLabel(step)}
-                </span>
-              )}
-
-              {/* Inline approve/reject for current user */}
-              {canAct && (
-                <div className="flex gap-1.5 mt-1">
-                  <button
-                    onClick={() => onApprove(step.id)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-ois-success text-white text-[10px] font-bold hover:bg-green-700 transition-colors active:scale-95"
-                  >
-                    <Check size={10} /> Approve
-                  </button>
-                  <button
-                    onClick={() => onReject(step.id)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-ois-surface border border-ois-danger text-ois-danger text-[10px] font-bold hover:bg-ois-danger-pale transition-colors"
-                  >
-                    <X size={10} /> Reject
-                  </button>
+          return (
+            <React.Fragment key={step.id}>
+              {/* Arrow connector */}
+              {i > 0 && (
+                <div className="flex items-center shrink-0 mx-1.5">
+                  <div className={cn('h-[2px] w-8 transition-colors', prevDone ? 'bg-ois-success' : 'bg-ois-border')} />
+                  <ChevronRight size={14} className={cn('-ml-1 transition-colors', prevDone ? 'text-ois-success' : 'text-ois-border')} />
                 </div>
               )}
-            </div>
-          </React.Fragment>
-        );
-      })}
-    </div>
+
+              {/* Step card */}
+              <div className={cn(
+                'flex flex-col gap-2 rounded-xl border-2 px-3 py-2.5 min-w-[148px] max-w-[172px] transition-all duration-200',
+                done     && 'border-ois-success bg-[#F0FDF4]',
+                active   && 'border-ois-primary bg-white shadow-md shadow-ois-primary/10',
+                rejected && 'border-ois-danger bg-ois-danger-pale',
+                skipped  && 'border-ois-border bg-ois-surface-muted',
+                pending  && 'border-ois-border bg-ois-surface-muted',
+              )}>
+
+                {/* Top row: step number badge + type icon */}
+                <div className="flex items-center justify-between">
+                  <span className={cn(
+                    'text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none',
+                    done     && 'bg-ois-success text-white',
+                    active   && 'bg-ois-primary text-white',
+                    rejected && 'bg-ois-danger text-white',
+                    (skipped || pending) && 'bg-ois-border-strong text-ois-text-subtle',
+                  )}>
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <TypeIcon size={12} className={cn(
+                    done     && 'text-ois-success',
+                    active   && 'text-ois-primary',
+                    rejected && 'text-ois-danger',
+                    (skipped || pending) && 'text-ois-text-subtle',
+                  )} />
+                </div>
+
+                {/* Step name */}
+                <div className={cn(
+                  'text-[12px] font-bold leading-tight',
+                  done     && 'text-ois-success',
+                  active   && 'text-ois-primary',
+                  rejected && 'text-ois-danger line-through',
+                  skipped  && 'text-ois-text-subtle line-through',
+                  pending  && 'text-ois-text-muted',
+                )}>
+                  {step.name}
+                </div>
+
+                {/* Sub-info */}
+                <div className="flex flex-col gap-0.5">
+                  {done && step.decidedBy && (
+                    <span className="text-[10px] text-ois-success font-medium">
+                      ✓ {step.decidedBy.split(' ')[0]}
+                      {step.completedAt && <span className="text-ois-success/70 font-normal"> · {formatRelative(step.completedAt)}</span>}
+                    </span>
+                  )}
+                  {done && !step.decidedBy && (
+                    <span className="text-[10px] text-ois-success font-medium">✓ Completed</span>
+                  )}
+                  {active && step.assigneeName && (
+                    <span className="text-[10px] text-ois-text-muted">{step.assigneeName}</span>
+                  )}
+                  {(pending || skipped) && step.assigneeName && (
+                    <span className="text-[10px] text-ois-text-subtle">{step.assigneeName}</span>
+                  )}
+                  {active && step.startedAt && (
+                    <span className={cn(
+                      'text-[10px] font-semibold flex items-center gap-0.5',
+                      step.slaStatus === 'breached' ? 'text-ois-danger' :
+                      step.slaStatus === 'warning'  ? 'text-ois-warning' : 'text-ois-text-subtle',
+                    )}>
+                      <Clock size={9} /> {stepSlaLabel(step)}
+                    </span>
+                  )}
+                  {rejected && (
+                    <span className="text-[10px] text-ois-danger font-medium">Rejected</span>
+                  )}
+                  {skipped && (
+                    <span className="text-[10px] text-ois-text-subtle">Skipped</span>
+                  )}
+                  {pending && !step.assigneeName && (
+                    <span className="text-[10px] text-ois-text-subtle">Waiting</span>
+                  )}
+                </div>
+
+                {/* Approve / Reject for current approver */}
+                {canAct && (
+                  <div className="flex gap-1.5 pt-2 border-t border-ois-primary/20">
+                    <button
+                      onClick={() => onApprove(step.id)}
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-ois-success text-white text-[10px] font-bold hover:bg-green-700 transition-colors active:scale-95"
+                    >
+                      <Check size={10} /> Approve
+                    </button>
+                    <button
+                      onClick={() => onReject(step.id)}
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-ois-danger text-ois-danger text-[10px] font-bold hover:bg-ois-danger-pale transition-colors"
+                    >
+                      <X size={10} /> Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
     </div>
   </div>
 );
