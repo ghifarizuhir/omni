@@ -102,6 +102,13 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ lang, code }) => {
 
 type CalloutType = 'note' | 'warning' | 'danger' | 'tip';
 
+const CALLOUT_META: Record<CalloutType, { label: string; border: string; bg: string; iconCls: string; Icon: React.FC<{ size?: number }> }> = {
+  note:    { label: 'NOTE',    border: '#1F4FD4', bg: 'bg-ois-primary-pale', iconCls: 'text-ois-primary', Icon: Info },
+  warning: { label: 'WARNING', border: '#F79009', bg: 'bg-ois-warning-pale', iconCls: 'text-ois-warning', Icon: AlertTriangle },
+  danger:  { label: 'DANGER',  border: '#F04438', bg: 'bg-ois-danger-pale',  iconCls: 'text-ois-danger',  Icon: ShieldAlert },
+  tip:     { label: 'TIP',     border: '#12B76A', bg: 'bg-ois-success-pale', iconCls: 'text-ois-success', Icon: Lightbulb },
+};
+
 function detectCalloutType(firstLine: string): CalloutType {
   if (/^\*\*(Warning|Caution)/i.test(firstLine)) return 'warning';
   if (/^\*\*(Danger|Critical|Do NOT)/i.test(firstLine)) return 'danger';
@@ -180,12 +187,7 @@ function renderMarkdown(body: string): React.ReactNode[] {
         i++;
       }
       const calloutType = detectCalloutType(quoteLines[0] ?? '');
-      const cm = {
-        note:    { label: 'NOTE',    border: '#1F4FD4', bg: 'bg-ois-primary-pale', iconCls: 'text-ois-primary', Icon: Info },
-        warning: { label: 'WARNING', border: '#F79009', bg: 'bg-ois-warning-pale', iconCls: 'text-ois-warning', Icon: AlertTriangle },
-        danger:  { label: 'DANGER',  border: '#F04438', bg: 'bg-ois-danger-pale',  iconCls: 'text-ois-danger',  Icon: ShieldAlert },
-        tip:     { label: 'TIP',     border: '#12B76A', bg: 'bg-ois-success-pale', iconCls: 'text-ois-success', Icon: Lightbulb },
-      }[calloutType];
+      const cm = CALLOUT_META[calloutType];
       const CalloutIcon = cm.Icon;
       nodes.push(
         <div
@@ -624,7 +626,7 @@ export const ArticleView: React.FC = () => {
         <div className="flex-1 overflow-y-auto px-8 py-6">
           <div className="max-w-[740px] mx-auto">
             <StatusBanner status={article.status} />
-            <div ref={articleRef} className="prose-sm max-w-none">
+            <div ref={articleRef}>
               {rendered}
             </div>
           </div>
