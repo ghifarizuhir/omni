@@ -7,6 +7,7 @@ import { CMDBList } from './cmdb/CMDBList';
 import { CMDBDetail } from './cmdb/CMDBDetail';
 import { CMDBGraph } from './cmdb/CMDBGraph';
 import { CMDBAudit } from './cmdb/CMDBAudit';
+import { MonitoringOverview } from './monitoring/MonitoringOverview';
 import { EventStream } from './monitoring/EventStream';
 import { EventDetail } from './monitoring/EventDetail';
 import { MonitoringRules } from './monitoring/MonitoringRules';
@@ -89,6 +90,7 @@ export const routes: RouteObject[] = [
       { path: 'cmdb/audit',                     element: <CMDBAudit /> },
       { path: 'cmdb/:ciId',                     element: <CMDBDetail /> },
       // Doc 2 — Monitoring
+      { path: 'monitoring',                     element: <MonitoringOverview /> },
       { path: 'events',                         element: <EventStream /> },
       { path: 'events/:id',                     element: <EventDetail /> },
       { path: 'monitoring/rules',               element: <MonitoringRules /> },

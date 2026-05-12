@@ -7,7 +7,7 @@ import {
   BookOpen, Wrench, Package, Rocket, CheckCircle2, Store,
   Heart, Zap, Lock, Radio, CircleDot, Clock,
   Lightbulb, Database, Settings, ChevronLeft, ChevronRight,
-  FileText, Gauge, Sparkles,
+  FileText, Gauge, Sparkles, Activity, Shield, GitBranch,
 } from 'lucide-react';
 import { mockInboxItems, mockIncidents } from '@/src/mocks';
 
@@ -164,9 +164,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
                   <SidebarItem icon={<Lock size={18} />} label="Continuity" to="/continuity/bia" collapsed={collapsed} />
                 </SidebarSection>
 
-                <SidebarSection label="Observability" collapsed={collapsed}>
-                  <SidebarItem icon={<Radio size={18} />} label="Events" to="/events" collapsed={collapsed} />
-                  <SidebarItem icon={<CircleDot size={18} />} label="Status Page" to="/status" collapsed={collapsed} />
+                <SidebarSection label="Monitoring" collapsed={collapsed}>
+                  <SidebarItem icon={<Activity size={18} />} label="Overview" to="/monitoring" collapsed={collapsed} />
+                  <SidebarItem icon={<Radio size={18} />} label="Event Stream" to="/events" collapsed={collapsed} />
+                  <SidebarItem icon={<Shield size={18} />} label="Rules" to="/monitoring/rules" collapsed={collapsed} />
+                  <SidebarItem icon={<GitBranch size={18} />} label="Alert Routing" to="/monitoring/routing" collapsed={collapsed} />
+                  <SidebarItem icon={<CircleDot size={18} />} label="Coverage" to="/monitoring/coverage" collapsed={collapsed} />
+                  <SidebarItem icon={<Zap size={18} />} label="Status Page" to="/status" collapsed={collapsed} />
                 </SidebarSection>
 
                 <SidebarSection label="Measurement" collapsed={collapsed}>

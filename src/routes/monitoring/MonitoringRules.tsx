@@ -410,6 +410,12 @@ export const MonitoringRules: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle -mb-2">
+        <span className="font-medium text-ois-text-muted">Monitoring</span>
+        <span>·</span>
+        <span>Rules</span>
+      </div>
       {/* Page Header */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>

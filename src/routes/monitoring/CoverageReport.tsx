@@ -186,6 +186,12 @@ export const CoverageReport: React.FC = () => {
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-8 pb-20">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
+        <span className="font-medium text-ois-text-muted">Monitoring</span>
+        <span>·</span>
+        <span>Coverage</span>
+      </div>
       {/* Toast */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-ois-text text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-lg animate-in slide-in-from-bottom-4 duration-200">

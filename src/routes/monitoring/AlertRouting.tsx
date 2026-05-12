@@ -299,6 +299,12 @@ export const AlertRouting: React.FC = () => {
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-6 pb-20">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-xs text-ois-text-subtle">
+        <span className="font-medium text-ois-text-muted">Monitoring</span>
+        <span>·</span>
+        <span>Alert Routing</span>
+      </div>
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-ois-text text-white px-5 py-3 rounded-xl shadow-xl text-sm font-semibold animate-in fade-in slide-in-from-bottom-2 duration-200">
