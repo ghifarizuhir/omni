@@ -41,7 +41,7 @@ interface OptionGroupProps<T extends string> {
 function OptionGroup<T extends string>({ label, options, value, onChange }: OptionGroupProps<T>) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold text-ois-text-muted uppercase tracking-wide">{label}</p>
+      <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">{label}</p>
       <div className="flex flex-wrap gap-2">
         {options.map(opt => (
           <button

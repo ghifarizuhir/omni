@@ -40,7 +40,7 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
             className={cn(
               'inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border',
               connected
-                ? 'bg-green-50 text-ois-success border-green-200'
+                ? 'bg-ois-success-pale text-ois-success border-ois-success/20'
                 : 'bg-ois-surface-muted text-ois-text-muted border-ois-border'
             )}
           >

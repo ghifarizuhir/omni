@@ -5,8 +5,8 @@ import { cn } from '@/src/lib/utils';
 import {
   LayoutDashboard, Inbox, AlertCircle, Bug, ShoppingCart,
   BookOpen, Wrench, Package, Rocket, CheckCircle2, Store,
-  Heart, Zap, Lock, Radio, CircleDot, Bell, Clock,
-  BarChart3, Lightbulb, Database, Settings, ChevronLeft, ChevronRight,
+  Heart, Zap, Lock, Radio, CircleDot, Clock,
+  Lightbulb, Database, Settings, ChevronLeft, ChevronRight,
   FileText, Gauge, Sparkles,
 } from 'lucide-react';
 import { mockInboxItems, mockIncidents } from '@/src/mocks';
@@ -176,7 +176,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
                 </SidebarSection>
 
                 <SidebarSection label="Platform" collapsed={collapsed}>
-                  <SidebarItem icon={<Bell size={18} />} label="Notifications" to="/notifications/preferences" collapsed={collapsed} />
                   <SidebarItem icon={<Clock size={18} />} label="On-Call" to="/on-call" collapsed={collapsed} />
                   <SidebarItem icon={<Lightbulb size={18} />} label="Improvements" to="/improvement" collapsed={collapsed} />
                   <SidebarItem icon={<Database size={18} />} label="CMDB" to="/cmdb" collapsed={collapsed} />
