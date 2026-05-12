@@ -1,24 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Pause, Play, Download, Search, Filter, 
-  RotateCcw, List, LayoutDashboard, ChevronDown, 
-  Activity, CheckCircle2, Clock, AlertTriangle, 
-  MessageSquare, MoreHorizontal, ExternalLink,
-  BarChart3, Database, Shield, Zap, Bell, Layers,
-  Globe, Hash, Mail, Users, User, ArrowRight,
-  TrendingUp, Circle, X
+import {
+  Pause, Play, Download, Search,
+  RotateCcw, List, ChevronDown,
+  Activity, Clock, AlertTriangle,
+  MessageSquare, ArrowLeft,
+  BarChart3, X,
 } from 'lucide-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow, isToday, isYesterday, parseISO, subDays, isAfter } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '../../components/ui/Button';
-import { Card, CardHeader, CardBody } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
+import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
-import { Avatar } from '../../components/ui/Avatar';
 import { EventCard } from '../../components/monitoring/EventCard';
 import { EventStreamStatsRail } from '../../components/monitoring/EventStreamStatsRail';
-import { mockEvents, mockCIs, mockMonitoringRules, mockUsers } from '../../mocks';
+import { mockEvents } from '../../mocks';
 import { Event, EventStatus, EventType, EventSource } from '../../types/monitoring';
 import { Severity } from '../../types/common';
 import { cn } from '../../lib/utils';
@@ -33,7 +29,6 @@ const TIME_RANGE_LABELS: Record<TimeRange, string> = {
 
 export const EventStream: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [isPaused, setIsPaused] = useState(false);
   const [frozenEvents, setFrozenEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,10 +39,9 @@ export const EventStream: React.FC = () => {
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(25);
   const [showStatsDrawer, setShowStatsDrawer] = useState(false);
-  const [timeRange, setTimeRange]         = useState<TimeRange>('7d');
+  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
   const [timeRangeOpen, setTimeRangeOpen] = useState(false);
 
-  // Filter Logic
   const filteredEvents = useMemo(() => {
     const referenceDate = new Date('2026-05-09');
     const days = timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : 30;
@@ -59,31 +53,18 @@ export const EventStream: React.FC = () => {
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(e => 
-        e.title.toLowerCase().includes(q) || 
-        e.message.toLowerCase().includes(q) || 
+      result = result.filter(e =>
+        e.title.toLowerCase().includes(q) ||
+        e.message.toLowerCase().includes(q) ||
         e.publicId.toLowerCase().includes(q) ||
         e.affectedCIPublicIds.some(id => id.toLowerCase().includes(q))
       );
     }
+    if (statusFilter !== 'all') result = result.filter(e => e.status === statusFilter);
+    if (severityFilter !== 'all') result = result.filter(e => e.severity === severityFilter);
+    if (sourceFilter !== 'all') result = result.filter(e => e.source === sourceFilter);
+    if (typeFilter !== 'all') result = result.filter(e => e.type === typeFilter);
 
-    if (statusFilter !== 'all') {
-      result = result.filter(e => e.status === statusFilter);
-    }
-
-    if (severityFilter !== 'all') {
-      result = result.filter(e => e.severity === severityFilter);
-    }
-
-    if (sourceFilter !== 'all') {
-      result = result.filter(e => e.source === sourceFilter);
-    }
-
-    if (typeFilter !== 'all') {
-      result = result.filter(e => e.type === typeFilter);
-    }
-
-    // Apply Quick Filters
     if (activeQuickFilter === 'active-p1p2') {
       result = result.filter(e => (e.severity === 'P1' || e.severity === 'P2') && (e.status === 'open' || e.status === 'acknowledged'));
     } else if (activeQuickFilter === 'exceptions') {
@@ -93,40 +74,39 @@ export const EventStream: React.FC = () => {
     } else if (activeQuickFilter === 'info') {
       result = result.filter(e => e.type === 'informational');
     } else if (activeQuickFilter === 'last24h') {
-      const oneDayAgo = new Date();
-      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-      result = result.filter(e => new Date(e.firedAt) > oneDayAgo);
+      result = result.filter(e => isAfter(parseISO(e.firedAt), subDays(new Date('2026-05-09'), 1)));
     }
 
     return result;
   }, [timeRange, searchQuery, statusFilter, severityFilter, sourceFilter, typeFilter, activeQuickFilter, isPaused, frozenEvents]);
 
+  // Derive accent color from live severity of active events
+  const accentColor = useMemo(() => {
+    const active = filteredEvents.filter(e => e.status === 'open' || e.status === 'acknowledged');
+    if (active.some(e => e.severity === 'P1')) return '#B42318';
+    if (active.some(e => e.severity === 'P2')) return '#DC6803';
+    return '#1F4FD4';
+  }, [filteredEvents]);
+
   const togglePause = () => {
-    if (!isPaused) {
-      setFrozenEvents([...filteredEvents]);
-    } else {
-      setFrozenEvents([]);
-    }
-    setIsPaused(!isPaused);
+    if (!isPaused) setFrozenEvents([...filteredEvents]);
+    else setFrozenEvents([]);
+    setIsPaused(v => !v);
   };
 
   const activeEvents = isPaused ? frozenEvents : filteredEvents;
   const displayedEvents = activeEvents.slice(0, visibleCount);
 
-  // Grouped by Date
   const groupedEvents = useMemo(() => {
     const groups: Record<string, Event[]> = {};
     displayedEvents.forEach(e => {
       const dateKey = format(parseISO(e.firedAt), 'yyyy-MM-dd');
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
-      }
+      if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(e);
     });
     return groups;
   }, [displayedEvents]);
 
-  // Stats Logic — shape matches EventStreamStatsRail's interface
   const stats = useMemo(() => {
     const events = isPaused ? frozenEvents : mockEvents;
     return {
@@ -156,282 +136,285 @@ export const EventStream: React.FC = () => {
     setActiveQuickFilter(null);
   };
 
-  const toggleQuickFilter = (id: string) => {
-    setActiveQuickFilter(activeQuickFilter === id ? null : id);
+  const openCount = mockEvents.filter(e => e.status === 'open').length;
+  const p1p2Count = mockEvents.filter(e => (e.severity === 'P1' || e.severity === 'P2') && e.status === 'open').length;
+
+  const handleExport = () => {
+    const headers = ['ID', 'Title', 'Severity', 'Status', 'Source', 'Fired At', 'Tags'];
+    const rows = filteredEvents.map(e => [
+      e.publicId,
+      `"${e.title.replace(/"/g, '""')}"`,
+      e.severity,
+      e.status,
+      e.source,
+      e.firedAt,
+      `"${(e.tags ?? []).join(', ')}"`,
+    ].join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `events-${timeRange}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="flex flex-col min-h-full">
-      {/* Page Header */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-ois-text">Event Stream</h1>
-          <div className="flex items-center gap-3 mt-1 text-sm text-ois-text-muted">
-            <span>{mockEvents.length} events in {TIME_RANGE_LABELS[timeRange].toLowerCase()}</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-            <span className="font-medium">{mockEvents.filter(e => e.status === 'open').length} open</span>
-            <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
-            <span className="font-medium text-ois-danger">{mockEvents.filter(e => (e.severity === 'P1' || e.severity === 'P2') && e.status === 'open').length} P1/P2 unacknowledged</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-2 h-9"
-            onClick={togglePause}
+    <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>
+
+      {/* ── Header ── */}
+      <div className="bg-ois-surface border-b border-ois-border shrink-0 z-30">
+
+        {/* Nav row */}
+        <div className="flex items-center justify-between px-6 py-2 border-b border-ois-border">
+          <button
+            onClick={() => navigate('/events')}
+            className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors"
           >
-            {isPaused ? <Play size={14} className="fill-current" /> : <Pause size={14} className="fill-current" />}
-            {isPaused ? 'Resume' : 'Pause'}
-          </Button>
-          <div className="relative">
+            <ArrowLeft size={15} />
+            Monitoring
+          </button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={togglePause}>
+              {isPaused
+                ? <><Play size={13} className="fill-current" /> Resume</>
+                : <><Pause size={13} className="fill-current" /> Pause</>}
+            </Button>
+            <div className="relative">
+              <Button variant="outline" size="sm" className="gap-1" onClick={() => setTimeRangeOpen(v => !v)}>
+                {TIME_RANGE_LABELS[timeRange]}
+                <ChevronDown size={13} className={cn('transition-transform', timeRangeOpen && 'rotate-180')} />
+              </Button>
+              {timeRangeOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setTimeRangeOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-lg border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[140px]">
+                    {(Object.entries(TIME_RANGE_LABELS) as [TimeRange, string][]).map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => { setTimeRange(key); setTimeRangeOpen(false); }}
+                        className={cn(
+                          'w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors',
+                          timeRange === key ? 'font-semibold text-ois-primary' : 'text-ois-text'
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
+              <Download size={13} /> Export
+            </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setTimeRangeOpen(v => !v)}
-              className="gap-1.5 h-9"
+              className="gap-1.5 lg:hidden"
+              onClick={() => setShowStatsDrawer(true)}
             >
-              {TIME_RANGE_LABELS[timeRange]}
-              <ChevronDown size={13} className={timeRangeOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+              <BarChart3 size={13} /> Stats
             </Button>
-            {timeRangeOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setTimeRangeOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl border border-ois-border shadow-ois-dropdown overflow-hidden min-w-[150px]">
-                  {(Object.entries(TIME_RANGE_LABELS) as [TimeRange, string][]).map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => { setTimeRange(key); setTimeRangeOpen(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-ois-surface-muted transition-colors ${timeRange === key ? 'font-semibold text-ois-primary' : 'text-ois-text'}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 h-9"
-            onClick={() => {
-              const headers = ['ID', 'Title', 'Severity', 'Status', 'Source', 'Fired At', 'Tags'];
-              const rows = filteredEvents.map(e => [
-                e.publicId,
-                `"${e.title.replace(/"/g, '""')}"`,
-                e.severity,
-                e.status,
-                e.source,
-                e.firedAt,
-                `"${(e.tags ?? []).join(', ')}"`,
-              ].join(','));
-              const csv = [headers.join(','), ...rows].join('\n');
-              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `events-${timeRange}-${new Date().toISOString().slice(0, 10)}.csv`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }}
-          >
-            <Download size={14} /> Export
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="lg:hidden gap-2 h-9"
-            onClick={() => setShowStatsDrawer(true)}
-          >
-            <BarChart3 size={14} /> Stats
-          </Button>
+        </div>
+
+        {/* Page header — accent strip + title + meta */}
+        <div className="flex items-stretch">
+          <div className="w-1 shrink-0 transition-colors duration-500" style={{ backgroundColor: accentColor }} />
+          <div className="flex-1 px-6 py-4">
+            <h1 className="text-xl font-bold text-ois-text">Event Stream</h1>
+            <div className="flex items-center gap-3 mt-1 text-xs text-ois-text-muted flex-wrap">
+              <span>{mockEvents.length} events in {TIME_RANGE_LABELS[timeRange].toLowerCase()}</span>
+              <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+              <span className="font-medium text-ois-text">{openCount} open</span>
+              {p1p2Count > 0 && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+                  <span className="font-semibold text-ois-danger">{p1p2Count} P1/P2 unacknowledged</span>
+                </>
+              )}
+              {isPaused && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-ois-border-strong" />
+                  <span className="font-semibold text-ois-warning">Stream paused</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Sticky Pause Banner */}
-      <AnimatePresence>
-        {isPaused && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="sticky top-0 z-20 mb-4 overflow-hidden"
-          >
-            <div className="bg-ois-primary text-white py-2 px-4 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-3 text-sm font-medium">
-                <Pause size={16} />
-                <span>Stream paused at {format(new Date(), 'HH:mm')} UTC. 3 new events available.</span>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-white hover:bg-white/20 h-7 text-xs font-bold"
-                onClick={togglePause}
+      {/* ── Body ── */}
+      <div className="flex flex-1 min-h-0">
+
+        {/* Main scrollable column */}
+        <div className="flex-1 min-w-0 overflow-y-auto">
+
+          {/* Pause banner */}
+          <AnimatePresence>
+            {isPaused && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
               >
-                Resume
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="flex gap-6 items-start">
-        {/* Main Stream Area */}
-        <div className="flex-1 min-w-0 space-y-6">
-          {/* Filters Card */}
-          <Card className="p-4">
-            <div className="flex flex-wrap gap-3">
-              <div className="relative flex-1 min-w-[240px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ois-text-subtle" size={15} />
-                <Input
-                  placeholder="Search title, message, CI ID…"
-                  className="pl-9 h-9 text-sm"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <FilterDropdown
-                  value={statusFilter}
-                  onChange={(v) => setStatusFilter(v as EventStatus | 'all')}
-                  options={[
-                    { value: 'all', label: 'Any Status' },
-                    { value: 'open', label: 'Open' },
-                    { value: 'acknowledged', label: 'Acknowledged' },
-                    { value: 'resolved', label: 'Resolved' },
-                    { value: 'suppressed', label: 'Suppressed' },
-                  ]}
-                  placeholder="Status"
-                />
-                <FilterDropdown
-                  value={severityFilter}
-                  onChange={(v) => setSeverityFilter(v as Severity | 'all')}
-                  options={[
-                    { value: 'all', label: 'Any Severity' },
-                    { value: 'P1', label: 'P1 — Critical' },
-                    { value: 'P2', label: 'P2 — High' },
-                    { value: 'P3', label: 'P3 — Medium' },
-                    { value: 'P4', label: 'P4 — Low' },
-                  ]}
-                  placeholder="Severity"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-ois-text-muted hover:text-ois-danger gap-1.5"
-                  onClick={resetFilters}
-                >
-                  <RotateCcw size={13} /> Reset
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-ois-border">
-              <span className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest self-center mr-1">Quick:</span>
-              {[
-                { id: 'active-p1p2', label: 'Active P1/P2', icon: AlertTriangle, count: mockEvents.filter(e => (e.severity === 'P1' || e.severity === 'P2') && (e.status === 'open' || e.status === 'acknowledged')).length },
-                { id: 'exceptions', label: 'Exceptions', icon: Activity, count: mockEvents.filter(e => e.type === 'exception').length },
-                { id: 'warnings', label: 'Warnings', icon: AlertTriangle, count: mockEvents.filter(e => e.type === 'warning').length },
-                { id: 'info', label: 'Informational', icon: MessageSquare, count: mockEvents.filter(e => e.type === 'informational').length },
-                { id: 'last24h', label: 'Last 24h', icon: Clock, count: mockEvents.filter(e => isAfter(parseISO(e.firedAt), subDays(new Date('2026-05-09'), 1))).length },
-              ].map(chip => (
-                <button
-                  key={chip.id}
-                  onClick={() => toggleQuickFilter(chip.id)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-colors",
-                    activeQuickFilter === chip.id
-                      ? "bg-ois-primary text-white border-ois-primary"
-                      : "bg-white text-ois-text-muted border-ois-border hover:border-ois-border-strong hover:text-ois-text"
-                  )}
-                >
-                  <chip.icon size={11} />
-                  {chip.label}
-                  <span className="opacity-70 tabular-nums">{chip.count}</span>
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          {/* Event Stream List */}
-          <div className="space-y-6">
-            {activeEvents.length === 0 ? (
-              <div className="text-center py-12">
-                <List size={36} className="mx-auto text-ois-text-subtle mb-3" />
-                <p className="text-sm font-medium text-ois-text-muted">No events match your filters.</p>
-                <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters}>
-                  <RotateCcw size={13} className="mr-1.5" /> Reset filters
-                </Button>
-              </div>
-            ) : (
-              (Object.entries(groupedEvents) as [string, Event[]][]).map(([date, events]) => (
-                <div key={date} className="space-y-3">
-                  <div className="flex items-center gap-3 sticky top-0 z-10 bg-ois-bg/90 backdrop-blur-sm py-1.5">
-                    <div className="flex-1 h-px bg-ois-border" />
-                    <span className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest whitespace-nowrap">
-                      {formatDateHeader(date)}
-                    </span>
-                    <div className="flex-1 h-px bg-ois-border" />
+                <div className="bg-ois-primary text-white py-2 px-6 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Pause size={14} />
+                    Stream paused at {format(new Date(), 'HH:mm')} UTC · 3 new events available
                   </div>
-                  {events.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                      onClick={() => navigate(`/events/${event.publicId}`)}
-                    />
-                  ))}
+                  <button
+                    onClick={togglePause}
+                    className="text-xs font-bold text-white/80 hover:text-white transition-colors"
+                  >
+                    Resume
+                  </button>
                 </div>
-              ))
+              </motion.div>
             )}
+          </AnimatePresence>
 
-            {activeEvents.length > visibleCount && (
-              <div className="pt-2 text-center">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                  onClick={() => setVisibleCount(prev => prev + 25)}
-                >
-                  Load 25 more events <span className="ml-1.5 text-ois-text-subtle tabular-nums">({activeEvents.length - visibleCount} remaining)</span>
-                </Button>
+          <div className="px-6 py-5 space-y-5">
+            {/* Filters */}
+            <Card className="p-4">
+              <div className="flex flex-wrap gap-3">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ois-text-subtle" size={14} />
+                  <Input
+                    placeholder="Search title, message, CI ID…"
+                    className="pl-9 h-9 text-sm"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <FilterDropdown
+                    value={statusFilter}
+                    onChange={v => setStatusFilter(v as EventStatus | 'all')}
+                    options={[
+                      { value: 'all', label: 'Any Status' },
+                      { value: 'open', label: 'Open' },
+                      { value: 'acknowledged', label: 'Acknowledged' },
+                      { value: 'resolved', label: 'Resolved' },
+                      { value: 'suppressed', label: 'Suppressed' },
+                    ]}
+                    placeholder="Status"
+                  />
+                  <FilterDropdown
+                    value={severityFilter}
+                    onChange={v => setSeverityFilter(v as Severity | 'all')}
+                    options={[
+                      { value: 'all', label: 'Any Severity' },
+                      { value: 'P1', label: 'P1 — Critical' },
+                      { value: 'P2', label: 'P2 — High' },
+                      { value: 'P3', label: 'P3 — Medium' },
+                      { value: 'P4', label: 'P4 — Low' },
+                    ]}
+                    placeholder="Severity"
+                  />
+                  <Button variant="ghost" size="sm" className="text-ois-text-muted hover:text-ois-danger gap-1.5" onClick={resetFilters}>
+                    <RotateCcw size={13} /> Reset
+                  </Button>
+                </div>
               </div>
-            )}
+
+              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-ois-border">
+                <span className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest self-center mr-1">Quick:</span>
+                {[
+                  { id: 'active-p1p2', label: 'Active P1/P2', icon: AlertTriangle, count: mockEvents.filter(e => (e.severity === 'P1' || e.severity === 'P2') && (e.status === 'open' || e.status === 'acknowledged')).length },
+                  { id: 'exceptions',  label: 'Exceptions',   icon: Activity,       count: mockEvents.filter(e => e.type === 'exception').length },
+                  { id: 'warnings',    label: 'Warnings',     icon: AlertTriangle,  count: mockEvents.filter(e => e.type === 'warning').length },
+                  { id: 'info',        label: 'Informational',icon: MessageSquare,  count: mockEvents.filter(e => e.type === 'informational').length },
+                  { id: 'last24h',     label: 'Last 24h',     icon: Clock,          count: mockEvents.filter(e => isAfter(parseISO(e.firedAt), subDays(new Date('2026-05-09'), 1))).length },
+                ].map(chip => (
+                  <button
+                    key={chip.id}
+                    onClick={() => setActiveQuickFilter(activeQuickFilter === chip.id ? null : chip.id)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-colors',
+                      activeQuickFilter === chip.id
+                        ? 'bg-ois-primary text-white border-ois-primary'
+                        : 'bg-white text-ois-text-muted border-ois-border hover:border-ois-border-strong hover:text-ois-text'
+                    )}
+                  >
+                    <chip.icon size={11} />
+                    {chip.label}
+                    <span className="opacity-70 tabular-nums">{chip.count}</span>
+                  </button>
+                ))}
+              </div>
+            </Card>
+
+            {/* Event list */}
+            <div className="space-y-5">
+              {activeEvents.length === 0 ? (
+                <div className="text-center py-12">
+                  <List size={36} className="mx-auto text-ois-text-subtle mb-3" />
+                  <p className="text-sm text-ois-text-muted">No events match your filters.</p>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters}>
+                    <RotateCcw size={13} className="mr-1.5" /> Reset filters
+                  </Button>
+                </div>
+              ) : (
+                (Object.entries(groupedEvents) as [string, Event[]][]).map(([date, events]) => (
+                  <div key={date} className="space-y-3">
+                    <div className="flex items-center gap-3 sticky top-0 z-10 bg-ois-bg/90 backdrop-blur-sm py-1.5">
+                      <div className="flex-1 h-px bg-ois-border" />
+                      <span className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest whitespace-nowrap">
+                        {formatDateHeader(date)}
+                      </span>
+                      <div className="flex-1 h-px bg-ois-border" />
+                    </div>
+                    {events.map(event => (
+                      <EventCard key={event.id} event={event} onClick={() => navigate(`/events/${event.publicId}`)} />
+                    ))}
+                  </div>
+                ))
+              )}
+
+              {activeEvents.length > visibleCount && (
+                <div className="pt-2 text-center">
+                  <Button variant="secondary" size="sm" className="w-full sm:w-auto" onClick={() => setVisibleCount(p => p + 25)}>
+                    Load 25 more
+                    <span className="ml-1.5 text-ois-text-subtle tabular-nums">({activeEvents.length - visibleCount} remaining)</span>
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Right Rail — Live Stats */}
-        <div className="hidden lg:block w-[300px] sticky top-6">
+        {/* Right stats rail */}
+        <aside className="hidden lg:block w-[300px] shrink-0 border-l border-ois-border overflow-y-auto bg-ois-surface p-4">
           <EventStreamStatsRail stats={stats} />
-        </div>
+        </aside>
       </div>
 
-      {/* Stats Drawer Overlay for Mobile/Tablet */}
+      {/* Mobile stats drawer */}
       <AnimatePresence>
         {showStatsDrawer && (
           <>
-            <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
-               onClick={() => setShowStatsDrawer(false)}
-               className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowStatsDrawer(false)}
+              className="fixed inset-0 bg-black/40 z-40 lg:hidden"
             />
-            <motion.div 
-               initial={{ x: '100%' }}
-               animate={{ x: 0 }}
-               exit={{ x: '100%' }}
-               className="fixed right-0 top-0 bottom-0 w-[300px] bg-ois-bg z-50 lg:hidden shadow-2xl p-6 overflow-y-auto"
+            <motion.div
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              className="fixed right-0 top-0 bottom-0 w-[300px] bg-ois-surface z-50 lg:hidden shadow-2xl overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-ois-text">Live Stats</h2>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-ois-border">
+                <h2 className="text-sm font-bold text-ois-text">Live Stats</h2>
                 <Button variant="ghost" size="sm" onClick={() => setShowStatsDrawer(false)}>
-                  <X size={20} />
+                  <X size={18} />
                 </Button>
               </div>
-              <div className="space-y-4">
+              <div className="p-4 space-y-4">
                 <Card className="p-4">
                   <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-3">Status</p>
                   <div className="space-y-2.5">
@@ -459,8 +442,8 @@ export const EventStream: React.FC = () => {
 };
 
 const StatRow: React.FC<{ label: string; value: string | number; color?: string }> = ({ label, value, color }) => (
-  <div className="flex items-center justify-between group">
-    <span className="text-xs font-medium text-ois-text-muted">{label}</span>
-    <span className={cn("text-xs font-bold text-ois-text", color)}>{value}</span>
+  <div className="flex items-center justify-between">
+    <span className="text-xs text-ois-text-muted">{label}</span>
+    <span className={cn('text-xs font-semibold text-ois-text tabular-nums', color)}>{value}</span>
   </div>
 );
