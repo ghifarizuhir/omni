@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, AlertTriangle, CheckCircle2, Clock,
-  ExternalLink, Tag, ClipboardCheck, History, MoreHorizontal,
+  ExternalLink, ClipboardCheck, History, MoreHorizontal,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
