@@ -14,6 +14,7 @@ import { mockTeams } from '@/src/mocks/teams';
 import { mockServiceRequests } from '@/src/mocks/serviceRequests';
 import { currentUser } from '@/src/mocks/users';
 import { CatalogItem, FormField, WorkflowStepTemplate, CatalogCategory } from '@/src/types/request';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 // ── Category meta ─────────────────────────────────────────────────────────────
 
@@ -155,19 +156,16 @@ const DynamicField: React.FC<FieldProps> = ({ field, value, onChange, error }) =
 
       {/* select */}
       {field.type === 'select' && (
-        <div className="relative">
-          <select
-            value={strVal}
-            onChange={e => onChange(e.target.value)}
-            className={cn(base, errCls, 'appearance-none pr-8 cursor-pointer')}
-          >
-            <option value="">Select…</option>
-            {field.options?.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none" />
-        </div>
+        <FilterDropdown
+          value={strVal}
+          onChange={v => onChange(v)}
+          options={[
+            { value: '', label: 'Select…' },
+            ...(field.options?.map(opt => ({ value: opt.value, label: opt.label })) ?? []),
+          ]}
+          placeholder="Select…"
+          fullWidth
+        />
       )}
 
       {/* multiselect */}

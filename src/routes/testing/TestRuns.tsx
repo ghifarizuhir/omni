@@ -16,6 +16,7 @@ import { TestRunCard } from '../../components/testing/TestRunCard';
 import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
 import { TestRunStatus } from '../../types/testing';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 // ── Derived constants ────────────────────────────────────────────────────────
 
@@ -332,46 +333,37 @@ export const TestRuns: React.FC = () => {
             </div>
 
             {/* Plan dropdown */}
-            <select
+            <FilterDropdown
               value={planFilter}
-              onChange={(e) => setPlanFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-ois-border bg-ois-surface text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-            >
-              <option value="">Plan</option>
-              {allPlans.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setPlanFilter(v)}
+              options={[
+                { value: '', label: 'Plan' },
+                ...allPlans.map((p) => ({ value: p, label: p })),
+              ]}
+              placeholder="Plan"
+            />
 
             {/* Environment dropdown */}
-            <select
+            <FilterDropdown
               value={envFilter}
-              onChange={(e) => setEnvFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-ois-border bg-ois-surface text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-            >
-              <option value="">Environment</option>
-              {allEnvironments.map((e) => (
-                <option key={e} value={e}>
-                  {e.charAt(0).toUpperCase() + e.slice(1)}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setEnvFilter(v)}
+              options={[
+                { value: '', label: 'Environment' },
+                ...allEnvironments.map((e) => ({ value: e, label: e.charAt(0).toUpperCase() + e.slice(1) })),
+              ]}
+              placeholder="Environment"
+            />
 
             {/* Triggered by dropdown */}
-            <select
+            <FilterDropdown
               value={triggerFilter}
-              onChange={(e) => setTriggerFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-ois-border bg-ois-surface text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-            >
-              <option value="">Triggered by</option>
-              {ALL_TRIGGERED_BY.map((t) => (
-                <option key={t} value={t}>
-                  {t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setTriggerFilter(v)}
+              options={[
+                { value: '', label: 'Triggered by' },
+                ...ALL_TRIGGERED_BY.map((t) => ({ value: t, label: t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) })),
+              ]}
+              placeholder="Triggered by"
+            />
 
             {/* Reset */}
             <button

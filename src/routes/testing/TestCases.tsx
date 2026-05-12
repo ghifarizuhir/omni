@@ -6,6 +6,7 @@ import { cn } from '../../lib/utils';
 import { formatRelative } from '../../lib/format';
 import { testCasePriorityMeta, testStepResultMeta } from '../../lib/constants';
 import { TestCase, TestCaseType, TestCasePriority, TestStepResultStatus } from '../../types/testing';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 // ── Derived stats from mock data ─────────────────────────────────────────────
 
@@ -189,63 +190,62 @@ export const TestCases: React.FC = () => {
         </div>
 
         {/* Type */}
-        <select
+        <FilterDropdown
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3 py-2 text-sm rounded-ois-btn border border-ois-border bg-ois-surface text-ois-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          <option value="">Type</option>
-          {Object.entries(TYPE_COLOR).map(([k, v]) => (
-            <option key={k} value={k}>{v.label}</option>
-          ))}
-        </select>
+          onChange={(v) => setTypeFilter(v)}
+          options={[
+            { value: '', label: 'Type' },
+            ...Object.entries(TYPE_COLOR).map(([k, v]) => ({ value: k, label: v.label })),
+          ]}
+          placeholder="Type"
+        />
 
         {/* Priority */}
-        <select
+        <FilterDropdown
           value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value)}
-          className="px-3 py-2 text-sm rounded-ois-btn border border-ois-border bg-ois-surface text-ois-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          <option value="">Priority</option>
-          {PRIORITY_ORDER.map((p) => (
-            <option key={p} value={p}>{testCasePriorityMeta[p].label}</option>
-          ))}
-        </select>
+          onChange={(v) => setPriorityFilter(v)}
+          options={[
+            { value: '', label: 'Priority' },
+            ...PRIORITY_ORDER.map((p) => ({ value: p, label: testCasePriorityMeta[p].label })),
+          ]}
+          placeholder="Priority"
+        />
 
         {/* Plan */}
-        <select
+        <FilterDropdown
           value={planFilter}
-          onChange={(e) => setPlanFilter(e.target.value)}
-          className="px-3 py-2 text-sm rounded-ois-btn border border-ois-border bg-ois-surface text-ois-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          <option value="">Plan</option>
-          {allPlans.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
+          onChange={(v) => setPlanFilter(v)}
+          options={[
+            { value: '', label: 'Plan' },
+            ...allPlans.map((p) => ({ value: p, label: p })),
+          ]}
+          placeholder="Plan"
+        />
 
         {/* Automated */}
-        <select
+        <FilterDropdown
           value={automatedFilter}
-          onChange={(e) => setAutomatedFilter(e.target.value)}
-          className="px-3 py-2 text-sm rounded-ois-btn border border-ois-border bg-ois-surface text-ois-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          <option value="">Automated</option>
-          <option value="automated">Automated</option>
-          <option value="manual">Manual</option>
-        </select>
+          onChange={(v) => setAutomatedFilter(v)}
+          options={[
+            { value: '', label: 'Automated' },
+            { value: 'automated', label: 'Automated' },
+            { value: 'manual', label: 'Manual' },
+          ]}
+          placeholder="Automated"
+        />
 
         {/* Status */}
-        <select
+        <FilterDropdown
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 text-sm rounded-ois-btn border border-ois-border bg-ois-surface text-ois-text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          <option value="">Status</option>
-          <option value="active">Active</option>
-          <option value="flaky">Flaky</option>
-          <option value="archived">Archived</option>
-        </select>
+          onChange={(v) => setStatusFilter(v)}
+          options={[
+            { value: '', label: 'Status' },
+            { value: 'active', label: 'Active' },
+            { value: 'flaky', label: 'Flaky' },
+            { value: 'archived', label: 'Archived' },
+          ]}
+          placeholder="Status"
+        />
 
         {/* Reset */}
         <button

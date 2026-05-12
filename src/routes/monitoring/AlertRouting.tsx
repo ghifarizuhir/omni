@@ -13,6 +13,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import {
   mockAlertRoutes,
   mockMonitoringRules,
@@ -768,39 +769,37 @@ export const AlertRouting: React.FC = () => {
                                    <div className="space-y-2">
                                       <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Timezone</p>
                                       {/* P2 Fix 8 — editable timezone */}
-                                      <select
+                                      <FilterDropdown
                                         value={editBuffer.quietHours?.timezone || 'UTC'}
-                                        onChange={e => updateBuffer({ quietHours: { ...editBuffer.quietHours!, timezone: e.target.value } })}
-                                        className="w-full h-10 px-3 rounded-lg border border-ois-border-strong bg-white text-sm font-bold outline-none"
-                                      >
-                                         <option value="UTC">UTC</option>
-                                         <option value="America/New_York">America/New_York</option>
-                                         <option value="Asia/Jakarta">Asia/Jakarta</option>
-                                      </select>
+                                        onChange={v => updateBuffer({ quietHours: { ...editBuffer.quietHours!, timezone: v } })}
+                                        options={[
+                                          { value: 'UTC', label: 'UTC' },
+                                          { value: 'America/New_York', label: 'America/New_York' },
+                                          { value: 'Asia/Jakarta', label: 'Asia/Jakarta' },
+                                        ]}
+                                        placeholder="Select timezone…"
+                                        fullWidth
+                                      />
                                    </div>
                                    <div className="space-y-2">
                                       <p className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider">Window</p>
                                       {/* P2 Fix 8 — editable start/end time */}
                                       <div className="flex items-center gap-2">
-                                         <select
-                                           value={editBuffer.quietHours?.fromHour ?? 22}
-                                           onChange={e => updateBuffer({ quietHours: { ...editBuffer.quietHours!, fromHour: Number(e.target.value) } })}
-                                           className="h-10 px-3 rounded-lg border border-ois-border-strong bg-white text-sm font-bold outline-none flex-1"
-                                         >
-                                            {HOUR_OPTIONS.map(opt => (
-                                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                         </select>
-                                         <span className="text-ois-text-subtle text-xs">to</span>
-                                         <select
-                                           value={editBuffer.quietHours?.toHour ?? 6}
-                                           onChange={e => updateBuffer({ quietHours: { ...editBuffer.quietHours!, toHour: Number(e.target.value) } })}
-                                           className="h-10 px-3 rounded-lg border border-ois-border-strong bg-white text-sm font-bold outline-none flex-1"
-                                         >
-                                            {HOUR_OPTIONS.map(opt => (
-                                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                         </select>
+                                         <FilterDropdown
+                                           value={String(editBuffer.quietHours?.fromHour ?? 22)}
+                                           onChange={v => updateBuffer({ quietHours: { ...editBuffer.quietHours!, fromHour: Number(v) } })}
+                                           options={HOUR_OPTIONS.map(opt => ({ value: String(opt.value), label: opt.label }))}
+                                           placeholder="From"
+                                           fullWidth
+                                         />
+                                         <span className="text-ois-text-subtle text-xs shrink-0">to</span>
+                                         <FilterDropdown
+                                           value={String(editBuffer.quietHours?.toHour ?? 6)}
+                                           onChange={v => updateBuffer({ quietHours: { ...editBuffer.quietHours!, toHour: Number(v) } })}
+                                           options={HOUR_OPTIONS.map(opt => ({ value: String(opt.value), label: opt.label }))}
+                                           placeholder="To"
+                                           fullWidth
+                                         />
                                       </div>
                                    </div>
                                    <div className="space-y-2">

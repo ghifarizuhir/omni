@@ -7,6 +7,7 @@ import { mockReleases } from '../../mocks';
 import { ReleaseTypeChip } from '../../components/releases/ReleaseTypeChip';
 import { formatDate } from '../../lib/format';
 import { ReleaseType } from '../../types/release';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 const PUBLISHED = mockReleases.filter((r) => r.status === 'released')
   .sort((a, b) => new Date(b.actualReleaseDate ?? b.plannedReleaseDate).getTime() -
@@ -57,25 +58,21 @@ export const ReleaseNotes: React.FC = () => {
 
       {/* Filters */}
       <div className="flex gap-3">
-        <select
+        <FilterDropdown
           value={component}
-          onChange={(e) => setComponent(e.target.value)}
-          className="h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/20"
-        >
-          {components.map((c) => (
-            <option key={c} value={c}>{c === 'all' ? 'All components' : c}</option>
-          ))}
-        </select>
-        <select
+          onChange={(v) => setComponent(v)}
+          options={components.map((c) => ({ value: c, label: c === 'all' ? 'All components' : c }))}
+          placeholder="All components"
+        />
+        <FilterDropdown
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as ReleaseType | 'all')}
-          className="h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/20"
-        >
-          <option value="all">All types</option>
-          {(['major', 'minor', 'patch', 'hotfix'] as ReleaseType[]).map((t) => (
-            <option key={t} value={t} className="capitalize">{t}</option>
-          ))}
-        </select>
+          onChange={(v) => setTypeFilter(v as ReleaseType | 'all')}
+          options={[
+            { value: 'all', label: 'All types' },
+            ...(['major', 'minor', 'patch', 'hotfix'] as ReleaseType[]).map((t) => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) })),
+          ]}
+          placeholder="All types"
+        />
         {(search || component !== 'all' || typeFilter !== 'all') && (
           <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setSearch(''); setComponent('all'); setTypeFilter('all'); }}>
             Reset

@@ -7,6 +7,7 @@ import { MetricCategory } from '@/src/types/measurement';
 import { metricCategoryMeta } from '@/src/lib/constants';
 import { MetricCard } from '@/src/components/measurement/MetricCard';
 import { MetricCategoryNav } from '@/src/components/measurement/MetricCategoryNav';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 const ALL_CATEGORIES = Object.keys(metricCategoryMeta) as MetricCategory[];
 const ALL_SOURCES = Array.from(new Set(mockMetricDefinitions.map((m) => m.sourceSystem)));
@@ -90,27 +91,25 @@ export const MetricCatalog: React.FC = () => {
           />
         </div>
 
-        <select
+        <FilterDropdown
           value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value as MetricCategory | 'all')}
-          className="h-9 rounded-lg border border-ois-border bg-white px-3 text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-        >
-          <option value="all">All categories</option>
-          {ALL_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>{metricCategoryMeta[cat].label}</option>
-          ))}
-        </select>
+          onChange={(v) => setSelectedCategory(v as MetricCategory | 'all')}
+          options={[
+            { value: 'all', label: 'All categories' },
+            ...ALL_CATEGORIES.map((cat) => ({ value: cat, label: metricCategoryMeta[cat].label })),
+          ]}
+          placeholder="All categories"
+        />
 
-        <select
+        <FilterDropdown
           value={sourceFilter}
-          onChange={(e) => setSourceFilter(e.target.value)}
-          className="h-9 rounded-lg border border-ois-border bg-white px-3 text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-        >
-          <option value="all">All sources</option>
-          {ALL_SOURCES.map((src) => (
-            <option key={src} value={src}>{src}</option>
-          ))}
-        </select>
+          onChange={(v) => setSourceFilter(v)}
+          options={[
+            { value: 'all', label: 'All sources' },
+            ...ALL_SOURCES.map((src) => ({ value: src, label: src })),
+          ]}
+          placeholder="All sources"
+        />
 
         <label className="inline-flex items-center gap-2 cursor-pointer select-none">
           <input

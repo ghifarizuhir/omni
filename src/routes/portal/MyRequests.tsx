@@ -11,6 +11,7 @@ import { formatRelative } from '@/src/lib/format';
 import { mockServiceRequests } from '@/src/mocks/serviceRequests';
 import { getCatalogItemById } from '@/src/mocks/catalogItems';
 import { ServiceRequest, RequestStatus, WorkflowStepStatus, CatalogCategory } from '@/src/types/request';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -362,15 +363,16 @@ export const MyRequests: React.FC = () => {
 
         {/* Sort */}
         <div className="shrink-0 pb-2 pl-4">
-          <select
+          <FilterDropdown
             value={sort}
-            onChange={e => setSort(e.target.value as SortKey)}
-            className="text-xs font-medium text-ois-text-muted border border-ois-border rounded-lg px-2.5 py-1.5 bg-ois-surface outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary cursor-pointer"
-          >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="status">By status</option>
-          </select>
+            onChange={v => setSort(v as SortKey)}
+            options={[
+              { value: 'newest', label: 'Newest first' },
+              { value: 'oldest', label: 'Oldest first' },
+              { value: 'status', label: 'By status' },
+            ]}
+            placeholder="Newest first"
+          />
         </div>
       </div>
 

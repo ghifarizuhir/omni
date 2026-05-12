@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search, X, ChevronDown, CheckCircle2, Plus, MoreVertical,
+  Search, X, CheckCircle2, Plus, MoreVertical,
   AlertTriangle, Clock, Check, ThumbsUp, UserCheck, Ban,
   SlidersHorizontal, Flame, ShieldAlert, Users, Radio,
 } from 'lucide-react';
@@ -14,6 +14,7 @@ import { Avatar } from '@/src/components/ui/Avatar';
 import {
   ServiceRequest, RequestStatus, CatalogCategory, WorkflowStepInstance,
 } from '@/src/types/request';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -106,28 +107,6 @@ const StatusPill: React.FC<{ status: RequestStatus }> = ({ status }) => {
   );
 };
 
-// ── Filter select ─────────────────────────────────────────────────────────────
-
-const FilterSelect: React.FC<{
-  value: string; onChange: (v: string) => void;
-  placeholder: string; options: { value: string; label: string }[];
-}> = ({ value, onChange, placeholder, options }) => (
-  <div className="relative">
-    <select
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className={cn(
-        'appearance-none pl-3 pr-7 py-1.5 text-xs border rounded-lg bg-white',
-        'focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary cursor-pointer transition-colors',
-        value !== '' ? 'border-ois-primary text-ois-primary font-semibold' : 'border-ois-border text-ois-text-muted',
-      )}
-    >
-      <option value="">{placeholder}</option>
-      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-    <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none" />
-  </div>
-);
 
 // ── Quick-filter chip ─────────────────────────────────────────────────────────
 
@@ -336,9 +315,11 @@ export const RequestQueue: React.FC = () => {
             )}
           </div>
 
-          <FilterSelect
-            value={statusFlt} onChange={setStatusFlt} placeholder="Status"
+          <FilterDropdown
+            value={statusFlt}
+            onChange={setStatusFlt}
             options={[
+              { value: '', label: 'Status' },
               { value: 'draft',          label: 'Draft' },
               { value: 'submitted',      label: 'Submitted' },
               { value: 'approved',       label: 'Approved' },
@@ -348,29 +329,41 @@ export const RequestQueue: React.FC = () => {
               { value: 'closed',         label: 'Closed' },
               { value: 'rejected',       label: 'Rejected' },
             ]}
+            placeholder="Status"
           />
 
-          <FilterSelect
-            value={catFlt} onChange={setCatFlt} placeholder="Category"
-            options={Object.entries(CATEGORY_LABELS).map(([v, label]) => ({ value: v, label }))}
-          />
-
-          <FilterSelect
-            value={stepFlt} onChange={setStepFlt} placeholder="Step type"
+          <FilterDropdown
+            value={catFlt}
+            onChange={setCatFlt}
             options={[
+              { value: '', label: 'Category' },
+              ...Object.entries(CATEGORY_LABELS).map(([v, label]) => ({ value: v, label })),
+            ]}
+            placeholder="Category"
+          />
+
+          <FilterDropdown
+            value={stepFlt}
+            onChange={setStepFlt}
+            options={[
+              { value: '', label: 'Step type' },
               { value: 'approval',  label: 'Approval' },
               { value: 'task',      label: 'Task' },
               { value: 'automated', label: 'Automated' },
             ]}
+            placeholder="Step type"
           />
 
-          <FilterSelect
-            value={slaFlt} onChange={setSlaFlt} placeholder="SLA"
+          <FilterDropdown
+            value={slaFlt}
+            onChange={setSlaFlt}
             options={[
+              { value: '', label: 'SLA' },
               { value: 'healthy',  label: 'SLA healthy' },
               { value: 'warning',  label: 'SLA warning' },
               { value: 'breached', label: 'SLA breached' },
             ]}
+            placeholder="SLA"
           />
 
           {hasFilters && (

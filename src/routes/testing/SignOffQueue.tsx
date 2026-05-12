@@ -6,6 +6,7 @@ import { SignOffCard } from '../../components/testing/SignOffCard';
 import { SignOffApproveModal } from '../../components/testing/SignOffApproveModal';
 import { SignOffRejectModal } from '../../components/testing/SignOffRejectModal';
 import { Button } from '../../components/ui/Button';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import { cn } from '../../lib/utils';
 
 const CURRENT_USER_ID = 'u-001';
@@ -136,9 +137,6 @@ export const SignOffQueue: React.FC = () => {
   const handleApprove = (signOff: SignOff) => setApproveTarget(signOff);
   const handleReject = (signOff: SignOff) => setRejectTarget(signOff);
 
-  const selectClass =
-    'text-sm border border-ois-border rounded-lg px-3 py-1.5 bg-ois-surface text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/40 cursor-pointer';
-
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Page header */}
@@ -172,51 +170,53 @@ export const SignOffQueue: React.FC = () => {
           />
         </div>
 
-        <select
+        <FilterDropdown
           value={typeFilter}
-          onChange={e => { setTypeFilter(e.target.value as SignOffType | 'all'); setQuickFilter(null); }}
-          className={selectClass}
-        >
-          <option value="all">Type: All</option>
-          <option value="release_validation">Release Validation</option>
-          <option value="change_validation">Change Validation</option>
-          <option value="security_scan">Security Scan</option>
-          <option value="compliance_check">Compliance Check</option>
-        </select>
+          onChange={v => { setTypeFilter(v as SignOffType | 'all'); setQuickFilter(null); }}
+          options={[
+            { value: 'all', label: 'Type: All' },
+            { value: 'release_validation', label: 'Release Validation' },
+            { value: 'change_validation', label: 'Change Validation' },
+            { value: 'security_scan', label: 'Security Scan' },
+            { value: 'compliance_check', label: 'Compliance Check' },
+          ]}
+          placeholder="Type: All"
+        />
 
-        <select
+        <FilterDropdown
           value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value as SignOffStatus | 'all'); setQuickFilter(null); }}
-          className={selectClass}
-        >
-          <option value="all">Status: All</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-          <option value="expired">Expired</option>
-        </select>
+          onChange={v => { setStatusFilter(v as SignOffStatus | 'all'); setQuickFilter(null); }}
+          options={[
+            { value: 'all', label: 'Status: All' },
+            { value: 'pending', label: 'Pending' },
+            { value: 'approved', label: 'Approved' },
+            { value: 'rejected', label: 'Rejected' },
+            { value: 'expired', label: 'Expired' },
+          ]}
+          placeholder="Status: All"
+        />
 
-        <select
+        <FilterDropdown
           value={approverFilter}
-          onChange={e => { setApproverFilter(e.target.value); setQuickFilter(null); }}
-          className={selectClass}
-        >
-          <option value="all">Approver: All</option>
-          {approvers.map(a => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
+          onChange={v => { setApproverFilter(v); setQuickFilter(null); }}
+          options={[
+            { value: 'all', label: 'Approver: All' },
+            ...approvers.map(a => ({ value: a.id, label: a.name })),
+          ]}
+          placeholder="Approver: All"
+        />
 
-        <select
+        <FilterDropdown
           value={slaFilter}
-          onChange={e => { setSlaFilter(e.target.value as SlaFilter); setQuickFilter(null); }}
-          className={selectClass}
-        >
-          <option value="all">SLA: All</option>
-          <option value="today">Due today</option>
-          <option value="week">Due this week</option>
-          <option value="breached">Breached</option>
-        </select>
+          onChange={v => { setSlaFilter(v as SlaFilter); setQuickFilter(null); }}
+          options={[
+            { value: 'all', label: 'SLA: All' },
+            { value: 'today', label: 'Due today' },
+            { value: 'week', label: 'Due this week' },
+            { value: 'breached', label: 'Breached' },
+          ]}
+          placeholder="SLA: All"
+        />
 
         <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1 text-ois-text-muted">
           <X size={13} />

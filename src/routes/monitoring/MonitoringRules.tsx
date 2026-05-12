@@ -35,6 +35,7 @@ import { RuleSparkline } from '../../components/monitoring/RuleSparkline';
 import { RuleQueryDisplay } from '../../components/monitoring/RuleQueryDisplay';
 import { ruleTypeMeta } from '../../lib/constants';
 import { StepperNav } from '../../components/monitoring/RuleWizard/StepperNav';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import { Step1Define } from '../../components/monitoring/RuleWizard/Step1Define';
 import { Step2Conditions } from '../../components/monitoring/RuleWizard/Step2Conditions';
 import { Step3Routing } from '../../components/monitoring/RuleWizard/Step3Routing';
@@ -450,38 +451,41 @@ export const MonitoringRules: React.FC = () => {
             />
           </div>
           <div className="flex flex-wrap items-center gap-3">
-             <select 
-               className="h-11 px-4 rounded-lg border border-ois-border-strong bg-white text-sm font-medium outline-none focus:ring-2 focus:ring-ois-primary/10 transition-all pr-10 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
+             <FilterDropdown
                value={typeFilter}
-               onChange={(e) => setTypeFilter(e.target.value as any)}
-             >
-                <option value="all">All Types</option>
-                <option value="threshold">Threshold</option>
-                <option value="anomaly">Anomaly</option>
-                <option value="log_pattern">Log Pattern</option>
-                <option value="synthetic">Synthetic</option>
-                <option value="absence">Absence</option>
-             </select>
-             <select 
-               className="h-11 px-4 rounded-lg border border-ois-border-strong bg-white text-sm font-medium outline-none focus:ring-2 focus:ring-ois-primary/10 transition-all pr-10 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
+               onChange={(v) => setTypeFilter(v as MonitoringRuleType | 'all')}
+               options={[
+                 { value: 'all', label: 'All Types' },
+                 { value: 'threshold', label: 'Threshold' },
+                 { value: 'anomaly', label: 'Anomaly' },
+                 { value: 'log_pattern', label: 'Log Pattern' },
+                 { value: 'synthetic', label: 'Synthetic' },
+                 { value: 'absence', label: 'Absence' },
+               ]}
+               placeholder="All Types"
+             />
+             <FilterDropdown
                value={severityFilter}
-               onChange={(e) => setSeverityFilter(e.target.value as any)}
-             >
-                <option value="all">All Severities</option>
-                <option value="P1">P1 — Critical</option>
-                <option value="P2">P2 — High</option>
-                <option value="P3">P3 — Medium</option>
-                <option value="P4">P4 — Low</option>
-             </select>
-             <select 
-               className="h-11 px-4 rounded-lg border border-ois-border-strong bg-white text-sm font-medium outline-none focus:ring-2 focus:ring-ois-primary/10 transition-all pr-10 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
+               onChange={(v) => setSeverityFilter(v as Severity | 'all')}
+               options={[
+                 { value: 'all', label: 'All Severities' },
+                 { value: 'P1', label: 'P1 — Critical' },
+                 { value: 'P2', label: 'P2 — High' },
+                 { value: 'P3', label: 'P3 — Medium' },
+                 { value: 'P4', label: 'P4 — Low' },
+               ]}
+               placeholder="All Severities"
+             />
+             <FilterDropdown
                value={enabledFilter}
-               onChange={(e) => setEnabledFilter(e.target.value as any)}
-             >
-                <option value="all">Any Status</option>
-                <option value="enabled">Enabled only</option>
-                <option value="disabled">Disabled only</option>
-             </select>
+               onChange={(v) => setEnabledFilter(v as 'all' | 'enabled' | 'disabled')}
+               options={[
+                 { value: 'all', label: 'Any Status' },
+                 { value: 'enabled', label: 'Enabled only' },
+                 { value: 'disabled', label: 'Disabled only' },
+               ]}
+               placeholder="Any Status"
+             />
              <Button 
                variant="ghost" 
                size="sm" 

@@ -7,6 +7,7 @@ import { cn } from '../../lib/utils';
 import { mockReleases } from '../../mocks';
 import { ReleaseCard } from '../../components/releases/ReleaseCard';
 import { ReleaseStatus, ReleaseType } from '../../types/release';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 interface ToastState { message: string; variant: 'success' | 'info' }
 const Toast: React.FC<ToastState> = ({ message, variant }) => (
@@ -110,16 +111,15 @@ export const ReleasesList: React.FC = () => {
             className="w-full h-9 pl-9 pr-3 rounded-lg border border-ois-border-strong bg-white text-sm focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
           />
         </div>
-        <select
+        <FilterDropdown
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as ReleaseType | 'all')}
-          className="h-9 rounded-lg border border-ois-border-strong bg-white px-3 text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/20"
-        >
-          <option value="all">All types</option>
-          {(['major', 'minor', 'patch', 'hotfix'] as ReleaseType[]).map((t) => (
-            <option key={t} value={t} className="capitalize">{t}</option>
-          ))}
-        </select>
+          onChange={(v) => setTypeFilter(v as ReleaseType | 'all')}
+          options={[
+            { value: 'all', label: 'All types' },
+            ...(['major', 'minor', 'patch', 'hotfix'] as ReleaseType[]).map((t) => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) })),
+          ]}
+          placeholder="All types"
+        />
         {(search || statusFilter !== 'all' || typeFilter !== 'all') && (
           <Button variant="ghost" size="sm" className="text-xs h-9" onClick={() => { setSearch(''); setStatusFilter('all'); setTypeFilter('all'); }}>
             Reset

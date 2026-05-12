@@ -14,6 +14,7 @@ import { formatRelative } from '@/src/lib/format';
 import { getArticleBySlug } from '@/src/mocks/kbArticles';
 import { mockKBCategories } from '@/src/mocks/kbCategories';
 import { Modal } from '@/src/components/ui/Modal';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import {
   KBContentType, KBVisibility, KBStatus,
 } from '@/src/types/knowledge';
@@ -746,35 +747,35 @@ export const KBEditor: React.FC = () => {
               {/* Category */}
               <div>
                 <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider block mb-1.5">Category</label>
-                <div className="relative">
-                  <select value={state.categoryId} onChange={e => set('categoryId', e.target.value)}
-                    className="w-full appearance-none pl-3 pr-7 py-2 text-xs border border-ois-border-strong rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary cursor-pointer">
-                    {mockKBCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                  <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none" />
-                </div>
+                <FilterDropdown
+                  value={state.categoryId}
+                  onChange={v => set('categoryId', v)}
+                  options={mockKBCategories.map(c => ({ value: c.id, label: c.name }))}
+                  placeholder="Select category…"
+                  fullWidth
+                />
               </div>
               {/* Content type */}
               <div>
                 <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider block mb-1.5">Content type</label>
-                <div className="relative">
-                  <select value={state.contentType} onChange={e => set('contentType', e.target.value as KBContentType)}
-                    className="w-full appearance-none pl-3 pr-7 py-2 text-xs border border-ois-border-strong rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary cursor-pointer">
-                    {CONTENT_TYPES.map(ct => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
-                  </select>
-                  <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none" />
-                </div>
+                <FilterDropdown
+                  value={state.contentType}
+                  onChange={v => set('contentType', v as KBContentType)}
+                  options={CONTENT_TYPES.map(ct => ({ value: ct.value, label: ct.label }))}
+                  placeholder="Select type…"
+                  fullWidth
+                />
               </div>
               {/* Visibility */}
               <div>
                 <label className="text-[10px] font-bold text-ois-text-subtle uppercase tracking-wider block mb-1.5">Visibility</label>
-                <div className="relative">
-                  <select value={state.visibility} onChange={e => set('visibility', e.target.value as KBVisibility)}
-                    className="w-full appearance-none pl-3 pr-7 py-2 text-xs border border-ois-border-strong rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary cursor-pointer">
-                    {VISIBILITIES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
-                  </select>
-                  <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none" />
-                </div>
+                <FilterDropdown
+                  value={state.visibility}
+                  onChange={v => set('visibility', v as KBVisibility)}
+                  options={VISIBILITIES.map(vis => ({ value: vis.value, label: vis.label }))}
+                  placeholder="Select visibility…"
+                  fullWidth
+                />
               </div>
             </div>
 

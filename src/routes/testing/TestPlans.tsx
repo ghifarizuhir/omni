@@ -6,6 +6,7 @@ import { TestPlanRow } from '../../components/testing/TestPlanRow';
 import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
 import { TestPlan, TestPlanType } from '../../types/testing';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 // ── Quick-stat helpers ──────────────────────────────────────────────────────
 
@@ -200,46 +201,37 @@ export const TestPlans: React.FC = () => {
         </div>
 
         {/* Component dropdown */}
-        <select
+        <FilterDropdown
           value={componentFilter}
-          onChange={(e) => setComponentFilter(e.target.value)}
-          className="px-3 py-1.5 rounded-lg border border-ois-border bg-ois-surface text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-        >
-          <option value="">Component</option>
-          {allComponents.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setComponentFilter(v)}
+          options={[
+            { value: '', label: 'Component' },
+            ...allComponents.map((c) => ({ value: c, label: c })),
+          ]}
+          placeholder="Component"
+        />
 
         {/* Status dropdown */}
-        <select
+        <FilterDropdown
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-1.5 rounded-lg border border-ois-border bg-ois-surface text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-        >
-          <option value="">Status</option>
-          {ALL_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setStatusFilter(v)}
+          options={[
+            { value: '', label: 'Status' },
+            ...ALL_STATUSES.map((s) => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) })),
+          ]}
+          placeholder="Status"
+        />
 
         {/* Owner dropdown */}
-        <select
+        <FilterDropdown
           value={ownerFilter}
-          onChange={(e) => setOwnerFilter(e.target.value)}
-          className="px-3 py-1.5 rounded-lg border border-ois-border bg-ois-surface text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-        >
-          <option value="">Owner</option>
-          {allOwners.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setOwnerFilter(v)}
+          options={[
+            { value: '', label: 'Owner' },
+            ...allOwners.map((o) => ({ value: o, label: o })),
+          ]}
+          placeholder="Owner"
+        />
 
         {/* Reset */}
         <button

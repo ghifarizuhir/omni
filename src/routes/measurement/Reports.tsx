@@ -9,6 +9,7 @@ import { ReportRow } from '@/src/components/measurement/ReportRow';
 import { ReportGenerateModal } from '@/src/components/measurement/ReportGenerateModal';
 import { ReportVersionsDrawer } from '@/src/components/measurement/ReportVersionsDrawer';
 import { Button } from '@/src/components/ui/Button';
+import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 const REPORT_TYPES: { value: ReportType | 'all'; label: string }[] = [
   { value: 'all',                 label: 'All types' },
@@ -137,25 +138,19 @@ export const Reports: React.FC = () => {
           />
         </div>
 
-        <select
+        <FilterDropdown
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as ReportType | 'all')}
-          className="h-9 rounded-lg border border-ois-border bg-white px-3 text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-        >
-          {REPORT_TYPES.map((rt) => (
-            <option key={rt.value} value={rt.value}>{rt.label}</option>
-          ))}
-        </select>
+          onChange={(v) => setTypeFilter(v as ReportType | 'all')}
+          options={REPORT_TYPES.map((rt) => ({ value: rt.value, label: rt.label }))}
+          placeholder="All types"
+        />
 
-        <select
+        <FilterDropdown
           value={freqFilter}
-          onChange={(e) => setFreqFilter(e.target.value as ReportFrequency | 'all')}
-          className="h-9 rounded-lg border border-ois-border bg-white px-3 text-sm text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/30"
-        >
-          {FREQUENCIES.map((f) => (
-            <option key={f.value} value={f.value}>{f.label}</option>
-          ))}
-        </select>
+          onChange={(v) => setFreqFilter(v as ReportFrequency | 'all')}
+          options={FREQUENCIES.map((f) => ({ value: f.value, label: f.label }))}
+          placeholder="All frequencies"
+        />
 
         {hasFilters && (
           <button

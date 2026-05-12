@@ -22,6 +22,7 @@ import { mockEvents, mockCIs, mockMonitoringRules, mockUsers } from '../../mocks
 import { Event, EventStatus, EventType, EventSource } from '../../types/monitoring';
 import { Severity } from '../../types/common';
 import { cn } from '../../lib/utils';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 type TimeRange = '24h' | '7d' | '30d';
 const TIME_RANGE_LABELS: Record<TimeRange, string> = {
@@ -316,28 +317,30 @@ export const EventStream: React.FC = () => {
                 />
               </div>
               <div className="flex gap-2">
-                <select 
-                  className="h-10 px-3 pr-8 rounded-md border border-ois-border-strong bg-ois-bg/50 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-ois-primary/20 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20fill%3D%22none%22%20stroke%3D%22%23666%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m3%205%203%203%203-3%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[position:right_10px_center] bg-no-repeat"
+                <FilterDropdown
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as any)}
-                >
-                  <option value="all">Any Status</option>
-                  <option value="open">Open</option>
-                  <option value="acknowledged">Acknowledged</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="suppressed">Suppressed</option>
-                </select>
-                <select 
-                   className="h-10 px-3 pr-8 rounded-md border border-ois-border-strong bg-ois-bg/50 text-xs font-medium appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20fill%3D%22none%22%20stroke%3D%22%23666%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m3%205%203%203%203-3%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[position:right_10px_center] bg-no-repeat"
-                   value={severityFilter}
-                   onChange={(e) => setSeverityFilter(e.target.value as any)}
-                >
-                  <option value="all">Any Severity</option>
-                  <option value="P1">P1 — Critical</option>
-                  <option value="P2">P2 — High</option>
-                  <option value="P3">P3 — Medium</option>
-                  <option value="P4">P4 — Low</option>
-                </select>
+                  onChange={(v) => setStatusFilter(v as EventStatus | 'all')}
+                  options={[
+                    { value: 'all', label: 'Any Status' },
+                    { value: 'open', label: 'Open' },
+                    { value: 'acknowledged', label: 'Acknowledged' },
+                    { value: 'resolved', label: 'Resolved' },
+                    { value: 'suppressed', label: 'Suppressed' },
+                  ]}
+                  placeholder="Any Status"
+                />
+                <FilterDropdown
+                  value={severityFilter}
+                  onChange={(v) => setSeverityFilter(v as Severity | 'all')}
+                  options={[
+                    { value: 'all', label: 'Any Severity' },
+                    { value: 'P1', label: 'P1 — Critical' },
+                    { value: 'P2', label: 'P2 — High' },
+                    { value: 'P3', label: 'P3 — Medium' },
+                    { value: 'P4', label: 'P4 — Low' },
+                  ]}
+                  placeholder="Any Severity"
+                />
                 <Button 
                   variant="ghost" 
                   size="sm" 
