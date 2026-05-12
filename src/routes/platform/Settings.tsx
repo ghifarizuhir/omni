@@ -30,19 +30,10 @@ const NAV_SECTIONS: Array<{
     ],
   },
   {
-    heading: 'Appearance',
+    heading: 'Workspace',
     items: [
-      { label: 'Theme',   panel: 'appearance' },
-      { label: 'Density', panel: 'appearance' },
-    ],
-  },
-  {
-    heading: 'Integrations',
-    items: [
-      { label: 'Slack',      panel: 'integrations' },
-      { label: 'PagerDuty',  panel: 'integrations' },
-      { label: 'GitHub',     panel: 'integrations' },
-      { label: 'Prometheus', panel: 'integrations' },
+      { label: 'Appearance',    panel: 'appearance' },
+      { label: 'Integrations',  panel: 'integrations' },
     ],
   },
 ];
