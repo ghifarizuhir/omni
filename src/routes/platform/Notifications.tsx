@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Bell, Check, MessageSquare, Settings, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/src/lib/utils';
-import { mockNotifications, MockNotificationItem } from '@/src/mocks/notifications';
+import { notificationsService, useResource } from '@/src/services';
+import type { MockNotificationItem } from '@/src/mocks/notifications';
 import { formatRelative } from '@/src/lib/format';
 
 type FilterId = 'all' | 'unread' | 'mentions';
@@ -36,10 +37,12 @@ function NotificationIcon({ type }: { type: MockNotificationItem['type'] }) {
 export const Notifications: React.FC = () => {
   const [filter, setFilter] = useState<FilterId>('all');
   const navigate = useNavigate();
+  const { data } = useResource(() => notificationsService.list(), []);
+  const notifications = data ?? [];
 
-  const unreadCount = mockNotifications.filter(n => !n.readAt).length;
+  const unreadCount = notifications.filter(n => !n.readAt).length;
 
-  const filtered = mockNotifications.filter(n => {
+  const filtered = notifications.filter(n => {
     if (filter === 'unread')   return !n.readAt;
     if (filter === 'mentions') return n.type === 'mention';
     return true;

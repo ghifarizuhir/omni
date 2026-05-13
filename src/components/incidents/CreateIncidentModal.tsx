@@ -5,7 +5,7 @@ import { Input } from '@/src/components/ui/Input';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { cn } from '@/src/lib/utils';
 import { IncidentPriority } from '@/src/types/incident';
-import { mockUsers } from '@/src/mocks/users';
+import { usersService, useResource } from '@/src/services';
 
 interface Props {
   isOpen: boolean;
@@ -29,14 +29,14 @@ const CHANNELS = [
   { value: 'integration', label: 'Integration' },
 ] as const;
 
-const ASSIGNEE_OPTIONS = [
-  { value: '', label: 'Unassigned' },
-  ...mockUsers.map(u => ({ value: u.id, label: u.name })),
-];
-
 const CHANNEL_OPTIONS = CHANNELS.map(c => ({ value: c.value, label: c.label }));
 
 export const CreateIncidentModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => {
+  const { data: users } = useResource(() => usersService.list(), []);
+  const ASSIGNEE_OPTIONS = [
+    { value: '', label: 'Unassigned' },
+    ...(users ?? []).map(u => ({ value: u.id, label: u.name })),
+  ];
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<IncidentPriority>('P2');

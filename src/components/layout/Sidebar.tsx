@@ -10,19 +10,19 @@ import {
   Sparkles, Activity, Shield, GitBranch, BarChart3,
 } from 'lucide-react';
 import {
-  mockInboxItems,
-  mockIncidents,
-  mockProblems,
-  mockServiceRequests,
-  mockChanges,
-  mockDeployments,
-  mockReleases,
-  mockOutages,
-  mockSLATargets,
-  mockSignOffs,
-  mockOnCallSchedules,
-} from '@/src/mocks';
-import { mockImprovements } from '@/src/mocks/improvements';
+  inboxService,
+  incidentsService,
+  problemsService,
+  requestsService,
+  changesService,
+  deploymentsService,
+  releasesService,
+  availabilityService,
+  testingService,
+  onCallService,
+  improvementsService,
+  useResource,
+} from '@/src/services';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
 
 interface SidebarProps {
@@ -35,30 +35,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, isAiRoute, aiSideba
   const navigate = useNavigate();
   const { user } = useCurrentUser();
   // ── Live signals ──────────────────────────────────────────────────────────
-  const urgentInboxCount = mockInboxItems.filter(i => i.priority === 'urgent').length;
-  const openIncidentCount = mockIncidents.filter(i => !['resolved', 'closed'].includes(i.status)).length;
-  const openProblemCount = mockProblems.filter(
+  const { data: inboxItems } = useResource(() => inboxService.items(), []);
+  const { data: incidents } = useResource(() => incidentsService.list(), []);
+  const { data: problems } = useResource(() => problemsService.list(), []);
+  const { data: serviceRequests } = useResource(() => requestsService.list(), []);
+  const { data: changes } = useResource(() => changesService.list(), []);
+  const { data: deployments } = useResource(() => deploymentsService.list(), []);
+  const { data: releases } = useResource(() => releasesService.list(), []);
+  const { data: outages } = useResource(() => availabilityService.outages(), []);
+  const { data: slaTargets } = useResource(() => availabilityService.slaTargets(), []);
+  const { data: signOffs } = useResource(() => testingService.signOffs(), []);
+  const { data: onCallSchedules } = useResource(() => onCallService.schedules(), []);
+  const { data: improvements } = useResource(() => improvementsService.list(), []);
+
+  const urgentInboxCount = (inboxItems ?? []).filter(i => i.priority === 'urgent').length;
+  const openIncidentCount = (incidents ?? []).filter(i => !['resolved', 'closed'].includes(i.status)).length;
+  const openProblemCount = (problems ?? []).filter(
     p => !['closed'].includes(p.status),
   ).length;
-  const requestsAwaitingUserCount = mockServiceRequests.filter(r => r.status === 'pending_user').length;
-  const changesAwaitingCabCount = mockChanges.filter(
+  const requestsAwaitingUserCount = (serviceRequests ?? []).filter(r => r.status === 'pending_user').length;
+  const changesAwaitingCabCount = (changes ?? []).filter(
     c => c.status === 'submitted' || c.status === 'in_review',
   ).length;
-  const deploymentsActiveCount = mockDeployments.filter(
+  const deploymentsActiveCount = (deployments ?? []).filter(
     d => d.status === 'running' || d.status === 'rolling_back',
   ).length;
-  const releasesUrgentCount = mockReleases.filter(r => r.status === 'rolled_back').length;
+  const releasesUrgentCount = (releases ?? []).filter(r => r.status === 'rolled_back').length;
   const availabilityCriticalCount =
-    mockOutages.filter(o => !o.endedAt).length +
-    mockSLATargets.filter(s => s.status === 'breached').length;
-  const signOffsBreachedCount = mockSignOffs.filter(
+    (outages ?? []).filter(o => !o.endedAt).length +
+    (slaTargets ?? []).filter(s => s.status === 'breached').length;
+  const signOffsBreachedCount = (signOffs ?? []).filter(
     s => s.status === 'pending' && new Date(s.dueAt).getTime() < Date.now(),
   ).length;
-  const onCallActiveIncidentCount = mockOnCallSchedules.reduce(
+  const onCallActiveIncidentCount = (onCallSchedules ?? []).reduce(
     (acc, s) => acc + s.activeIncidentCount,
     0,
   );
-  const improvementsBlockedCount = mockImprovements.filter(
+  const improvementsBlockedCount = (improvements ?? []).filter(
     i => i.priority === 'critical' && i.status === 'on_hold',
   ).length;
 

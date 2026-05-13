@@ -3,7 +3,7 @@ import { ArrowLeft, MoreVertical, Siren, Clock, Users, AlertTriangle } from 'luc
 import { Link } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { Incident } from '@/src/types/incident';
-import { mockUsers } from '@/src/mocks/users';
+import { usersService, useResource } from '@/src/services';
 import { formatRelative } from '@/src/lib/format';
 import { differenceInSeconds, differenceInMinutes } from 'date-fns';
 
@@ -31,6 +31,8 @@ export const WarRoomHero: React.FC<WarRoomHeroProps> = ({ incident, onStandDown,
     return () => clearInterval(id);
   }, []);
 
+  const { data: usersData } = useResource(() => usersService.list(), []);
+  const mockUsers = usersData ?? [];
   const ic = incident.incidentCommander ? mockUsers.find(u => u.id === incident.incidentCommander) : null;
   const assignee = incident.assigneeId ? mockUsers.find(u => u.id === incident.assigneeId) : null;
 

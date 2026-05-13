@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { CapacityForecast, CapacityMetric } from '../../types';
-import { getTimeSeriesForMetric } from '../../mocks/capacityTimeSeries';
+import { capacityService, useResource } from '../../services';
 
 interface ForecastChartProps {
   forecast: CapacityForecast;
@@ -71,9 +71,9 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export function ForecastChart({ forecast, metric, height = 250 }: ForecastChartProps) {
-  const historicalRaw = getTimeSeriesForMetric(metric.id);
+  const { data: historicalRaw } = useResource(() => capacityService.timeSeriesForMetric(metric.id), [metric.id]);
 
-  const historicalPoints: ChartPoint[] = historicalRaw.map(d => ({
+  const historicalPoints: ChartPoint[] = (historicalRaw ?? []).map(d => ({
     date: d.timestamp.split('T')[0],
     historical: d.value,
     capacity: d.capacity,

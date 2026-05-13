@@ -13,7 +13,7 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { EventCard } from '../../components/monitoring/EventCard';
 import { EventStreamStatsRail } from '../../components/monitoring/EventStreamStatsRail';
-import { mockEvents } from '../../mocks';
+import { eventsService, useResource } from '../../services';
 import { Event, EventStatus, EventType, EventSource } from '../../types/monitoring';
 import { Severity } from '../../types/common';
 import { cn } from '../../lib/utils';
@@ -28,6 +28,8 @@ const TIME_RANGE_LABELS: Record<TimeRange, string> = {
 
 export const EventStream: React.FC = () => {
   const navigate = useNavigate();
+  const { data: eventsData } = useResource(() => eventsService.list(), []);
+  const mockEvents = eventsData ?? [];
   const [isPaused, setIsPaused] = useState(false);
   const [frozenEvents, setFrozenEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');

@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Camera, Plus, Trash2, AlertTriangle, Mail, Phone, MessageSquare, User, Bell, KeyRound, Palette, Plug } from 'lucide-react';
+import { Camera, Plus, Trash2, AlertTriangle, Mail, Phone, MessageSquare, User, Bell, KeyRound, Palette, Plug, Webhook, Activity, ShieldCheck, AlertOctagon } from 'lucide-react';
 import { AppearanceSettings } from '../../components/platform/AppearanceSettings';
-import { IntegrationCard } from '../../components/platform/IntegrationCard';
+import { AddIntegrationModal } from '../../components/platform/AddIntegrationModal';
+import { IntegrationRow } from '../../components/platform/IntegrationRow';
+import { integrationsService, notificationsService, useResource } from '../../services';
+import type { Integration } from '../../types/integration';
 import { ProfileForm } from '../../components/platform/ProfileForm';
 import { APITokenRow } from '../../components/platform/APITokenRow';
 import type { APIToken } from '../../components/platform/APITokenRow';
 import { GenerateTokenModal } from '../../components/platform/GenerateTokenModal';
 import { QuietHoursForm } from '../../components/platform/QuietHoursForm';
 import { PreferencesTable } from '../../components/platform/PreferencesTable';
-import { mockNotificationPreferences, mockQuietHours } from '../../mocks/notificationPreferences';
 import type { NotificationPreference, QuietHoursConfig } from '../../types/platform';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
@@ -128,9 +130,14 @@ const ProfilePanel: React.FC = () => {
 // ── Notifications panel ───────────────────────────────────────────────────────
 
 const NotificationsPanel: React.FC = () => {
-  const [preferences, setPreferences] = useState<NotificationPreference[]>(mockNotificationPreferences);
-  const [quietHours, setQuietHours] = useState<QuietHoursConfig>(mockQuietHours);
+  const { data: prefData } = useResource(() => notificationsService.preferences(), []);
+  const { data: quietData } = useResource(() => notificationsService.quietHours(), []);
+  const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
+  const [quietHours, setQuietHours] = useState<QuietHoursConfig | null>(null);
   const [saved, setSaved] = useState(false);
+
+  React.useEffect(() => { if (prefData) setPreferences(prefData); }, [prefData]);
+  React.useEffect(() => { if (quietData) setQuietHours(quietData); }, [quietData]);
 
   const handleSavePrefs = () => {
     setSaved(true);
@@ -143,7 +150,7 @@ const NotificationsPanel: React.FC = () => {
 
       <SectionBlock title="Quiet hours" description="Suppress non-urgent notifications during the hours you specify.">
         <div className="border border-ois-border rounded-ois-card p-5 bg-ois-surface">
-          <QuietHoursForm initial={quietHours} onSave={setQuietHours} />
+          {quietHours && <QuietHoursForm initial={quietHours} onSave={setQuietHours} />}
         </div>
       </SectionBlock>
 
@@ -254,49 +261,111 @@ const APITokensPanel: React.FC = () => {
 
 // ── Integrations panel ────────────────────────────────────────────────────────
 
-const noop = () => {};
-
-const INTEGRATIONS = [
-  {
-    name: 'Slack', logo: '💬', connected: true,
-    details: ['Workspace: Acme Corp (acme.slack.com)', 'Channels: #incidents, #payment-engineering, #platform-oncall'],
-    actions: [
-      { label: 'Test connection', handler: noop, variant: 'outline' as const },
-      { label: 'Disconnect',      handler: noop, variant: 'ghost' as const },
-    ],
-  },
-  {
-    name: 'PagerDuty', logo: '🔔', connected: false,
-    description: 'Connect PagerDuty to sync on-call schedules and escalation policies with OIS.',
-    details: [],
-    actions: [{ label: 'Connect PagerDuty', handler: noop, variant: 'primary' as const }],
-  },
-  {
-    name: 'GitHub', logo: '🐙', connected: true,
-    details: ['Organization: acme-corp', 'Repositories: 12 · Pipelines: 5'],
-    actions: [
-      { label: 'Manage repos', handler: noop, variant: 'outline' as const },
-      { label: 'Disconnect',   handler: noop, variant: 'ghost' as const },
-    ],
-  },
-  {
-    name: 'Prometheus', logo: '📊', connected: true,
-    details: ['Endpoint: https://prometheus.acme.io', 'Last scraped: 2m ago · Rules: 12'],
-    actions: [
-      { label: 'Test connection', handler: noop, variant: 'outline' as const },
-      { label: 'Edit config',     handler: noop, variant: 'ghost' as const },
-    ],
-  },
-];
-
-const IntegrationsPanel: React.FC = () => (
-  <div className="max-w-2xl space-y-8">
-    <PanelHeader title="Integrations" description="Connect OIS with your existing toolchain for seamless operations." />
-    <div className="space-y-3">
-      {INTEGRATIONS.map(i => <IntegrationCard key={i.name} {...i} />)}
+const IntegrationStat: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode; tone?: string }> = ({
+  icon, label, value, tone,
+}) => (
+  <div className="flex-1 min-w-[140px] flex items-start gap-3 px-4 py-3 border border-ois-border rounded-ois-card bg-ois-surface">
+    <span className={cn('mt-0.5', tone ?? 'text-ois-text-subtle')}>{icon}</span>
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest">{label}</p>
+      <p className={cn('text-lg font-bold tabular-nums leading-tight', tone ?? 'text-ois-text')}>{value}</p>
     </div>
   </div>
 );
+
+const IntegrationsPanel: React.FC = () => {
+  const { data, loading, refresh } = useResource(() => integrationsService.list(), []);
+  const [showAdd, setShowAdd] = useState(false);
+  const integrations: Integration[] = data ?? [];
+
+  const total = integrations.length;
+  const healthy = integrations.filter(i => i.enabled && i.status === 'healthy').length;
+  const issues = integrations.filter(i => i.enabled && (i.status === 'error' || i.status === 'degraded')).length;
+  const events24h = integrations.reduce((sum, i) => sum + (i.enabled ? i.eventCount24h : 0), 0);
+  const webhooks = integrations.filter(i => i.mode === 'webhook').length;
+  const apis = integrations.filter(i => i.mode === 'api').length;
+
+  const handleCreate = async (i: Integration) => {
+    await integrationsService.create(i);
+    refresh();
+  };
+  const handleToggle = async (id: string) => {
+    await integrationsService.toggle(id);
+    refresh();
+  };
+  const handleDelete = async (id: string) => {
+    await integrationsService.remove(id);
+    refresh();
+  };
+  const handleRotate = async (id: string) => {
+    await integrationsService.rotateSecret(id);
+    refresh();
+  };
+
+  return (
+    <div className="max-w-4xl space-y-8">
+      <PanelHeader
+        title="Integrations"
+        description="Connect external monitoring & observability systems. Dynatrace uses an API token; everything else receives a unique webhook URL that OIS exposes."
+      />
+
+      {/* Stats strip */}
+      <div className="flex flex-wrap gap-3">
+        <IntegrationStat icon={<Plug size={15} />} label="Sources" value={total} />
+        <IntegrationStat
+          icon={<ShieldCheck size={15} />}
+          label="Healthy"
+          value={`${healthy}/${integrations.filter(i => i.enabled).length}`}
+          tone={healthy === integrations.filter(i => i.enabled).length ? 'text-ois-success' : 'text-ois-text'}
+        />
+        <IntegrationStat
+          icon={<AlertOctagon size={15} />}
+          label="Needs attention"
+          value={issues}
+          tone={issues > 0 ? 'text-ois-warning' : 'text-ois-text-subtle'}
+        />
+        <IntegrationStat icon={<Activity size={15} />} label="Events · 24h" value={events24h.toLocaleString()} />
+        <IntegrationStat icon={<Webhook size={15} />} label="Mode mix" value={<span className="text-ois-text">{webhooks}<span className="text-ois-text-subtle text-xs"> webhook</span> · {apis}<span className="text-ois-text-subtle text-xs"> api</span></span>} />
+      </div>
+
+      <SectionBlock
+        title="Connected sources"
+        description="Each integration shows where it feeds in OIS: Monitoring, Availability, or Capacity."
+        action={
+          <Button variant="primary" size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
+            <Plus size={13} /> Add integration
+          </Button>
+        }
+      >
+        {loading && !data ? (
+          <div className="space-y-3">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="h-20 rounded-ois-card border border-ois-border bg-ois-surface animate-pulse" />
+            ))}
+          </div>
+        ) : integrations.length === 0 ? (
+          <div className="py-10 text-center text-sm text-ois-text-muted border border-dashed border-ois-border rounded-ois-card">
+            No integrations yet. Add one to start ingesting alerts.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {integrations.map(i => (
+              <IntegrationRow
+                key={i.id}
+                integration={i}
+                onToggle={() => handleToggle(i.id)}
+                onDelete={() => handleDelete(i.id)}
+                onRotate={() => handleRotate(i.id)}
+              />
+            ))}
+          </div>
+        )}
+      </SectionBlock>
+
+      <AddIntegrationModal isOpen={showAdd} onClose={() => setShowAdd(false)} onCreate={handleCreate} />
+    </div>
+  );
+};
 
 // ── Panel map ─────────────────────────────────────────────────────────────────
 

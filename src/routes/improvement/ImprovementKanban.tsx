@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
-import { mockImprovements } from '@/src/mocks/improvements';
-import { mockBenefitMeasurements } from '@/src/mocks/benefitMeasurements';
+import { improvementsService, useResource } from '@/src/services';
 import { improvementCategoryMeta, improvementPriorityMeta } from '@/src/lib/constants';
 import { KanbanBoard } from '@/src/components/improvement/KanbanBoard/KanbanBoard';
 import { ImprovementCategory, ImprovementPriority } from '@/src/types/improvement';
@@ -16,6 +15,10 @@ const ALL_PRIORITIES: ImprovementPriority[] = ['critical', 'high', 'medium', 'lo
 
 export const ImprovementKanban: React.FC = () => {
   const navigate = useNavigate();
+  const { data: improvementsData } = useResource(() => improvementsService.list(), []);
+  const { data: measurementsData } = useResource(() => improvementsService.benefitMeasurements(), []);
+  const mockImprovements = improvementsData ?? [];
+  const mockBenefitMeasurements = measurementsData ?? [];
   const [categoryFilter, setCategoryFilter] = useState('');
   const [ownerFilter, setOwnerFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
@@ -24,7 +27,7 @@ export const ImprovementKanban: React.FC = () => {
     const seen = new Map<string, string>();
     mockImprovements.forEach(i => seen.set(i.ownerId, i.ownerName));
     return [...seen.entries()];
-  }, []);
+  }, [mockImprovements]);
 
   const filteredInitiatives = useMemo(() => {
     let result = [...mockImprovements];
@@ -32,7 +35,7 @@ export const ImprovementKanban: React.FC = () => {
     if (ownerFilter) result = result.filter(i => i.ownerId === ownerFilter);
     if (priorityFilter) result = result.filter(i => i.priority === priorityFilter);
     return result;
-  }, [categoryFilter, ownerFilter, priorityFilter]);
+  }, [categoryFilter, ownerFilter, priorityFilter, mockImprovements]);
 
   const hasFilters = categoryFilter || ownerFilter || priorityFilter;
 

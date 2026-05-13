@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search, X, Link2 } from 'lucide-react';
 import { Modal } from '@/src/components/ui/Modal';
 import { Button } from '@/src/components/ui/Button';
-import { mockIncidents } from '@/src/mocks/incidents';
+import { incidentsService, useResource } from '@/src/services';
 import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
 import { Problem } from '@/src/types/problem';
 import { SeverityBadge } from '@/src/components/ui/StatusSeverityBadges';
@@ -19,7 +19,8 @@ export const LinkIncidentsModal: React.FC<Props> = ({ problem, isOpen, onClose, 
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const candidates = mockIncidents.filter(inc => {
+  const { data: incidents } = useResource(() => incidentsService.list(), []);
+  const candidates = (incidents ?? []).filter(inc => {
     if (problem.relatedIncidentIds.includes(inc.publicId)) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();

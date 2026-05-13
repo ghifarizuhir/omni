@@ -1,36 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, Calendar } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
 import { EnvironmentCard } from '../../components/deployments/EnvironmentCard';
 import { RecentDeploymentsTable } from '../../components/deployments/RecentDeploymentsTable';
-import { mockEnvironments } from '../../mocks/environments';
-import { mockDeployments } from '../../mocks/deployments';
+import { deploymentsService, useResource } from '../../services';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
-
-// ─── Calculation helpers ──────────────────────────────────────────────────────
-
-const last7d = mockDeployments.filter(d => {
-  const cutoff = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
-  return (d.startedAt ?? '') >= cutoff || (d.completedAt ?? '') >= cutoff;
-});
-
-const successRate7d =
-  last7d.length > 0
-    ? last7d.filter(d => d.status === 'success').length / last7d.length
-    : 1;
-
-const rollbacks7d = last7d.filter(d => d.status === 'rolled_back').length;
-
-const activeFailures = mockDeployments.filter(d => d.status === 'failed').length;
-
-const avgDurationSec =
-  last7d.filter(d => d.durationSec != null).length > 0
-    ? last7d
-        .filter(d => d.durationSec != null)
-        .reduce((sum, d) => sum + (d.durationSec ?? 0), 0) /
-      last7d.filter(d => d.durationSec != null).length
-    : 0;
 
 function formatDuration(sec: number): string {
   if (sec === 0) return '—';
@@ -38,12 +13,6 @@ function formatDuration(sec: number): string {
   const s = Math.round(sec % 60);
   return `${m}m ${s}s`;
 }
-
-// ─── Upcoming / pending deployments ──────────────────────────────────────────
-
-const upcomingDeployments = mockDeployments
-  .filter(d => d.status === 'pending' && d.scheduledFor)
-  .sort((a, b) => (a.scheduledFor ?? '').localeCompare(b.scheduledFor ?? ''));
 
 function formatScheduledDate(iso: string): string {
   const d = new Date(iso);
@@ -62,21 +31,44 @@ function versionFromArtifact(artifactRef: string): string {
   return artifactRef.includes(':') ? artifactRef.split(':').pop() ?? artifactRef : artifactRef;
 }
 
-// ─── Freeze windows ───────────────────────────────────────────────────────────
-
-const freezeEnvs = mockEnvironments.filter(e => e.freezeWindowActive);
-
-// ─── Recent deployments sorted desc ──────────────────────────────────────────
-
-const recentDeployments = [...last7d].sort((a, b) =>
-  (b.startedAt ?? '').localeCompare(a.startedAt ?? ''),
-);
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export const Environments: React.FC = () => {
   const [envTableFilter, setEnvTableFilter] = useState('');
   const [statusTableFilter, setStatusTableFilter] = useState('');
+
+  const { data: envsData } = useResource(() => deploymentsService.environments(), []);
+  const { data: depsData } = useResource(() => deploymentsService.list(), []);
+  const mockEnvironments = envsData ?? [];
+  const mockDeployments = depsData ?? [];
+
+  const last7d = useMemo(() => {
+    const cutoff = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    return mockDeployments.filter(
+      d => (d.startedAt ?? '') >= cutoff || (d.completedAt ?? '') >= cutoff,
+    );
+  }, [mockDeployments]);
+
+  const successRate7d = last7d.length > 0
+    ? last7d.filter(d => d.status === 'success').length / last7d.length
+    : 1;
+  const rollbacks7d = last7d.filter(d => d.status === 'rolled_back').length;
+  const activeFailures = mockDeployments.filter(d => d.status === 'failed').length;
+  const avgDurationSec = (() => {
+    const withDur = last7d.filter(d => d.durationSec != null);
+    if (withDur.length === 0) return 0;
+    return withDur.reduce((sum, d) => sum + (d.durationSec ?? 0), 0) / withDur.length;
+  })();
+
+  const upcomingDeployments = useMemo(
+    () => mockDeployments
+      .filter(d => d.status === 'pending' && d.scheduledFor)
+      .sort((a, b) => (a.scheduledFor ?? '').localeCompare(b.scheduledFor ?? '')),
+    [mockDeployments],
+  );
+  const freezeEnvs = mockEnvironments.filter(e => e.freezeWindowActive);
+  const recentDeployments = useMemo(
+    () => [...last7d].sort((a, b) => (b.startedAt ?? '').localeCompare(a.startedAt ?? '')),
+    [last7d],
+  );
 
   return (
     <div className="p-6 space-y-6">

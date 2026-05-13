@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MoreVertical, ArrowRight } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatDate } from '@/src/lib/format';
-import { getImprovementById } from '@/src/mocks/improvements';
+import { improvementsService, useResource } from '@/src/services';
 import { Can, improvementResource } from '@/src/lib/rbac';
-import { getROICalculation } from '@/src/mocks/roiCalculations';
 import {
   improvementStatusMeta,
   improvementCategoryMeta,
@@ -51,9 +50,19 @@ export const ImprovementDetail: React.FC = () => {
   const { initiativeId } = useParams<{ initiativeId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
-  const [initiative, setInitiative] = useState<ImprovementInitiative | undefined>(
-    initiativeId ? getImprovementById(initiativeId) : undefined
+  const { data: loadedInitiative } = useResource(
+    () => initiativeId ? improvementsService.getByAnyId(initiativeId) : Promise.resolve(undefined),
+    [initiativeId],
   );
+  const { data: roiCalc } = useResource(
+    () => loadedInitiative ? improvementsService.roiCalculation(loadedInitiative.id) : Promise.resolve(undefined),
+    [loadedInitiative?.id],
+  );
+  const [initiative, setInitiative] = useState<ImprovementInitiative | undefined>(undefined);
+
+  useEffect(() => {
+    if (loadedInitiative) setInitiative(loadedInitiative);
+  }, [loadedInitiative]);
 
   if (!initiative) {
     return (
@@ -64,7 +73,6 @@ export const ImprovementDetail: React.FC = () => {
     );
   }
 
-  const roiCalc = getROICalculation(initiative.id);
   const updatesCount = initiative.updates.length;
 
   const tabsWithCount = TABS.map(t =>

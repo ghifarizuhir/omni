@@ -7,8 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
-import { mockServiceRequests, getMyPendingApprovals } from '@/src/mocks/serviceRequests';
-import { mockUsers } from '@/src/mocks/users';
+import { requestsService, usersService, useResource } from '@/src/services';
 import { currentUser } from '@/src/mocks/users';
 import { Avatar } from '@/src/components/ui/Avatar';
 import {
@@ -73,10 +72,10 @@ function isMyApproval(req: ServiceRequest): boolean {
   );
 }
 
-function isMyTeam(req: ServiceRequest): boolean {
+function isMyTeam(req: ServiceRequest, users: { id: string; team?: string }[]): boolean {
   const step = getActiveStep(req);
   if (!step?.assigneeId) return false;
-  const u = mockUsers.find(u => u.id === step.assigneeId);
+  const u = users.find(u => u.id === step.assigneeId);
   return u?.team === currentUser.team;
 }
 
@@ -87,11 +86,11 @@ function isLast24h(req: ServiceRequest): boolean {
 
 type QuickFilter = 'my_approval' | 'sla_risk' | 'my_team' | 'last_24h' | null;
 
-function applyQuick(reqs: ServiceRequest[], qf: QuickFilter): ServiceRequest[] {
+function applyQuick(reqs: ServiceRequest[], qf: QuickFilter, users: { id: string; team?: string }[]): ServiceRequest[] {
   if (!qf) return reqs;
   if (qf === 'my_approval') return reqs.filter(isMyApproval);
   if (qf === 'sla_risk')    return reqs.filter(r => r.slaBreached || r.workflow.steps.some(s => s.slaStatus === 'warning' || s.slaStatus === 'breached'));
-  if (qf === 'my_team')     return reqs.filter(isMyTeam);
+  if (qf === 'my_team')     return reqs.filter(r => isMyTeam(r, users));
   if (qf === 'last_24h')    return reqs.filter(isLast24h);
   return reqs;
 }
@@ -202,28 +201,35 @@ export const RequestQueue: React.FC = () => {
   const [quickFlt,   setQuickFlt]   = useState<QuickFilter>(null);
 
   const { user, applications, teams, departments } = useCurrentUser();
+  const { data: requestsData } = useResource(() => requestsService.list(), []);
+  const { data: usersData } = useResource(() => usersService.list(), []);
+  const mockServiceRequests = requestsData ?? [];
+  const mockUsers = usersData ?? [];
   const all = useMemo(
     () => filterReadable(
       user,
       'request',
       mockServiceRequests.map(r => ({ ...r, ...requestResource(r) })),
     ) as typeof mockServiceRequests,
-    [user, applications, teams, departments],
+    [user, applications, teams, departments, mockServiceRequests],
   );
 
   // ── Pre-computed counts for chips ──────────────────────────────────────────
-  const counts = useMemo(() => ({
+  const counts = useMemo<{
+    myApproval: number; slaRisk: number; myTeam: number;
+    last24h: number; active: number; breached: number;
+  }>(() => ({
     myApproval: all.filter(isMyApproval).length,
     slaRisk:    all.filter(r => r.slaBreached || r.workflow.steps.some(s => s.slaStatus === 'warning' || s.slaStatus === 'breached')).length,
-    myTeam:     all.filter(isMyTeam).length,
+    myTeam:     all.filter(r => isMyTeam(r, mockUsers)).length,
     last24h:    all.filter(isLast24h).length,
     active:     all.filter(r => ['submitted', 'approved', 'in_fulfillment', 'pending_user'].includes(r.status)).length,
     breached:   all.filter(r => r.slaBreached).length,
-  }), []);
+  }), [all, mockUsers]);
 
   // ── Filtered + sorted results ──────────────────────────────────────────────
   const results = useMemo(() => {
-    let r = applyQuick(all, quickFlt);
+    let r = applyQuick(all, quickFlt, mockUsers);
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -256,7 +262,7 @@ export const RequestQueue: React.FC = () => {
       if (aApproval !== bApproval) return aApproval - bApproval;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [search, statusFlt, catFlt, stepFlt, slaFlt, quickFlt]);
+  }, [all, mockUsers, search, statusFlt, catFlt, stepFlt, slaFlt, quickFlt]);
 
   const hasFilters = !!(search || statusFlt || catFlt || stepFlt || slaFlt || quickFlt);
 

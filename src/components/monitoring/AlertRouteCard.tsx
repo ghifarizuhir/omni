@@ -2,7 +2,7 @@ import React from 'react';
 import { Mail, MessageSquare, Phone, Bell, Webhook, MoreHorizontal, ArrowRight, User } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { AlertRoute } from '../../types/monitoring';
-import { mockTeams, mockUsers } from '../../mocks';
+import { teamsService, useResource } from '../../services';
 import { cn } from '../../lib/utils';
 
 interface AlertRouteCardProps {
@@ -12,7 +12,8 @@ interface AlertRouteCardProps {
 }
 
 export const AlertRouteCard: React.FC<AlertRouteCardProps> = ({ route, active, onClick }) => {
-  const team = mockTeams.find(t => t.id === route.teamId);
+  const { data: teams } = useResource(() => teamsService.list(), []);
+  const team = (teams ?? []).find(t => t.id === route.teamId);
 
   return (
     <Card 

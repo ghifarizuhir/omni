@@ -8,8 +8,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
-import { mockServiceRequests } from '@/src/mocks/serviceRequests';
-import { getCatalogItemById } from '@/src/mocks/catalogItems';
+import { requestsService, useResource } from '@/src/services';
 import { ServiceRequest, RequestStatus, WorkflowStepStatus, CatalogCategory } from '@/src/types/request';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { useCurrentUser } from '@/src/lib/rbac';
@@ -299,11 +298,13 @@ export const MyRequests: React.FC = () => {
 
   // Show only the current user's own requests. Superadmin sees all for demo richness.
   const { user } = useCurrentUser();
+  const { data: requestsData } = useResource(() => requestsService.list(), []);
+  const mockServiceRequests = requestsData ?? [];
   const all = useMemo(
     () => user?.isSuperadmin
       ? mockServiceRequests
       : mockServiceRequests.filter(r => r.requesterId === user?.id),
-    [user],
+    [user, mockServiceRequests],
   );
   const active    = all.filter(r => ACTIVE_STATUSES.includes(r.status));
   const completed = all.filter(r => COMPLETED_STATUSES.includes(r.status));
@@ -317,7 +318,7 @@ export const MyRequests: React.FC = () => {
   const listed = useMemo(() => {
     const base = tab === 'active' ? active : tab === 'completed' ? completed : tab === 'drafts' ? drafts : all;
     return sortRequests(base, sort);
-  }, [tab, sort]);
+  }, [tab, sort, active, completed, drafts, all]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (

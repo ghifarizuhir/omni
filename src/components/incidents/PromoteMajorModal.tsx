@@ -3,7 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Modal } from '@/src/components/ui/Modal';
 import { Button } from '@/src/components/ui/Button';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
-import { mockUsers } from '@/src/mocks/users';
+import { usersService, useResource } from '@/src/services';
 import { Incident } from '@/src/types/incident';
 
 interface Props {
@@ -13,11 +13,11 @@ interface Props {
   onConfirm: (commanderId: string) => void;
 }
 
-const commanderOptions = mockUsers.map(u => ({ value: u.id, label: u.name }));
-
 export const PromoteMajorModal: React.FC<Props> = ({ isOpen, onClose, incident, onConfirm }) => {
   const [commanderId, setCommanderId] = useState('');
   const [error, setError] = useState('');
+  const { data: users } = useResource(() => usersService.list(), []);
+  const commanderOptions = (users ?? []).map(u => ({ value: u.id, label: u.name }));
 
   const handleConfirm = () => {
     if (!commanderId) {

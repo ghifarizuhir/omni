@@ -1,9 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ClipboardList, FileText, PlayCircle, ClipboardCheck } from 'lucide-react';
-import { mockTestPlans } from '@/src/mocks/testPlans';
-import { mockTestRuns, getActiveTestRuns } from '@/src/mocks/testRuns';
-import { mockSignOffs } from '@/src/mocks/signOffs';
+import { testingService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 const TABS = [
@@ -14,8 +12,16 @@ const TABS = [
 ];
 
 export const TestingLayout: React.FC = () => {
+  const { data: plansData } = useResource(() => testingService.plans(), []);
+  const { data: runsData } = useResource(() => testingService.runs(), []);
+  const { data: activeRunsData } = useResource(() => testingService.activeRuns(), []);
+  const { data: signOffsData } = useResource(() => testingService.signOffs(), []);
+  const mockTestPlans = plansData ?? [];
+  const mockTestRuns = runsData ?? [];
+  const mockSignOffs = signOffsData ?? [];
+
   const activePlans = mockTestPlans.filter(p => p.status === 'active').length;
-  const activeRuns = getActiveTestRuns().length;
+  const activeRuns = (activeRunsData ?? []).length;
 
   const completedRuns = mockTestRuns.filter(r => r.status !== 'running' && r.status !== 'pending');
   const passed = completedRuns.filter(r => r.status === 'passed').length;

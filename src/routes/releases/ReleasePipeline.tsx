@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, Loader2, RotateCcw, Circle, MinusCircle, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
-import { mockReleases } from '../../mocks';
+import { releasesService, useResource } from '../../services';
 import { ReleaseStatusPill } from '../../components/releases/ReleaseStatusPill';
 import { ReleaseTypeChip } from '../../components/releases/ReleaseTypeChip';
 import { stageStatusMeta } from '../../lib/constants';
@@ -65,15 +65,19 @@ const StageCell: React.FC<{
 
 // Active releases go first, then released
 const activeStatuses = ['planning', 'locked', 'in_validation', 'ready', 'deploying', 'partially_released'];
-const SORTED_RELEASES = [
-  ...mockReleases.filter((r) => activeStatuses.includes(r.status)),
-  ...mockReleases.filter((r) => r.status === 'released'),
-  ...mockReleases.filter((r) => !activeStatuses.includes(r.status) && r.status !== 'released'),
-];
 
 export const ReleasePipeline: React.FC = () => {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'active' | 'released' | 'rolled_back'>('all');
+
+  const { data: releasesData } = useResource(() => releasesService.list(), []);
+  const mockReleases = releasesData ?? [];
+
+  const SORTED_RELEASES = useMemo(() => [
+    ...mockReleases.filter((r) => activeStatuses.includes(r.status)),
+    ...mockReleases.filter((r) => r.status === 'released'),
+    ...mockReleases.filter((r) => !activeStatuses.includes(r.status) && r.status !== 'released'),
+  ], [mockReleases]);
 
   const displayed = SORTED_RELEASES.filter((r) => {
     if (filter === 'active') return activeStatuses.includes(r.status);

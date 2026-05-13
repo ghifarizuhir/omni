@@ -18,7 +18,14 @@ import { Avatar } from '../../components/ui/Avatar';
 import { EventStatusPill } from '../../components/monitoring/EventStatusPill';
 import { EventSeverityBadge } from '../../components/monitoring/EventSeverityBadge';
 import { EventTimeline } from '../../components/monitoring/EventTimeline';
-import { mockEvents, mockCIs, mockMonitoringRules, mockUsers, mockIncidents } from '../../mocks';
+import {
+  eventsService,
+  cisService,
+  monitoringRulesService,
+  usersService,
+  incidentsService,
+  useResource,
+} from '../../services';
 import { cn } from '../../lib/utils';
 import { EventStatus } from '../../types/monitoring';
 import { CreateIncidentModal } from '../../components/incidents/CreateIncidentModal';
@@ -60,10 +67,28 @@ const ResolveEventModal: React.FC<ResolveEventModalProps> = ({
 export const EventDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
+  // Load data from service layer
+  const { data: allEvents, loading: eventsLoading } = useResource(() => eventsService.list(), []);
+  const { data: allCIs } = useResource(() => cisService.list(), []);
+  const { data: allRules } = useResource(() => monitoringRulesService.list(), []);
+  const { data: allUsers } = useResource(() => usersService.list(), []);
+  const { data: allIncidents } = useResource(() => incidentsService.list(), []);
+
+  const mockEvents = allEvents ?? [];
+  const mockCIs = allCIs ?? [];
+  const mockMonitoringRules = allRules ?? [];
+  const mockUsers = allUsers ?? [];
+  const mockIncidents = allIncidents ?? [];
+
   // State for simulated interactions
   const foundEvent = mockEvents.find(e => e.id === id || e.publicId === id);
   const [event, setEvent] = useState(foundEvent);
+
+  // Sync event state when data loads
+  React.useEffect(() => {
+    if (!event && foundEvent) setEvent(foundEvent);
+  }, [foundEvent, event]);
   const [showRawPayload, setShowRawPayload] = useState(false);
   const [resolveModalOpen, setResolveModalOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -73,6 +98,10 @@ export const EventDetail: React.FC = () => {
   const [createIncidentOpen, setCreateIncidentOpen] = useState(false);
   const [addingTag, setAddingTag]                   = useState(false);
   const [tagInput, setTagInput]                     = useState('');
+
+  if (eventsLoading && !event) {
+    return <div className="py-20 text-center text-sm text-ois-text-muted">Loading…</div>;
+  }
 
   if (!event) {
     return (

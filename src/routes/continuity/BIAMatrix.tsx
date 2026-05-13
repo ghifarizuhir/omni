@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { mockBIAEntries } from '@/src/mocks/biaEntries';
+import { continuityService, useResource } from '@/src/services';
 import { BIAEntry } from '@/src/types/continuity';
 import { BIAMatrix } from '@/src/components/continuity/BIAMatrix';
 import { BIAEntryRow } from '@/src/components/continuity/BIAEntryRow';
@@ -10,6 +10,8 @@ import { Can } from '@/src/lib/rbac';
 
 export const BIAMatrixPage: React.FC = () => {
   const navigate = useNavigate();
+  const { data: biaData } = useResource(() => continuityService.bia(), []);
+  const mockBIAEntries = biaData ?? [];
   const [selectedEntry, setSelectedEntry] = useState<BIAEntry | null>(null);
 
   const handleOpenDRPlan = (_planPublicId: string) => {

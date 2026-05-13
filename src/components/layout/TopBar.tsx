@@ -4,11 +4,11 @@ import { Menu, Search as SearchIcon, Bell, Inbox } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
 import { cn } from '@/src/lib/utils';
-import { mockInboxItems, mockNotifications, currentUser } from '@/src/mocks';
 import { NotificationDropdown } from './NotificationDropdown';
 import { UserMenu } from './UserMenu';
 import { UserSwitcher } from './UserSwitcher';
 import { useBreadcrumbs } from '@/src/lib/breadcrumbs';
+import { inboxService, notificationsService, usersService, useResource } from '@/src/services';
 
 interface TopBarProps {
   onToggleSidebar: () => void;
@@ -20,8 +20,12 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const breadcrumbs = useBreadcrumbs();
 
-  const urgentInboxCount = mockInboxItems.filter(i => i.priority === 'urgent').length;
-  const unreadNotifCount = mockNotifications.filter(n => !n.readAt).length;
+  const { data: inboxItems } = useResource(() => inboxService.items(), []);
+  const { data: notifications } = useResource(() => notificationsService.list(), []);
+  const { data: currentUser } = useResource(() => usersService.current(), []);
+
+  const urgentInboxCount = (inboxItems ?? []).filter(i => i.priority === 'urgent').length;
+  const unreadNotifCount = (notifications ?? []).filter(n => !n.readAt).length;
 
   return (
     <header
@@ -100,7 +104,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) 
 
         <div className="relative ml-2">
           <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 focus:outline-none">
-            <Avatar name={currentUser.name} size="sm" />
+            <Avatar name={currentUser?.name ?? ''} size="sm" />
           </button>
           {showUserMenu && <UserMenu onClose={() => setShowUserMenu(false)} />}
         </div>

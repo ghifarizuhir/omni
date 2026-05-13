@@ -3,7 +3,7 @@ import { Check, Bell, MessageSquare, Settings, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { cn } from '@/src/lib/utils';
-import { mockNotifications } from '@/src/mocks';
+import { notificationsService, useResource } from '@/src/services';
 import { formatRelative } from '@/src/lib/format';
 
 interface NotificationDropdownProps {
@@ -13,14 +13,16 @@ interface NotificationDropdownProps {
 export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) => {
   const [filter, setFilter] = useState<'all' | 'unread' | 'mentions'>('all');
   const navigate = useNavigate();
+  const { data } = useResource(() => notificationsService.list(), []);
+  const notifications = data ?? [];
 
-  const filteredNotifications = mockNotifications.filter(n => {
+  const filteredNotifications = notifications.filter(n => {
     if (filter === 'unread') return !n.readAt;
     if (filter === 'mentions') return n.type === 'mention';
     return true;
   });
 
-  const unreadCount = mockNotifications.filter(n => !n.readAt).length;
+  const unreadCount = notifications.filter(n => !n.readAt).length;
 
   return (
     <div 

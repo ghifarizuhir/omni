@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Play, Download, AlertTriangle, CheckCircle2, Clock, ChevronRight,
@@ -9,7 +9,7 @@ import { Card, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { cn } from '../../lib/utils';
-import { mockChanges } from '../../mocks';
+import { changesService, useResource } from '../../services';
 import { Change, CABVote, ChangeApproval } from '../../types/change';
 import { cabVoteMeta, changeTypeMeta, riskMeta } from '../../lib/constants';
 import { RiskBadge } from '../../components/changes/RiskBadge';
@@ -32,8 +32,6 @@ const SectionCard: React.FC<{ title?: string; children: React.ReactNode; classNa
   </div>
 );
 
-// CAB agenda: in_review changes
-const AGENDA = mockChanges.filter((c) => c.status === 'in_review');
 const CURRENT_USER = 'u-001'; // Sarah Chen
 
 const SESSION = {
@@ -413,6 +411,11 @@ const ScheduleSessionModal: React.FC<{
 
 export const CABWorkspace: React.FC = () => {
   const navigate = useNavigate();
+  const { data: allChanges } = useResource(() => changesService.list(), []);
+  const AGENDA = useMemo(
+    () => (allChanges ?? []).filter((c) => c.status === 'in_review'),
+    [allChanges],
+  );
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [votes, setVotes] = useState<Record<string, Record<string, CABVote>>>({});

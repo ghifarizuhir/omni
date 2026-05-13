@@ -1,5 +1,5 @@
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
-import { getTimeSeriesForMetric } from '../../mocks/capacityTimeSeries';
+import { capacityService, useResource } from '../../services';
 
 interface MetricSparklineProps {
   metricId: string;
@@ -20,15 +20,16 @@ export function MetricSparkline({
   criticalThreshold,
   height = 40,
 }: MetricSparklineProps) {
-  const data = getTimeSeriesForMetric(metricId);
-  if (data.length === 0) return null;
+  const { data } = useResource(() => capacityService.timeSeriesForMetric(metricId), [metricId]);
+  const series = data ?? [];
+  if (series.length === 0) return null;
 
-  const lastValue = data[data.length - 1]?.value ?? 0;
+  const lastValue = series[series.length - 1]?.value ?? 0;
   const color = getLineColor(lastValue, warningThreshold, criticalThreshold);
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+      <LineChart data={series} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
         <Line
           type="monotone"
           dataKey="value"

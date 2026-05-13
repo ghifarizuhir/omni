@@ -4,7 +4,7 @@ import {
   SlidersHorizontal, ChevronDown, CheckCircle2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockCIs, mockCIRelationships, mockServices } from '@/src/mocks';
+import { cisService, servicesService, useResource } from '@/src/services';
 import { CIType, ConfigurationItem, Criticality } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -34,9 +34,6 @@ type ViewMode = 'tree' | 'list';
 type HealthFilter = 'all' | 'operational' | 'degraded' | 'partial_outage' | 'major_outage' | 'maintenance';
 const HEALTH_CYCLE: HealthFilter[] = ['all', 'operational', 'degraded', 'partial_outage', 'major_outage', 'maintenance'];
 
-// Derive the service IDs that actually appear in CI data
-const SERVICE_IDS = mockServices.map(s => s.id);
-
 export const CMDBList: React.FC = () => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('tree');
@@ -50,6 +47,14 @@ export const CMDBList: React.FC = () => {
   const [extraCIs, setExtraCIs] = useState<ConfigurationItem[]>([]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const { data: cisData } = useResource(() => cisService.list(), []);
+  const mockCIs = cisData ?? [];
+  const { data: relsData } = useResource(() => cisService.relationshipsAll(), []);
+  const mockCIRelationships = relsData ?? [];
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const mockServices = servicesData ?? [];
+  const SERVICE_IDS = useMemo(() => mockServices.map(s => s.id), [mockServices]);
+
   const showToast = (message: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast({ message });
@@ -62,11 +67,18 @@ export const CMDBList: React.FC = () => {
     const acc: Record<string, boolean> = { unassigned: true };
     SERVICE_IDS.forEach(id => { acc[id] = true; });
     return acc;
-  }, []);
+  }, [SERVICE_IDS]);
 
-  const [expandedServices, setExpandedServices] = useState<Record<string, boolean>>(initialExpanded);
+  const [expandedServices, setExpandedServices] = useState<Record<string, boolean>>({ unassigned: true });
+  useEffect(() => {
+    setExpandedServices(prev => {
+      const next = { ...prev };
+      for (const id of SERVICE_IDS) if (!(id in next)) next[id] = true;
+      return next;
+    });
+  }, [SERVICE_IDS]);
 
-  const allCIs = useMemo(() => [...extraCIs, ...mockCIs], [extraCIs]);
+  const allCIs = useMemo(() => [...extraCIs, ...mockCIs], [extraCIs, mockCIs]);
 
   const filteredCIs = useMemo(() => {
     return allCIs.filter(ci => {
@@ -116,7 +128,7 @@ export const CMDBList: React.FC = () => {
     const unassigned = filteredCIs.filter(ci => !ci.serviceId && ci.type !== 'service');
     
     return { serviceTrees, unassignedTrees: unassigned.map(buildTree) };
-  }, [filteredCIs]);
+  }, [filteredCIs, mockCIRelationships, mockServices, allCIs]);
 
   const listColumns = [
     {

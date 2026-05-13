@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Plus, Search, X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { mockDRPlans } from '@/src/mocks/drPlans';
+import { continuityService, useResource } from '@/src/services';
 import { DRPlan, DRPlanStatus } from '@/src/types/continuity';
 import { DRPlanCard } from '@/src/components/continuity/DRPlanCard';
 import { DRTestRunnerWizard } from '@/src/components/continuity/DRTestRunner/DRTestRunnerWizard';
@@ -38,12 +38,16 @@ const TABS: { value: TabValue; label: string }[] = [
   { value: 'overdue_review', label: 'Overdue review' },
 ];
 
-const ALL_SERVICES = Array.from(
-  new Set(mockDRPlans.flatMap((p) => p.serviceNames)),
-).sort();
-
 export const DRPlans: React.FC = () => {
   const navigate = useNavigate();
+
+  const { data: plansData } = useResource(() => continuityService.drPlans(), []);
+  const mockDRPlans = useMemo(() => plansData ?? [], [plansData]);
+
+  const ALL_SERVICES = useMemo(
+    () => Array.from(new Set(mockDRPlans.flatMap((p) => p.serviceNames))).sort(),
+    [mockDRPlans],
+  );
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<DRPlanStatus | 'all'>('all');
@@ -53,7 +57,7 @@ export const DRPlans: React.FC = () => {
 
   const overduePlans = useMemo(
     () => mockDRPlans.filter((p) => isOverdue(p.reviewDueAt)),
-    [],
+    [mockDRPlans],
   );
 
   const filtered = useMemo(() => {
@@ -86,7 +90,7 @@ export const DRPlans: React.FC = () => {
     }
 
     return list;
-  }, [search, statusFilter, serviceFilter, activeTab]);
+  }, [mockDRPlans, search, statusFilter, serviceFilter, activeTab]);
 
   const tabCounts = useMemo(() => ({
     all: mockDRPlans.length,
@@ -94,13 +98,13 @@ export const DRPlans: React.FC = () => {
     under_review: mockDRPlans.filter((p) => p.status === 'under_review').length,
     draft: mockDRPlans.filter((p) => p.status === 'draft').length,
     overdue_review: overduePlans.length,
-  }), [overduePlans]);
+  }), [mockDRPlans, overduePlans]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     mockDRPlans.forEach((p) => { counts[p.status] = (counts[p.status] ?? 0) + 1; });
     return counts;
-  }, []);
+  }, [mockDRPlans]);
 
 
   const resetFilters = () => {

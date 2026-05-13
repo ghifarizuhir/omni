@@ -3,7 +3,7 @@ import { X, ExternalLink, CheckCircle, XCircle, AlertTriangle } from 'lucide-rea
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { motion } from 'motion/react';
-import { mockInboxItems } from '@/src/mocks';
+import { inboxService, useResource } from '@/src/services';
 import { formatRelative } from '@/src/lib/format';
 import { cn } from '@/src/lib/utils';
 
@@ -13,8 +13,10 @@ interface InboxDrawerProps {
 
 export const InboxDrawer: React.FC<InboxDrawerProps> = ({ onClose }) => {
   const [filter, setFilter] = useState<'all' | 'urgent' | 'approval'>('all');
+  const { data } = useResource(() => inboxService.items(), []);
+  const inboxItems = data ?? [];
 
-  const filteredItems = mockInboxItems.filter(item => {
+  const filteredItems = inboxItems.filter(item => {
     if (filter === 'urgent') return item.priority === 'urgent';
     if (filter === 'approval') return item.type === 'approval_request';
     return true;
@@ -51,9 +53,9 @@ export const InboxDrawer: React.FC<InboxDrawerProps> = ({ onClose }) => {
 
         {/* Filters */}
         <div className="px-5 py-3 border-b border-ois-border flex items-center gap-2 overflow-x-auto no-scrollbar">
-          <FilterPill active={filter === 'all'} onClick={() => setFilter('all')}>All {mockInboxItems.length}</FilterPill>
-          <FilterPill active={filter === 'urgent'} onClick={() => setFilter('urgent')} variant="urgent">Urgent {mockInboxItems.filter(i => i.priority === 'urgent').length}</FilterPill>
-          <FilterPill active={filter === 'approval'} onClick={() => setFilter('approval')}>Approvals {mockInboxItems.filter(i => i.type === 'approval_request').length}</FilterPill>
+          <FilterPill active={filter === 'all'} onClick={() => setFilter('all')}>All {inboxItems.length}</FilterPill>
+          <FilterPill active={filter === 'urgent'} onClick={() => setFilter('urgent')} variant="urgent">Urgent {inboxItems.filter(i => i.priority === 'urgent').length}</FilterPill>
+          <FilterPill active={filter === 'approval'} onClick={() => setFilter('approval')}>Approvals {inboxItems.filter(i => i.type === 'approval_request').length}</FilterPill>
         </div>
 
         {/* Items */}

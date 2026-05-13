@@ -1,66 +1,45 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   ArrowRight, Radio, Shield, GitBranch,
   AlertOctagon, AlertTriangle, CheckCircle2,
-  Eye, Settings2, Activity,
+  Eye, Activity,
 } from 'lucide-react';
-import { parseISO, isAfter, subDays } from 'date-fns';
-import { mockEvents, mockMonitoringRules, mockAlertRoutes, mockCIs } from '../../mocks';
 import { EventCard } from '../../components/monitoring/EventCard';
+import { ConnectedSourcesPanel } from '../../components/platform/ConnectedSourcesPanel';
+import { eventsService, useResource } from '../../services';
 import { cn } from '../../lib/utils';
-
-const SEVERITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
 
 export const MonitoringOverview: React.FC = () => {
   const navigate = useNavigate();
 
-  // ── Derived stats ────────────────────────────────────────────────────────
-  const activeEvents = useMemo(() =>
-    mockEvents
-      .filter(e => e.status === 'open' || e.status === 'acknowledged')
-      .sort((a, b) =>
-        (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9) ||
-        new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
-      ),
-    []
-  );
+  const { data: activeEvents } = useResource(() => eventsService.listActive(), []);
+  const { data: stats } = useResource(() => eventsService.dashboardStats(), []);
 
-  const kpis = useMemo(() => ({
-    active:          activeEvents.length,
-    p1Open:          mockEvents.filter(e => e.severity === 'P1' && e.status === 'open').length,
-    p2Open:          mockEvents.filter(e => e.severity === 'P2' && e.status === 'open').length,
-    unacknowledged:  mockEvents.filter(e => e.status === 'open').length,
-  }), [activeEvents]);
+  const events = activeEvents ?? [];
+  const kpis = {
+    active:         stats?.active ?? 0,
+    p1Open:         stats?.p1Open ?? 0,
+    p2Open:         stats?.p2Open ?? 0,
+    unacknowledged: stats?.unacknowledged ?? 0,
+  };
+  const rulesStats = {
+    total:    stats?.rules.total    ?? 0,
+    enabled:  stats?.rules.enabled  ?? 0,
+    disabled: stats?.rules.disabled ?? 0,
+    firing:   stats?.rules.firing24h ?? 0,
+  };
+  const routingStats = {
+    total:    stats?.routing.total    ?? 0,
+    channels: stats?.routing.channels ?? 0,
+  };
+  const coverageStats = {
+    covered: stats?.coverage.covered ?? 0,
+    total:   stats?.coverage.total   ?? 0,
+    pct:     stats?.coverage.pct     ?? 0,
+  };
 
-  const rulesStats = useMemo(() => {
-    const yesterday = subDays(new Date('2026-05-09'), 1);
-    return {
-      total:    mockMonitoringRules.length,
-      enabled:  mockMonitoringRules.filter(r => r.enabled).length,
-      disabled: mockMonitoringRules.filter(r => !r.enabled).length,
-      firing:   mockMonitoringRules.filter(r => r.lastTriggeredAt && isAfter(parseISO(r.lastTriggeredAt), yesterday)).length,
-    };
-  }, []);
-
-  const routingStats = useMemo(() => ({
-    total:    mockAlertRoutes.length,
-    channels: [...new Set(mockAlertRoutes.flatMap(r => r.channels))].length,
-  }), []);
-
-  const coverageStats = useMemo(() => {
-    const coveredIds = new Set(
-      mockMonitoringRules.filter(r => r.enabled).flatMap(r => r.targetCIIds)
-    );
-    const covered = mockCIs.filter(ci => coveredIds.has(ci.id)).length;
-    return {
-      covered,
-      total: mockCIs.length,
-      pct: mockCIs.length > 0 ? Math.round((covered / mockCIs.length) * 100) : 0,
-    };
-  }, []);
-
-  const feedEvents = activeEvents.slice(0, 8);
+  const feedEvents = events.slice(0, 8);
 
   return (
     <div className="flex flex-1 min-h-0">
@@ -117,12 +96,12 @@ export const MonitoringOverview: React.FC = () => {
                     onClick={() => navigate(`/monitoring/events/${event.publicId}`)}
                   />
                 ))}
-                {activeEvents.length > feedEvents.length && (
+                {events.length > feedEvents.length && (
                   <Link
                     to="/monitoring/events"
                     className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-ois-card border border-ois-border bg-ois-surface text-xs font-medium text-ois-primary hover:bg-ois-surface-muted transition-colors"
                   >
-                    View all {activeEvents.length} active events <ArrowRight size={12} />
+                    View all {events.length} active events <ArrowRight size={12} />
                   </Link>
                 )}
               </div>
@@ -174,6 +153,9 @@ export const MonitoringOverview: React.FC = () => {
               </Link>
             </div>
           </div>
+
+          {/* Connected sources */}
+          <ConnectedSourcesPanel domain="monitoring" variant="rail" />
 
           {/* Coverage */}
           <div className="border border-ois-border rounded-ois-card overflow-hidden">

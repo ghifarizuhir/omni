@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bell, Info, AlertTriangle, CheckCircle2, MoreHorizontal, Settings } from 'lucide-react';
-import { mockAlertRoutes } from '../../../mocks';
+import { alertRoutesService, useResource } from '../../../services';
 import { Badge } from '../../ui/Badge';
 import { cn } from '../../../lib/utils';
 import { channelMeta } from '../../../lib/constants';
@@ -11,6 +11,8 @@ interface Step3RoutingProps {
 }
 
 export const Step3Routing: React.FC<Step3RoutingProps> = ({ data, updateData }) => {
+  const { data: routesData } = useResource(() => alertRoutesService.list(), []);
+  const mockAlertRoutes = routesData ?? [];
   return (
     <div className="space-y-8">
       {/* Route Selection */}

@@ -1,9 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { LayoutDashboard, TrendingUp, FileBarChart2, Tag } from 'lucide-react';
-import { mockMeasurementDashboards } from '@/src/mocks/measurementDashboards';
-import { mockReports } from '@/src/mocks/reports';
-import { mockMetricDefinitions } from '@/src/mocks/metricDefinitions';
+import { measurementService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 const TABS = [
@@ -14,6 +12,14 @@ const TABS = [
 ];
 
 export const MeasurementLayout: React.FC = () => {
+  const { data: dashboardsData } = useResource(() => measurementService.dashboards(), []);
+  const { data: reportsData } = useResource(() => measurementService.reports(), []);
+  const { data: metricsData } = useResource(() => measurementService.metrics(), []);
+
+  const mockMeasurementDashboards = dashboardsData ?? [];
+  const mockReports = reportsData ?? [];
+  const mockMetricDefinitions = metricsData ?? [];
+
   const dashboardCount = mockMeasurementDashboards.length;
   const reportCount = mockReports.length;
   const metricCount = mockMetricDefinitions.length;

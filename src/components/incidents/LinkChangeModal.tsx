@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { Modal } from '@/src/components/ui/Modal';
 import { Button } from '@/src/components/ui/Button';
-import { mockChanges } from '@/src/mocks/changes';
+import { changesService, useResource } from '@/src/services';
 import { ChangeStatusPill } from '@/src/components/changes/ChangeStatusPill';
 import { RiskBadge } from '@/src/components/changes/RiskBadge';
 import { cn } from '@/src/lib/utils';
@@ -17,8 +17,9 @@ interface Props {
 export const LinkChangeModal: React.FC<Props> = ({ isOpen, onClose, currentChangeIds, onLink }) => {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { data: changes } = useResource(() => changesService.list(), []);
 
-  const filtered = mockChanges.filter(chg => {
+  const filtered = (changes ?? []).filter(chg => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return chg.publicId.toLowerCase().includes(q) || chg.title.toLowerCase().includes(q);

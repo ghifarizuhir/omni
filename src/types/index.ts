@@ -18,3 +18,4 @@ export * from './continuity';
 export * from './measurement';
 export * from './ai';
 export * from './rbac';
+export * from './integration';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { BookOpen, BarChart3, FileEdit } from 'lucide-react';
-import { mockKBArticles } from '@/src/mocks/kbArticles';
+import { knowledgeService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 const TABS = [
@@ -11,10 +11,12 @@ const TABS = [
 ];
 
 export const KBLayout: React.FC = () => {
-  const published = mockKBArticles.filter(a => a.status === 'published').length;
-  const drafts    = mockKBArticles.filter(a => a.status === 'draft').length;
-  const inReview  = mockKBArticles.filter(a => a.status === 'in_review').length;
-  const expired   = mockKBArticles.filter(a => a.status === 'expired').length;
+  const { data } = useResource(() => knowledgeService.articles(), []);
+  const articles = data ?? [];
+  const published = articles.filter(a => a.status === 'published').length;
+  const drafts    = articles.filter(a => a.status === 'draft').length;
+  const inReview  = articles.filter(a => a.status === 'in_review').length;
+  const expired   = articles.filter(a => a.status === 'expired').length;
 
   const accentColor =
     expired > 0   ? '#DC6803' :

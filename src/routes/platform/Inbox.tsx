@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, CheckCheck, ArchiveX, Inbox as InboxIcon } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { mockInboxItems } from '@/src/mocks/inboxItems';
+import { inboxService, useResource } from '@/src/services';
 import { InboxItem } from '@/src/types/platform';
 import { Button } from '@/src/components/ui/Button';
 import { InboxListItem } from '@/src/components/inbox/InboxListItem';
@@ -46,10 +46,15 @@ function sortItems(items: InboxItem[]): InboxItem[] {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const Inbox: React.FC = () => {
-  const [items, setItems] = useState<InboxItem[]>(mockInboxItems);
+  const { data } = useResource(() => inboxService.items(), []);
+  const [items, setItems] = useState<InboxItem[]>([]);
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [selectedId, setSelectedId] = useState<string>('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (data) setItems(data);
+  }, [data]);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const unreadCount = useMemo(() => items.filter(i => !i.isRead && !i.isArchived).length, [items]);

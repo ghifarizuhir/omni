@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { Modal } from '@/src/components/ui/Modal';
 import { Button } from '@/src/components/ui/Button';
-import { mockCIs } from '@/src/mocks/cis';
+import { cisService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 interface Props {
@@ -29,8 +29,9 @@ function healthBadge(health: string) {
 export const LinkCIModal: React.FC<Props> = ({ isOpen, onClose, currentCIIds, onLink }) => {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { data: cis } = useResource(() => cisService.list(), []);
 
-  const allCIs = mockCIs.filter(ci => {
+  const allCIs = (cis ?? []).filter(ci => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return ci.publicId.toLowerCase().includes(q) || ci.name.toLowerCase().includes(q);

@@ -1,10 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockMeasurementDashboards } from '@/src/mocks/measurementDashboards';
+import { measurementService, useResource } from '@/src/services';
 import { DashboardCard } from '@/src/components/measurement/DashboardCard';
 
 export const DashboardsIndex: React.FC = () => {
   const navigate = useNavigate();
+  const { data } = useResource(() => measurementService.dashboards(), []);
+  const mockMeasurementDashboards = data ?? [];
 
   const handleOpen = (_dashboardId: string) => {
     navigate('/dashboards/exec');

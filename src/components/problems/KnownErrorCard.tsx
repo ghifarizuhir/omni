@@ -2,7 +2,7 @@ import React from 'react';
 import { ShieldAlert, CheckCircle2, AlertTriangle, XCircle, Edit3, BookOpen, ExternalLink } from 'lucide-react';
 import { Problem } from '@/src/types/problem';
 import { formatDate, formatRelative } from '@/src/lib/format';
-import { mockUsers } from '@/src/mocks/users';
+import { usersService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 interface KnownErrorCardProps {
@@ -20,7 +20,8 @@ export const KnownErrorCard: React.FC<KnownErrorCardProps> = ({ problem, onEdit 
   const ke = problem.knownError;
   if (!ke) return null;
 
-  const publisher = mockUsers.find(u => u.id === ke.publishedBy);
+  const { data: users } = useResource(() => usersService.list(), []);
+  const publisher = (users ?? []).find(u => u.id === ke.publishedBy);
   const eff = EFFECTIVENESS_META[ke.workaroundEffectiveness];
   const EffIcon = eff.icon;
 

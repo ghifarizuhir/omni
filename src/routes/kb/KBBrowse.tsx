@@ -9,9 +9,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
-import { mockKBArticles } from '@/src/mocks/kbArticles';
-import { mockKBCategories } from '@/src/mocks/kbCategories';
-import { KBArticle, KBStatus, KBContentType } from '@/src/types/knowledge';
+import { knowledgeService, useResource } from '@/src/services';
+import { KBArticle, KBStatus, KBContentType, KBCategory } from '@/src/types/knowledge';
 import { Can } from '@/src/lib/rbac';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -253,7 +252,10 @@ export const KBBrowse: React.FC = () => {
   const [tagFilter,   setTagFilter]   = useState<string | null>(null);
   const [sort,        setSort]        = useState<SortKey>('recent');
 
-  const allArticles = mockKBArticles;
+  const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
+  const { data: categoriesData } = useResource(() => knowledgeService.categories(), []);
+  const allArticles = articlesData ?? [];
+  const categories: KBCategory[] = categoriesData ?? [];
 
   // ── Aggregates ──────────────────────────────────────────────────────────────
 
@@ -261,19 +263,19 @@ export const KBBrowse: React.FC = () => {
     const counts: Partial<Record<KBStatus, number>> = {};
     allArticles.forEach(a => { counts[a.status] = (counts[a.status] ?? 0) + 1; });
     return counts;
-  }, []);
+  }, [allArticles]);
 
   const allTags = useMemo(() => {
     const counts: Record<string, number> = {};
     allArticles.forEach(a => a.tags.forEach(t => { counts[t] = (counts[t] ?? 0) + 1; }));
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
-  }, []);
+  }, [allArticles]);
 
   const catCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     allArticles.forEach(a => { counts[a.categoryId] = (counts[a.categoryId] ?? 0) + 1; });
     return counts;
-  }, []);
+  }, [allArticles]);
 
   // ── Filtering + search ──────────────────────────────────────────────────────
 
@@ -299,7 +301,7 @@ export const KBBrowse: React.FC = () => {
     }
 
     return sortArticles(r, sort);
-  }, [query, catFilter, statusFilter, tagFilter, sort]);
+  }, [allArticles, query, catFilter, statusFilter, tagFilter, sort]);
 
   const isFiltering = query.trim() !== '' || catFilter !== 'all' || statusFilter.size > 0 || tagFilter !== null;
 
@@ -380,7 +382,7 @@ export const KBBrowse: React.FC = () => {
               <div className="my-1 border-t border-ois-border" />
 
               {/* Per category */}
-              {mockKBCategories.map(cat => {
+              {categories.map(cat => {
                 const CatIcon = LUCIDE_ICONS[cat.iconName] ?? BookOpen;
                 const count   = catCounts[cat.id] ?? 0;
                 const active  = catFilter === cat.id;
@@ -485,7 +487,7 @@ export const KBBrowse: React.FC = () => {
                 <span className="font-semibold text-ois-text">"{query}"</span>
                 {catFilter !== 'all' && (
                   <> in <span className="font-semibold text-ois-text">
-                    {mockKBCategories.find(c => c.id === catFilter)?.name ?? catFilter}
+                    {categories.find(c => c.id === catFilter)?.name ?? catFilter}
                   </span></>
                 )}
               </p>
@@ -493,7 +495,7 @@ export const KBBrowse: React.FC = () => {
               <div className="flex items-center gap-2">
                 <p className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">
                   {catFilter !== 'all'
-                    ? mockKBCategories.find(c => c.id === catFilter)?.name
+                    ? categories.find(c => c.id === catFilter)?.name
                     : statusFilter.size > 0
                     ? `Filtered · ${results.length} articles`
                     : tagFilter

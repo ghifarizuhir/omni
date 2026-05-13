@@ -1,9 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Grid3x3, FileText, FlaskConical } from 'lucide-react';
-import { mockBIAEntries } from '@/src/mocks/biaEntries';
-import { mockDRPlans } from '@/src/mocks/drPlans';
-import { mockDRTestRuns } from '@/src/mocks/drTestRuns';
+import { continuityService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 const TABS = [
@@ -13,6 +11,13 @@ const TABS = [
 ];
 
 export const ContinuityLayout: React.FC = () => {
+  const { data: biaData } = useResource(() => continuityService.bia(), []);
+  const { data: drPlansData } = useResource(() => continuityService.drPlans(), []);
+  const { data: drRunsData } = useResource(() => continuityService.drRuns(), []);
+  const mockBIAEntries = biaData ?? [];
+  const mockDRPlans = drPlansData ?? [];
+  const mockDRTestRuns = drRunsData ?? [];
+
   const catastrophic = mockBIAEntries.filter(b => b.impactLevel === 'catastrophic').length;
   const criticalImpact = mockBIAEntries.filter(b => b.impactLevel === 'critical').length;
   const activePlans = mockDRPlans.filter(p => p.status === 'active').length;

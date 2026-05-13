@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Plus, RotateCcw } from 'lucide-react';
-import { mockTestPlans } from '../../mocks/testPlans';
+import { testingService, useResource } from '../../services';
 import { TestPlanRow } from '../../components/testing/TestPlanRow';
 import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
@@ -36,6 +36,9 @@ function unique<T>(arr: T[]): T[] {
 // ── Main component ───────────────────────────────────────────────────────────
 
 export const TestPlans: React.FC = () => {
+  const { data: plansData } = useResource(() => testingService.plans(), []);
+  const plans = plansData ?? [];
+
   // Filter state
   const [search, setSearch] = useState('');
   const [componentFilter, setComponentFilter] = useState<string>('');
@@ -49,38 +52,38 @@ export const TestPlans: React.FC = () => {
   const allComponents = useMemo(
     () =>
       unique(
-        mockTestPlans
+        plans
           .map((p) => p.componentName)
           .filter((c): c is string => Boolean(c))
       ).sort(),
-    []
+    [plans]
   );
 
   const allOwners = useMemo(
-    () => unique(mockTestPlans.map((p) => p.ownerName)).sort(),
-    []
+    () => unique(plans.map((p) => p.ownerName)).sort(),
+    [plans]
   );
 
   // Counts for the stats strip chips
   const typeCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: mockTestPlans.length };
+    const counts: Record<string, number> = { all: plans.length };
     for (const t of ALL_TYPES) {
-      counts[t] = mockTestPlans.filter((p) => p.type === t).length;
+      counts[t] = plans.filter((p) => p.type === t).length;
     }
     return counts;
-  }, []);
+  }, [plans]);
 
-  const passAbove95Count = mockTestPlans.filter((p) => p.passRate30d >= 0.95).length;
-  const passBelow90Count = mockTestPlans.filter((p) => p.passRate30d < 0.9).length;
+  const passAbove95Count = plans.filter((p) => p.passRate30d >= 0.95).length;
+  const passBelow90Count = plans.filter((p) => p.passRate30d < 0.9).length;
   const now = Date.now();
-  const recentRunCount = mockTestPlans.filter((p) => {
+  const recentRunCount = plans.filter((p) => {
     if (!p.lastRunAt) return false;
     return now - new Date(p.lastRunAt).getTime() < 24 * 60 * 60 * 1000;
   }).length;
 
   // Derived filtered list
   const filtered = useMemo(() => {
-    let list = [...mockTestPlans];
+    let list = [...plans];
 
     // Stats strip — type chip
     if (typeChip !== 'all') {
@@ -122,7 +125,7 @@ export const TestPlans: React.FC = () => {
     });
 
     return list;
-  }, [search, componentFilter, statusFilter, ownerFilter, typeChip, qualityChip, now]);
+  }, [plans, search, componentFilter, statusFilter, ownerFilter, typeChip, qualityChip, now]);
 
   const handleReset = () => {
     setSearch('');

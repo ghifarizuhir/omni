@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { mockImprovements, getTotalActualBenefitUSD } from '@/src/mocks/improvements';
+import { improvementsService, useResource } from '@/src/services';
 import { BubbleMatrix } from '@/src/components/improvement/HeatmapView/BubbleMatrix';
 import { PortfolioSummaryStrip } from '@/src/components/improvement/HeatmapView/PortfolioSummaryStrip';
 import { HeatmapGapAnalysis } from '@/src/components/improvement/HeatmapView/HeatmapGapAnalysis';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 export const ImprovementHeatmap: React.FC = () => {
-  const totalActual = getTotalActualBenefitUSD();
+  const { data: improvementsData } = useResource(() => improvementsService.list(), []);
+  const { data: totalActualData } = useResource(() => improvementsService.totalActualBenefitUSD(), []);
+  const mockImprovements = improvementsData ?? [];
+  const totalActual = totalActualData ?? 0;
   const [statusFilter, setStatusFilter] = useState('active');
   const [sizeBy, setSizeBy] = useState('benefit');
   const [colorBy, setColorBy] = useState('priority');
@@ -17,7 +20,7 @@ export const ImprovementHeatmap: React.FC = () => {
     }
     if (statusFilter === 'all') return mockImprovements;
     return mockImprovements.filter(i => i.status === statusFilter);
-  }, [statusFilter]);
+  }, [statusFilter, mockImprovements]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">

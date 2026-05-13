@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { mockCIs } from '@/src/mocks';
+import { cisService, useResource } from '@/src/services';
 import type { ConfigurationItem } from '@/src/types/ci';
 
 interface AiCompletenessPanelProps {
@@ -48,8 +48,10 @@ function StatRowUI({ label, count, total }: StatRow) {
 }
 
 export const AiCompletenessPanel: React.FC<AiCompletenessPanelProps> = ({ onFillWithAI }) => {
+  const { data } = useResource(() => cisService.list(), []);
+  const cisData = data ?? [];
   const { stats, attentionItems, noOwnerCIs, noMonitorCIs } = useMemo(() => {
-    const cis: ConfigurationItem[] = mockCIs;
+    const cis: ConfigurationItem[] = cisData;
     const total = cis.length;
 
     const noOwner = cis.filter((ci) => !ci.ownerId || ci.ownerId === '');
@@ -87,7 +89,7 @@ export const AiCompletenessPanel: React.FC<AiCompletenessPanelProps> = ({ onFill
     }
 
     return { stats, attentionItems: attention, noOwnerCIs: noOwner, noMonitorCIs: noMonitor };
-  }, []);
+  }, [cisData]);
 
   const handleFillWithAI = () => {
     const noOwnerList = noOwnerCIs.slice(0, 2).map((ci) => ci.publicId).join(' dan ');

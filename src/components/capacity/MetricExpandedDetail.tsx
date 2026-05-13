@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CapacityMetric } from '../../types';
-import { getActiveForecastsForMetric } from '../../mocks/capacityForecasts';
+import { capacityService, useResource } from '../../services';
 import { CapacityChart } from './CapacityChart';
 
 interface MetricExpandedDetailProps {
@@ -14,8 +14,8 @@ type TimeRange = '24h' | '7d' | '30d';
 
 export function MetricExpandedDetail({ metric, onClose }: MetricExpandedDetailProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
-  const forecasts = getActiveForecastsForMetric(metric.id);
-  const primaryForecast = forecasts[0];
+  const { data: forecasts } = useResource(() => capacityService.forecastsForMetric(metric.id), [metric.id]);
+  const primaryForecast = (forecasts ?? [])[0];
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white shadow-md overflow-hidden">

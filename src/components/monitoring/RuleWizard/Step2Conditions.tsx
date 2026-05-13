@@ -3,7 +3,7 @@ import { Terminal, Database, Search, Target, Plus, X } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { Card } from '../../ui/Card';
-import { mockCIs } from '../../../mocks';
+import { cisService, useResource } from '../../../services';
 import { cn } from '../../../lib/utils';
 
 interface Step2ConditionsProps {
@@ -13,14 +13,16 @@ interface Step2ConditionsProps {
 
 export const Step2Conditions: React.FC<Step2ConditionsProps> = ({ data, updateData }) => {
   const [ciSearch, setCiSearch] = React.useState('');
-  
+  const { data: cisData } = useResource(() => cisService.list(), []);
+  const mockCIs = cisData ?? [];
+
   const filteredCIs = React.useMemo(() => {
     if (!ciSearch) return [];
-    return mockCIs.filter(ci => 
-      ci.name.toLowerCase().includes(ciSearch.toLowerCase()) || 
+    return mockCIs.filter(ci =>
+      ci.name.toLowerCase().includes(ciSearch.toLowerCase()) ||
       ci.publicId.toLowerCase().includes(ciSearch.toLowerCase())
     ).slice(0, 5);
-  }, [ciSearch]);
+  }, [ciSearch, mockCIs]);
 
   const addCI = (ciPublicId: string) => {
     if (!data.targets.includes(ciPublicId)) {

@@ -3,21 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { Search, ArrowRight } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { mockReleases } from '../../mocks';
+import { releasesService, useResource } from '../../services';
 import { ReleaseTypeChip } from '../../components/releases/ReleaseTypeChip';
 import { formatDate } from '../../lib/format';
 import { ReleaseType } from '../../types/release';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
-
-const PUBLISHED = mockReleases.filter((r) => r.status === 'released')
-  .sort((a, b) => new Date(b.actualReleaseDate ?? b.plannedReleaseDate).getTime() -
-                  new Date(a.actualReleaseDate ?? a.plannedReleaseDate).getTime());
 
 export const ReleaseNotes: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [component, setComponent] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<ReleaseType | 'all'>('all');
+
+  const { data: releasesData } = useResource(() => releasesService.list(), []);
+  const PUBLISHED = useMemo(() =>
+    (releasesData ?? []).filter((r) => r.status === 'released')
+      .sort((a, b) => new Date(b.actualReleaseDate ?? b.plannedReleaseDate).getTime() -
+                      new Date(a.actualReleaseDate ?? a.plannedReleaseDate).getTime()),
+  [releasesData]);
 
   const components = ['all', ...Array.from(new Set(PUBLISHED.map((r) => r.componentName)))];
 
@@ -33,7 +36,7 @@ export const ReleaseNotes: React.FC = () => {
       }
       return true;
     }),
-  [search, component, typeFilter]);
+  [PUBLISHED, search, component, typeFilter]);
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto p-6">

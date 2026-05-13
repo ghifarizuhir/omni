@@ -17,11 +17,10 @@ import { Can, useCan } from '@/src/lib/rbac';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import { ConfigureChannelModal, ChannelConfig } from '../../components/monitoring/modals/ConfigureChannelModal';
 import {
-  mockAlertRoutes,
-  mockMonitoringRules,
-  mockTeams,
-  mockUsers
-} from '../../mocks';
+  alertRoutesService,
+  monitoringRulesService,
+  useResource,
+} from '../../services';
 import { cn } from '../../lib/utils';
 import {
   AlertRoute,
@@ -41,9 +40,22 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
 
 export const AlertRouting: React.FC = () => {
   const canManage = useCan('monitoring', 'update');
+
+  const { data: routesData } = useResource(() => alertRoutesService.list(), []);
+  const { data: rulesData } = useResource(() => monitoringRulesService.list(), []);
+  const mockMonitoringRules = rulesData ?? [];
+
   // --- State ---
-  const [routes, setRoutes] = useState<AlertRoute[]>(mockAlertRoutes);
-  const [selectedRouteId, setSelectedRouteId] = useState<string>(mockAlertRoutes[0]?.id || '');
+  const [routes, setRoutes] = useState<AlertRoute[]>([]);
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('');
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!seededRef.current && routesData) {
+      setRoutes(routesData);
+      setSelectedRouteId(routesData[0]?.id ?? '');
+      seededRef.current = true;
+    }
+  }, [routesData]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Local state for editing to allow "Save Changes" pattern

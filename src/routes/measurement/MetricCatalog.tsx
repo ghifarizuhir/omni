@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { mockMetricDefinitions } from '@/src/mocks/metricDefinitions';
+import { measurementService, useResource } from '@/src/services';
 import { MetricCategory } from '@/src/types/measurement';
 import { metricCategoryMeta } from '@/src/lib/constants';
 import { MetricCard } from '@/src/components/measurement/MetricCard';
@@ -9,9 +9,15 @@ import { MetricCategoryNav } from '@/src/components/measurement/MetricCategoryNa
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
 const ALL_CATEGORIES = Object.keys(metricCategoryMeta) as MetricCategory[];
-const ALL_SOURCES = Array.from(new Set(mockMetricDefinitions.map((m) => m.sourceSystem)));
 
 export const MetricCatalog: React.FC = () => {
+  const { data } = useResource(() => measurementService.metrics(), []);
+  const mockMetricDefinitions = data ?? [];
+  const ALL_SOURCES = useMemo(
+    () => Array.from(new Set(mockMetricDefinitions.map((m) => m.sourceSystem))),
+    [mockMetricDefinitions],
+  );
+
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MetricCategory | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
@@ -24,7 +30,7 @@ export const MetricCatalog: React.FC = () => {
       counts[cat] = mockMetricDefinitions.filter((m) => m.category === cat).length;
     }
     return counts;
-  }, []);
+  }, [mockMetricDefinitions]);
 
   const filteredMetrics = useMemo(() => {
     return mockMetricDefinitions.filter((m) => {
@@ -41,7 +47,7 @@ export const MetricCatalog: React.FC = () => {
       }
       return true;
     });
-  }, [search, selectedCategory, sourceFilter, hasTarget]);
+  }, [search, selectedCategory, sourceFilter, hasTarget, mockMetricDefinitions]);
 
   const resetFilters = () => {
     setSearch('');

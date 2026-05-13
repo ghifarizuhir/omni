@@ -13,15 +13,12 @@ import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { ProblemStatusPill } from '@/src/components/problems/ProblemStatusPill';
 import { ProblemSourceChip } from '@/src/components/problems/ProblemSourceChip';
-import { mockProblems } from '@/src/mocks/problems';
+import { problemsService, usersService, useResource } from '@/src/services';
 import { Can, useCurrentUser, filterReadable, problemResource } from '@/src/lib/rbac';
-import { mockUsers } from '@/src/mocks/users';
 import { problemStatusMeta, problemSourceMeta } from '@/src/lib/constants';
 import { formatRelative } from '@/src/lib/format';
 import { Problem, ProblemStatus, ProblemSource } from '@/src/types/problem';
 import { cn } from '@/src/lib/utils';
-
-const USER_MAP = Object.fromEntries(mockUsers.map(u => [u.id, u]));
 
 type SortKey = 'lastIncidentDate' | 'createdAt' | 'relatedIncidentCount' | 'severity';
 type SortDir = 'asc' | 'desc';
@@ -130,6 +127,14 @@ export const ProblemList: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [extraProblems, setExtraProblems] = useState<Problem[]>([]);
   const { user, applications, teams, departments } = useCurrentUser();
+  const { data: loadedProblems } = useResource(() => problemsService.list(), []);
+  const mockProblems = loadedProblems ?? [];
+  const { data: loadedUsers } = useResource(() => usersService.list(), []);
+  const mockUsers = loadedUsers ?? [];
+  const USER_MAP = useMemo(
+    () => Object.fromEntries(mockUsers.map(u => [u.id, u])),
+    [mockUsers],
+  );
 
   const problems = useMemo(
     () => filterReadable(
@@ -137,7 +142,7 @@ export const ProblemList: React.FC = () => {
       'problem',
       [...extraProblems, ...mockProblems].map(p => ({ ...p, ...problemResource(p) })),
     ) as Problem[],
-    [extraProblems, user, applications, teams, departments],
+    [extraProblems, mockProblems, user, applications, teams, departments],
   );
 
   const handleCreateProblem = ({ title, description }: { title: string; description: string }) => {

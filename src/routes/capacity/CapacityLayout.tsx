@@ -1,9 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Gauge, TrendingUp, AlertTriangle } from 'lucide-react';
-import { mockCapacityMetrics } from '@/src/mocks/capacityMetrics';
-import { mockCapacityForecasts } from '@/src/mocks/capacityForecasts';
-import { mockCapacityThresholds } from '@/src/mocks/capacityThresholds';
+import { capacityService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 const TABS = [
@@ -13,6 +11,14 @@ const TABS = [
 ];
 
 export const CapacityLayout: React.FC = () => {
+  const { data: metricsData } = useResource(() => capacityService.metrics(), []);
+  const { data: forecastsData } = useResource(() => capacityService.forecasts(), []);
+  const { data: thresholdsData } = useResource(() => capacityService.thresholds(), []);
+
+  const mockCapacityMetrics = metricsData ?? [];
+  const mockCapacityForecasts = forecastsData ?? [];
+  const mockCapacityThresholds = thresholdsData ?? [];
+
   const critical = mockCapacityMetrics.filter(m => m.utilizationPercent >= m.criticalThreshold).length;
   const warning  = mockCapacityMetrics.filter(
     m => m.utilizationPercent >= m.warningThreshold && m.utilizationPercent < m.criticalThreshold,

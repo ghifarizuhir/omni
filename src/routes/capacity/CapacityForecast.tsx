@@ -4,11 +4,7 @@ import { Button } from '@/src/components/ui/Button';
 import { Card, CardBody } from '@/src/components/ui/Card';
 import { ForecastChart } from '@/src/components/capacity/ForecastChart';
 import { PredictedBreachAlert } from '@/src/components/capacity/PredictedBreachAlert';
-import { mockCapacityMetrics } from '@/src/mocks/capacityMetrics';
-import {
-  mockCapacityForecasts,
-  getForecastsWithImminentBreach,
-} from '@/src/mocks/capacityForecasts';
+import { capacityService, useResource } from '@/src/services';
 import { useToast, ToastView } from '@/src/lib/useToast';
 
 export default function CapacityForecast() {
@@ -16,6 +12,13 @@ export default function CapacityForecast() {
   const [horizonFilter, setHorizonFilter] = useState<30 | 90>(30);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast, showToast } = useToast();
+
+  const { data: metricsData } = useResource(() => capacityService.metrics(), []);
+  const { data: forecastsData } = useResource(() => capacityService.forecasts(), []);
+  const { data: imminentData } = useResource(() => capacityService.imminentForecasts(), []);
+  const mockCapacityMetrics = metricsData ?? [];
+  const mockCapacityForecasts = forecastsData ?? [];
+  const imminentForecastsList = imminentData ?? [];
 
   const handleGenerateForecast = () => {
     if (isGenerating) return;
@@ -32,7 +35,7 @@ export default function CapacityForecast() {
     setTimeout(() => navigate('/changes'), 500);
   };
 
-  const imminentBreaches = getForecastsWithImminentBreach()
+  const imminentBreaches = imminentForecastsList
     .slice()
     .sort((a, b) => (a.daysUntilBreach ?? 999) - (b.daysUntilBreach ?? 999));
 

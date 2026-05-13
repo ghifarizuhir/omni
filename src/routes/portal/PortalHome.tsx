@@ -11,9 +11,7 @@ import * as LucideIcons from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
 import { currentUser } from '@/src/mocks/users';
-import { getRequestsByRequester, getActiveRequests } from '@/src/mocks/serviceRequests';
-import { getPopularCatalogItems } from '@/src/mocks/catalogItems';
-import { mockKBArticles } from '@/src/mocks/kbArticles';
+import { requestsService, knowledgeService, useResource } from '@/src/services';
 import { RequestStatus, WorkflowStepStatus } from '@/src/types/request';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -284,17 +282,27 @@ export const PortalHome: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [chatModalOpen, setChatModalOpen] = useState(false);
 
+  const { data: requestsData } = useResource(() => requestsService.list(), []);
+  const { data: catalogData } = useResource(() => requestsService.catalog(), []);
+  const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
+  const mockServiceRequests = requestsData ?? [];
+  const mockCatalogItems = catalogData ?? [];
+  const mockKBArticles = articlesData ?? [];
+
   const myRequests = useMemo(
-    () => getRequestsByRequester(currentUser.id).filter(r => !['closed', 'cancelled'].includes(r.status)),
-    []
+    () => mockServiceRequests.filter(r => r.requesterId === currentUser.id && !['closed', 'cancelled'].includes(r.status)),
+    [mockServiceRequests]
   );
   const activeRequests = myRequests.filter(r => !['fulfilled', 'closed', 'cancelled', 'rejected'].includes(r.status)).slice(0, 3);
 
-  const popularItems = useMemo(() => getPopularCatalogItems(6), []);
+  const popularItems = useMemo(
+    () => [...mockCatalogItems].sort((a, b) => b.popularity - a.popularity).slice(0, 6),
+    [mockCatalogItems]
+  );
 
   const recommendedArticles = useMemo(
     () => mockKBArticles.filter(a => RECOMMENDED_SLUGS.includes(a.slug)),
-    []
+    [mockKBArticles]
   );
 
   const handleSearch = (q: string) => {

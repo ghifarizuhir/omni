@@ -2,12 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import {
-  mockImprovements,
-  getTotalEstimatedBenefitUSD,
-  getTotalActualBenefitUSD,
-  TODAY,
-} from '@/src/mocks/improvements';
+import { TODAY } from '@/src/mocks/improvements';
+import { improvementsService, useResource } from '@/src/services';
 import {
   improvementStatusMeta,
   improvementCategoryMeta,
@@ -42,13 +38,17 @@ const STATUS_ORDER: Record<ImprovementStatus, number> = {
 export const ImprovementRegister: React.FC = () => {
   const navigate = useNavigate();
   const { user, applications, teams, departments } = useCurrentUser();
+  const { data: improvementsData } = useResource(() => improvementsService.list(), []);
+  const { data: totalEstimatedData } = useResource(() => improvementsService.totalEstimatedBenefitUSD(), []);
+  const { data: totalActualData } = useResource(() => improvementsService.totalActualBenefitUSD(), []);
+  const mockImprovements = improvementsData ?? [];
   const visibleImprovements = useMemo(
     () => filterReadable(
       user,
       'improvement',
       mockImprovements.map(i => ({ ...i, ...improvementResource(i) })),
     ) as ImprovementInitiative[],
-    [user, applications, teams, departments],
+    [user, applications, teams, departments, mockImprovements],
   );
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -58,8 +58,8 @@ export const ImprovementRegister: React.FC = () => {
   const [quickFilter, setQuickFilter] = useState<string | null>(null);
   const [activeStatusTab, setActiveStatusTab] = useState<ImprovementStatus | 'all'>('all');
 
-  const totalEstimated = getTotalEstimatedBenefitUSD();
-  const totalActual = getTotalActualBenefitUSD();
+  const totalEstimated = totalEstimatedData ?? 0;
+  const totalActual = totalActualData ?? 0;
   const inProgressCount = visibleImprovements.filter(i => i.status === 'in_progress').length;
   const completedCount = visibleImprovements.filter(i => i.status === 'completed').length;
 
@@ -148,7 +148,7 @@ export const ImprovementRegister: React.FC = () => {
       counts[s] = visibleImprovements.filter(i => i.status === s).length;
     });
     return counts;
-  }, []);
+  }, [visibleImprovements]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">

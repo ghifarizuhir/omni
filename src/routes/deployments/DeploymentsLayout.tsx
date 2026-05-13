@@ -1,8 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Rocket, Server } from 'lucide-react';
-import { mockDeployments } from '@/src/mocks/deployments';
-import { mockEnvironments } from '@/src/mocks/environments';
+import { deploymentsService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 const TABS = [
@@ -11,6 +10,10 @@ const TABS = [
 ];
 
 export const DeploymentsLayout: React.FC = () => {
+  const { data: deploymentsData } = useResource(() => deploymentsService.list(), []);
+  const { data: envsData } = useResource(() => deploymentsService.environments(), []);
+  const mockDeployments = deploymentsData ?? [];
+  const mockEnvironments = envsData ?? [];
   const running = mockDeployments.filter(d => d.status === 'running').length;
   const pending = mockDeployments.filter(d => d.status === 'pending').length;
   const rollingBack = mockDeployments.filter(d => d.status === 'rolling_back').length;

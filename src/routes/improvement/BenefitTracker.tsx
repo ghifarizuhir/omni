@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
-import { mockImprovements } from '@/src/mocks/improvements';
-import { mockBenefitMeasurements } from '@/src/mocks/benefitMeasurements';
+import { improvementsService, useResource } from '@/src/services';
 import { CumulativeBenefitChart } from '@/src/components/improvement/BenefitTracker/CumulativeBenefitChart';
 import { BenefitByTypeDonut } from '@/src/components/improvement/BenefitTracker/BenefitByTypeDonut';
 import { TopContributorsList } from '@/src/components/improvement/BenefitTracker/TopContributorsList';
@@ -12,6 +11,10 @@ import { Button } from '@/src/components/ui/Button';
 
 export const BenefitTracker: React.FC = () => {
   const [showLogModal, setShowLogModal] = useState(false);
+  const { data: improvementsData } = useResource(() => improvementsService.list(), []);
+  const { data: measurementsData } = useResource(() => improvementsService.benefitMeasurements(), []);
+  const mockImprovements = improvementsData ?? [];
+  const mockBenefitMeasurements = measurementsData ?? [];
 
   return (
     <div className="flex flex-col flex-1 min-h-0">

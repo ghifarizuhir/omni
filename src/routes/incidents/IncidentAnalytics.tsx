@@ -12,9 +12,7 @@ import { VolumeOverTimeChart } from '@/src/components/incidents/analytics/Volume
 import { MTTRByServiceChart } from '@/src/components/incidents/analytics/MTTRByServiceChart';
 import { TopCategoriesPanel } from '@/src/components/incidents/analytics/TopCategoriesPanel';
 import { SLAPerformancePanel } from '@/src/components/incidents/analytics/SLAPerformancePanel';
-import { mockIncidents } from '@/src/mocks/incidents';
-import { mockServices } from '@/src/mocks/services';
-import { mockUsers } from '@/src/mocks/users';
+import { incidentsService, servicesService, usersService, useResource } from '@/src/services';
 import { formatRelative, formatDate } from '@/src/lib/format';
 import { subDays, parseISO, isAfter } from 'date-fns';
 
@@ -26,8 +24,6 @@ const RANGE_LABELS: Record<DateRange, string> = {
   '90d': 'Last 90 days',
 };
 
-const SERVICE_MAP = Object.fromEntries(mockServices.map(s => [s.id, s.name]));
-
 type CISortField = 'publicId' | 'count' | 'lastIncident';
 
 export const IncidentAnalytics: React.FC = () => {
@@ -35,13 +31,25 @@ export const IncidentAnalytics: React.FC = () => {
   const [rangeOpen, setRangeOpen] = useState(false);
   const [ciSort, setCISort] = useState<{ field: CISortField; dir: 'asc' | 'desc' }>({ field: 'count', dir: 'desc' });
 
+  const { data: incidentsData } = useResource(() => incidentsService.list(), []);
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const { data: usersData } = useResource(() => usersService.list(), []);
+  const mockIncidents = incidentsData ?? [];
+  const mockServices = servicesData ?? [];
+  const mockUsers = usersData ?? [];
+  const SERVICE_MAP = useMemo(
+    () => Object.fromEntries(mockServices.map(s => [s.id, s.name])),
+    [mockServices],
+  );
+
   const referenceDate = new Date('2026-05-08');
   const rangeDays = range === '7d' ? 7 : range === '30d' ? 30 : 90;
 
   const filteredIncidents = useMemo(() => {
     const cutoff = subDays(referenceDate, rangeDays);
     return mockIncidents.filter(inc => isAfter(parseISO(inc.createdAt), cutoff));
-  }, [rangeDays]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rangeDays, incidentsData]);
 
   // KPI 1: Total
   const total = filteredIncidents.length;

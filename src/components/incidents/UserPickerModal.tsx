@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { Modal } from '@/src/components/ui/Modal';
 import { Avatar } from '@/src/components/ui/Avatar';
-import { mockUsers } from '@/src/mocks/users';
+import { usersService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 interface UserPickerModalProps {
@@ -21,8 +21,9 @@ export const UserPickerModal: React.FC<UserPickerModalProps> = ({
   excludeIds = [],
 }) => {
   const [search, setSearch] = useState('');
+  const { data: users } = useResource(() => usersService.list(), []);
 
-  const candidates = mockUsers.filter(user => {
+  const candidates = (users ?? []).filter(user => {
     if (excludeIds.includes(user.id)) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();

@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { cn } from '../../lib/utils';
-import { getReleaseById } from '../../mocks/releases';
+import { releasesService, useResource } from '../../services';
 import { Can, useCan as useCanRbac, releaseResource } from '@/src/lib/rbac';
 import { ReleaseStatusPill } from '../../components/releases/ReleaseStatusPill';
 import { ReleaseTypeChip } from '../../components/releases/ReleaseTypeChip';
@@ -98,10 +98,11 @@ const StageCard: React.FC<{ stage: ReleaseStage; isCurrent: boolean; onDeploy?: 
 export const ReleaseDetail: React.FC = () => {
   const { releaseId } = useParams<{ releaseId: string }>();
   const navigate = useNavigate();
-  const release = getReleaseById(releaseId ?? '');
+  const { data: releases, loading } = useResource(() => releasesService.list(), []);
+  const release = (releases ?? []).find(r => r.id === releaseId || r.publicId === releaseId);
   const [activeTab, setActiveTab] = useState('overview');
   const [localStatus, setLocalStatus] = useState<ReleaseStatus | null>(null);
-  const [localStages, setLocalStages] = useState<ReleaseStage[]>(() => release?.stages ?? []);
+  const [localStages, setLocalStages] = useState<ReleaseStage[]>([]);
   const [deployIdx, setDeployIdx] = useState<number | null>(null);
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -133,11 +134,20 @@ export const ReleaseDetail: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (release && localStages.length === 0) setLocalStages(release.stages);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [release?.id]);
+
   const handleCancelConfirm = () => {
     setCancelModalOpen(false);
     setLocalStatus('cancelled');
     showToast('Release cancelled', 'danger');
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-24 text-sm text-ois-text-muted">Loading…</div>;
+  }
 
   if (!release) {
     return (

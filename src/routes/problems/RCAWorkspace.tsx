@@ -5,8 +5,7 @@ import {
   CheckCircle2, Clock, AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { getProblemById } from '@/src/mocks/problems';
-import { mockUsers } from '@/src/mocks/users';
+import { problemsService, usersService, useResource } from '@/src/services';
 import { RCAAnalysis, RCATechnique, Problem } from '@/src/types/problem';
 import { rcaTechniqueMeta } from '@/src/lib/constants';
 import { Button } from '@/src/components/ui/Button';
@@ -244,7 +243,8 @@ type RecommendedAction = NonNullable<RCAAnalysis['recommendedActions']>[number];
 const RecommendedActionsEditor: React.FC<{
   actions: RecommendedAction[];
   onChange: (actions: RecommendedAction[]) => void;
-}> = ({ actions, onChange }) => {
+  users: { id: string; name: string }[];
+}> = ({ actions, onChange, users }) => {
   const update = (idx: number, patch: Partial<RecommendedAction>) =>
     onChange(actions.map((a, i) => i === idx ? { ...a, ...patch } : a));
   const remove = (idx: number) => onChange(actions.filter((_, i) => i !== idx));
@@ -308,7 +308,7 @@ const RecommendedActionsEditor: React.FC<{
                     onChange={v => update(idx, { owner: v || undefined })}
                     options={[
                       { value: '', label: 'Unassigned' },
-                      ...mockUsers.map(u => ({ value: u.id, label: u.name })),
+                      ...users.map(u => ({ value: u.id, label: u.name })),
                     ]}
                     placeholder="Unassigned"
                     className="text-xs w-full"
@@ -355,7 +355,12 @@ const RecommendedActionsEditor: React.FC<{
 
 export const RCAWorkspace: React.FC = () => {
   const { problemId } = useParams<{ problemId: string }>();
-  const problem = problemId ? getProblemById(problemId) : undefined;
+  const { data: problem, loading: problemLoading } = useResource(
+    () => problemId ? problemsService.get(problemId).catch(() => null as any) : Promise.resolve(null as any),
+    [problemId],
+  );
+  const { data: usersData } = useResource(() => usersService.list(), []);
+  const users = usersData ?? [];
 
   const DEFAULT_RCA: RCAAnalysis = {
     id: `rca-new-${Date.now()}`,
@@ -374,10 +379,19 @@ export const RCAWorkspace: React.FC = () => {
 
   const [rca, setRca] = useState<RCAAnalysis>(problem?.rca ?? DEFAULT_RCA);
   const [saved, setSaved] = useState(!!problem?.rca);
+  React.useEffect(() => {
+    if (problem?.rca) {
+      setRca(problem.rca);
+      setSaved(true);
+    }
+  }, [problem?.id]);
   const [published, setPublished] = useState(false);
   const [publishedAt, setPublishedAt] = useState<string | null>(null);
   const [techniqueOpen, setTechniqueOpen] = useState(false);
 
+  if (problemLoading && !problem) {
+    return <div className="flex items-center justify-center py-24 text-sm text-ois-text-muted">Loading…</div>;
+  }
   if (!problem) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
@@ -418,7 +432,7 @@ export const RCAWorkspace: React.FC = () => {
     setTechniqueOpen(false);
   };
 
-  const author = mockUsers.find(u => u.id === rca.authorId);
+  const author = users.find(u => u.id === rca.authorId);
   const TECHNIQUES: RCATechnique[] = ['five_whys', 'fishbone', 'narrative'];
 
   return (
@@ -553,6 +567,7 @@ export const RCAWorkspace: React.FC = () => {
 
         <RecommendedActionsEditor
           actions={rca.recommendedActions}
+          users={users}
           onChange={actions => setRca(prev => ({ ...prev, recommendedActions: actions }))}
         />
       </div>

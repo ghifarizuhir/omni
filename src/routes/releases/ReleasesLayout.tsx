@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Package, GitBranch, FileText } from 'lucide-react';
-import { mockReleases } from '@/src/mocks/releases';
+import { releasesService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 const TABS = [
@@ -11,6 +11,8 @@ const TABS = [
 ];
 
 export const ReleasesLayout: React.FC = () => {
+  const { data: releasesData } = useResource(() => releasesService.list(), []);
+  const mockReleases = releasesData ?? [];
   const deploying = mockReleases.filter(r => r.status === 'deploying').length;
   const rolledBack = mockReleases.filter(r => r.status === 'rolled_back').length;
   const ready = mockReleases.filter(r => r.status === 'ready').length;

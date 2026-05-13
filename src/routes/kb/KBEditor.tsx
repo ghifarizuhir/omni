@@ -11,8 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
-import { getArticleBySlug } from '@/src/mocks/kbArticles';
-import { mockKBCategories } from '@/src/mocks/kbCategories';
+import { knowledgeService, useResource } from '@/src/services';
 import { Modal } from '@/src/components/ui/Modal';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import {
@@ -547,7 +546,13 @@ const KBEditorForm: React.FC = () => {
   const navigate      = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const existingArticle = useMemo(() => slug ? getArticleBySlug(slug) : null, [slug]);
+  const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
+  const { data: categoriesData } = useResource(() => knowledgeService.categories(), []);
+  const mockKBCategories = categoriesData ?? [];
+  const existingArticle = useMemo(
+    () => slug ? (articlesData ?? []).find(a => a.slug === slug) ?? null : null,
+    [slug, articlesData]
+  );
   const isEditing = !!existingArticle;
 
   // ── Editor state ─────────────────────────────────────────────────────────

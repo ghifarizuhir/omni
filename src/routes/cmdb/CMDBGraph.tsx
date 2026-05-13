@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { mockCIs, mockCIRelationships } from '@/src/mocks';
+import { cisService, useResource } from '@/src/services';
 import { CIType, RelationshipType, ConfigurationItem } from '../../types/ci';
 import { ForceGraph } from '../../components/cmdb/CMDBGraph/ForceGraph';
 import { GraphFilterPanel } from '../../components/cmdb/CMDBGraph/GraphFilterPanel';
@@ -26,9 +26,14 @@ export const CMDBGraph: React.FC = () => {
   const navigate = useNavigate();
   const focusedParam = searchParams.get('focus');
 
+  const { data: cisData } = useResource(() => cisService.list(), []);
+  const mockCIs = cisData ?? [];
+  const { data: relsData } = useResource(() => cisService.relationshipsAll(), []);
+  const mockCIRelationships = relsData ?? [];
+
   const focusCI = useMemo(
     () => mockCIs.find(ci => ci.id === focusedParam || ci.publicId === focusedParam) || null,
-    [focusedParam]
+    [mockCIs, focusedParam]
   );
 
   const [selectedTypes, setSelectedTypes] = useState<CIType[]>(
@@ -37,7 +42,8 @@ export const CMDBGraph: React.FC = () => {
   const [selectedRels, setSelectedRels] = useState<RelationshipType[]>(
     ['depends_on', 'contains', 'runs_on', 'connects_to', 'part_of']
   );
-  const [selectedNode, setSelectedNode] = useState<ConfigurationItem | null>(focusCI);
+  const [selectedNode, setSelectedNode] = useState<ConfigurationItem | null>(null);
+  useEffect(() => { if (focusCI) setSelectedNode(focusCI); }, [focusCI?.id]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
@@ -53,7 +59,7 @@ export const CMDBGraph: React.FC = () => {
 
   const typeFilteredNodes = useMemo(() => {
     return mockCIs.filter(ci => selectedTypes.includes(ci.type));
-  }, [selectedTypes]);
+  }, [mockCIs, selectedTypes]);
 
   const filteredNodes = useMemo(() => {
     if (!searchQuery.trim()) return typeFilteredNodes;
@@ -69,7 +75,7 @@ export const CMDBGraph: React.FC = () => {
       filteredNodes.some(n => n.id === rel.fromCiId) &&
       filteredNodes.some(n => n.id === rel.toCiId)
     );
-  }, [filteredNodes, selectedRels]);
+  }, [mockCIRelationships, filteredNodes, selectedRels]);
 
   const toggleType = (type: CIType) => {
     setSelectedTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);

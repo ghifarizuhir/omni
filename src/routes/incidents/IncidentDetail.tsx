@@ -8,23 +8,17 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative, formatDate } from '@/src/lib/format';
-import { getIncidentById, getIncidentsByCI, mockIncidents } from '@/src/mocks/incidents';
-import { getBIAByService } from '@/src/mocks/biaEntries';
-import { mockKBArticles } from '@/src/mocks/kbArticles';
-import { getTimelineForIncident } from '@/src/mocks/incidentTimelines';
-import { getCommentsForIncident } from '@/src/mocks/incidentComments';
-import { mockProblems } from '@/src/mocks/problems';
-import { mockUsers } from '@/src/mocks/users';
-import { mockServices } from '@/src/mocks/services';
-import { mockCIs } from '@/src/mocks/cis';
+import {
+  incidentsService, usersService, servicesService, cisService,
+  problemsService, changesService, knowledgeService, continuityService,
+  availabilityService, useResource,
+} from '@/src/services';
 import { Incident, IncidentStatus, IncidentEventKind, IncidentComment } from '@/src/types/incident';
 import { incidentStatusMeta, incidentEventKindMeta } from '@/src/lib/constants';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { Button } from '@/src/components/ui/Button';
 import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
 import { IncidentPriorityBadge } from '@/src/components/incidents/IncidentPriorityBadge';
-import { getChangeById } from '@/src/mocks/changes';
-import { getOutagesByService } from '@/src/mocks/outages';
 import { ChangeStatusPill } from '@/src/components/changes/ChangeStatusPill';
 import { RiskBadge } from '@/src/components/changes/RiskBadge';
 import { SLATimer } from '@/src/components/incidents/SLATimer';
@@ -46,12 +40,12 @@ const PRIORITY_COLOR: Record<string, string> = {
   P1: '#B42318', P2: '#DC6803', P3: '#F79009', P4: '#027A48',
 };
 
-function getUserById(id?: string) {
-  return mockUsers.find(u => u.id === id);
+function getUserById(users: { id: string; name: string }[], id?: string) {
+  return users.find(u => u.id === id);
 }
 
-function getServiceNames(ids: string[]) {
-  return ids.map(id => mockServices.find(s => s.id === id)?.name ?? id);
+function getServiceNames(services: { id: string; name: string }[], ids: string[]) {
+  return ids.map(id => services.find(s => s.id === id)?.name ?? id);
 }
 
 function getReporterChannelLabel(ch: string) {
@@ -140,21 +134,59 @@ export const IncidentDetail: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
 
-  const incident = useMemo(() => getIncidentById(incidentId ?? ''), [incidentId]);
+  const { data: incidentData, loading: incidentLoading } = useResource(
+    () => (incidentId ? incidentsService.get(incidentId) : Promise.resolve(null)),
+    [incidentId],
+  );
+  const incident = incidentData ?? undefined;
+
+  const { data: usersData } = useResource(() => usersService.list(), []);
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const { data: cisData } = useResource(() => cisService.list(), []);
+  const { data: problemsData } = useResource(() => problemsService.list(), []);
+  const { data: changesData } = useResource(() => changesService.list(), []);
+  const { data: kbData } = useResource(() => knowledgeService.articles(), []);
+  const { data: biaData } = useResource(() => continuityService.bia(), []);
+  const { data: outagesData } = useResource(() => availabilityService.outages(), []);
+  const { data: allIncidentsData } = useResource(() => incidentsService.list(), []);
+  const mockUsers = usersData ?? [];
+  const mockServices = servicesData ?? [];
+  const mockCIs = cisData ?? [];
+  const mockProblems = problemsData ?? [];
+  const mockKBArticles = kbData ?? [];
+
+  const { data: timelineDataRaw } = useResource(
+    () => (incident ? incidentsService.timeline(incident.id) : Promise.resolve([])),
+    [incident?.id],
+  );
+  const { data: commentsData } = useResource(
+    () => (incident ? incidentsService.comments(incident.id) : Promise.resolve([])),
+    [incident?.id],
+  );
 
   // Local mutable incident copy — all mutations go through setInc
-  const [inc, setInc] = useState<Incident | null>(incident ?? null);
+  const [inc, setInc] = useState<Incident | null>(null);
+  React.useEffect(() => {
+    setInc(incident ?? null);
+  }, [incident?.id]);
 
   // Derive status from inc for StatusDropdown compatibility
   const status = inc?.status ?? 'new';
   const setStatus = (s: IncidentStatus) => setInc(prev => prev ? { ...prev, status: s } : prev);
 
   const [resolveOpen, setResolveOpen] = useState(false);
-  const [resolvedData, setResolvedData] = useState<ResolveData | null>(
-    incident?.resolution
-      ? { summary: incident.resolution.summary, rootCause: incident.resolution.rootCause, workaround: incident.resolution.workaround, suggestKB: false, schedulePIR: false }
-      : null
-  );
+  const [resolvedData, setResolvedData] = useState<ResolveData | null>(null);
+  React.useEffect(() => {
+    if (incident?.resolution) {
+      setResolvedData({
+        summary: incident.resolution.summary,
+        rootCause: incident.resolution.rootCause,
+        workaround: incident.resolution.workaround,
+        suggestKB: false,
+        schedulePIR: false,
+      });
+    }
+  }, [incident?.id]);
   const [activeTabId, setActiveTabId] = useState('overview');
   const [timelineFilter, setTimelineFilter] = useState<string>('all');
   const [newComment, setNewComment] = useState('');
@@ -171,18 +203,22 @@ export const IncidentDetail: React.FC = () => {
   const [addWatcherOpen, setAddWatcherOpen] = useState(false);
 
   // Comments and watchers as local state
-  const [comments, setComments] = useState(() => incident ? getCommentsForIncident(incident.id) : []);
-  const [watchers, setWatchers] = useState(() => {
-    const ids = new Set([incident?.assigneeId, incident?.incidentCommander, 'u-006'].filter(Boolean) as string[]);
-    return [...ids].map(id => getUserById(id)).filter(Boolean) as typeof mockUsers;
-  });
+  const [comments, setComments] = useState<IncidentComment[]>([]);
+  React.useEffect(() => { if (commentsData) setComments(commentsData); }, [commentsData]);
+  const [watchers, setWatchers] = useState<typeof mockUsers>([]);
+  React.useEffect(() => {
+    if (!incident || mockUsers.length === 0) return;
+    const ids = new Set([incident.assigneeId, incident.incidentCommander, 'u-006'].filter(Boolean) as string[]);
+    setWatchers([...ids].map(id => getUserById(mockUsers, id)).filter(Boolean) as typeof mockUsers);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incident?.id, usersData]);
 
   // Ref for focusing the comment textarea
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const timeline = useMemo(
-    () => incident ? getTimelineForIncident(incident.id) : [],
-    [incident]
+    () => timelineDataRaw ?? [],
+    [timelineDataRaw]
   );
 
   const filteredTimeline = useMemo(() => {
@@ -198,45 +234,49 @@ export const IncidentDetail: React.FC = () => {
   // Related incidents sharing same CIs
   const relatedIncidents = useMemo(() => {
     if (!inc) return [];
-    const related = inc.affectedCIIds.flatMap(ci => getIncidentsByCI(ci));
+    const all = allIncidentsData ?? [];
+    const related = inc.affectedCIIds.flatMap(ciId =>
+      all.filter(i => i.affectedCIIds.includes(ciId) || i.affectedCIPublicIds.includes(ciId))
+    );
     const seen = new Map<string, Incident>();
     for (const i of related) seen.set(i.id, i);
     return [...seen.values()].filter(i => i.id !== inc.id).slice(0, 5);
-  }, [inc]);
+  }, [inc, allIncidentsData]);
 
   // Linked problem
   const linkedProblem = useMemo(() => {
     if (!inc?.linkedProblemId) return null;
     return mockProblems.find(p => p.id === inc.linkedProblemId) ?? null;
-  }, [inc]);
+  }, [inc, problemsData]);
 
   const linkedKBArticles = useMemo(() => {
     if (!inc) return [];
     return mockKBArticles.filter(a =>
       a.linkedIncidentIds.includes(inc.publicId) && a.status === 'published'
     );
-  }, [inc]);
+  }, [inc, kbData]);
 
   // Affected CIs
   const affectedCIs = useMemo(() => {
     if (!inc) return [];
     return inc.affectedCIIds.map(id => mockCIs.find(ci => ci.id === id)).filter(Boolean) as typeof mockCIs;
-  }, [inc]);
+  }, [inc, cisData]);
 
   // BIA context — find entry matching any affected service
   const biaEntry = useMemo(() => {
     if (!inc) return null;
+    const entries = biaData ?? [];
     for (const svcId of inc.affectedServiceIds) {
-      const entry = getBIAByService(svcId);
+      const entry = entries.find(e => e.serviceId === svcId);
       if (entry) return entry;
     }
     return null;
-  }, [inc]);
+  }, [inc, biaData]);
 
   // Assignee / reporter
-  const assignee = getUserById(inc?.assigneeId);
-  const reporter = getUserById(inc?.reporterId);
-  const commander = getUserById(inc?.incidentCommander);
+  const assignee = getUserById(mockUsers, inc?.assigneeId);
+  const reporter = getUserById(mockUsers, inc?.reporterId);
+  const commander = getUserById(mockUsers, inc?.incidentCommander);
 
   const handleStatusChange = (s: IncidentStatus) => {
     if (s === 'resolved' && !resolvedData) {
@@ -261,7 +301,10 @@ export const IncidentDetail: React.FC = () => {
     } : prev);
   };
 
-  // ── Not found ────────────────────────────────────────────────────────────────
+  // ── Loading / Not found ──────────────────────────────────────────────────────
+  if (incidentLoading) {
+    return <div className="p-8 text-sm text-ois-text-subtle">Loading incident…</div>;
+  }
   if (!incident) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
@@ -277,9 +320,13 @@ export const IncidentDetail: React.FC = () => {
     );
   }
 
+  if (!inc) {
+    return <div className="p-8 text-sm text-ois-text-subtle">Loading incident…</div>;
+  }
+
   const priorityColor = PRIORITY_COLOR[inc!.priority] ?? '#475467';
   const isResolved = status === 'resolved' || status === 'closed';
-  const serviceNames = getServiceNames(inc!.affectedServiceIds);
+  const serviceNames = getServiceNames(mockServices, inc!.affectedServiceIds);
 
   // ── Tabs definition ──────────────────────────────────────────────────────────
   const tabs = [
@@ -541,7 +588,7 @@ export const IncidentDetail: React.FC = () => {
         ) : (
           <div className="space-y-2">
             {inc!.linkedChangeIds!.map(id => {
-              const chg = getChangeById(id);
+              const chg = (changesData ?? []).find(c => c.id === id || c.publicId === id);
               return (
                 <div key={id} className="p-2 rounded-lg bg-ois-bg border border-ois-border">
                   <div className="flex items-center justify-between mb-1">
@@ -588,7 +635,7 @@ export const IncidentDetail: React.FC = () => {
 
       {/* Linked outages */}
       {(() => {
-        const outages = inc!.affectedServiceIds.flatMap(id => getOutagesByService(id))
+        const outages = inc!.affectedServiceIds.flatMap(id => (outagesData ?? []).filter(o => o.serviceId === id))
           .filter(o => {
             const oStart = new Date(o.startedAt).getTime();
             const iStart = new Date(inc!.createdAt).getTime();
@@ -643,7 +690,7 @@ export const IncidentDetail: React.FC = () => {
           <div className="text-xs text-ois-text-subtle">
             Resolved by{' '}
             <span className="font-medium text-ois-text">
-              {getUserById(inc!.resolution?.resolvedBy)?.name ?? 'Unknown'}
+              {getUserById(mockUsers, inc!.resolution?.resolvedBy)?.name ?? 'Unknown'}
             </span>
             {inc!.resolution?.resolvedAt && (
               <> · {formatRelative(inc!.resolution.resolvedAt)}</>

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { mockReports } from '@/src/mocks/reports';
+import { measurementService, useResource } from '@/src/services';
 import { Report, ReportType, ReportFrequency } from '@/src/types/measurement';
 import { reportTypeMeta } from '@/src/lib/constants';
 import { ReportRow } from '@/src/components/measurement/ReportRow';
@@ -36,6 +36,8 @@ const FREQ_TAB_ORDER: (ReportFrequency | 'all')[] = ['all', 'monthly', 'weekly',
 
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
+  const { data } = useResource(() => measurementService.reports(), []);
+  const mockReports = data ?? [];
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<ReportType | 'all'>('all');
@@ -53,7 +55,7 @@ export const Reports: React.FC = () => {
       if (freqFilter !== 'all' && r.frequency !== freqFilter) return false;
       return true;
     });
-  }, [search, typeFilter, freqFilter]);
+  }, [search, typeFilter, freqFilter, mockReports]);
 
   const freqCounts = useMemo(() => {
     const counts: Record<string, number> = { all: mockReports.length };
@@ -61,7 +63,7 @@ export const Reports: React.FC = () => {
       counts[r.frequency] = (counts[r.frequency] ?? 0) + 1;
     }
     return counts;
-  }, []);
+  }, [mockReports]);
 
   const freqTabLabels: Record<string, string> = {
     all:       'All',

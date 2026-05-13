@@ -1,8 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Activity, Target, AlertOctagon } from 'lucide-react';
-import { mockSLATargets } from '@/src/mocks/slaTargets';
-import { mockOutages, getOngoingOutages } from '@/src/mocks/outages';
+import { availabilityService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 const TABS = [
@@ -12,7 +11,12 @@ const TABS = [
 ];
 
 export const AvailabilityLayout: React.FC = () => {
-  const ongoing = getOngoingOutages().length;
+  const { data: slaData } = useResource(() => availabilityService.slaTargets(), []);
+  const { data: outagesData } = useResource(() => availabilityService.outages(), []);
+  const mockSLATargets = slaData ?? [];
+  const mockOutages = outagesData ?? [];
+
+  const ongoing = mockOutages.filter(o => !o.endedAt).length;
   const breachedSLAs = mockSLATargets.filter(s => s.status === 'breached').length;
   const atRiskSLAs = mockSLATargets.filter(s => s.status === 'at_risk').length;
 

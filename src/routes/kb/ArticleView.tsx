@@ -8,11 +8,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatDate, formatRelative } from '@/src/lib/format';
-import { getArticleBySlug, getRelatedArticles, mockKBArticles } from '@/src/mocks/kbArticles';
+import { knowledgeService, useResource } from '@/src/services';
 import { Can } from '@/src/lib/rbac';
-import { mockKBCategories } from '@/src/mocks/kbCategories';
 import { Modal } from '@/src/components/ui/Modal';
 import { KBArticle, KBContentType, KBStatus } from '@/src/types/knowledge';
+
+type ArticleLookup = (publicId: string) => KBArticle | undefined;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -45,19 +46,21 @@ function extractToc(body: string): TocEntry[] {
 // ── Inline renderer ───────────────────────────────────────────────────────────
 
 /** Map KB/INC/PRB/CHG public IDs to hrefs */
-function refHref(ref: string): string {
-  if (ref.startsWith('KB-')) {
-    const a = mockKBArticles.find(a => a.publicId === ref);
-    return a ? `/kb/${a.slug}` : '/kb';
-  }
-  if (ref.startsWith('INC-')) return `/incidents`;
-  if (ref.startsWith('PRB-')) return `/problems`;
-  if (ref.startsWith('CHG-')) return `/changes`;
-  if (ref.startsWith('CAT-')) return `/portal/catalog`;
-  return '#';
+function makeRefHref(lookup: ArticleLookup) {
+  return (ref: string): string => {
+    if (ref.startsWith('KB-')) {
+      const a = lookup(ref);
+      return a ? `/kb/${a.slug}` : '/kb';
+    }
+    if (ref.startsWith('INC-')) return `/incidents`;
+    if (ref.startsWith('PRB-')) return `/problems`;
+    if (ref.startsWith('CHG-')) return `/changes`;
+    if (ref.startsWith('CAT-')) return `/portal/catalog`;
+    return '#';
+  };
 }
 
-function renderInline(text: string): React.ReactNode[] {
+function renderInline(text: string, refHref: (ref: string) => string): React.ReactNode[] {
   // Patterns: **bold**, `code`, KB-XXXXX, INC-XXXX-XXXXX, PRB-..., CHG-...
   const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|(?:KB|INC|PRB|CHG|CAT)-[\w-]+)/g);
   return parts.map((p, i) => {
@@ -117,7 +120,7 @@ function detectCalloutType(firstLine: string): CalloutType {
   return 'note';
 }
 
-function renderMarkdown(body: string): React.ReactNode[] {
+function renderMarkdown(body: string, refHref: (ref: string) => string): React.ReactNode[] {
   const lines = body.split('\n');
   const nodes: React.ReactNode[] = [];
   let i = 0;
@@ -130,7 +133,7 @@ function renderMarkdown(body: string): React.ReactNode[] {
         {listBuffer.map((item, j) => (
           <li key={j} className="flex items-start gap-3">
             <span className="mt-[9px] w-1.5 h-1.5 rounded-full bg-ois-primary shrink-0" />
-            <span className="text-[15px] leading-[1.8] text-ois-text-muted">{renderInline(item)}</span>
+            <span className="text-[15px] leading-[1.8] text-ois-text-muted">{renderInline(item, refHref)}</span>
           </li>
         ))}
       </ul>
@@ -172,7 +175,7 @@ function renderMarkdown(body: string): React.ReactNode[] {
       const Tag = (`h${level}` as 'h1' | 'h2' | 'h3' | 'h4');
       nodes.push(
         <Tag key={`h-${nodes.length}`} id={id} className={cls}>
-          {renderInline(text)}
+          {renderInline(text, refHref)}
         </Tag>
       );
       i++;
@@ -202,7 +205,7 @@ function renderMarkdown(body: string): React.ReactNode[] {
           </div>
           <div className="space-y-1">
             {quoteLines.map((ql, j) => (
-              <p key={j} className="text-[13.5px] leading-relaxed text-ois-text">{renderInline(ql)}</p>
+              <p key={j} className="text-[13.5px] leading-relaxed text-ois-text">{renderInline(ql, refHref)}</p>
             ))}
           </div>
         </div>
@@ -236,7 +239,7 @@ function renderMarkdown(body: string): React.ReactNode[] {
                 {j + 1}
               </span>
               <span className="text-[15px] leading-[1.8] text-ois-text-muted flex-1 pt-0.5">
-                {renderInline(item)}
+                {renderInline(item, refHref)}
               </span>
             </li>
           ))}
@@ -288,7 +291,7 @@ function renderMarkdown(body: string): React.ReactNode[] {
                 <tr key={ri} className={ri % 2 === 1 ? 'bg-ois-surface-muted/40' : ''}>
                   {row.map((cell, ci) => (
                     <td key={ci} className="px-4 py-2.5 text-ois-text">
-                      {renderInline(cell)}
+                      {renderInline(cell, refHref)}
                     </td>
                   ))}
                 </tr>
@@ -311,7 +314,7 @@ function renderMarkdown(body: string): React.ReactNode[] {
     flushList();
     nodes.push(
       <p key={`p-${nodes.length}`} className="text-[15px] text-ois-text-muted leading-[1.8] my-4">
-        {renderInline(line)}
+        {renderInline(line, refHref)}
       </p>
     );
     i++;
@@ -442,7 +445,20 @@ export const ArticleView: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
 
-  const article = useMemo(() => getArticleBySlug(slug ?? ''), [slug]);
+  const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
+  const { data: categoriesData } = useResource(() => knowledgeService.categories(), []);
+  const allArticles = articlesData ?? [];
+  const categories = categoriesData ?? [];
+
+  const article = useMemo(
+    () => allArticles.find(a => a.slug === (slug ?? '')),
+    [allArticles, slug]
+  );
+  const articleByPublicId = useMemo<ArticleLookup>(
+    () => (id: string) => allArticles.find(a => a.publicId === id),
+    [allArticles]
+  );
+  const refHref = useMemo(() => makeRefHref(articleByPublicId), [articleByPublicId]);
 
   const [helpful,       setHelpful]       = useState<boolean | null>(null);
   const [helpfulCount,  setHelpfulCount]  = useState(article?.helpfulCount ?? 0);
@@ -454,13 +470,15 @@ export const ArticleView: React.FC = () => {
   const articleRef = useRef<HTMLDivElement>(null);
 
   const toc     = useMemo(() => article ? extractToc(article.body) : [], [article]);
-  const related = useMemo(() =>
-    article ? getRelatedArticles(article.relatedArticleSlugs) : [],
-  [article]);
+  const related = useMemo(() => {
+    if (!article) return [];
+    const slugs = article.relatedArticleSlugs;
+    return slugs.map(s => allArticles.find(a => a.slug === s)).filter(Boolean) as KBArticle[];
+  }, [article, allArticles]);
 
   const category = useMemo(() =>
-    article ? mockKBCategories.find(c => c.id === article.categoryId) : null,
-  [article]);
+    article ? categories.find(c => c.id === article.categoryId) : null,
+  [article, categories]);
 
   // Scroll-spy via IntersectionObserver
   useEffect(() => {
@@ -508,6 +526,7 @@ export const ArticleView: React.FC = () => {
   };
 
   if (!article) {
+    if (!articlesData) return <div className="p-6 text-sm text-ois-text-muted">Loading…</div>;
     return (
       <div className="flex flex-col items-center justify-center py-32 text-center">
         <BookOpen size={32} className="text-ois-text-subtle mb-3" />
@@ -522,7 +541,7 @@ export const ArticleView: React.FC = () => {
   const ctMeta      = CONTENT_TYPE_META[article.contentType];
   const totalVotes  = helpfulCount + unhelpfulCount;
   const helpfulPct  = totalVotes > 0 ? Math.round((helpfulCount / totalVotes) * 100) : null;
-  const rendered    = useMemo(() => renderMarkdown(article.body), [article.body]);
+  const rendered    = useMemo(() => renderMarkdown(article.body, refHref), [article.body, refHref]);
 
   return (
     <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>

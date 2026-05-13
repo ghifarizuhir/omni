@@ -4,9 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { KnownErrorCard } from '@/src/components/problems/KnownErrorCard';
-import { getKnownErrors } from '@/src/mocks/problems';
-import { mockIncidents } from '@/src/mocks/incidents';
-import { mockServices } from '@/src/mocks/services';
+import { problemsService, incidentsService, servicesService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 import { Can } from '@/src/lib/rbac';
 
@@ -24,7 +22,13 @@ export const KEDB: React.FC = () => {
   const [serviceFilter, setServiceFilter] = useState('all');
   const [effectivenessFilter, setEffectivenessFilter] = useState('all');
 
-  const knownErrors = getKnownErrors();
+  const { data: allProblems } = useResource(() => problemsService.list(), []);
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const mockServices = servicesData ?? [];
+  const knownErrors = useMemo(
+    () => (allProblems ?? []).filter(p => p.status === 'known_error' && !!p.knownError),
+    [allProblems],
+  );
 
   const filtered = useMemo(() => {
     let result = [...knownErrors];
@@ -222,12 +226,13 @@ const ApplyWorkaroundButton: React.FC<{ problemPublicId: string }> = ({ problemP
   const [open, setOpen] = useState(false);
   const [incidentId, setIncidentId] = useState('');
 
+  const { data: incidents } = useResource(() => incidentsService.list(), []);
   const recentIncidents = useMemo(() => {
-    return [...mockIncidents]
+    return [...(incidents ?? [])]
       .filter(i => !['resolved', 'closed'].includes(i.status))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 10);
-  }, []);
+  }, [incidents]);
 
   if (!open) {
     return (

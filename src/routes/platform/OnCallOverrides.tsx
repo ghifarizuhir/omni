@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
 import { OverrideCard } from '@/src/components/oncall/OverrideCard';
 import { RequestOverrideModal } from '@/src/components/oncall/RequestOverrideModal';
-import { mockOnCallSchedules, mockOnCallOverrides } from '@/src/mocks';
+import { onCallService, useResource } from '@/src/services';
 import { OnCallOverride } from '@/src/types/platform';
 import { Can } from '@/src/lib/rbac';
 
 export const OnCallOverrides: React.FC = () => {
-  const [overrides, setOverrides] = useState<OnCallOverride[]>(mockOnCallOverrides);
+  const { data: schedulesData } = useResource(() => onCallService.schedules(), []);
+  const { data: overridesData } = useResource(() => onCallService.overrides(), []);
+  const schedules = schedulesData ?? [];
+  const [overrides, setOverrides] = useState<OnCallOverride[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => { if (overridesData) setOverrides(overridesData); }, [overridesData]);
 
 
   const handleApprove = (id: string) => {
@@ -77,7 +82,7 @@ export const OnCallOverrides: React.FC = () => {
       <RequestOverrideModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        schedules={mockOnCallSchedules}
+        schedules={schedules}
         onSubmit={handleNewOverride}
       />
     </div>

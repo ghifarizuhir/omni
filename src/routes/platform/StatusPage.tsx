@@ -1,5 +1,5 @@
 import { RotateCcw, CheckCircle2, AlertTriangle, AlertOctagon, Wrench } from 'lucide-react';
-import { mockStatusPageEntries, mockStatusPageIncidents } from '@/src/mocks';
+import { statusPageService, useResource } from '@/src/services';
 import { deriveOverallStatus } from '@/src/components/status/StatusHero';
 import { ServiceStatusRow } from '@/src/components/status/ServiceStatusRow';
 import { StatusIncidentCard } from '@/src/components/status/StatusIncidentCard';
@@ -13,8 +13,10 @@ const STATUS_ICON = {
 };
 
 export default function StatusPage() {
-  const entries = [...mockStatusPageEntries].sort((a, b) => a.displayOrder - b.displayOrder);
-  const activeIncidents = mockStatusPageIncidents.filter(i => i.status !== 'resolved');
+  const { data: entriesData } = useResource(() => statusPageService.entries(), []);
+  const { data: incidentsData } = useResource(() => statusPageService.incidents(), []);
+  const entries = [...(entriesData ?? [])].sort((a, b) => a.displayOrder - b.displayOrder);
+  const activeIncidents = (incidentsData ?? []).filter(i => i.status !== 'resolved');
   const overall = deriveOverallStatus(entries);
   const affectedCount = entries.filter(e => e.status !== 'operational' && e.status !== 'maintenance').length;
 

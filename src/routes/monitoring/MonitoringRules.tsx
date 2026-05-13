@@ -20,12 +20,11 @@ import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { SeverityBadge } from '../../components/ui/StatusSeverityBadges';
 import { SparkLine } from '../../components/charts/SparkLine';
-import { 
-  mockMonitoringRules, 
-  mockCIs, 
-  mockUsers, 
-  mockAlertRoutes 
-} from '../../mocks';
+import {
+  monitoringRulesService,
+  alertRoutesService,
+  useResource,
+} from '../../services';
 import { MonitoringRule, MonitoringRuleType, EventSource } from '../../types/monitoring';
 import { Can, useCan } from '@/src/lib/rbac';
 import { Severity } from '../../types/common';
@@ -74,8 +73,19 @@ export const MonitoringRules: React.FC = () => {
   const navigate = useNavigate();
   const canManage = useCan('monitoring', 'update');
 
+  const { data: rulesData } = useResource(() => monitoringRulesService.list(), []);
+  const { data: routesData } = useResource(() => alertRoutesService.list(), []);
+  const mockAlertRoutes = routesData ?? [];
+
   // --- State ---
-  const [rules, setRules] = useState<MonitoringRule[]>(mockMonitoringRules);
+  const [rules, setRules] = useState<MonitoringRule[]>([]);
+  const seededRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!seededRef.current && rulesData) {
+      setRules(rulesData);
+      seededRef.current = true;
+    }
+  }, [rulesData]);
   const [deleteConfirmRule, setDeleteConfirmRule] = useState<MonitoringRule | null>(null);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<MonitoringRuleType | 'all'>('all');

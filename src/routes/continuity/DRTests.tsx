@@ -2,8 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Plus, Search, X, Radio } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { mockDRTestRuns } from '@/src/mocks/drTestRuns';
-import { mockDRPlans } from '@/src/mocks/drPlans';
+import { continuityService, useResource } from '@/src/services';
 import { DRTestRun, DRTestStatus, DRTestType } from '@/src/types/continuity';
 import { DRTestCard } from '@/src/components/continuity/DRTestCard';
 import { LiveDRTestPanel } from '@/src/components/continuity/LiveDRTestPanel';
@@ -30,10 +29,6 @@ const TABS: { value: TabValue; label: string }[] = [
   { value: 'failed', label: 'Failed' },
 ];
 
-const ALL_PLAN_OPTIONS = Array.from(
-  new Set(mockDRTestRuns.map((r) => r.planPublicId)),
-).sort();
-
 const TEST_TYPE_OPTIONS: { value: DRTestType | 'all'; label: string }[] = [
   { value: 'all', label: 'All types' },
   { value: 'tabletop', label: 'Tabletop' },
@@ -45,6 +40,16 @@ const TEST_TYPE_OPTIONS: { value: DRTestType | 'all'; label: string }[] = [
 export const DRTests: React.FC = () => {
   const navigate = useNavigate();
 
+  const { data: runsData } = useResource(() => continuityService.drRuns(), []);
+  const { data: plansData } = useResource(() => continuityService.drPlans(), []);
+  const mockDRTestRuns = useMemo(() => runsData ?? [], [runsData]);
+  const mockDRPlans = plansData ?? [];
+
+  const ALL_PLAN_OPTIONS = useMemo(
+    () => Array.from(new Set(mockDRTestRuns.map((r) => r.planPublicId))).sort(),
+    [mockDRTestRuns],
+  );
+
   const [liveTestId, setLiveTestId] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [activeTab, setActiveTab] = useState<TabValue>('all');
@@ -55,12 +60,12 @@ export const DRTests: React.FC = () => {
 
   const activeTest = useMemo(
     () => mockDRTestRuns.find((r) => r.status === 'in_progress') ?? null,
-    [],
+    [mockDRTestRuns],
   );
 
   const liveTest = useMemo(
     () => (liveTestId ? mockDRTestRuns.find((r) => r.id === liveTestId) ?? null : null),
-    [liveTestId],
+    [liveTestId, mockDRTestRuns],
   );
 
   const tabCounts = useMemo(() => ({
@@ -69,7 +74,7 @@ export const DRTests: React.FC = () => {
     passed: mockDRTestRuns.filter((r) => r.status === 'passed').length,
     passed_with_issues: mockDRTestRuns.filter((r) => r.status === 'passed_with_issues').length,
     failed: mockDRTestRuns.filter((r) => r.status === 'failed').length,
-  }), []);
+  }), [mockDRTestRuns]);
 
   const filtered = useMemo(() => {
     let list = [...mockDRTestRuns];
@@ -115,7 +120,7 @@ export const DRTests: React.FC = () => {
     });
 
     return list;
-  }, [search, planFilter, typeFilter, statusFilter, activeTab]);
+  }, [mockDRTestRuns, search, planFilter, typeFilter, statusFilter, activeTab]);
 
   const hasFilters = search || planFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all';
 

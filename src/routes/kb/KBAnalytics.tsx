@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Clock, Download, Eye, ThumbsUp, Users, ArrowRight } from 'lucide-react';
-import { kbAnalytics } from '@/src/mocks/kbAnalytics';
-import { mockKBArticles, getArticleBySlug } from '@/src/mocks/kbArticles';
-import { mockKBFeedback } from '@/src/mocks/kbFeedback';
+import { knowledgeService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
+import type { KBArticle } from '@/src/types/knowledge';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,21 +22,21 @@ function fmtViews(n: number): string {
 }
 
 // Per-article helpful stats derived from feedback mock
-function useArticleHelpfulness() {
+type FeedbackItem = { articleId: string; isHelpful: boolean };
+function useArticleHelpfulness(feedback: FeedbackItem[]) {
   return useMemo(() => {
     const map: Record<string, { helpful: number; total: number }> = {};
-    for (const fb of mockKBFeedback) {
+    for (const fb of feedback) {
       if (!map[fb.articleId]) map[fb.articleId] = { helpful: 0, total: 0 };
       map[fb.articleId].total++;
       if (fb.isHelpful) map[fb.articleId].helpful++;
     }
     return map;
-  }, []);
+  }, [feedback]);
 }
 
 // Synthetic view trends (compare first/last 15 days of the 30-day window)
-function useViewTrend(): { pct: number; dir: 'up' | 'down' | 'flat' } {
-  const series = kbAnalytics.viewsTimeSeries;
+function viewTrendFrom(series: { views: number }[]): { pct: number; dir: 'up' | 'down' | 'flat' } {
   const half = Math.floor(series.length / 2);
   const prev = series.slice(0, half).reduce((s, d) => s + d.views, 0);
   const curr = series.slice(half).reduce((s, d) => s + d.views, 0);
@@ -80,8 +79,7 @@ function KpiCard({ icon, label, value, delta, dir, good = true }: KpiCardProps) 
 
 // ── Views over time SVG chart ────────────────────────────────────────────────
 
-function ViewsChart() {
-  const series = kbAnalytics.viewsTimeSeries;
+function ViewsChart({ series }: { series: { date: string; views: number }[] }) {
   const W = 760, H = 140, PAD = { t: 12, r: 16, b: 28, l: 40 };
   const innerW = W - PAD.l - PAD.r;
   const innerH = H - PAD.t - PAD.b;
@@ -167,16 +165,34 @@ function TrendBadge({ pct, isNew }: { pct?: number; isNew?: boolean }) {
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export function KBAnalytics() {
-  const helpMap = useArticleHelpfulness();
-  const viewTrend = useViewTrend();
+  const { data: analyticsData } = useResource(() => knowledgeService.analytics(), []);
+  const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
+  const { data: feedbackData } = useResource(() => knowledgeService.feedback(), []);
+
+  const kbAnalytics = analyticsData ?? {
+    totalViews: 0, totalSearches: 0, helpfulRate: 0,
+    viewsTimeSeries: [] as { date: string; views: number }[],
+    topViewed: [] as string[], topHelpful: [] as string[],
+    needsReview: [] as string[],
+    contentGaps: [] as { searchTerm: string; count: number; suggestedAction: string; linkedItemId?: string }[],
+    topSearches: [] as { term: string; count: number; hasMatchingArticle: boolean; matchingArticleSlug?: string }[],
+  };
+  const mockKBArticles = articlesData ?? [];
+  const mockKBFeedback = (feedbackData ?? []) as FeedbackItem[];
+
+  const getArticleBySlug = (slug: string): KBArticle | undefined =>
+    mockKBArticles.find(a => a.slug === slug);
+
+  const helpMap = useArticleHelpfulness(mockKBFeedback);
+  const viewTrend = viewTrendFrom(kbAnalytics.viewsTimeSeries);
 
   // Resolve topViewed slugs → articles with synthetic view counts from mock
   const topViewed = useMemo(() => {
     return kbAnalytics.topViewed.map(slug => {
       const a = getArticleBySlug(slug);
       return a ?? null;
-    }).filter(Boolean) as typeof mockKBArticles;
-  }, []);
+    }).filter(Boolean) as KBArticle[];
+  }, [kbAnalytics.topViewed, mockKBArticles]);
 
   // Resolve topHelpful slugs → articles + stats
   const topHelpful = useMemo(() => {
@@ -185,8 +201,8 @@ export function KBAnalytics() {
       if (!a) return null;
       const stats = helpMap[a.id] ?? { helpful: 0, total: 0 };
       return { article: a, ...stats };
-    }).filter(Boolean) as Array<{ article: (typeof mockKBArticles)[0]; helpful: number; total: number }>;
-  }, [helpMap]);
+    }).filter(Boolean) as Array<{ article: KBArticle; helpful: number; total: number }>;
+  }, [kbAnalytics.topHelpful, mockKBArticles, helpMap]);
 
   // Resolve needsReview slugs
   const reviewItems = useMemo(() => {
@@ -194,8 +210,8 @@ export function KBAnalytics() {
       const a = getArticleBySlug(slug);
       if (!a || !a.reviewDueAt) return null;
       return { article: a, days: daysUntil(a.reviewDueAt) };
-    }).filter(Boolean) as Array<{ article: (typeof mockKBArticles)[0]; days: number }>;
-  }, []);
+    }).filter(Boolean) as Array<{ article: KBArticle; days: number }>;
+  }, [kbAnalytics.needsReview, mockKBArticles]);
 
   // Also pull all published articles that have reviewDueAt and aren't already in needsReview
   const allReviewItems = useMemo(() => {
@@ -206,7 +222,7 @@ export function KBAnalytics() {
       .slice(0, 3)
       .map(a => ({ article: a, days: daysUntil(a.reviewDueAt!) }));
     return [...reviewItems, ...extras].sort((a, b) => a.days - b.days);
-  }, [reviewItems]);
+  }, [reviewItems, mockKBArticles, kbAnalytics.needsReview]);
 
   // Synthetic view trends: assign fixed deltas per article for demo purposes
   const viewDeltas: Record<string, number | 'new'> = {
@@ -321,7 +337,7 @@ export function KBAnalytics() {
         {/* ── Views over time ── */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Views over time (last 30 days)</h2>
-          <ViewsChart />
+          <ViewsChart series={kbAnalytics.viewsTimeSeries} />
         </div>
 
         {/* ── Two-column: Top viewed + Most helpful ── */}

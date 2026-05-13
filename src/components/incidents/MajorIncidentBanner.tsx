@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
 import { Incident } from '@/src/types/incident';
-import { mockUsers } from '@/src/mocks/users';
+import { usersService, useResource } from '@/src/services';
 
 interface Props {
   incident: Incident;
@@ -13,8 +13,9 @@ interface Props {
 
 export const MajorIncidentBanner: React.FC<Props> = ({ incident, className }) => {
   const navigate = useNavigate();
+  const { data: users } = useResource(() => usersService.list(), []);
   const commander = incident.incidentCommander
-    ? mockUsers.find(u => u.id === incident.incidentCommander)?.name ?? 'Unknown'
+    ? (users ?? []).find(u => u.id === incident.incidentCommander)?.name ?? 'Unknown'
     : 'Unassigned';
 
   return (

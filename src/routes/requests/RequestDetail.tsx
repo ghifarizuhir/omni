@@ -9,10 +9,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
-import { getRequestById } from '@/src/mocks/serviceRequests';
-import { getCatalogItemById } from '@/src/mocks/catalogItems';
-import { getArticleBySlug } from '@/src/mocks/kbArticles';
-import { mockUsers, currentUser } from '@/src/mocks/users';
+import { requestsService, knowledgeService, usersService, useResource } from '@/src/services';
+import { currentUser } from '@/src/mocks/users';
 import { useCan as useCanRbac, requestResource } from '@/src/lib/rbac';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { Modal } from '@/src/components/ui/Modal';
@@ -410,11 +408,12 @@ const RequestInfoModal: React.FC<{
 
 const ReassignModal: React.FC<{
   currentAssignee?: string;
+  users: { id: string; name: string; email: string; role?: string }[];
   onConfirm: (userId: string, userName: string) => void;
   onClose: () => void;
-}> = ({ currentAssignee, onConfirm, onClose }) => {
+}> = ({ currentAssignee, users, onConfirm, onClose }) => {
   const [selected, setSelected] = useState<string>('');
-  const candidates = mockUsers.filter(u => u.name !== currentAssignee);
+  const candidates = users.filter(u => u.name !== currentAssignee);
   return (
     <Modal isOpen onClose={onClose} title="Reassign current step" size="sm">
       <div className="space-y-4">
@@ -489,11 +488,12 @@ const CancelModal: React.FC<{
 
 const AddWatcherModal: React.FC<{
   existingIds: Set<string>;
+  users: { id: string; name: string; email: string; role?: string }[];
   onConfirm: (userId: string, userName: string) => void;
   onClose: () => void;
-}> = ({ existingIds, onConfirm, onClose }) => {
+}> = ({ existingIds, users, onConfirm, onClose }) => {
   const [selected, setSelected] = useState<string>('');
-  const candidates = mockUsers.filter(u => !existingIds.has(u.id));
+  const candidates = users.filter(u => !existingIds.has(u.id));
   return (
     <Modal isOpen onClose={onClose} title="Add watcher" size="sm">
       <div className="space-y-4">
@@ -552,13 +552,29 @@ export const RequestDetail: React.FC = () => {
     setTimeout(() => commentTextareaRef.current?.focus(), 50);
   }, []);
 
-  const req = useMemo(() => getRequestById(requestId ?? ''), [requestId]);
-  const catalogItem = useMemo(() => req ? getCatalogItemById(req.catalogItemId) : null, [req]);
+  const { data: requestsData } = useResource(() => requestsService.list(), []);
+  const { data: catalogData } = useResource(() => requestsService.catalog(), []);
+  const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
+  const { data: usersData } = useResource(() => usersService.list(), []);
+  const mockUsers = usersData ?? [];
+
+  const req = useMemo(
+    () => (requestsData ?? []).find(r => r.id === (requestId ?? '')),
+    [requestsData, requestId]
+  );
+  const catalogItem = useMemo(
+    () => req ? (catalogData ?? []).find(c => c.id === req.catalogItemId) ?? null : null,
+    [req, catalogData]
+  );
+  const getArticleBySlug = (s: string) => (articlesData ?? []).find(a => a.slug === s);
 
   const requestRes = req ? requestResource(req) : undefined;
   const canApproveRequest = useCanRbac('request', 'approve', { resource: requestRes });
 
-  if (!req) return <NotFound />;
+  if (!req) {
+    if (!requestsData) return <div className="p-6 text-sm text-ois-text-muted">Loading…</div>;
+    return <NotFound />;
+  }
 
   const statusMeta  = STATUS_META[req.status];
   const activity    = buildActivity(req);
@@ -574,7 +590,7 @@ export const RequestDetail: React.FC = () => {
     req.workflow.steps.forEach(s => { if (s.assigneeId) ids.add(s.assigneeId); });
     extraWatcherIds.forEach(id => ids.add(id));
     return Array.from(ids).map(id => mockUsers.find(u => u.id === id)).filter(Boolean);
-  }, [req, extraWatcherIds]);
+  }, [req, extraWatcherIds, mockUsers]);
 
   const watcherIdSet = useMemo(() => new Set(watchers.map(u => u!.id)), [watchers]);
 
@@ -1082,6 +1098,7 @@ export const RequestDetail: React.FC = () => {
       {showReassign && (
         <ReassignModal
           currentAssignee={activeStepCurrentAssignee}
+          users={mockUsers}
           onClose={() => setShowReassign(false)}
           onConfirm={(_id, name) => {
             setActiveStepAssignee(name);
@@ -1101,6 +1118,7 @@ export const RequestDetail: React.FC = () => {
       {showAddWatcher && (
         <AddWatcherModal
           existingIds={watcherIdSet}
+          users={mockUsers}
           onClose={() => setShowAddWatcher(false)}
           onConfirm={(id, _name) => {
             setExtraWatcherIds(prev => [...prev, id]);

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, RotateCcw, MoreVertical } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatRelative, formatDate } from '../../lib/format';
-import { mockDeployments, getActiveDeployments } from '../../mocks/deployments';
+import { deploymentsService, useResource } from '../../services';
 import { Deployment, DeploymentStatus, DeploymentStrategy, DeploymentTrigger } from '../../types/deployment';
 import { Environment } from '../../types/ci';
 import { ActiveDeploymentBanner } from '../../components/deployments/ActiveDeploymentBanner';
@@ -169,9 +169,15 @@ export const DeploymentsQueue: React.FC = () => {
   const [triggerFilter, setTriggerFilter] = useState<DeploymentTrigger | ''>('');
   const [quickFilters, setQuickFilters] = useState<Set<QuickFilter>>(new Set());
 
+  const { data: deploymentsData } = useResource(() => deploymentsService.list(), []);
+  const mockDeployments = useMemo(() => deploymentsData ?? [], [deploymentsData]);
+
   // live elapsed seconds for running deployments
   const [elapsedTick, setElapsedTick] = useState(0);
-  const activeDeployments = useMemo(() => getActiveDeployments(), []);
+  const activeDeployments = useMemo(
+    () => mockDeployments.filter(d => d.status === 'running' || d.status === 'pending' || d.status === 'rolling_back'),
+    [mockDeployments],
+  );
   const hasRunning = activeDeployments.some(
     (d) => d.status === 'running' || d.status === 'rolling_back'
   );
@@ -189,12 +195,12 @@ export const DeploymentsQueue: React.FC = () => {
       counts[d.status] = (counts[d.status] ?? 0) + 1;
     });
     return counts;
-  }, [extraDeployments]);
+  }, [extraDeployments, mockDeployments]);
 
   // unique values for filter dropdowns
   const uniqueComponents = useMemo(
     () => [...new Set([...extraDeployments, ...mockDeployments].map((d) => d.componentName))].sort(),
-    [extraDeployments]
+    [extraDeployments, mockDeployments]
   );
 
   // filtered + sorted
@@ -253,7 +259,7 @@ export const DeploymentsQueue: React.FC = () => {
     });
 
     return list;
-  }, [search, statusFilter, envFilter, componentFilter, strategyFilter, triggerFilter, quickFilters, extraDeployments]);
+  }, [search, statusFilter, envFilter, componentFilter, strategyFilter, triggerFilter, quickFilters, extraDeployments, mockDeployments]);
 
   const hasFilters =
     search ||

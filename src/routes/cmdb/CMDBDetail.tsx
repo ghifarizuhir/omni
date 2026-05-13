@@ -6,20 +6,14 @@ import {
   Clock, Activity, ShieldCheck, AlertCircle, Heart, Radio
 } from 'lucide-react';
 import {
-  mockCIs,
-  mockCIRelationships,
-  mockServices,
-  mockCIAuditEntries,
-  mockMonitoringRules
-} from '@/src/mocks';
-import { getIncidentsByCI } from '@/src/mocks/incidents';
+  cisService, servicesService, incidentsService,
+  changesService, problemsService,
+  monitoringRulesService, knowledgeService, capacityService,
+  useResource,
+} from '@/src/services';
 import { Can } from '@/src/lib/rbac';
 import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
-import { getChangesByCI } from '@/src/mocks/changes';
-import { getProblemsByCI } from '@/src/mocks/problems';
-import { getKBArticlesByCI } from '@/src/mocks/kbArticles';
 import { formatDistanceToNow, parseISO } from 'date-fns';
-import { getMetricsByCI } from '@/src/mocks/capacityMetrics';
 import { UtilizationBar } from '@/src/components/capacity/UtilizationBar';
 import { TrendIndicator } from '@/src/components/capacity/TrendIndicator';
 import { ChangeStatusPill } from '@/src/components/changes/ChangeStatusPill';
@@ -77,14 +71,32 @@ export const CMDBDetail: React.FC = () => {
   const [showJson, setShowJson] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
-  const rawCI = useMemo(() => mockCIs.find(c => c.id === ciId || c.publicId === ciId), [ciId]);
-  const [ci, setCi] = useState<ConfigurationItem | null>(() => mockCIs.find(c => c.id === ciId || c.publicId === ciId) ?? null);
-  const service = useMemo(() => mockServices.find(s => s.id === ci?.serviceId), [ci]);
+  const { data: cisData, loading: cisLoading } = useResource(() => cisService.list(), []);
+  const mockCIs = cisData ?? [];
+  const { data: relsData } = useResource(() => cisService.relationshipsAll(), []);
+  const mockCIRelationships = relsData ?? [];
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const mockServices = servicesData ?? [];
+  const { data: auditData } = useResource(() => cisService.audit(), []);
+  const mockCIAuditEntries = auditData ?? [];
+  const { data: incidentsData } = useResource(() => incidentsService.list(), []);
+  const { data: changesData } = useResource(() => changesService.list(), []);
+  const { data: problemsData } = useResource(() => problemsService.list(), []);
+
+  const rawCI = useMemo(() => mockCIs.find(c => c.id === ciId || c.publicId === ciId), [mockCIs, ciId]);
+  const [ci, setCi] = useState<ConfigurationItem | null>(null);
+  React.useEffect(() => {
+    setCi(rawCI ?? null);
+  }, [rawCI?.id]);
+  const service = useMemo(() => mockServices.find(s => s.id === ci?.serviceId), [mockServices, ci]);
 
   const [editMode, setEditMode] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [editDraft, setEditDraft] = useState({ name: '', status: 'active', environment: 'production', criticality: 'critical' });
 
+  if (cisLoading && !ci) {
+    return <div className="flex items-center justify-center py-20 text-sm text-ois-text-muted">Loading…</div>;
+  }
   if (!rawCI || !ci) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -97,7 +109,16 @@ export const CMDBDetail: React.FC = () => {
   const outgoing = mockCIRelationships.filter(r => r.fromCiId === ci.id);
   const incoming = mockCIRelationships.filter(r => r.toCiId === ci.id);
 
-  const ciRules = useMemo(() => mockMonitoringRules.filter(r => r.targetCIIds.includes(ci.id)), [ci.id]);
+  const { data: allRulesData } = useResource(() => monitoringRulesService.list(), []);
+  const { data: kbArticlesData } = useResource(() => knowledgeService.articles(), []);
+  const { data: allMetricsData } = useResource(() => capacityService.metrics(), []);
+  const allMonitoringRules = allRulesData ?? [];
+  const allKBArticles = kbArticlesData ?? [];
+  const allCapacityMetrics = allMetricsData ?? [];
+  const ciRules = useMemo(
+    () => allMonitoringRules.filter(r => r.targetCIIds.includes(ci.id)),
+    [ci.id, allMonitoringRules],
+  );
 
   const stripeColor = CI_TYPE_COLOR[ci.type] ?? '#475467';
 
@@ -324,6 +345,10 @@ export const CMDBDetail: React.FC = () => {
 
             {/* Incidents tab */}
             {activeTab === 'incidents' && (() => {
+              const allIncidents = incidentsData ?? [];
+              const getIncidentsByCI = (cid: string) => allIncidents.filter(i =>
+                i.affectedCIIds.includes(cid) || i.affectedCIPublicIds.includes(cid)
+              );
               const ciIncidents = getIncidentsByCI(ci.id).concat(getIncidentsByCI(ci.publicId));
               const unique = [...new Map(ciIncidents.map(i => [i.id, i])).values()];
               const open = unique.filter(i => !['resolved', 'closed'].includes(i.status));
@@ -371,6 +396,8 @@ export const CMDBDetail: React.FC = () => {
 
             {/* Changes tab */}
             {activeTab === 'changes' && (() => {
+              const allChanges = changesData ?? [];
+              const getChangesByCI = (cid: string) => allChanges.filter(c => c.affectedCIIds.includes(cid));
               const ciChanges = getChangesByCI(ci.id).concat(getChangesByCI(ci.publicId))
                 .filter((c, i, a) => a.findIndex(x => x.id === c.id) === i)
                 .slice(0, 5);
@@ -403,6 +430,10 @@ export const CMDBDetail: React.FC = () => {
 
             {/* Problems tab */}
             {activeTab === 'problems' && (() => {
+              const allProblems = problemsData ?? [];
+              const getProblemsByCI = (cid: string) => allProblems.filter(p =>
+                p.affectedCIIds.includes(cid) || p.affectedCIPublicIds.includes(cid)
+              );
               const ciProblems = getProblemsByCI(ci.id).concat(getProblemsByCI(ci.publicId))
                 .filter((p, i, a) => a.findIndex(x => x.id === p.id) === i)
                 .slice(0, 5);
@@ -429,7 +460,9 @@ export const CMDBDetail: React.FC = () => {
 
             {/* Knowledge Base tab */}
             {activeTab === 'kb' && (() => {
-              const ciKBArticles = getKBArticlesByCI(ci.id).concat(getKBArticlesByCI(ci.publicId))
+              const ciKBArticles = allKBArticles
+                .filter(a => a.relatedCIIds?.includes(ci.id) || a.relatedCIPublicIds?.includes(ci.id)
+                  || a.relatedCIIds?.includes(ci.publicId) || a.relatedCIPublicIds?.includes(ci.publicId))
                 .filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
                 .slice(0, 5);
               return (
@@ -488,7 +521,7 @@ export const CMDBDetail: React.FC = () => {
             {activeTab === 'capacity' && (
               <div className="space-y-3">
                 {(() => {
-                  const ciMetrics = getMetricsByCI(ci.id);
+                  const ciMetrics = allCapacityMetrics.filter(m => m.ciId === ci.id);
                   if (ciMetrics.length === 0) {
                     return (
                       <div className="py-12 text-center text-ois-text-muted">

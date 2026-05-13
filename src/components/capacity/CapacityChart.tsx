@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { CapacityMetric } from '../../types';
-import { getTimeSeriesForMetric } from '../../mocks/capacityTimeSeries';
+import { capacityService, useResource } from '../../services';
 
 interface CapacityChartProps {
   metricId: string;
@@ -56,8 +56,8 @@ export function CapacityChart({
   showThresholds = true,
   showBaseline = false,
 }: CapacityChartProps) {
-  const rawData = getTimeSeriesForMetric(metricId);
-  const data = rawData.map(d => ({
+  const { data: rawData } = useResource(() => capacityService.timeSeriesForMetric(metricId), [metricId]);
+  const data = (rawData ?? []).map(d => ({
     ...d,
     date: formatDate(d.timestamp),
     value: d.value,

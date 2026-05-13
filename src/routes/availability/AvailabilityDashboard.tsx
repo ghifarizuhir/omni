@@ -2,11 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Download, ArrowRight } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { mockDailyServiceHealth } from '@/src/mocks/dailyServiceHealth';
-import { mockServices } from '@/src/mocks/services';
-import { mockSLATargets } from '@/src/mocks/slaTargets';
-import { getActiveBreaches } from '@/src/mocks/slaBreaches';
-import { mockOutages } from '@/src/mocks/outages';
+import { availabilityService, servicesService, useResource } from '@/src/services';
 import { KPICard } from '@/src/components/ui/KPICard';
 import { Card, CardBody } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
@@ -15,12 +11,23 @@ import { MTTRTrendChart } from '@/src/components/availability/MTTRTrendChart';
 import { SLAComplianceDonut } from '@/src/components/availability/SLAComplianceDonut';
 import { ActiveBreachesList } from '@/src/components/availability/ActiveBreachesList';
 import { OutageTimeline } from '@/src/components/availability/OutageTimeline';
+import { ConnectedSourcesPanel } from '@/src/components/platform/ConnectedSourcesPanel';
 
 export const AvailabilityDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [compact, setCompact] = useState(false);
 
-  const activeBreaches = useMemo(() => getActiveBreaches(), []);
+  const { data: dailyHealthData } = useResource(() => availabilityService.dailyHealth(), []);
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const { data: slaData } = useResource(() => availabilityService.slaTargets(), []);
+  const { data: activeBreachesData } = useResource(() => availabilityService.activeBreaches(), []);
+  const { data: outagesData } = useResource(() => availabilityService.outages(), []);
+
+  const mockDailyServiceHealth = dailyHealthData ?? [];
+  const mockServices = servicesData ?? [];
+  const mockSLATargets = slaData ?? [];
+  const activeBreaches = activeBreachesData ?? [];
+  const mockOutages = outagesData ?? [];
 
   const recentOutages = useMemo(() => {
     const cutoff = new Date();
@@ -28,11 +35,11 @@ export const AvailabilityDashboard: React.FC = () => {
     return [...mockOutages]
       .filter((o) => new Date(o.startedAt) >= cutoff)
       .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
-  }, []);
+  }, [mockOutages]);
 
   const serviceList = useMemo(
     () => mockServices.map((s) => ({ id: s.id, name: s.name })),
-    [],
+    [mockServices],
   );
 
   const slaStats = useMemo(() => {
@@ -40,7 +47,7 @@ export const AvailabilityDashboard: React.FC = () => {
     const breached = mockSLATargets.filter((s) => s.status === 'breached').length;
     const atRisk = mockSLATargets.filter((s) => s.status === 'at_risk').length;
     return { meeting, breached, atRisk };
-  }, []);
+  }, [mockSLATargets]);
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -154,6 +161,9 @@ export const AvailabilityDashboard: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Connected monitoring sources */}
+      <ConnectedSourcesPanel domain="availability" />
 
       {/* Bottom: Recent Outages Timeline */}
       <Card>

@@ -6,15 +6,23 @@ import { CriticalMetricsHero } from '@/src/components/capacity/CriticalMetricsHe
 import { MetricCard } from '@/src/components/capacity/MetricCard';
 import { MetricExpandedDetail } from '@/src/components/capacity/MetricExpandedDetail';
 import { ScalingRecommendationCard } from '@/src/components/capacity/ScalingRecommendationCard';
-import { mockCapacityMetrics, getCriticalMetrics } from '@/src/mocks/capacityMetrics';
-import { mockCapacityThresholds } from '@/src/mocks/capacityThresholds';
-import { mockScalingRecommendations, getOpenRecommendations } from '@/src/mocks/scalingRecommendations';
+import { capacityService, useResource } from '@/src/services';
+import { ConnectedSourcesPanel } from '@/src/components/platform/ConnectedSourcesPanel';
 
 export default function CapacityDashboard() {
   const [expandedMetricId, setExpandedMetricId] = useState<string | null>(null);
 
-  const criticalMetrics = getCriticalMetrics();
-  const openRecs = getOpenRecommendations();
+  const { data: metricsData } = useResource(() => capacityService.metrics(), []);
+  const { data: criticalData } = useResource(() => capacityService.criticalMetrics(), []);
+  const { data: thresholdsData } = useResource(() => capacityService.thresholds(), []);
+  const { data: recsData } = useResource(() => capacityService.recommendations(), []);
+  const { data: openRecsData } = useResource(() => capacityService.openRecommendations(), []);
+
+  const mockCapacityMetrics = metricsData ?? [];
+  const criticalMetrics = criticalData ?? [];
+  const mockCapacityThresholds = thresholdsData ?? [];
+  const mockScalingRecommendations = recsData ?? [];
+  const openRecs = openRecsData ?? [];
 
   // Group open recommendations by priority
   const recsByPriority = (['urgent', 'high', 'medium', 'low'] as const).reduce(
@@ -156,6 +164,9 @@ export default function CapacityDashboard() {
               </Link>
             </CardBody>
           </Card>
+
+          {/* Card 2.5: Connected Sources */}
+          <ConnectedSourcesPanel domain="capacity" variant="rail" />
 
           {/* Card 3: Change Linkage */}
           <Card>

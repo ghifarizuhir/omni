@@ -16,17 +16,9 @@ import { ResolveIncidentModal } from '@/src/components/incidents/ResolveIncident
 import { UserPickerModal } from '@/src/components/incidents/UserPickerModal';
 import { LinkChangeModal } from '@/src/components/incidents/LinkChangeModal';
 import { LinkProblemModal } from '@/src/components/incidents/LinkProblemModal';
-import { getIncidentById, mockIncidents } from '@/src/mocks/incidents';
+import { incidentsService, cisService, useResource } from '@/src/services';
 import { Can, useCan, incidentResource } from '@/src/lib/rbac';
-import { mockIncidentTimelines } from '@/src/mocks/incidentTimelines';
-import { mockCIs } from '@/src/mocks/cis';
 import { Incident, IncidentTimelineEvent } from '@/src/types/incident';
-
-// ── Helper Functions ──────────────────────────────────────────────────────────
-
-function getCIName(publicId: string): string {
-  return mockCIs.find(ci => ci.publicId === publicId)?.name ?? publicId;
-}
 
 // ── Stand Down Modal ──────────────────────────────────────────────────────────
 
@@ -119,7 +111,20 @@ export const MajorIncidentWarRoom: React.FC = () => {
   const [resolveOpen, setResolveOpen] = useState(false);
 
   // Local state for timeline (so we can add new comms events)
-  const incident = incidentId ? getIncidentById(incidentId) : undefined;
+  const { data: incidentData, loading: incidentLoading } = useResource(
+    () => (incidentId ? incidentsService.get(incidentId) : Promise.resolve(null)),
+    [incidentId],
+  );
+  const incident = incidentData ?? undefined;
+  const { data: cisData } = useResource(() => cisService.list(), []);
+  const mockCIs = cisData ?? [];
+  const getCIName = (publicId: string): string =>
+    mockCIs.find(ci => ci.publicId === publicId)?.name ?? publicId;
+  const { data: timelineData } = useResource(
+    () => (incident ? incidentsService.timeline(incident.id) : Promise.resolve([] as IncidentTimelineEvent[])),
+    [incident?.id],
+  );
+
   const canUpdate = useCan('incident', 'update', {
     resource: incident ? incidentResource(incident) : undefined,
   });
@@ -134,11 +139,17 @@ export const MajorIncidentWarRoom: React.FC = () => {
   const [linkedProblemId, setLinkedProblemId] = useState<string | undefined>(incident?.linkedProblemId);
   const [commenters, setCommenters] = useState<string[]>([]);
 
-  const allEvents = incident
-    ? mockIncidentTimelines.filter(e => e.incidentId === incident.id)
-    : [];
+  useEffect(() => {
+    if (incident) {
+      setLinkedChangeIds(incident.linkedChangeIds ?? []);
+      setLinkedProblemId(incident.linkedProblemId);
+    }
+  }, [incident?.id]);
 
-  const [events, setEvents] = useState<IncidentTimelineEvent[]>(allEvents);
+  const [events, setEvents] = useState<IncidentTimelineEvent[]>([]);
+  useEffect(() => {
+    if (timelineData) setEvents(timelineData);
+  }, [timelineData]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -146,6 +157,10 @@ export const MajorIncidentWarRoom: React.FC = () => {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  if (incidentLoading) {
+    return <div className="fixed inset-0 z-50 bg-ois-bg flex items-center justify-center text-sm text-ois-text-subtle">Loading…</div>;
+  }
 
   if (!incident) {
     return (

@@ -13,10 +13,11 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import {
-  mockCIs,
-  mockMonitoringRules,
-  mockServices
-} from '../../mocks';
+  cisService,
+  monitoringRulesService,
+  servicesService,
+  useResource,
+} from '../../services';
 import { cn } from '../../lib/utils';
 import { CIType, ConfigurationItem } from '../../types/ci';
 import { MonitoringRule } from '../../types/monitoring';
@@ -31,6 +32,13 @@ interface CoverageRow {
 
 export const CoverageReport: React.FC = () => {
   const navigate = useNavigate();
+
+  const { data: cisData } = useResource(() => cisService.list(), []);
+  const { data: rulesData } = useResource(() => monitoringRulesService.list(), []);
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const mockCIs = cisData ?? [];
+  const mockMonitoringRules = rulesData ?? [];
+  const mockServices = servicesData ?? [];
 
   // --- State ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,7 +104,7 @@ export const CoverageReport: React.FC = () => {
         suggestedTemplates: templates[ci.type] || []
       };
     });
-  }, []);
+  }, [mockCIs, mockMonitoringRules]);
 
   const criticalGaps = useMemo(() => {
     return coverageData.filter(row => row.ci.criticality === 'critical' && row.rules.length === 0);
@@ -160,8 +168,8 @@ export const CoverageReport: React.FC = () => {
 
   // --- Derived insights ---
   const insightCriticalGaps = criticalGaps.length;
-  const noisyRules = useMemo(() => mockMonitoringRules.filter(r => r.signalToNoiseRatio != null && r.signalToNoiseRatio < 0.5), []);
-  const silentRules = useMemo(() => mockMonitoringRules.filter(r => r.totalFires30d === 0), []);
+  const noisyRules = useMemo(() => mockMonitoringRules.filter(r => r.signalToNoiseRatio != null && r.signalToNoiseRatio < 0.5), [mockMonitoringRules]);
+  const silentRules = useMemo(() => mockMonitoringRules.filter(r => r.totalFires30d === 0), [mockMonitoringRules]);
 
   // --- Helpers ---
   const getCIIcon = (type: CIType) => {

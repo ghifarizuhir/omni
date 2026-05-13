@@ -10,8 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { cn } from '../../lib/utils';
-import { getChangeById } from '../../mocks/changes';
-import { mockScalingRecommendations } from '../../mocks/scalingRecommendations';
+import { changesService, capacityService, useResource } from '../../services';
 import { ChangeStatusPill } from '../../components/changes/ChangeStatusPill';
 import { ChangeTypeChip } from '../../components/changes/ChangeTypeChip';
 import { RiskBadge } from '../../components/changes/RiskBadge';
@@ -23,6 +22,7 @@ import { RescheduleModal } from '../../components/changes/RescheduleModal';
 import { AuditTimeline, AuditEntry } from '../../components/common/AuditTimeline';
 import { formatDate, formatRelative } from '../../lib/format';
 import { Can, changeResource, useCan as useCanRbac } from '../../lib/rbac';
+import type { ChangeStatus } from '../../types/change';
 
 const RISK_COLOR: Record<string, string> = {
   low: '#12B76A', medium: '#F79009', high: '#F04438', critical: '#B42318',
@@ -48,10 +48,21 @@ const SectionCard: React.FC<{ title?: string; children: React.ReactNode; classNa
 export const ChangeDetail: React.FC = () => {
   const { changeId } = useParams<{ changeId: string }>();
   const navigate = useNavigate();
-  const rawChange = getChangeById(changeId ?? '');
-  const [change, setChange] = useState(rawChange ?? null);
+  const { data: rawChange, loading: changeLoading } = useResource(
+    () => changeId ? changesService.get(changeId).catch(() => null as any) : Promise.resolve(null as any),
+    [changeId],
+  );
+  const { data: scalingRecsData } = useResource(() => capacityService.recommendations(), []);
+  const mockScalingRecommendations = scalingRecsData ?? [];
+  const [change, setChange] = useState<typeof rawChange>(null);
+  React.useEffect(() => {
+    if (rawChange) setChange(rawChange);
+  }, [rawChange]);
 
-  const [changeStatus, setChangeStatus] = useState(change?.status ?? 'draft');
+  const [changeStatus, setChangeStatus] = useState<ChangeStatus>('draft');
+  React.useEffect(() => {
+    if (rawChange) setChangeStatus(rawChange.status);
+  }, [rawChange?.id]);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -66,6 +77,9 @@ export const ChangeDetail: React.FC = () => {
   });
   const canImplement = useCanRbac('change', 'implement', { resource: changeRes });
 
+  if (changeLoading && !change) {
+    return <div className="flex items-center justify-center py-24 text-sm text-ois-text-muted">Loading…</div>;
+  }
   if (!rawChange || !change) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">

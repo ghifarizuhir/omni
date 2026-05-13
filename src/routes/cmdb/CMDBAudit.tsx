@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { mockCIAuditEntries } from '@/src/mocks';
+import { cisService, useResource } from '@/src/services';
 import { CIAuditTimeline } from '../../components/cmdb/CIAuditTimeline';
 import { ExportAuditModal } from '../../components/cmdb/modals/ExportAuditModal';
 import { cn } from '../../lib/utils';
@@ -77,6 +77,9 @@ const CMDBAuditView: React.FC = () => {
     setDateRange(next.value);
   };
 
+  const { data: auditEntries } = useResource(() => cisService.audit(), []);
+  const mockCIAuditEntries = auditEntries ?? [];
+
   const filteredAudit = useMemo(() => {
     const now = Date.now();
     return mockCIAuditEntries.filter(entry => {
@@ -94,7 +97,7 @@ const CMDBAuditView: React.FC = () => {
 
       return matchesSearch && matchesAction && matchesSource && matchesDate;
     });
-  }, [search, actionFilter, sourceFilter, activeDateRange]);
+  }, [mockCIAuditEntries, search, actionFilter, sourceFilter, activeDateRange]);
 
   const isFiltered = search !== '' || actionFilter !== 'all' || sourceFilter !== 'all' || dateRange !== 'all';
   const totalCount = mockCIAuditEntries.length;

@@ -14,15 +14,14 @@ import {
   MoreVertical, ShieldCheck, TrendingUp, Siren,
 } from 'lucide-react';
 import {
-  mockServices,
-  mockIncidents,
-  mockUsers,
-  mockInboxItems,
-  mockChanges,
-  mockTeams
-} from '@/src/mocks';
-import { mockImprovements } from '@/src/mocks/improvements';
-import { getMajorIncidents, getActiveIncidents } from '@/src/mocks/incidents';
+  servicesService,
+  incidentsService,
+  usersService,
+  inboxService,
+  changesService,
+  improvementsService,
+  useResource,
+} from '../services';
 import { formatRelative, formatDate } from '@/src/lib/format';
 import { ServiceHealthStatus, Severity } from '../types';
 
@@ -40,8 +39,22 @@ const DASHBOARD_REFERENCE_DATE = new Date('2026-05-08');
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const activeIncidents = getActiveIncidents();
-  const majorIncidents = getMajorIncidents().filter(i => !['resolved', 'closed'].includes(i.status));
+
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const { data: activeIncidentsData } = useResource(() => incidentsService.active(), []);
+  const { data: majorIncidentsData } = useResource(() => incidentsService.major(), []);
+  const { data: usersData } = useResource(() => usersService.list(), []);
+  const { data: inboxData } = useResource(() => inboxService.items(), []);
+  const { data: changesData } = useResource(() => changesService.list(), []);
+  const { data: improvementsData } = useResource(() => improvementsService.list(), []);
+
+  const services = servicesData ?? [];
+  const activeIncidents = activeIncidentsData ?? [];
+  const majorIncidents = (majorIncidentsData ?? []).filter(i => !['resolved', 'closed'].includes(i.status));
+  const users = usersData ?? [];
+  const inboxItems = inboxData ?? [];
+  const changes = changesData ?? [];
+  const improvements = improvementsData ?? [];
 
   const [timeRange, setTimeRange]         = useState<DashboardTimeRange>('24h');
   const [timeRangeOpen, setTimeRangeOpen] = useState(false);
@@ -54,10 +67,10 @@ export const Dashboard: React.FC = () => {
       timeRange === '7d'  ? 7  * 86_400_000 :
                             30 * 86_400_000;
     const cutoff = new Date(DASHBOARD_REFERENCE_DATE.getTime() - ms);
-    return getActiveIncidents().filter(
+    return activeIncidents.filter(
       i => new Date(i.createdAt).getTime() >= cutoff.getTime()
     );
-  }, [timeRange, refreshCount]);
+  }, [timeRange, refreshCount, activeIncidents]);
 
   const filteredInboxItems = useMemo(() => {
     const ms =
@@ -65,10 +78,10 @@ export const Dashboard: React.FC = () => {
       timeRange === '7d'  ? 7  * 86_400_000 :
                             30 * 86_400_000;
     const cutoff = new Date(DASHBOARD_REFERENCE_DATE.getTime() - ms);
-    return mockInboxItems.filter(
+    return inboxItems.filter(
       item => new Date(item.receivedAt).getTime() >= cutoff.getTime()
     );
-  }, [timeRange, refreshCount]);
+  }, [timeRange, refreshCount, inboxItems]);
   
   // Section A Logic
   const getStatusColor = (status: ServiceHealthStatus) => {
@@ -100,7 +113,7 @@ export const Dashboard: React.FC = () => {
     return formatDate(dateStr, 'EEE MMM dd').toUpperCase();
   };
 
-  const upcomingChanges = mockChanges.filter((c) => {
+  const upcomingChanges = changes.filter((c) => {
     const now = new Date('2026-05-09T00:00:00Z');
     const limit = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const start = new Date(c.plannedStart);
@@ -186,7 +199,7 @@ export const Dashboard: React.FC = () => {
           </Link>
         </CardHeader>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-x divide-y divide-ois-border">
-          {mockServices.map(service => (
+          {services.map(service => (
             <div 
               key={service.id} 
               onClick={() => navigate('/availability')}
@@ -267,7 +280,7 @@ export const Dashboard: React.FC = () => {
                 {majorIncidents[0].title}
               </p>
               <p className="text-xs text-ois-text-muted mt-0.5">
-                IC: {mockUsers.find(u => u.id === majorIncidents[0].incidentCommander)?.name ?? '—'} · Started {formatRelative(majorIncidents[0].createdAt)}
+                IC: {users.find(u => u.id === majorIncidents[0].incidentCommander)?.name ?? '—'} · Started {formatRelative(majorIncidents[0].createdAt)}
               </p>
             </div>
             <Link
@@ -308,7 +321,7 @@ export const Dashboard: React.FC = () => {
                       </span>
                     </div>
                     <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-ois-text-muted font-medium">
-                      <span>Assigned to {mockUsers.find(u => u.id === incident.assigneeId)?.name}</span>
+                      <span>Assigned to {users.find(u => u.id === incident.assigneeId)?.name}</span>
                       <span className="flex items-center gap-1.5">
                          <div className="w-1 h-1 rounded-full bg-ois-border-strong" />
                          <span className="capitalize">{incident.status.replace('_', ' ')}</span>
@@ -469,7 +482,7 @@ export const Dashboard: React.FC = () => {
               <div className="flex items-center gap-2">
                 <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Improvement Pipeline</p>
                 <Badge variant="neutral" className="ml-1 bg-ois-surface-muted text-ois-text-muted">
-                  {mockImprovements.filter(i => i.status === 'in_progress').length} active
+                  {improvements.filter(i => i.status === 'in_progress').length} active
                 </Badge>
               </div>
               <Link to="/improvement/kanban" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
@@ -477,7 +490,7 @@ export const Dashboard: React.FC = () => {
               </Link>
             </CardHeader>
             <div className="divide-y divide-ois-border">
-              {mockImprovements
+              {improvements
                 .filter(i => i.status === 'in_progress')
                 .slice(0, 4)
                 .map(imp => (

@@ -7,7 +7,7 @@ import {
   Key, Laptop, Download, Mail, Users, Folder, SlidersHorizontal,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { mockCatalogItems, getPopularCatalogItems } from '@/src/mocks/catalogItems';
+import { requestsService, useResource } from '@/src/services';
 import { CatalogItem, CatalogCategory } from '@/src/types/request';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -302,7 +302,9 @@ export const Catalog: React.FC = () => {
     if (q) { setQuery(q); inputRef.current?.focus(); }
   }, []);
 
-  const allEnabled = mockCatalogItems.filter(i => i.enabled);
+  const { data: catalogData } = useResource(() => requestsService.catalog(), []);
+  const mockCatalogItems = catalogData ?? [];
+  const allEnabled = useMemo(() => mockCatalogItems.filter(i => i.enabled), [mockCatalogItems]);
 
   const categoryCounts = useMemo(() =>
     Object.fromEntries(
@@ -311,13 +313,16 @@ export const Catalog: React.FC = () => {
         allEnabled.filter(i => i.category === cat).length,
       ])
     ) as Record<CatalogCategory, number>,
-  []);
+  [allEnabled]);
 
-  const recommended = useMemo(() => getPopularCatalogItems(6), []);
+  const recommended = useMemo(
+    () => [...mockCatalogItems].sort((a, b) => b.popularity - a.popularity).slice(0, 6),
+    [mockCatalogItems]
+  );
 
   const results = useMemo(
     () => filterAndSort(allEnabled, query, catFilter, sort),
-    [query, catFilter, sort]
+    [allEnabled, query, catFilter, sort]
   );
 
   const isSearching = query.trim() !== '' || catFilter !== 'all';

@@ -1,20 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle, Users } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { ShiftCalendarGrid } from '@/src/components/oncall/ShiftCalendarGrid';
 import { RequestOverrideModal } from '@/src/components/oncall/RequestOverrideModal';
-import { mockOnCallSchedules, mockOnCallOverrides } from '@/src/mocks';
+import { onCallService, useResource } from '@/src/services';
 import { OnCallOverride } from '@/src/types/platform';
 import { cn } from '@/src/lib/utils';
 import { Can } from '@/src/lib/rbac';
 
 export const OnCallSchedule: React.FC = () => {
-  const [selectedScheduleId, setSelectedScheduleId] = useState(mockOnCallSchedules[0]?.id ?? '');
-  const [overrides, setOverrides] = useState<OnCallOverride[]>(mockOnCallOverrides);
+  const { data: schedulesData } = useResource(() => onCallService.schedules(), []);
+  const { data: overridesData } = useResource(() => onCallService.overrides(), []);
+  const schedules = schedulesData ?? [];
+  const [selectedScheduleId, setSelectedScheduleId] = useState('');
+  const [overrides, setOverrides] = useState<OnCallOverride[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const selectedSchedule = mockOnCallSchedules.find(s => s.id === selectedScheduleId) ?? mockOnCallSchedules[0];
+  useEffect(() => { if (overridesData) setOverrides(overridesData); }, [overridesData]);
+  useEffect(() => {
+    if (!selectedScheduleId && schedules.length > 0) setSelectedScheduleId(schedules[0].id);
+  }, [schedules, selectedScheduleId]);
+
+  const selectedSchedule = schedules.find(s => s.id === selectedScheduleId) ?? schedules[0];
 
   const handleNewOverride = (override: OnCallOverride) => {
     setOverrides(prev => [override, ...prev]);
@@ -35,7 +43,7 @@ export const OnCallSchedule: React.FC = () => {
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-xs font-semibold text-ois-text-muted uppercase tracking-wide">Schedule:</span>
         <div className="flex items-center gap-2 flex-wrap">
-          {mockOnCallSchedules.map(s => (
+          {schedules.map(s => (
             <button
               key={s.id}
               onClick={() => setSelectedScheduleId(s.id)}
@@ -104,7 +112,7 @@ export const OnCallSchedule: React.FC = () => {
       <RequestOverrideModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        schedules={mockOnCallSchedules}
+        schedules={schedules}
         onSubmit={handleNewOverride}
       />
     </div>

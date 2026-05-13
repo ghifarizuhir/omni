@@ -45,3 +45,4 @@ export * from './onCallOverrides';
 export * from './statusPageEntries';
 export * from './aiSessions';
 export * from './rbac';
+export * from './integrations';

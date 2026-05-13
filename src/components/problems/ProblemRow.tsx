@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { MoreVertical, BookOpen, Wrench, Activity } from 'lucide-react';
 import { Problem } from '@/src/types/problem';
-import { mockUsers } from '@/src/mocks/users';
+import { usersService, useResource } from '@/src/services';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { SeverityBadge } from '@/src/components/ui/StatusSeverityBadges';
 import { ProblemStatusPill } from './ProblemStatusPill';
@@ -15,7 +15,8 @@ interface ProblemRowProps {
 }
 
 export const ProblemRow: React.FC<ProblemRowProps> = ({ problem, onClick }) => {
-  const owner = mockUsers.find(u => u.id === problem.ownerId);
+  const { data: users } = useResource(() => usersService.list(), []);
+  const owner = (users ?? []).find(u => u.id === problem.ownerId);
 
   return (
     <tr

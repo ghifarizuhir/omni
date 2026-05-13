@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { cn } from '../../lib/utils';
-import { mockChanges } from '../../mocks';
+import { changesService, useResource } from '../../services';
 import { ChangeCalendar as CalendarView } from '../../components/changes/ChangeCalendar/ChangeCalendar';
 import { ChangeBoard } from '../../components/changes/ChangeBoard/ChangeBoard';
 import { ChangeRow } from '../../components/changes/ChangeRow';
@@ -52,6 +52,8 @@ export const ChangeCalendar: React.FC = () => {
   const [listRiskFilter, setListRiskFilter] = useState<RiskLevel | ''>('');
   const navigate = useNavigate();
   const { user, applications, teams, departments } = useCurrentUser();
+  const { data: changesData } = useResource(() => changesService.list(), []);
+  const mockChanges = changesData ?? [];
 
   const visibleChanges = useMemo(
     () => filterReadable(
@@ -59,7 +61,7 @@ export const ChangeCalendar: React.FC = () => {
       'change',
       mockChanges.map(c => ({ ...c, ...changeResource(c) })),
     ) as Change[],
-    [user, applications, teams, departments],
+    [mockChanges, user, applications, teams, departments],
   );
 
   const activeChanges = useMemo(

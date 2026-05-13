@@ -3,7 +3,7 @@ import { Search, Plus, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
-import { mockReleases } from '../../mocks';
+import { releasesService, useResource } from '../../services';
 import { ReleaseCard } from '../../components/releases/ReleaseCard';
 import { NewReleaseModal } from '../../components/releases/NewReleaseModal';
 import { Release, ReleaseStatus, ReleaseType } from '../../types/release';
@@ -40,13 +40,15 @@ export const ReleasesList: React.FC = () => {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { user, applications, teams, departments } = useCurrentUser();
+  const { data: releasesData } = useResource(() => releasesService.list(), []);
+  const mockReleases = releasesData ?? [];
   const allReleases = useMemo(
     () => filterReadable(
       user,
       'release',
       [...extraReleases, ...mockReleases].map(r => ({ ...r, ...releaseResource(r) })),
     ) as Release[],
-    [extraReleases, user, applications, teams, departments],
+    [extraReleases, mockReleases, user, applications, teams, departments],
   );
 
   const showToast = (message: string, variant: ToastState['variant'] = 'info') => {

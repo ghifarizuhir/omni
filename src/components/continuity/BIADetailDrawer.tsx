@@ -6,7 +6,7 @@ import { BIADependencyList } from './BIADependencyList';
 import { BIARiskList } from './BIARiskList';
 import { rtoClassMeta } from '@/src/lib/constants';
 import { BIAEntry } from '@/src/types/continuity';
-import { mockDRPlans } from '@/src/mocks/drPlans';
+import { continuityService, useResource } from '@/src/services';
 import { DRPlanStatusPill } from './DRPlanStatusPill';
 
 interface Props {
@@ -38,6 +38,9 @@ const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, ch
 );
 
 export const BIADetailDrawer: React.FC<Props> = ({ entry, onClose, onOpenDRPlan }) => {
+  const { data: plansData } = useResource(() => continuityService.drPlans(), []);
+  const mockDRPlans = plansData ?? [];
+
   if (!entry) return null;
 
   const rtoMeta = rtoClassMeta[entry.rtoClass];

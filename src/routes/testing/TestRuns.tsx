@@ -9,90 +9,13 @@ import {
   Radio,
   Building2,
 } from 'lucide-react';
-import { mockTestRuns, getActiveTestRuns } from '../../mocks/testRuns';
-import { mockTestCases } from '../../mocks/testCases';
+import { testingService, useResource } from '../../services';
 import { ActiveTestRunBanner } from '../../components/testing/ActiveTestRunBanner';
 import { TestRunCard } from '../../components/testing/TestRunCard';
 import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
 import { TestRunStatus } from '../../types/testing';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
-
-// ── Derived constants ────────────────────────────────────────────────────────
-
-const activeRuns = getActiveTestRuns();
-
-// Pass rate: exclude running runs from denominator
-const completedRuns = mockTestRuns.filter(
-  (r) => r.status !== 'running' && r.status !== 'pending'
-);
-const passedRuns = completedRuns.filter((r) => r.status === 'passed');
-const overallPassRate =
-  completedRuns.length > 0
-    ? Math.round((passedRuns.length / completedRuns.length) * 100)
-    : 0;
-
-const TOTAL_RUNS_30D = mockTestRuns.length; // treat all mock data as 30d window
-
-// Average duration (completed runs only, with durationSec)
-const runsWithDuration = completedRuns.filter((r) => r.durationSec != null);
-const avgDurationMin =
-  runsWithDuration.length > 0
-    ? Math.round(
-        runsWithDuration.reduce((acc, r) => acc + (r.durationSec ?? 0), 0) /
-          runsWithDuration.length /
-          60
-      )
-    : 0;
-
-// 7d pass rate (mock: use same runs subset)
-const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-const runs7d = completedRuns.filter(
-  (r) => r.createdAt && new Date(r.createdAt).getTime() >= sevenDaysAgo
-);
-const passed7d = runs7d.filter((r) => r.status === 'passed');
-const passRate7d =
-  runs7d.length > 0
-    ? Math.round((passed7d.length / runs7d.length) * 100)
-    : overallPassRate;
-
-// Flaky test cases
-const flakyCases = mockTestCases.filter(
-  (c) => c.flakeRate != null && c.flakeRate > 0.05
-);
-
-// Failed/partial runs in the last 7 days
-const failedRecent = completedRuns.filter(
-  (r) =>
-    (r.status === 'failed' || r.status === 'partial') &&
-    r.createdAt &&
-    new Date(r.createdAt).getTime() >= sevenDaysAgo
-);
-
-// Gather unique top failure cases from recent failures
-const topFailureCaseIds = new Set<string>();
-const topFailureCaseEntries: { publicId: string; title: string }[] = [];
-for (const run of failedRecent) {
-  for (const f of run.topFailures ?? []) {
-    if (!topFailureCaseIds.has(f.casePublicId)) {
-      topFailureCaseIds.add(f.casePublicId);
-      topFailureCaseEntries.push({ publicId: f.casePublicId, title: f.title });
-    }
-  }
-}
-
-// Quick filter counts
-const now24h = Date.now() - 24 * 60 * 60 * 1000;
-const failed24hCount = mockTestRuns.filter(
-  (r) =>
-    (r.status === 'failed' || r.status === 'partial') &&
-    r.createdAt &&
-    new Date(r.createdAt).getTime() >= now24h
-).length;
-
-const productionRunsCount = mockTestRuns.filter(
-  (r) => r.environment === 'production'
-).length;
 
 // Available filter values
 const ALL_STATUSES: TestRunStatus[] = [
@@ -133,6 +56,81 @@ const TRIGGER_CHIPS: { label: string; key: string }[] = [
 // ── Main component ────────────────────────────────────────────────────────────
 
 export const TestRuns: React.FC = () => {
+  const { data: runsData } = useResource(() => testingService.runs(), []);
+  const { data: activeRunsData } = useResource(() => testingService.activeRuns(), []);
+  const { data: casesData } = useResource(() => testingService.cases(), []);
+  const mockTestRuns = useMemo(() => runsData ?? [], [runsData]);
+  const activeRuns = useMemo(() => activeRunsData ?? [], [activeRunsData]);
+  const mockTestCases = useMemo(() => casesData ?? [], [casesData]);
+
+  const completedRuns = useMemo(
+    () => mockTestRuns.filter((r) => r.status !== 'running' && r.status !== 'pending'),
+    [mockTestRuns]
+  );
+  const passedRuns = useMemo(() => completedRuns.filter((r) => r.status === 'passed'), [completedRuns]);
+  const overallPassRate =
+    completedRuns.length > 0
+      ? Math.round((passedRuns.length / completedRuns.length) * 100)
+      : 0;
+  const TOTAL_RUNS_30D = mockTestRuns.length;
+  const runsWithDuration = useMemo(
+    () => completedRuns.filter((r) => r.durationSec != null),
+    [completedRuns]
+  );
+  const avgDurationMin =
+    runsWithDuration.length > 0
+      ? Math.round(
+          runsWithDuration.reduce((acc, r) => acc + (r.durationSec ?? 0), 0) /
+            runsWithDuration.length /
+            60
+        )
+      : 0;
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const runs7d = useMemo(
+    () => completedRuns.filter((r) => r.createdAt && new Date(r.createdAt).getTime() >= sevenDaysAgo),
+    [completedRuns, sevenDaysAgo]
+  );
+  const passed7d = useMemo(() => runs7d.filter((r) => r.status === 'passed'), [runs7d]);
+  const passRate7d =
+    runs7d.length > 0
+      ? Math.round((passed7d.length / runs7d.length) * 100)
+      : overallPassRate;
+  const flakyCases = useMemo(
+    () => mockTestCases.filter((c) => c.flakeRate != null && c.flakeRate > 0.05),
+    [mockTestCases]
+  );
+  const failedRecent = useMemo(
+    () =>
+      completedRuns.filter(
+        (r) =>
+          (r.status === 'failed' || r.status === 'partial') &&
+          r.createdAt &&
+          new Date(r.createdAt).getTime() >= sevenDaysAgo
+      ),
+    [completedRuns, sevenDaysAgo]
+  );
+  const topFailureCaseEntries = useMemo(() => {
+    const ids = new Set<string>();
+    const entries: { publicId: string; title: string }[] = [];
+    for (const run of failedRecent) {
+      for (const f of run.topFailures ?? []) {
+        if (!ids.has(f.casePublicId)) {
+          ids.add(f.casePublicId);
+          entries.push({ publicId: f.casePublicId, title: f.title });
+        }
+      }
+    }
+    return entries;
+  }, [failedRecent]);
+  const now24h = Date.now() - 24 * 60 * 60 * 1000;
+  const failed24hCount = mockTestRuns.filter(
+    (r) =>
+      (r.status === 'failed' || r.status === 'partial') &&
+      r.createdAt &&
+      new Date(r.createdAt).getTime() >= now24h
+  ).length;
+  const productionRunsCount = mockTestRuns.filter((r) => r.environment === 'production').length;
+
   // Filter state
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState<string>('');
@@ -164,11 +162,11 @@ export const TestRuns: React.FC = () => {
   // Available dropdown options
   const allPlans = useMemo(
     () => unique(mockTestRuns.map((r) => r.testPlanName)).sort(),
-    []
+    [mockTestRuns]
   );
   const allEnvironments = useMemo(
     () => unique(mockTestRuns.map((r) => r.environment)).sort(),
-    []
+    [mockTestRuns]
   );
 
   // Status chip counts
@@ -178,7 +176,7 @@ export const TestRuns: React.FC = () => {
       counts[s] = mockTestRuns.filter((r) => r.status === s).length;
     }
     return counts;
-  }, []);
+  }, [mockTestRuns]);
 
   const triggerCounts = useMemo(() => {
     return {
@@ -189,7 +187,7 @@ export const TestRuns: React.FC = () => {
         .length,
       manual: mockTestRuns.filter((r) => r.triggeredBy === 'manual').length,
     };
-  }, []);
+  }, [mockTestRuns]);
 
   // Derived filtered + sorted list
   const filteredRuns = useMemo(() => {
@@ -253,6 +251,9 @@ export const TestRuns: React.FC = () => {
 
     return list;
   }, [
+    mockTestRuns,
+    flakyCases,
+    now24h,
     search,
     planFilter,
     envFilter,

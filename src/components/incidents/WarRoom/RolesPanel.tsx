@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Users, UserPlus } from 'lucide-react';
 import { Incident } from '@/src/types/incident';
-import { mockUsers } from '@/src/mocks/users';
+import { usersService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 interface RolesPanelProps {
@@ -29,6 +29,8 @@ const avatarColor = (userId: string) => {
 };
 
 export const RolesPanel: React.FC<RolesPanelProps> = ({ incident }) => {
+  const { data: usersData } = useResource(() => usersService.list(), []);
+  const mockUsers = usersData ?? [];
   const [roles, setRoles] = useState<Role[]>([
     { key: 'ic', label: 'Incident Commander', userId: incident.incidentCommander ?? null },
     { key: 'ops', label: 'Operations Lead', userId: incident.assigneeId ?? null },

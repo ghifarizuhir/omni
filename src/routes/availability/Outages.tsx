@@ -2,8 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, Download, X, Check, Minus } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { mockOutages } from '@/src/mocks/outages';
-import { mockServices } from '@/src/mocks/services';
+import { availabilityService, servicesService, useResource } from '@/src/services';
 import { Outage, OutageType } from '@/src/types';
 import { formatRelative } from '@/src/lib/format';
 import { Card, CardBody } from '@/src/components/ui/Card';
@@ -36,6 +35,11 @@ export const Outages: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialService = searchParams.get('service') ?? 'all';
 
+  const { data: outagesData } = useResource(() => availabilityService.outages(), []);
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const mockOutages = outagesData ?? [];
+  const mockServices = servicesData ?? [];
+
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [serviceFilter, setServiceFilter] = useState(initialService);
@@ -45,7 +49,7 @@ export const Outages: React.FC = () => {
 
   const serviceOptions = useMemo(
     () => [{ id: 'all', name: 'All Services' }, ...mockServices.map((s) => ({ id: s.id, name: s.name }))],
-    [],
+    [mockServices],
   );
 
   const sortedOutages = useMemo(
@@ -53,7 +57,7 @@ export const Outages: React.FC = () => {
       [...mockOutages].sort(
         (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
       ),
-    [],
+    [mockOutages],
   );
 
   const filteredOutages = useMemo(() => {

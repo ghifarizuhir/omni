@@ -8,10 +8,9 @@ import { RollbackModal } from '../../components/deployments/DeploymentDetail/Rol
 import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { getDeploymentById } from '../../mocks/deployments';
+import { deploymentsService, testingService, useResource } from '../../services';
+import { Deployment } from '../../types/deployment';
 import { useCan, deploymentResource } from '@/src/lib/rbac';
-import { getLogsByDeploymentId } from '../../mocks/deploymentLogs';
-import { mockTestRuns } from '../../mocks/testRuns';
 import { formatDate, formatRelative } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import { Modal } from '../../components/ui/Modal';
@@ -87,7 +86,7 @@ function StickyActionBar({
   onRedeploy,
   canDeploy,
 }: {
-  deployment: ReturnType<typeof getDeploymentById>;
+  deployment: Deployment | undefined;
   onRollback: () => void;
   onRedeploy: () => void;
   canDeploy: boolean;
@@ -200,14 +199,24 @@ export const DeploymentDetail: React.FC = () => {
   const [redeployOpen, setRedeployOpen] = useState(false);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
 
-  const deployment = getDeploymentById(deploymentId ?? '');
+  const { data: deployments, loading } = useResource(() => deploymentsService.list(), []);
+  const deployment = (deployments ?? []).find(d => d.id === deploymentId || d.publicId === deploymentId);
   const canDeploy = useCan('release', 'implement', {
     resource: deployment ? deploymentResource(deployment) : undefined,
   });
-  const logs = getLogsByDeploymentId(deployment?.id ?? '');
-  const linkedTestRun = mockTestRuns.find(
+  const { data: logsData } = useResource(
+    () => (deployment ? deploymentsService.logs(deployment.id) : Promise.resolve([])),
+    [deployment?.id],
+  );
+  const logs = logsData ?? [];
+  const { data: testRunsData } = useResource(() => testingService.runs(), []);
+  const linkedTestRun = (testRunsData ?? []).find(
     (r) => r.linkedDeploymentPublicId === deployment?.publicId,
   );
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[40vh] text-sm text-ois-text-muted">Loading…</div>;
+  }
 
   if (!deployment) {
     return (

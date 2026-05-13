@@ -1,8 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Home, BookOpen, Inbox } from 'lucide-react';
-import { mockCatalogItems } from '@/src/mocks/catalogItems';
-import { mockServiceRequests } from '@/src/mocks/serviceRequests';
+import { requestsService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 const TABS = [
@@ -12,6 +11,10 @@ const TABS = [
 ];
 
 export const PortalLayout: React.FC = () => {
+  const { data: catalogData } = useResource(() => requestsService.catalog(), []);
+  const { data: requestsData } = useResource(() => requestsService.list(), []);
+  const mockCatalogItems = catalogData ?? [];
+  const mockServiceRequests = requestsData ?? [];
   const catalogCount = mockCatalogItems.length;
 
   const pendingUser = mockServiceRequests.filter(r => r.status === 'pending_user').length;

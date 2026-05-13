@@ -1,9 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Plus, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { mockSLATargets } from '@/src/mocks/slaTargets';
-import { mockSLABreaches } from '@/src/mocks/slaBreaches';
-import { mockServices } from '@/src/mocks/services';
+import { availabilityService, servicesService, useResource } from '@/src/services';
 import { SLACard as SLACardBase } from '@/src/components/availability/SLACard';
 import { Button } from '@/src/components/ui/Button';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
@@ -28,9 +26,16 @@ export const SLATargets: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [serviceFilter, setServiceFilter] = useState('all');
 
+  const { data: slaData } = useResource(() => availabilityService.slaTargets(), []);
+  const { data: breachesData } = useResource(() => availabilityService.slaBreaches(), []);
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const mockSLATargets = slaData ?? [];
+  const mockSLABreaches = breachesData ?? [];
+  const mockServices = servicesData ?? [];
+
   const serviceOptions = useMemo(
     () => [{ id: 'all', name: 'All Services' }, ...mockServices.map((s) => ({ id: s.id, name: s.name }))],
-    [],
+    [mockServices],
   );
 
   const filteredSLAs = useMemo(() => {
@@ -43,7 +48,7 @@ export const SLATargets: React.FC = () => {
       const matchesService = serviceFilter === 'all' || sla.serviceId === serviceFilter;
       return matchesSearch && matchesStatus && matchesService;
     });
-  }, [searchQuery, statusFilter, serviceFilter]);
+  }, [mockSLATargets, searchQuery, statusFilter, serviceFilter]);
 
   const getBreachForSLA = (slaId: string) =>
     mockSLABreaches.find((b) => b.slaId === slaId && b.status === 'active');

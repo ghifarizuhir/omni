@@ -3,8 +3,7 @@ import { Button } from '@/src/components/ui/Button';
 import { ThresholdRow } from '@/src/components/capacity/ThresholdRow';
 import { ThresholdSeverityPill } from '@/src/components/capacity/ThresholdSeverityPill';
 import { NewThresholdModal } from '@/src/components/capacity/NewThresholdModal';
-import { mockCapacityMetrics } from '@/src/mocks/capacityMetrics';
-import { mockCapacityThresholds } from '@/src/mocks/capacityThresholds';
+import { capacityService, useResource } from '@/src/services';
 import { CapacityThreshold, CapacityThresholdSeverity } from '@/src/types/capacity';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { useToast, ToastView } from '@/src/lib/useToast';
@@ -22,9 +21,14 @@ export default function CapacityThresholds() {
   const [extraThresholds, setExtraThresholds] = useState<CapacityThreshold[]>([]);
   const { toast, showToast } = useToast();
 
+  const { data: metricsData } = useResource(() => capacityService.metrics(), []);
+  const { data: thresholdsData } = useResource(() => capacityService.thresholds(), []);
+  const mockCapacityMetrics = metricsData ?? [];
+  const mockCapacityThresholds = thresholdsData ?? [];
+
   const allThresholds = useMemo(
     () => [...extraThresholds, ...mockCapacityThresholds],
-    [extraThresholds],
+    [extraThresholds, mockCapacityThresholds],
   );
 
   const handleCreated = (threshold: CapacityThreshold) => {

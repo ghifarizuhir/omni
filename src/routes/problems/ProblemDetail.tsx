@@ -8,12 +8,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatDate, formatRelative } from '@/src/lib/format';
-import { getProblemById } from '@/src/mocks/problems';
-import { getArticleById } from '@/src/mocks/kbArticles';
-import { mockIncidents } from '@/src/mocks/incidents';
-import { mockUsers } from '@/src/mocks/users';
-import { mockServices } from '@/src/mocks/services';
-import { mockCIs } from '@/src/mocks/cis';
+import {
+  problemsService, incidentsService, changesService,
+  servicesService, usersService, improvementsService,
+  knowledgeService, useResource,
+} from '@/src/services';
 import { Problem, ProblemStatus } from '@/src/types/problem';
 import { problemStatusMeta } from '@/src/lib/constants';
 import { Can, problemResource } from '@/src/lib/rbac';
@@ -26,10 +25,8 @@ import { ProblemSourceChip } from '@/src/components/problems/ProblemSourceChip';
 import { KnownErrorCard } from '@/src/components/problems/KnownErrorCard';
 import { PromoteToKnownErrorModal } from '@/src/components/problems/PromoteToKnownErrorModal';
 import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
-import { getChangeById } from '@/src/mocks/changes';
 import { ChangeStatusPill } from '@/src/components/changes/ChangeStatusPill';
 import { RiskBadge } from '@/src/components/changes/RiskBadge';
-import { mockImprovements } from '@/src/mocks/improvements';
 import { ImprovementStatusPill } from '@/src/components/improvement/ImprovementStatusPill';
 import { LinkIncidentsModal } from '@/src/components/problems/LinkIncidentsModal';
 import { LinkChangeModal } from '@/src/components/incidents/LinkChangeModal';
@@ -40,8 +37,13 @@ const PRIORITY_STRIPE: Record<string, string> = {
   P1: '#B42318', P2: '#DC6803', P3: '#F79009', P4: '#027A48',
 };
 
-function getUserById(id?: string) {
-  return id ? mockUsers.find(u => u.id === id) : undefined;
+function useUsers() {
+  const { data } = useResource(() => usersService.list(), []);
+  return data ?? [];
+}
+
+function findUserById(users: ReturnType<typeof useUsers>, id?: string) {
+  return id ? users.find(u => u.id === id) : undefined;
 }
 
 // ── Sidebar card ─────────────────────────────────────────────────────────────
@@ -67,6 +69,7 @@ const MetaRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label
 // ── RCA Summary view (inline in RCA tab) ─────────────────────────────────────
 
 const RCASummaryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
+  const users = useUsers();
   const rca = problem.rca;
   if (!rca) {
     return (
@@ -163,7 +166,7 @@ const RCASummaryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
               </thead>
               <tbody className="divide-y divide-ois-border">
                 {rca.recommendedActions.map((action, i) => {
-                  const owner = getUserById(action.owner);
+                  const owner = findUserById(users, action.owner);
                   return (
                     <tr key={i} className="hover:bg-ois-surface-muted/30 transition-colors">
                       <td className="px-3 py-2.5">
@@ -211,7 +214,8 @@ const RCASummaryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
 // ── Related incidents tab ─────────────────────────────────────────────────────
 
 const RelatedIncidentsTab: React.FC<{ problem: Problem; onLinkIncidents: () => void }> = ({ problem, onLinkIncidents }) => {
-  const incidents = mockIncidents.filter(i =>
+  const { data: allIncidents } = useResource(() => incidentsService.list(), []);
+  const incidents = (allIncidents ?? []).filter(i =>
     problem.relatedIncidentIds.includes(i.publicId)
   );
 
@@ -283,9 +287,9 @@ const RelatedIncidentsTab: React.FC<{ problem: Problem; onLinkIncidents: () => v
 // ── Pattern Summary ───────────────────────────────────────────────────────────
 
 const PatternSummaryCard: React.FC<{ problem: Problem }> = ({ problem }) => {
+  const { data: allIncidents } = useResource(() => incidentsService.list(), []);
+  const incidents = (allIncidents ?? []).filter(i => problem.relatedIncidentIds.includes(i.publicId));
   if (!problem.firstIncidentDate && !problem.lastIncidentDate) return null;
-
-  const incidents = mockIncidents.filter(i => problem.relatedIncidentIds.includes(i.publicId));
   const resolved = incidents.filter(i => i.resolution?.resolvedAt);
   const avgMttr = resolved.length > 0
     ? resolved.reduce((sum, inc) => sum + (new Date(inc.resolution!.resolvedAt).getTime() - new Date(inc.createdAt).getTime()) / 60_000, 0) / resolved.length
@@ -439,9 +443,25 @@ export const ProblemDetail: React.FC = () => {
   const { problemId } = useParams<{ problemId: string }>();
   const navigate = useNavigate();
 
-  const [problem, setProblem] = useState<Problem | undefined>(
-    problemId ? getProblemById(problemId) : undefined
+  const { data: loadedProblem, loading: problemLoading } = useResource(
+    () => problemId ? problemsService.get(problemId).catch(() => null as any) : Promise.resolve(null as any),
+    [problemId],
   );
+  const [problem, setProblem] = useState<Problem | undefined>(undefined);
+  React.useEffect(() => {
+    if (loadedProblem) setProblem(loadedProblem);
+  }, [loadedProblem]);
+  const users = useUsers();
+  const { data: services } = useResource(() => servicesService.list(), []);
+  const mockServices = services ?? [];
+  const { data: changes } = useResource(() => changesService.list(), []);
+  const getChangeById = (id: string) => (changes ?? []).find(c => c.id === id || c.publicId === id);
+  const { data: improvements } = useResource(() => improvementsService.list(), []);
+  const mockImprovements = improvements ?? [];
+  const { data: allIncidentsForCounts } = useResource(() => incidentsService.list(), []);
+  const { data: kbArticles } = useResource(() => knowledgeService.articles(), []);
+  const getArticleById = (id: string) =>
+    (kbArticles ?? []).find(a => a.id === id || a.publicId === id);
   const [activeTab, setActiveTab] = useState('overview');
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
@@ -449,6 +469,10 @@ export const ProblemDetail: React.FC = () => {
   const [linkChangeOpen, setLinkChangeOpen] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState('');
+
+  if (problemLoading && !problem) {
+    return <div className="flex items-center justify-center py-24 text-sm text-ois-text-muted">Loading…</div>;
+  }
 
   if (!problem) {
     return (
@@ -460,7 +484,7 @@ export const ProblemDetail: React.FC = () => {
     );
   }
 
-  const owner = getUserById(problem.ownerId);
+  const owner = findUserById(users, problem.ownerId);
   const affectedServices = problem.affectedServiceIds.map(id =>
     mockServices.find(s => s.id === id)?.name ?? id
   );
@@ -479,7 +503,7 @@ export const ProblemDetail: React.FC = () => {
   };
 
   const stripeColor = PRIORITY_STRIPE[problem.severity] ?? '#475467';
-  const incidents = mockIncidents.filter(i => problem.relatedIncidentIds.includes(i.publicId));
+  const incidents = (allIncidentsForCounts ?? []).filter(i => problem.relatedIncidentIds.includes(i.publicId));
 
   const TABS = [
     { id: 'overview',    label: 'Overview' },

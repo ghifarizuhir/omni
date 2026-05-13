@@ -1,12 +1,8 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ListChecks, KanbanSquare, Grid3x3, DollarSign } from 'lucide-react';
-import {
-  mockImprovements,
-  getTotalEstimatedBenefitUSD,
-  getTotalActualBenefitUSD,
-  TODAY,
-} from '@/src/mocks/improvements';
+import { improvementsService, useResource } from '@/src/services';
+import { TODAY } from '@/src/mocks/improvements';
 import { formatBenefitUSD } from '@/src/lib/constants';
 import { cn } from '@/src/lib/utils';
 
@@ -18,8 +14,10 @@ const TABS = [
 ];
 
 export const ImprovementsLayout: React.FC = () => {
-  const totalEstimated = getTotalEstimatedBenefitUSD();
-  const totalActual = getTotalActualBenefitUSD();
+  const { data } = useResource(() => improvementsService.list(), []);
+  const mockImprovements = data ?? [];
+  const totalEstimated = mockImprovements.reduce((s, i) => s + (i.estimatedBenefit?.annualValueUSD ?? 0), 0);
+  const totalActual = mockImprovements.reduce((s, i) => s + (i.actualBenefitUSD ?? 0), 0);
   const inProgressCount = mockImprovements.filter(i => i.status === 'in_progress').length;
   const activeCount = mockImprovements.filter(
     i => !['completed', 'cancelled'].includes(i.status),

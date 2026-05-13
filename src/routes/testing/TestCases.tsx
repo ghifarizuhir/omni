@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, RotateCcw, MoreVertical, CheckCircle2, XCircle, MinusCircle, Circle, Loader2 } from 'lucide-react';
-import { mockTestCases } from '../../mocks/testCases';
+import { testingService, useResource } from '../../services';
 import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
 import { formatRelative } from '../../lib/format';
@@ -8,10 +8,6 @@ import { testCasePriorityMeta, testStepResultMeta } from '../../lib/constants';
 import { TestCase, TestCaseType, TestCasePriority, TestStepResultStatus } from '../../types/testing';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import { Can } from '@/src/lib/rbac';
-
-// ── Derived stats from mock data ─────────────────────────────────────────────
-
-const totalCases = mockTestCases.length;
 
 // ── Type chip colours ────────────────────────────────────────────────────────
 
@@ -55,6 +51,10 @@ function countByType(cases: TestCase[], type: TestCaseType): number {
 // ── Main component ───────────────────────────────────────────────────────────
 
 export const TestCases: React.FC = () => {
+  const { data: casesData } = useResource(() => testingService.cases(), []);
+  const mockTestCases = useMemo(() => casesData ?? [], [casesData]);
+  const totalCases = mockTestCases.length;
+
   // Filter state
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -71,7 +71,7 @@ export const TestCases: React.FC = () => {
   // Collect all plan IDs from mock data
   const allPlans = useMemo(
     () => unique(mockTestCases.flatMap((c) => c.containedInPlans)).sort(),
-    [],
+    [mockTestCases],
   );
 
   // Filtered + sorted cases
@@ -115,7 +115,7 @@ export const TestCases: React.FC = () => {
       if (pa !== pb) return pa - pb;
       return a.title.localeCompare(b.title);
     });
-  }, [search, typeFilter, priorityFilter, planFilter, automatedFilter, statusFilter, priorityChip, typeChip, qualityChip]);
+  }, [mockTestCases, search, typeFilter, priorityFilter, planFilter, automatedFilter, statusFilter, priorityChip, typeChip, qualityChip]);
 
   function handleReset() {
     setSearch('');

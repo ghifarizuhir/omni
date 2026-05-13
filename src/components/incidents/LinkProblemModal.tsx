@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { Modal } from '@/src/components/ui/Modal';
 import { Button } from '@/src/components/ui/Button';
-import { mockProblems } from '@/src/mocks/problems';
+import { problemsService, useResource } from '@/src/services';
 import { problemStatusMeta } from '@/src/lib/constants';
 import { cn } from '@/src/lib/utils';
 import { ProblemStatus } from '@/src/types/problem';
@@ -18,8 +18,9 @@ export const LinkProblemModal: React.FC<Props> = ({ isOpen, onClose, currentProb
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedPublicId, setSelectedPublicId] = useState<string | null>(null);
+  const { data: problems } = useResource(() => problemsService.list(), []);
 
-  const filtered = mockProblems.filter(prb => {
+  const filtered = (problems ?? []).filter(prb => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return prb.publicId.toLowerCase().includes(q) || prb.title.toLowerCase().includes(q);

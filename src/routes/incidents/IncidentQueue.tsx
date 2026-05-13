@@ -6,9 +6,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
-import { mockIncidents, getMajorIncidents, getActiveIncidents } from '@/src/mocks/incidents';
-import { mockUsers } from '@/src/mocks/users';
-import { mockServices } from '@/src/mocks/services';
+import { incidentsService, usersService, servicesService, useResource } from '@/src/services';
 import { Incident, IncidentStatus, IncidentPriority } from '@/src/types/incident';
 import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
 import { IncidentPriorityBadge } from '@/src/components/incidents/IncidentPriorityBadge';
@@ -39,18 +37,18 @@ const STATUS_FILTERS: { value: IncidentStatus | 'all'; label: string }[] = [
 
 const PRIORITY_ORDER: Record<IncidentPriority, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
 
-function getAssigneeName(id?: string) {
+function getAssigneeName(users: { id: string; name: string }[], id?: string) {
   if (!id) return null;
-  return mockUsers.find(u => u.id === id)?.name ?? null;
+  return users.find(u => u.id === id)?.name ?? null;
 }
 
 function getAssigneeInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-function getServiceName(ids: string[]) {
+function getServiceName(services: { id: string; name: string }[], ids: string[]) {
   if (!ids.length) return '—';
-  return mockServices.find(s => ids.includes(s.id))?.name ?? ids[0];
+  return services.find(s => ids.includes(s.id))?.name ?? ids[0];
 }
 
 // ── Quick filter chip definitions ─────────────────────────────────────────
@@ -86,8 +84,17 @@ export const IncidentQueue: React.FC = () => {
 
   const { user, applications, teams, departments } = useCurrentUser();
 
+  const { data: incidentsData } = useResource(() => incidentsService.list(), []);
+  const { data: usersData } = useResource(() => usersService.list(), []);
+  const { data: servicesData } = useResource(() => servicesService.list(), []);
+  const mockUsers = usersData ?? [];
+  const mockServices = servicesData ?? [];
+
   // mutable incidents state — filtered to what the current user can read
-  const [allIncidents, setAllIncidents] = useState(() => [...mockIncidents]);
+  const [allIncidents, setAllIncidents] = useState<Incident[]>([]);
+  useEffect(() => {
+    if (incidentsData) setAllIncidents([...incidentsData]);
+  }, [incidentsData]);
   const incidents = useMemo(
     () => filterReadable(
       user,
@@ -125,7 +132,10 @@ export const IncidentQueue: React.FC = () => {
   }, []);
 
   // major incidents
-  const majorActive = useMemo(() => getMajorIncidents().filter(i => i.status !== 'closed'), []);
+  const majorActive = useMemo(
+    () => (incidentsData ?? []).filter(i => i.isMajor && i.status !== 'closed'),
+    [incidentsData],
+  );
 
   // derived counts
   const totalCount = incidents.length;
@@ -181,7 +191,7 @@ export const IncidentQueue: React.FC = () => {
       list = list.filter(i =>
         i.publicId.toLowerCase().includes(q) ||
         i.title.toLowerCase().includes(q) ||
-        (i.assigneeId && getAssigneeName(i.assigneeId)?.toLowerCase().includes(q)) ||
+        (i.assigneeId && getAssigneeName(mockUsers, i.assigneeId)?.toLowerCase().includes(q)) ||
         i.affectedCIPublicIds.some(c => c.toLowerCase().includes(q))
       );
     }
@@ -194,7 +204,8 @@ export const IncidentQueue: React.FC = () => {
     });
 
     return list;
-  }, [incidents, search, statusFilter, priorityFilter, quickFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incidents, search, statusFilter, priorityFilter, quickFilter, usersData]);
 
   // selection helpers
   const allSelected = filtered.length > 0 && filtered.every(i => selectedIds.has(i.id));
@@ -236,8 +247,8 @@ export const IncidentQueue: React.FC = () => {
     const selected = incidents.filter(i => selectedIds.has(i.id));
     const headers = ['ID', 'Title', 'Priority', 'Status', 'Assignee', 'Service', 'Created', 'Tags'];
     const rows = selected.map(inc => {
-      const assigneeName = mockUsers.find(u => u.id === inc.assigneeId)?.name ?? '';
-      const serviceName = inc.affectedServiceIds.map(id => mockServices.find(s => s.id === id)?.name ?? id).join('; ');
+      const assigneeName = mockUsers.find((u: { id: string; name: string }) => u.id === inc.assigneeId)?.name ?? '';
+      const serviceName = inc.affectedServiceIds.map(id => mockServices.find((s: { id: string; name: string }) => s.id === id)?.name ?? id).join('; ');
       return [inc.publicId, `"${inc.title.replace(/"/g, '""')}"`, inc.priority, inc.status, `"${assigneeName}"`, `"${serviceName}"`, inc.createdAt, `"${inc.tags.join(', ')}"`].join(',');
     });
     const csv = [headers.join(','), ...rows].join('\n');
@@ -468,6 +479,8 @@ export const IncidentQueue: React.FC = () => {
                 <IncidentRow
                   key={incident.id}
                   incident={incident}
+                  users={mockUsers}
+                  services={mockServices}
                   selected={selectedIds.has(incident.id)}
                   onSelect={() => toggleOne(incident.id)}
                   onClick={() => navigate(`/incidents/${incident.publicId}`)}
@@ -534,6 +547,8 @@ const QuickFilterChip: React.FC<{ label: string; active: boolean; onClick: () =>
 
 interface IncidentRowProps {
   incident: Incident;
+  users: { id: string; name: string }[];
+  services: { id: string; name: string }[];
   selected: boolean;
   onSelect: () => void;
   onClick: () => void;
@@ -544,10 +559,10 @@ interface IncidentRowProps {
 }
 
 const IncidentRow: React.FC<IncidentRowProps> = ({
-  incident, selected, onSelect, onClick, menuOpen, onMenuOpen, onMenuClose, onAssignToMe
+  incident, users, services, selected, onSelect, onClick, menuOpen, onMenuOpen, onMenuClose, onAssignToMe
 }) => {
-  const assigneeName = getAssigneeName(incident.assigneeId);
-  const serviceName = getServiceName(incident.affectedServiceIds);
+  const assigneeName = getAssigneeName(users, incident.assigneeId);
+  const serviceName = getServiceName(services, incident.affectedServiceIds);
   const visibleTags = incident.tags.slice(0, 2);
   const extraTags = incident.tags.length - visibleTags.length;
 

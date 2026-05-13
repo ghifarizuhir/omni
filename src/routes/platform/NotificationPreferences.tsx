@@ -5,7 +5,7 @@ import { cn } from '@/src/lib/utils';
 import { Button } from '@/src/components/ui/Button';
 import { QuietHoursForm } from '@/src/components/platform/QuietHoursForm';
 import { PreferencesTable } from '@/src/components/platform/PreferencesTable';
-import { mockNotificationPreferences, mockQuietHours } from '@/src/mocks/notificationPreferences';
+import { notificationsService, useResource } from '@/src/services';
 import { NotificationPreference, QuietHoursConfig } from '@/src/types/platform';
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -82,9 +82,14 @@ function ChannelRow({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NotificationPreferences() {
-  const [preferences, setPreferences] = useState<NotificationPreference[]>(mockNotificationPreferences);
-  const [quietHours, setQuietHours] = useState<QuietHoursConfig>(mockQuietHours);
+  const { data: prefData } = useResource(() => notificationsService.preferences(), []);
+  const { data: quietData } = useResource(() => notificationsService.quietHours(), []);
+  const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
+  const [quietHours, setQuietHours] = useState<QuietHoursConfig | null>(null);
   const [toasts, setToasts] = useState<ToastState[]>([]);
+
+  useEffect(() => { if (prefData) setPreferences(prefData); }, [prefData]);
+  useEffect(() => { if (quietData) setQuietHours(quietData); }, [quietData]);
 
   let nextId = 0;
 
@@ -137,7 +142,7 @@ export default function NotificationPreferences() {
           title="Quiet Hours"
           subtitle="Suppress non-urgent notifications during the hours you specify."
         >
-          <QuietHoursForm initial={quietHours} onSave={handleSaveQuietHours} />
+          {quietHours && <QuietHoursForm initial={quietHours} onSave={handleSaveQuietHours} />}
         </SectionCard>
 
         {/* Topic Notifications */}

@@ -1,8 +1,8 @@
 import React from 'react';
 import { User, Settings, LogOut, Moon, UserCircle } from 'lucide-react';
-import { currentUser } from '@/src/mocks';
 import { cn } from '@/src/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { usersService, useResource } from '@/src/services';
 
 interface UserMenuProps {
   onClose: () => void;
@@ -10,6 +10,7 @@ interface UserMenuProps {
 
 export const UserMenu: React.FC<UserMenuProps> = ({ onClose }) => {
   const navigate = useNavigate();
+  const { data: currentUser } = useResource(() => usersService.current(), []);
 
   const handleLogout = () => {
     navigate('/login');
@@ -21,8 +22,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onClose }) => {
       onMouseLeave={onClose}
     >
       <div className="px-4 py-3 border-b border-ois-border mb-1">
-        <div className="font-bold text-ois-text">{currentUser.name}</div>
-        <div className="text-xs text-ois-text-subtle truncate">{currentUser.email}</div>
+        <div className="font-bold text-ois-text">{currentUser?.name ?? ''}</div>
+        <div className="text-xs text-ois-text-subtle truncate">{currentUser?.email ?? ''}</div>
         <div className="mt-1 flex items-center gap-1.5">
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-ois-primary-pale text-ois-primary uppercase">
             Admin

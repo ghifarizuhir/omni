@@ -21,7 +21,7 @@ import { AiPendingDraftItem } from '@/src/components/ai/AiPendingDraftItem';
 import { AiSidebarPanel } from '@/src/components/ai/AiSidebarPanel';
 import { AiCompletenessPanel } from '@/src/components/ai/AiCompletenessPanel';
 import { formatAiTime, getDomainLabel, getMockAiResponse } from '@/src/components/ai/utils';
-import { mockAiSessions, getActiveSession } from '@/src/mocks';
+import { aiService, useResource } from '@/src/services';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -33,11 +33,21 @@ export const AiWorkspace: React.FC = () => {
     setAiSidebarContent: (node: React.ReactNode) => void;
   }>();
 
-  const initialSessionId = sessionId ?? getActiveSession()?.id ?? 'ai-sess-001';
+  const { data: sessionsData } = useResource(() => aiService.sessions(), []);
+  const { data: activeSession0 } = useResource(() => aiService.activeSession(), []);
+  const initialSessionId = sessionId ?? activeSession0?.id ?? 'ai-sess-001';
 
   const [activeDomain, setActiveDomain] = useState<AiDomain>('cmdb');
-  const [sessions, setSessions] = useState<AiSession[]>([...mockAiSessions]);
+  const [sessions, setSessions] = useState<AiSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>(initialSessionId);
+
+  useEffect(() => {
+    if (sessionsData) setSessions([...sessionsData]);
+  }, [sessionsData]);
+
+  useEffect(() => {
+    if (!sessionId && activeSession0?.id) setActiveSessionId(activeSession0.id);
+  }, [sessionId, activeSession0]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

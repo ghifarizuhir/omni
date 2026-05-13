@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ClipboardCheck, Search, X, Flame, AlertTriangle, ClipboardList } from 'lucide-react';
 import { SignOff, SignOffStatus, SignOffType } from '../../types/testing';
-import { mockSignOffs, getActiveSignOffs } from '../../mocks/signOffs';
+import { testingService, useResource } from '../../services';
 import { SignOffCard } from '../../components/testing/SignOffCard';
 import { SignOffApproveModal } from '../../components/testing/SignOffApproveModal';
 import { SignOffRejectModal } from '../../components/testing/SignOffRejectModal';
@@ -35,6 +35,9 @@ const isToday = (dueAt: string) => {
 };
 
 export const SignOffQueue: React.FC = () => {
+  const { data: signOffsData } = useResource(() => testingService.signOffs(), []);
+  const mockSignOffs = useMemo(() => signOffsData ?? [], [signOffsData]);
+
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<SignOffType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<SignOffStatus | 'all'>('all');
@@ -62,7 +65,7 @@ export const SignOffQueue: React.FC = () => {
     const map = new Map<string, string>();
     mockSignOffs.forEach(s => map.set(s.approverId, s.approverName));
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, []);
+  }, [mockSignOffs]);
 
   const filteredSignOffs = useMemo(() => {
     let results = mockSignOffs.filter(s => !localStatuses.has(s.publicId));
@@ -117,7 +120,7 @@ export const SignOffQueue: React.FC = () => {
       if (a.status !== 'pending' && b.status === 'pending') return 1;
       return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
     });
-  }, [search, typeFilter, statusFilter, approverFilter, slaFilter, quickFilter, localStatuses]);
+  }, [mockSignOffs, search, typeFilter, statusFilter, approverFilter, slaFilter, quickFilter, localStatuses]);
 
   const handleReset = () => {
     setSearch('');

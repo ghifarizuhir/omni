@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../ui/Card';
 import { ConfigurationItem } from '../../types/ci';
-import { mockUsers, mockTeams } from '../../mocks';
+import { usersService, teamsService, useResource } from '../../services';
 import { formatRelative } from '../../lib/format';
 import { User, Users, Clock, Tag as TagIcon, MapPin, Hash } from 'lucide-react';
 
@@ -10,8 +10,10 @@ interface CIQuickFactsCardProps {
 }
 
 export const CIQuickFactsCard: React.FC<CIQuickFactsCardProps> = ({ ci }) => {
-  const owner = mockUsers.find(u => u.id === ci.ownerId);
-  const team = mockTeams.find(t => t.id === ci.ownerTeamId);
+  const { data: users } = useResource(() => usersService.list(), []);
+  const { data: teams } = useResource(() => teamsService.list(), []);
+  const owner = (users ?? []).find(u => u.id === ci.ownerId);
+  const team = (teams ?? []).find(t => t.id === ci.ownerTeamId);
 
   const facts = [
     { label: 'Asset ID', value: ci.publicId, icon: Hash },

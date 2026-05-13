@@ -8,10 +8,7 @@ import {
   CalendarDays, Upload,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { getCatalogItemById } from '@/src/mocks/catalogItems';
-import { mockKBArticles } from '@/src/mocks/kbArticles';
-import { mockTeams } from '@/src/mocks/teams';
-import { mockServiceRequests } from '@/src/mocks/serviceRequests';
+import { requestsService, knowledgeService, teamsService, useResource } from '@/src/services';
 import { currentUser } from '@/src/mocks/users';
 import { Can } from '@/src/lib/rbac';
 import { CatalogItem, FormField, WorkflowStepTemplate, CatalogCategory } from '@/src/types/request';
@@ -456,7 +453,19 @@ export const CatalogItemDetail: React.FC = () => {
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
 
-  const item = useMemo(() => getCatalogItemById(itemId ?? ''), [itemId]);
+  const { data: catalogData } = useResource(() => requestsService.catalog(), []);
+  const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
+  const { data: teamsData } = useResource(() => teamsService.list(), []);
+  const { data: requestsData } = useResource(() => requestsService.list(), []);
+  const mockCatalogItems = catalogData ?? [];
+  const mockKBArticles = articlesData ?? [];
+  const mockTeams = teamsData ?? [];
+  const mockServiceRequests = requestsData ?? [];
+
+  const item = useMemo(
+    () => mockCatalogItems.find(c => c.id === (itemId ?? '')),
+    [mockCatalogItems, itemId]
+  );
 
   const [step,       setStep]       = useState<Step>(0);
   const [values,     setValues]     = useState<FormValues>(() => item ? initValues(item.formFields) : {});
@@ -478,7 +487,10 @@ export const CatalogItemDetail: React.FC = () => {
     }
   }, [submitted, navigate]);
 
-  if (!item) return <NotFound />;
+  if (!item) {
+    if (!catalogData) return <div className="p-6 text-sm text-ois-text-muted">Loading…</div>;
+    return <NotFound />;
+  }
 
   const catMeta = CATEGORY_META[item.category];
   const ownerTeam = mockTeams.find(t => t.id === item.ownerTeamId);

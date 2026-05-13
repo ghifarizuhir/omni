@@ -1,8 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Users, Calendar, UserPlus } from 'lucide-react';
-import { mockOnCallSchedules } from '@/src/mocks/onCallSchedules';
-import { mockOnCallOverrides } from '@/src/mocks/onCallOverrides';
+import { onCallService, useResource } from '@/src/services';
 import { cn } from '@/src/lib/utils';
 
 const TABS = [
@@ -12,16 +11,21 @@ const TABS = [
 ];
 
 export const OnCallLayout: React.FC = () => {
-  const totalSchedules = mockOnCallSchedules.length;
-  const activeIncidents = mockOnCallSchedules.reduce((acc, s) => acc + s.activeIncidentCount, 0);
+  const { data: schedulesData } = useResource(() => onCallService.schedules(), []);
+  const { data: overridesData } = useResource(() => onCallService.overrides(), []);
+  const schedules = schedulesData ?? [];
+  const overrides = overridesData ?? [];
+
+  const totalSchedules = schedules.length;
+  const activeIncidents = schedules.reduce((acc, s) => acc + s.activeIncidentCount, 0);
 
   const now = Date.now();
-  const activeOverrides = mockOnCallOverrides.filter(
+  const activeOverrides = overrides.filter(
     o => o.status === 'approved'
       && new Date(o.startAt).getTime() <= now
       && new Date(o.endAt).getTime() >= now,
   ).length;
-  const pendingOverrides = mockOnCallOverrides.filter(o => o.status === 'pending').length;
+  const pendingOverrides = overrides.filter(o => o.status === 'pending').length;
 
   const accentColor =
     activeIncidents > 0   ? '#B42318' :

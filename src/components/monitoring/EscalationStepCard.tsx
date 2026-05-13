@@ -2,7 +2,7 @@ import React from 'react';
 import { Clock, User, Users, Trash2, GripVertical } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { EscalationStep } from '../../types/monitoring';
-import { mockUsers, mockTeams } from '../../mocks';
+import { usersService, teamsService, useResource } from '../../services';
 import { cn } from '../../lib/utils';
 
 interface EscalationStepCardProps {
@@ -12,8 +12,10 @@ interface EscalationStepCardProps {
 }
 
 export const EscalationStepCard: React.FC<EscalationStepCardProps> = ({ step, index, onDelete }) => {
-  const users = mockUsers.filter(u => step.targets.userIds.includes(u.id));
-  const teams = mockTeams.filter(t => step.targets.teamIds?.includes(t.id));
+  const { data: usersData } = useResource(() => usersService.list(), []);
+  const { data: teamsData } = useResource(() => teamsService.list(), []);
+  const users = (usersData ?? []).filter(u => step.targets.userIds.includes(u.id));
+  const teams = (teamsData ?? []).filter(t => step.targets.teamIds?.includes(t.id));
 
   return (
     <Card className="p-0 border-ois-border overflow-hidden group">

@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Activity, Radio, Shield, GitBranch, CircleDot } from 'lucide-react';
-import { mockEvents } from '../../mocks';
+import { eventsService, useResource } from '../../services';
 import { cn } from '../../lib/utils';
 
 const TABS = [
@@ -13,10 +13,12 @@ const TABS = [
 ];
 
 export const MonitoringLayout: React.FC = () => {
-  const activeEvents = mockEvents.filter(e => e.status === 'open' || e.status === 'acknowledged');
+  const { data } = useResource(() => eventsService.list(), []);
+  const events = data ?? [];
+  const activeEvents = events.filter(e => e.status === 'open' || e.status === 'acknowledged');
   const p1Count = activeEvents.filter(e => e.severity === 'P1').length;
   const p2Count = activeEvents.filter(e => e.severity === 'P2').length;
-  const openCount = mockEvents.filter(e => e.status === 'open').length;
+  const openCount = events.filter(e => e.status === 'open').length;
 
   const accentColor = p1Count > 0 ? '#B42318' : p2Count > 0 ? '#DC6803' : '#1F4FD4';
 
