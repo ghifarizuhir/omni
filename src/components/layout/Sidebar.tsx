@@ -7,7 +7,7 @@ import {
   BookOpen, Wrench, Package, Rocket, CheckCircle2, Store,
   Heart, Zap, Lock, Radio, CircleDot, Clock,
   Lightbulb, Database, Settings, ChevronLeft, ChevronRight,
-  FileText, Gauge, Sparkles, Activity, Shield, GitBranch,
+  Sparkles, Activity, Shield, GitBranch,
 } from 'lucide-react';
 import { mockInboxItems, mockIncidents } from '@/src/mocks';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
@@ -172,9 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
                 </SidebarSection>
 
                 <SidebarSection label="Measurement" collapsed={collapsed}>
-                  <SidebarItem icon={<LayoutDashboard size={18} />} label="Dashboards" to="/dashboards" collapsed={collapsed} />
-                  <SidebarItem icon={<FileText size={18} />} label="Reports" to="/reports" collapsed={collapsed} />
-                  <SidebarItem icon={<Gauge size={18} />} label="Metric Catalog" to="/metrics/catalog" collapsed={collapsed} />
+                  <SidebarItem icon={<LayoutDashboard size={18} />} label="Measurement" to="/dashboards" collapsed={collapsed} />
                 </SidebarSection>
 
                 <SidebarSection label="Platform" collapsed={collapsed}>
