@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { mockCIAuditEntries } from '@/src/mocks';
 import { CIAuditTimeline } from '../../components/cmdb/CIAuditTimeline';
+import { ExportAuditModal } from '../../components/cmdb/modals/ExportAuditModal';
 import { cn } from '../../lib/utils';
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -35,6 +36,7 @@ export const CMDBAudit: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>('7d');
 
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (message: string) => {
@@ -94,8 +96,8 @@ export const CMDBAudit: React.FC = () => {
            <Button variant="outline" size="sm" onClick={() => navigate('/cmdb')} className="h-9">
               <ArrowLeft size={14} className="mr-2" /> Back to CMDB
            </Button>
-           <Button variant="primary" size="sm" className="gap-2 h-9 px-4" onClick={() => showToast('Export coming soon')}>
-             <Download size={14} /> Export CSV
+           <Button variant="primary" size="sm" className="gap-2 h-9 px-4" onClick={() => setExportOpen(true)}>
+             <Download size={14} /> Export
            </Button>
         </div>
       </div>
@@ -169,6 +171,14 @@ export const CMDBAudit: React.FC = () => {
           <CIAuditTimeline entries={filteredAudit} />
         )}
       </div>
+
+      <ExportAuditModal
+        isOpen={exportOpen}
+        onClose={() => setExportOpen(false)}
+        entries={filteredAudit}
+        totalCount={totalCount}
+        onExported={(count, format) => showToast(`Exported ${count} entries as ${format.toUpperCase()}`)}
+      />
 
       {toast && <Toast message={toast.message} />}
     </div>

@@ -20,6 +20,7 @@ import {
 import { cn } from '../../lib/utils';
 import { CIType, ConfigurationItem } from '../../types/ci';
 import { MonitoringRule } from '../../types/monitoring';
+import { BulkCreateRulesModal } from '../../components/monitoring/modals/BulkCreateRulesModal';
 
 // Interface for coverage row
 interface CoverageRow {
@@ -36,6 +37,8 @@ export const CoverageReport: React.FC = () => {
   const [groupBy, setGroupBy] = useState<'type' | 'service'>('type');
   const [expandedCIs, setExpandedCIs] = useState<Record<string, boolean>>({});
   const [expandedHeroGaps, setExpandedHeroGaps] = useState<Record<string, boolean>>({});
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [createdRules, setCreatedRules] = useState<MonitoringRule[]>([]);
 
   // Toast state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -281,7 +284,7 @@ export const CoverageReport: React.FC = () => {
                   <Button
                     variant="primary"
                     className="h-11 px-8 font-bold gap-3 shadow-md bg-red-600 hover:bg-red-700 border-red-600"
-                    onClick={() => showToast('Bulk rule creation coming soon')}
+                    onClick={() => setBulkOpen(true)}
                   >
                     <Plus size={20} /> Bulk create rules from suggestions
                   </Button>
@@ -528,6 +531,16 @@ export const CoverageReport: React.FC = () => {
       </div>
         </div>
       </div>
+
+      <BulkCreateRulesModal
+        isOpen={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        suggestions={criticalGaps.map(row => ({ ci: row.ci, templates: row.suggestedTemplates }))}
+        onCreate={(rules) => {
+          setCreatedRules(prev => [...rules, ...prev]);
+          showToast(`Created ${rules.length} monitoring rule${rules.length === 1 ? '' : 's'}`);
+        }}
+      />
     </div>
   );
 };

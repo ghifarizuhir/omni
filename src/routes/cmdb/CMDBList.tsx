@@ -16,6 +16,8 @@ import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
 import { CIServiceGroup } from '../../components/cmdb/CIServiceGroup';
 import { CITreeNode, TreeDataNode } from '../../components/cmdb/CITreeNode';
+import { CreateCIModal } from '../../components/cmdb/modals/CreateCIModal';
+import { ImportCIModal } from '../../components/cmdb/modals/ImportCIModal';
 import { ciTypeMeta } from '../../lib/constants';
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -42,6 +44,9 @@ export const CMDBList: React.FC = () => {
   const [critFilter, setCritFilter] = useState<Criticality | 'all'>('all');
   const [healthFilter, setHealthFilter] = useState<HealthFilter>('all');
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [extraCIs, setExtraCIs] = useState<ConfigurationItem[]>([]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (message: string) => {
@@ -60,8 +65,10 @@ export const CMDBList: React.FC = () => {
 
   const [expandedServices, setExpandedServices] = useState<Record<string, boolean>>(initialExpanded);
 
+  const allCIs = useMemo(() => [...extraCIs, ...mockCIs], [extraCIs]);
+
   const filteredCIs = useMemo(() => {
-    return mockCIs.filter(ci => {
+    return allCIs.filter(ci => {
       const matchesSearch = ci.name.toLowerCase().includes(search.toLowerCase()) ||
                            ci.publicId.toLowerCase().includes(search.toLowerCase()) ||
                            JSON.stringify(ci.attributes).toLowerCase().includes(search.toLowerCase());
@@ -70,7 +77,7 @@ export const CMDBList: React.FC = () => {
       const matchesHealth = healthFilter === 'all' || ci.health === healthFilter;
       return matchesSearch && matchesType && matchesCrit && matchesHealth;
     });
-  }, [search, typeFilter, critFilter, healthFilter]);
+  }, [allCIs, search, typeFilter, critFilter, healthFilter]);
 
   const toggleService = (id: string) => {
     setExpandedServices(prev => ({ ...prev, [id]: !prev[id] }));
@@ -83,7 +90,7 @@ export const CMDBList: React.FC = () => {
       return {
         ci,
         children: rels.map(r => {
-          const target = mockCIs.find(c => c.id === r.toCiId);
+          const target = allCIs.find(c => c.id === r.toCiId);
           if (!target) return null;
           return {
             ci: target,
@@ -155,14 +162,14 @@ export const CMDBList: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-ois-text">CMDB Explorer</h1>
           <p className="text-sm text-ois-text-muted font-medium mt-1">
-            {mockCIs.length} configuration items · {mockCIRelationships.length} relationships · Last updated {formatRelative([...mockCIs].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]?.updatedAt ?? new Date())}
+            {allCIs.length} configuration items · {mockCIRelationships.length} relationships · Last updated {formatRelative([...allCIs].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]?.updatedAt ?? new Date())}
           </p>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="primary" size="sm" className="gap-2 h-9 px-4" onClick={() => showToast('Create CI form coming soon')}>
+           <Button variant="primary" size="sm" className="gap-2 h-9 px-4" onClick={() => setCreateOpen(true)}>
              <Plus size={16} /> Add CI
            </Button>
-           <Button variant="outline" size="sm" className="h-9 px-3 border-ois-border-strong bg-white" onClick={() => showToast('Import coming soon')}>
+           <Button variant="outline" size="sm" className="h-9 px-3 border-ois-border-strong bg-white" onClick={() => setImportOpen(true)}>
              Import
            </Button>
            <div className="w-px h-6 bg-ois-border mx-1" />
@@ -222,7 +229,7 @@ export const CMDBList: React.FC = () => {
       <div className="space-y-2">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {(['all', ...Object.keys(ciTypeMeta)] as const).map(type => {
-            const count = mockCIs.filter(ci => type === 'all' ? ci.type !== 'service' : ci.type === type).length;
+            const count = allCIs.filter(ci => type === 'all' ? ci.type !== 'service' : ci.type === type).length;
             return (
               <button
                 key={type}
@@ -241,7 +248,7 @@ export const CMDBList: React.FC = () => {
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {(['all', 'critical', 'high', 'medium', 'low'] as const).map(crit => {
-            const count = mockCIs.filter(ci => ci.criticality === crit).length;
+            const count = allCIs.filter(ci => ci.criticality === crit).length;
             return (
               <button
                 key={crit}
@@ -314,10 +321,29 @@ export const CMDBList: React.FC = () => {
         <Card className="overflow-hidden bg-white">
           <DataTable columns={listColumns} data={filteredCIs} onRowClick={(ci) => navigate(`/cmdb/${ci.id}`)} />
           <div className="p-4 border-t border-ois-border flex items-center justify-between text-xs text-ois-text-subtle bg-ois-bg/50">
-            <span>Showing {filteredCIs.length} of {mockCIs.length} items</span>
+            <span>Showing {filteredCIs.length} of {allCIs.length} items</span>
           </div>
         </Card>
       )}
+
+      <CreateCIModal
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        services={mockServices.map(s => ({ id: s.id, name: s.name }))}
+        onCreate={(ci) => {
+          setExtraCIs(prev => [ci, ...prev]);
+          showToast(`Added ${ci.publicId}`);
+        }}
+      />
+
+      <ImportCIModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImport={(cis) => {
+          setExtraCIs(prev => [...cis, ...prev]);
+          showToast(`Imported ${cis.length} CI${cis.length === 1 ? '' : 's'}`);
+        }}
+      />
 
       {toast && <Toast message={toast.message} />}
     </div>

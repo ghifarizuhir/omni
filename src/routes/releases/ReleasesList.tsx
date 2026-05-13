@@ -6,7 +6,8 @@ import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
 import { mockReleases } from '../../mocks';
 import { ReleaseCard } from '../../components/releases/ReleaseCard';
-import { ReleaseStatus, ReleaseType } from '../../types/release';
+import { NewReleaseModal } from '../../components/releases/NewReleaseModal';
+import { Release, ReleaseStatus, ReleaseType } from '../../types/release';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 interface ToastState { message: string; variant: 'success' | 'info' }
@@ -35,7 +36,11 @@ export const ReleasesList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<ReleaseStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<ReleaseType | 'all'>('all');
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [newReleaseOpen, setNewReleaseOpen] = useState(false);
+  const [extraReleases, setExtraReleases] = useState<Release[]>([]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const allReleases = useMemo(() => [...extraReleases, ...mockReleases], [extraReleases]);
 
   const showToast = (message: string, variant: ToastState['variant'] = 'info') => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -44,7 +49,7 @@ export const ReleasesList: React.FC = () => {
   };
 
   const filtered = useMemo(() => {
-    return mockReleases.filter((r) => {
+    return allReleases.filter((r) => {
       if (statusFilter !== 'all' && r.status !== statusFilter) return false;
       if (typeFilter !== 'all' && r.type !== typeFilter) return false;
       if (search) {
@@ -56,23 +61,23 @@ export const ReleasesList: React.FC = () => {
       }
       return true;
     });
-  }, [search, statusFilter, typeFilter]);
+  }, [allReleases, search, statusFilter, typeFilter]);
 
-  const active = mockReleases.filter((r) => !['released', 'rolled_back', 'cancelled'].includes(r.status));
-  const ready = mockReleases.filter((r) => r.status === 'ready');
-  const rolledBack = mockReleases.filter((r) => r.status === 'rolled_back');
+  const active = allReleases.filter((r) => !['released', 'rolled_back', 'cancelled'].includes(r.status));
+  const ready = allReleases.filter((r) => r.status === 'ready');
+  const rolledBack = allReleases.filter((r) => r.status === 'rolled_back');
 
   const counts: Record<ReleaseStatus | 'all', number> = {
-    all: mockReleases.length,
-    planning: mockReleases.filter((r) => r.status === 'planning').length,
-    locked: mockReleases.filter((r) => r.status === 'locked').length,
-    in_validation: mockReleases.filter((r) => r.status === 'in_validation').length,
+    all: allReleases.length,
+    planning: allReleases.filter((r) => r.status === 'planning').length,
+    locked: allReleases.filter((r) => r.status === 'locked').length,
+    in_validation: allReleases.filter((r) => r.status === 'in_validation').length,
     ready: ready.length,
-    deploying: mockReleases.filter((r) => r.status === 'deploying').length,
-    released: mockReleases.filter((r) => r.status === 'released').length,
-    partially_released: mockReleases.filter((r) => r.status === 'partially_released').length,
+    deploying: allReleases.filter((r) => r.status === 'deploying').length,
+    released: allReleases.filter((r) => r.status === 'released').length,
+    partially_released: allReleases.filter((r) => r.status === 'partially_released').length,
     rolled_back: rolledBack.length,
-    cancelled: mockReleases.filter((r) => r.status === 'cancelled').length,
+    cancelled: allReleases.filter((r) => r.status === 'cancelled').length,
   };
 
   return (
@@ -82,7 +87,7 @@ export const ReleasesList: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-ois-text">Releases</h1>
           <p className="text-sm text-ois-text-muted mt-0.5">
-            {mockReleases.length} total · {active.length} active ·{' '}
+            {allReleases.length} total · {active.length} active ·{' '}
             {ready.length > 0 && <span className="text-ois-primary font-semibold">{ready.length} ready for prod approval · </span>}
             {rolledBack.length} rolled back this quarter
           </p>
@@ -94,7 +99,7 @@ export const ReleasesList: React.FC = () => {
           <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => navigate('/releases/notes')}>
             <FileText size={13} /> Notes archive
           </Button>
-          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => showToast('New release form coming soon', 'info')}>
+          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setNewReleaseOpen(true)}>
             <Plus size={13} /> New release
           </Button>
         </div>
@@ -164,6 +169,15 @@ export const ReleasesList: React.FC = () => {
           {filtered.map((r) => <ReleaseCard key={r.id} release={r} />)}
         </div>
       )}
+
+      <NewReleaseModal
+        isOpen={newReleaseOpen}
+        onClose={() => setNewReleaseOpen(false)}
+        onCreate={(release) => {
+          setExtraReleases((prev) => [release, ...prev]);
+          showToast(`Created ${release.publicId} (${release.version})`, 'success');
+        }}
+      />
 
       {toast && <Toast message={toast.message} variant={toast.variant} />}
     </div>

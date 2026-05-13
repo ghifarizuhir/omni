@@ -14,6 +14,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
+import { ConfigureChannelModal, ChannelConfig } from '../../components/monitoring/modals/ConfigureChannelModal';
 import {
   mockAlertRoutes,
   mockMonitoringRules,
@@ -57,6 +58,10 @@ export const AlertRouting: React.FC = () => {
   // Edit escalation step modal
   const [editingStep, setEditingStep] = useState<EscalationStep | null>(null);
   const [editStepDelay, setEditStepDelay] = useState(0);
+
+  // Channel configuration modal
+  const [configuringChannel, setConfiguringChannel] = useState<AlertChannel | null>(null);
+  const [channelConfigs, setChannelConfigs] = useState<Record<string, ChannelConfig>>({});
 
   // Toast
   const [toast, setToast] = useState<string | null>(null);
@@ -608,9 +613,8 @@ export const AlertRouting: React.FC = () => {
                                  <span className="text-[10px] font-medium text-ois-text-muted">
                                     {ch === 'slack' ? '#platform-oncall' : ch === 'sms' ? '(Twilio)' : ch === 'email' ? 'platform-oncall@acme.io' : 'Standard persistent'}
                                  </span>
-                                 {/* P1 Fix 3 — toast on Edit click */}
                                  <button
-                                   onClick={() => showToast('Channel configuration coming soon')}
+                                   onClick={() => setConfiguringChannel(ch)}
                                    className="text-[10px] font-bold text-ois-primary hover:underline"
                                  >
                                    Edit
@@ -895,6 +899,17 @@ export const AlertRouting: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <ConfigureChannelModal
+        isOpen={configuringChannel !== null}
+        onClose={() => setConfiguringChannel(null)}
+        channel={configuringChannel}
+        initialConfig={configuringChannel ? channelConfigs[configuringChannel] : undefined}
+        onSave={(ch, cfg) => {
+          setChannelConfigs(prev => ({ ...prev, [ch]: cfg }));
+          showToast(`${ch.replace('_', ' ')} channel saved`);
+        }}
+      />
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { CIType, RelationshipType, ConfigurationItem } from '../../types/ci';
 import { ForceGraph } from '../../components/cmdb/CMDBGraph/ForceGraph';
 import { GraphFilterPanel } from '../../components/cmdb/CMDBGraph/GraphFilterPanel';
 import { GraphNodeSidePanel } from '../../components/cmdb/CMDBGraph/GraphNodeSidePanel';
+import { ExportGraphModal } from '../../components/cmdb/modals/ExportGraphModal';
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 interface ToastState { message: string }
@@ -39,6 +40,7 @@ export const CMDBGraph: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<ConfigurationItem | null>(focusCI);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (message: string) => {
@@ -112,7 +114,7 @@ export const CMDBGraph: React.FC = () => {
            <Button variant="outline" size="sm" onClick={() => navigate('/cmdb')} className="h-9 px-4">
              List View
            </Button>
-           <Button variant="primary" size="sm" className="gap-2 h-9 px-4" onClick={() => showToast('Graph export coming soon')}>
+           <Button variant="primary" size="sm" className="gap-2 h-9 px-4" onClick={() => setExportOpen(true)}>
              <Share2 size={14} /> Export
            </Button>
         </div>
@@ -151,6 +153,14 @@ export const CMDBGraph: React.FC = () => {
           onClose={() => setSelectedNode(null)}
         />
       </div>
+
+      <ExportGraphModal
+        isOpen={exportOpen}
+        onClose={() => setExportOpen(false)}
+        nodes={filteredNodes}
+        links={filteredLinks}
+        onExported={(filename) => showToast(`Exported ${filename}`)}
+      />
     </div>
   );
 };
