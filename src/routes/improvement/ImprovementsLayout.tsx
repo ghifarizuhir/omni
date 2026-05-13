@@ -5,11 +5,10 @@ import {
   mockImprovements,
   getTotalEstimatedBenefitUSD,
   getTotalActualBenefitUSD,
+  TODAY,
 } from '@/src/mocks/improvements';
 import { formatBenefitUSD } from '@/src/lib/constants';
 import { cn } from '@/src/lib/utils';
-
-const TODAY = '2026-05-12';
 
 const TABS = [
   { label: 'Register', to: '/improvement',          icon: ListChecks,    end: true },

@@ -6,6 +6,7 @@ import {
   mockImprovements,
   getTotalEstimatedBenefitUSD,
   getTotalActualBenefitUSD,
+  TODAY,
 } from '@/src/mocks/improvements';
 import {
   improvementStatusMeta,
@@ -18,7 +19,6 @@ import { ImprovementStatus, ImprovementCategory, ImprovementPriority } from '@/s
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { Button } from '@/src/components/ui/Button';
 
-const TODAY = '2026-05-10';
 const LOGGED_IN_USER = 'u-001';
 
 const ALL_STATUSES: ImprovementStatus[] = [

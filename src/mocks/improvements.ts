@@ -5,6 +5,8 @@ import {
 } from '../types/improvement';
 import { mockBenefitMeasurements } from './benefitMeasurements';
 
+export const TODAY = '2026-05-12';
+
 export const mockImprovements: ImprovementInitiative[] = [
   // IMP-2026-00012 — approved, process, medium
   {
