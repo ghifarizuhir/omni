@@ -148,6 +148,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
                   <SidebarItem icon={<Inbox size={18} />} label="Inbox" to="/inbox" collapsed={collapsed} badge={urgentInboxCount} badgeVariant="urgent" />
                   <SidebarItem icon={<AlertCircle size={18} />} label="Incidents" to="/incidents" collapsed={collapsed} badge={openIncidentCount} />
                   <SidebarItem icon={<Bug size={18} />} label="Problems" to="/problems" collapsed={collapsed} />
+                </SidebarSection>
+
+                <SidebarSection label="Service Delivery" collapsed={collapsed}>
                   <SidebarItem icon={<Store size={18} />} label="Self-Service Portal" to="/portal" collapsed={collapsed} />
                   <SidebarItem icon={<ShoppingCart size={18} />} label="Service Requests" to="/requests" collapsed={collapsed} />
                   <SidebarItem icon={<BookOpen size={18} />} label="Knowledge Base" to="/kb" collapsed={collapsed} />
@@ -157,28 +160,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
                   <SidebarItem icon={<Wrench size={18} />} label="Changes" to="/changes" collapsed={collapsed} />
                   <SidebarItem icon={<Package size={18} />} label="Releases" to="/releases" collapsed={collapsed} />
                   <SidebarItem icon={<Rocket size={18} />} label="Deployments" to="/deployments" collapsed={collapsed} />
-                  <SidebarItem icon={<CheckCircle2 size={18} />} label="Validation" to="/testing/plans" collapsed={collapsed} />
+                  <SidebarItem icon={<CheckCircle2 size={18} />} label="Testing" to="/testing/plans" collapsed={collapsed} />
                 </SidebarSection>
 
                 <SidebarSection label="Service Health" collapsed={collapsed}>
                   <SidebarItem icon={<Heart size={18} />} label="Availability" to="/availability" collapsed={collapsed} />
                   <SidebarItem icon={<Zap size={18} />} label="Capacity" to="/capacity" collapsed={collapsed} />
                   <SidebarItem icon={<Lock size={18} />} label="Continuity" to="/continuity/bia" collapsed={collapsed} />
-                </SidebarSection>
-
-                <SidebarSection label="Monitoring" collapsed={collapsed}>
-                  <SidebarItem icon={<Activity size={18} />} label="Monitoring" to="/monitoring" collapsed={collapsed} />
                   <SidebarItem icon={<CircleDot size={18} />} label="Status Page" to="/status" collapsed={collapsed} />
                 </SidebarSection>
 
-                <SidebarSection label="Measurement" collapsed={collapsed}>
+                <SidebarSection label="Observability" collapsed={collapsed}>
+                  <SidebarItem icon={<Activity size={18} />} label="Monitoring" to="/monitoring" collapsed={collapsed} />
                   <SidebarItem icon={<BarChart3 size={18} />} label="Measurement" to="/dashboards" collapsed={collapsed} />
                 </SidebarSection>
 
-                <SidebarSection label="Platform" collapsed={collapsed}>
+                <SidebarSection label="Foundation" collapsed={collapsed}>
+                  <SidebarItem icon={<Database size={18} />} label="CMDB" to="/cmdb" collapsed={collapsed} />
                   <SidebarItem icon={<Clock size={18} />} label="On-Call" to="/on-call" collapsed={collapsed} />
                   <SidebarItem icon={<Lightbulb size={18} />} label="Improvements" to="/improvement" collapsed={collapsed} />
-                  <SidebarItem icon={<Database size={18} />} label="CMDB" to="/cmdb" collapsed={collapsed} />
                 </SidebarSection>
               </div>
 
