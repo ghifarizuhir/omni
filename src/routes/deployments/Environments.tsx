@@ -39,24 +39,6 @@ function formatDuration(sec: number): string {
   return `${m}m ${s}s`;
 }
 
-// ─── Derived header counts ────────────────────────────────────────────────────
-
-const envCount = mockEnvironments.length;
-const inProgressCount = mockDeployments.filter(d => d.status === 'running').length;
-const prodEnv = mockEnvironments.find(e => e.name === 'production');
-
-const prodHealthLabel: Record<string, string> = {
-  healthy: 'Healthy',
-  degraded: 'Degraded',
-  down: 'Down',
-};
-
-const prodHealthColor: Record<string, string> = {
-  healthy: '#12B76A',
-  degraded: '#F79009',
-  down: '#F04438',
-};
-
 // ─── Upcoming / pending deployments ──────────────────────────────────────────
 
 const upcomingDeployments = mockDeployments
@@ -93,37 +75,12 @@ const recentDeployments = [...last7d].sort((a, b) =>
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const Environments: React.FC = () => {
-  const prodHealth = prodEnv?.health ?? 'healthy';
   const [envTableFilter, setEnvTableFilter] = useState('');
   const [statusTableFilter, setStatusTableFilter] = useState('');
 
   return (
     <div className="p-6 space-y-6">
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">Environments</h1>
-          <div className="flex items-center gap-3 mt-1 text-sm text-ois-text-muted">
-            <span>{envCount} environments</span>
-            <span className="text-ois-border-strong">·</span>
-            <span>{inProgressCount} deployment{inProgressCount !== 1 ? 's' : ''} in progress</span>
-            {prodEnv && (
-              <>
-                <span className="text-ois-border-strong">·</span>
-                <span className="flex items-center gap-1.5">
-                  Production:
-                  <span
-                    className="w-2 h-2 rounded-full inline-block"
-                    style={{ background: prodHealthColor[prodHealth] }}
-                  />
-                  <span className="font-semibold" style={{ color: prodHealthColor[prodHealth] }}>
-                    {prodHealthLabel[prodHealth]}
-                  </span>
-                </span>
-              </>
-            )}
-          </div>
-        </div>
+      <div className="flex items-center justify-end">
         <span className="text-sm text-ois-text-muted">Last 7d</span>
       </div>
 

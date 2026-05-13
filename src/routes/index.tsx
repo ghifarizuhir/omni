@@ -44,6 +44,7 @@ import { ReleasesList } from './releases/ReleasesList';
 import { ReleaseDetail } from './releases/ReleaseDetail';
 import { ReleasePipeline } from './releases/ReleasePipeline';
 import { ReleaseNotes } from './releases/ReleaseNotes';
+import { DeploymentsLayout } from './deployments/DeploymentsLayout';
 import { DeploymentsQueue } from './deployments/DeploymentsQueue';
 import { DeploymentDetail } from './deployments/DeploymentDetail';
 import { Environments } from './deployments/Environments';
@@ -70,6 +71,7 @@ import { ImprovementsLayout } from './improvement/ImprovementsLayout';
 import { BIAMatrixPage } from './continuity/BIAMatrix';
 import { DRPlans } from './continuity/DRPlans';
 import { DRTests } from './continuity/DRTests';
+import { MeasurementLayout } from './measurement/MeasurementLayout';
 import { DashboardsIndex } from './measurement/DashboardsIndex';
 import { ExecutiveDashboard } from './measurement/ExecutiveDashboard';
 import { Reports } from './measurement/Reports';
@@ -153,9 +155,13 @@ export const routes: RouteObject[] = [
         { path: 'notes',      element: <ReleaseNotes /> },
       ]},
       { path: 'releases/:releaseId',            element: <ReleaseDetail /> },
-      { path: 'deployments',                    element: <DeploymentsQueue /> },
+      { path: 'deployments', element: <DeploymentsLayout />, children: [
+        { index: true, element: <DeploymentsQueue /> },
+      ]},
       { path: 'deployments/:deploymentId',      element: <DeploymentDetail /> },
-      { path: 'environments',                   element: <Environments /> },
+      { path: 'environments', element: <DeploymentsLayout />, children: [
+        { index: true, element: <Environments /> },
+      ]},
       { path: 'testing', element: <TestingLayout />, children: [
         { path: 'plans',    element: <TestPlans /> },
         { path: 'cases',    element: <TestCases /> },
@@ -178,11 +184,17 @@ export const routes: RouteObject[] = [
         { path: 'dr-plans',  element: <DRPlans /> },
         { path: 'tests',     element: <DRTests /> },
       ]},
-      { path: 'dashboards/exec',                 element: <ExecutiveDashboard /> },
-      { path: 'dashboards',                      element: <DashboardsIndex /> },
+      { path: 'dashboards', element: <MeasurementLayout />, children: [
+        { index: true,  element: <DashboardsIndex /> },
+        { path: 'exec', element: <ExecutiveDashboard /> },
+      ]},
+      { path: 'reports', element: <MeasurementLayout />, children: [
+        { index: true, element: <Reports /> },
+      ]},
       { path: 'reports/builder',                 element: <ReportBuilder /> },
-      { path: 'reports',                         element: <Reports /> },
-      { path: 'metrics/catalog',                 element: <MetricCatalog /> },
+      { path: 'metrics', element: <MeasurementLayout />, children: [
+        { path: 'catalog', element: <MetricCatalog /> },
+      ]},
       { path: 'improvement', element: <ImprovementsLayout />, children: [
         { index: true,        element: <ImprovementRegister /> },
         { path: 'kanban',     element: <ImprovementKanban /> },

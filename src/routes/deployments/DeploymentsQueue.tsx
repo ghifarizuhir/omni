@@ -28,7 +28,6 @@ const fmtDuration = (sec: number) => {
 };
 
 const LAST_24H = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-const LAST_30D = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
 
 // ── types ──────────────────────────────────────────────────────────────────
 
@@ -183,20 +182,6 @@ export const DeploymentsQueue: React.FC = () => {
     return () => clearInterval(id);
   }, [hasRunning]);
 
-  // summary counts (last 30 days)
-  const summary = useMemo(() => {
-    const recent = [...extraDeployments, ...mockDeployments].filter(
-      (d) => (d.startedAt ?? d.createdAt) >= LAST_30D
-    );
-    return {
-      total: recent.length,
-      active: recent.filter((d) => d.status === 'running' || d.status === 'rolling_back').length,
-      pending: recent.filter((d) => d.status === 'pending').length,
-      success: recent.filter((d) => d.status === 'success').length,
-      failed: recent.filter((d) => d.status === 'failed').length,
-    };
-  }, [extraDeployments]);
-
   // status badge counts for dropdown
   const statusCounts = useMemo(() => {
     const counts: Partial<Record<DeploymentStatus, number>> = {};
@@ -350,30 +335,13 @@ export const DeploymentsQueue: React.FC = () => {
 
   return (
     <div className="p-6 space-y-5">
-      {/* ── Page header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold text-[#101828]">Deployments</h1>
-          <p className="text-sm text-[#475467] mt-0.5">
-            {summary.total} total &middot; {summary.active} active &middot; {summary.pending} pending
-            &middot; {summary.success} success &middot; {summary.failed} failed
-            <span className="ml-1 text-[#98A2B3]">(last 30 days)</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Link
-            to="/environments"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm font-semibold text-[#344054] hover:bg-[#F9FAFB] transition-colors"
-          >
-            Environments →
-          </Link>
-          <button
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#1F4FD4] px-3 py-2 text-sm font-semibold text-white hover:bg-[#1a44b8] transition-colors"
-            onClick={() => setManualDeployOpen(true)}
-          >
-            + Manual deploy
-          </button>
-        </div>
+      <div className="flex items-center justify-end gap-2">
+        <button
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#1F4FD4] px-3 py-2 text-sm font-semibold text-white hover:bg-[#1a44b8] transition-colors"
+          onClick={() => setManualDeployOpen(true)}
+        >
+          + Manual deploy
+        </button>
       </div>
 
       {/* ── Active banner ── */}

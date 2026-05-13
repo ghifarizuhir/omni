@@ -24,11 +24,7 @@ export const ExecutiveDashboard: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6 max-w-screen-xl mx-auto">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">Executive Dashboard</h1>
-        </div>
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-2 shrink-0">
           {/* Time Range Dropdown */}
           <div className="relative">

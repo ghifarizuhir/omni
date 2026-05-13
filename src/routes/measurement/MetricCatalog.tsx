@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, ArrowRight, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { mockMetricDefinitions } from '@/src/mocks/metricDefinitions';
 import { MetricCategory } from '@/src/types/measurement';
@@ -18,11 +17,6 @@ export const MetricCatalog: React.FC = () => {
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [hasTarget, setHasTarget] = useState(false);
   const [expandedMetricId, setExpandedMetricId] = useState<string | null>(null);
-
-  const totalMetrics = mockMetricDefinitions.length;
-  const totalCategories = ALL_CATEGORIES.filter((cat) =>
-    mockMetricDefinitions.some((m) => m.category === cat),
-  ).length;
 
   const categoryCounts = useMemo(() => {
     const counts = {} as Record<MetricCategory, number>;
@@ -61,23 +55,6 @@ export const MetricCatalog: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6 max-w-screen-xl mx-auto">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">Metric Catalog</h1>
-          <p className="mt-0.5 text-sm text-ois-text-subtle">
-            {totalMetrics} metrics defined · {totalCategories} categories · Browse and understand all tracked metrics
-          </p>
-        </div>
-        <Link
-          to="/reports"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-ois-border bg-white px-3 py-2 text-sm font-medium text-ois-text hover:bg-ois-surface-muted transition-colors"
-        >
-          Reports
-          <ArrowRight size={14} />
-        </Link>
-      </div>
-
       {/* Search + Filter Bar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-sm">

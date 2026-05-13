@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Search, ArrowRight, Plus, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Plus, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { mockReports } from '@/src/mocks/reports';
 import { Report, ReportType, ReportFrequency } from '@/src/types/measurement';
@@ -33,14 +33,6 @@ const FREQUENCIES: { value: ReportFrequency | 'all'; label: string }[] = [
 
 const FREQ_TAB_ORDER: (ReportFrequency | 'all')[] = ['all', 'monthly', 'weekly', 'quarterly', 'on_demand'];
 
-function formatLastGen(isoStr?: string): string {
-  if (!isoStr) return '—';
-  const diff = Date.now() - new Date(isoStr).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  return `${days}d ago`;
-}
 
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
@@ -50,19 +42,6 @@ export const Reports: React.FC = () => {
   const [freqFilter, setFreqFilter] = useState<ReportFrequency | 'all'>('all');
   const [generateReport, setGenerateReport] = useState<Report | null>(null);
   const [versionsReport, setVersionsReport] = useState<Report | null>(null);
-
-  const scheduledCount = useMemo(
-    () => mockReports.filter((r) => r.frequency !== 'on_demand').length,
-    [],
-  );
-
-  const lastGen = useMemo(() => {
-    const dates = mockReports
-      .filter((r) => r.lastGeneratedAt)
-      .map((r) => new Date(r.lastGeneratedAt!).getTime());
-    if (!dates.length) return '—';
-    return formatLastGen(new Date(Math.max(...dates)).toISOString());
-  }, []);
 
   const filteredReports = useMemo(() => {
     return mockReports.filter((r) => {
@@ -102,27 +81,11 @@ export const Reports: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6 max-w-screen-xl mx-auto">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">Reports</h1>
-          <p className="mt-0.5 text-sm text-ois-text-subtle">
-            {mockReports.length} reports · {scheduledCount} scheduled · Last generated: {lastGen}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Link
-            to="/metrics/catalog"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-ois-border bg-white px-3 py-2 text-sm font-medium text-ois-text hover:bg-ois-surface-muted transition-colors"
-          >
-            Metric Catalog
-            <ArrowRight size={14} />
-          </Link>
-          <Button variant="primary" size="sm" onClick={() => navigate('/reports/builder')}>
-            <Plus size={14} className="mr-1" />
-            New report
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="primary" size="sm" onClick={() => navigate('/reports/builder')}>
+          <Plus size={14} className="mr-1" />
+          New report
+        </Button>
       </div>
 
       {/* Filter Bar */}
