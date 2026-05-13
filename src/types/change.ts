@@ -66,6 +66,8 @@ export interface Change {
   linkedReleasePublicId?: string;
   linkedKBSlugs: string[];
 
+  technicalAssessment?: TechnicalAssessment;
+
   approvals: ChangeApproval[];
   cabReviewedAt?: string;
   cabSessionId?: string;
@@ -81,6 +83,44 @@ export interface Change {
   createdAt: string;
   updatedAt: string;
   closedAt?: string;
+}
+
+export type TechAssessmentStatus =
+  | 'not_started'
+  | 'in_progress'
+  | 'submitted'
+  | 'approved'
+  | 'rework_required';
+
+export type TechRiskLikelihood = 'rare' | 'unlikely' | 'possible' | 'likely' | 'almost_certain';
+export type TechRiskImpact = 'negligible' | 'minor' | 'moderate' | 'major' | 'severe';
+
+export interface TechnicalRisk {
+  id: string;
+  description: string;
+  likelihood: TechRiskLikelihood;
+  impact: TechRiskImpact;
+  mitigation: string;
+  owner?: string;
+}
+
+export interface TechnicalAssessment {
+  status: TechAssessmentStatus;
+  objective: string;
+  technicalScope: string;
+  prerequisites: string[];
+  dependencies: string[];
+  performanceImpact?: string;
+  securityConsiderations?: string;
+  observabilityNotes?: string;
+  risks: TechnicalRisk[];
+  reviewerId?: string;
+  reviewerName?: string;
+  reviewerRole?: string;
+  reviewedAt?: string;
+  signOffNote?: string;
+  submittedAt?: string;
+  submittedBy?: string;
 }
 
 export interface ChangeApproval {
