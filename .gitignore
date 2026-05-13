@@ -7,3 +7,10 @@ coverage/
 nohup.out
 .env*
 !.env.example
+
+# Local SQLite dev DB (regenerated via `npm run db:reset`)
+prisma/*.db
+prisma/*.db-journal
+
+# Claude Code local config / worktrees
+.claude/

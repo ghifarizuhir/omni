@@ -52,6 +52,7 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
     headers: { 'Content-Type': 'application/json' },
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     signal: opts.signal,
+    credentials: 'include',
   });
   const text = await res.text();
   const json = text ? (JSON.parse(text) as unknown) : null;
