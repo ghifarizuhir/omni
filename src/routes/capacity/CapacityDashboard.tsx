@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Button } from '@/src/components/ui/Button';
+import { Link } from 'react-router-dom';
 import { Card, CardBody } from '@/src/components/ui/Card';
 import { KPICard } from '@/src/components/ui/KPICard';
 import { CriticalMetricsHero } from '@/src/components/capacity/CriticalMetricsHero';
@@ -12,7 +11,6 @@ import { mockCapacityThresholds } from '@/src/mocks/capacityThresholds';
 import { mockScalingRecommendations, getOpenRecommendations } from '@/src/mocks/scalingRecommendations';
 
 export default function CapacityDashboard() {
-  const navigate = useNavigate();
   const [expandedMetricId, setExpandedMetricId] = useState<string | null>(null);
 
   const criticalMetrics = getCriticalMetrics();
@@ -37,24 +35,6 @@ export default function CapacityDashboard() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Capacity &amp; Performance</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {mockCapacityMetrics.length} metrics tracked · 3 thresholds breaching · 5 active scaling recommendations
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={() => navigate('/capacity/forecast')}>
-            Forecast →
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate('/capacity/thresholds')}>
-            Thresholds →
-          </Button>
-        </div>
-      </div>
-
       {/* KPI Row */}
       <div className="grid grid-cols-4 gap-4">
         <KPICard

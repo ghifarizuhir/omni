@@ -79,14 +79,7 @@ export default function CapacityThresholds() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Capacity Thresholds</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {allThresholds.length} thresholds configured · {totalEnabled} enabled · 3 currently triggering
-          </p>
-        </div>
+      <div className="flex items-center justify-end gap-2">
         <Can module="capacity" action="update">
           <Button variant="default" size="sm" onClick={() => setIsModalOpen(true)}>
             + New threshold

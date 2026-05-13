@@ -23,12 +23,14 @@ import { ProblemList } from './problems/ProblemList';
 import { ProblemDetail } from './problems/ProblemDetail';
 import { RCAWorkspace } from './problems/RCAWorkspace';
 import { KEDB } from './problems/KEDB';
+import { PortalLayout } from './portal/PortalLayout';
 import { PortalHome } from './portal/PortalHome';
 import { Catalog } from './portal/Catalog';
 import { CatalogItemDetail } from './portal/CatalogItemDetail';
 import { MyRequests } from './portal/MyRequests';
 import { RequestQueue } from './requests/RequestQueue';
 import { RequestDetail } from './requests/RequestDetail';
+import { KBLayout } from './kb/KBLayout';
 import { KBBrowse } from './kb/KBBrowse';
 import { ArticleView } from './kb/ArticleView';
 import { KBEditor } from './kb/KBEditor';
@@ -37,6 +39,7 @@ import { ChangeCalendar } from './changes/ChangeCalendar';
 import { NewChange } from './changes/NewChange';
 import { ChangeDetail } from './changes/ChangeDetail';
 import { CABWorkspace } from './changes/CABWorkspace';
+import { ReleasesLayout } from './releases/ReleasesLayout';
 import { ReleasesList } from './releases/ReleasesList';
 import { ReleaseDetail } from './releases/ReleaseDetail';
 import { ReleasePipeline } from './releases/ReleasePipeline';
@@ -44,16 +47,20 @@ import { ReleaseNotes } from './releases/ReleaseNotes';
 import { DeploymentsQueue } from './deployments/DeploymentsQueue';
 import { DeploymentDetail } from './deployments/DeploymentDetail';
 import { Environments } from './deployments/Environments';
+import { TestingLayout } from './testing/TestingLayout';
 import { TestPlans } from './testing/TestPlans';
 import { TestCases } from './testing/TestCases';
 import { TestRuns } from './testing/TestRuns';
 import { SignOffQueue } from './testing/SignOffQueue';
+import { AvailabilityLayout } from './availability/AvailabilityLayout';
 import { AvailabilityDashboard } from './availability/AvailabilityDashboard';
 import { SLATargets } from './availability/SLATargets';
 import { Outages } from './availability/Outages';
+import { CapacityLayout } from './capacity/CapacityLayout';
 import CapacityDashboard from './capacity/CapacityDashboard';
 import CapacityForecast from './capacity/CapacityForecast';
 import CapacityThresholds from './capacity/CapacityThresholds';
+import { ContinuityLayout } from './continuity/ContinuityLayout';
 import { ImprovementRegister } from './improvement/ImprovementRegister';
 import { ImprovementDetail } from './improvement/ImprovementDetail';
 import { ImprovementKanban } from './improvement/ImprovementKanban';
@@ -71,6 +78,7 @@ import { MetricCatalog } from './measurement/MetricCatalog';
 import { Inbox } from './platform/Inbox';
 import NotificationPreferences from './platform/NotificationPreferences';
 import Notifications from './platform/Notifications';
+import { OnCallLayout } from './platform/OnCallLayout';
 import { OnCall } from './platform/OnCall';
 import { OnCallSchedule } from './platform/OnCallSchedule';
 import { OnCallOverrides } from './platform/OnCallOverrides';
@@ -120,13 +128,17 @@ export const routes: RouteObject[] = [
       { path: 'kedb',                           element: <KEDB /> },
       { path: 'requests',                       element: <RequestQueue /> },
       { path: 'requests/:requestId',            element: <RequestDetail /> },
-      { path: 'portal',                         element: <PortalHome /> },
-      { path: 'portal/catalog',                 element: <Catalog /> },
+      { path: 'portal', element: <PortalLayout />, children: [
+        { index: true,             element: <PortalHome /> },
+        { path: 'catalog',         element: <Catalog /> },
+        { path: 'my-requests',     element: <MyRequests /> },
+      ]},
       { path: 'portal/catalog/:itemId',         element: <CatalogItemDetail /> },
-      { path: 'portal/my-requests',             element: <MyRequests /> },
-      { path: 'kb',                             element: <KBBrowse /> },
-      { path: 'kb/analytics',                   element: <KBAnalytics /> },
-      { path: 'kb/editor',                      element: <KBEditor /> },
+      { path: 'kb', element: <KBLayout />, children: [
+        { index: true,        element: <KBBrowse /> },
+        { path: 'analytics',  element: <KBAnalytics /> },
+        { path: 'editor',     element: <KBEditor /> },
+      ]},
       { path: 'kb/editor/:slug',                element: <KBEditor /> },
       { path: 'kb/:slug',                       element: <ArticleView /> },
       // Doc 4 — Change & Delivery
@@ -135,27 +147,37 @@ export const routes: RouteObject[] = [
       { path: 'changes/calendar',               element: <ChangeCalendar /> },
       { path: 'changes/cab',                    element: <CABWorkspace /> },
       { path: 'changes/:changeId',              element: <ChangeDetail /> },
-      { path: 'releases',                       element: <ReleasesList /> },
-      { path: 'releases/pipeline',              element: <ReleasePipeline /> },
-      { path: 'releases/notes',                 element: <ReleaseNotes /> },
+      { path: 'releases', element: <ReleasesLayout />, children: [
+        { index: true,        element: <ReleasesList /> },
+        { path: 'pipeline',   element: <ReleasePipeline /> },
+        { path: 'notes',      element: <ReleaseNotes /> },
+      ]},
       { path: 'releases/:releaseId',            element: <ReleaseDetail /> },
       { path: 'deployments',                    element: <DeploymentsQueue /> },
       { path: 'deployments/:deploymentId',      element: <DeploymentDetail /> },
       { path: 'environments',                   element: <Environments /> },
-      { path: 'testing/plans',                  element: <TestPlans /> },
-      { path: 'testing/cases',                  element: <TestCases /> },
-      { path: 'testing/runs',                   element: <TestRuns /> },
-      { path: 'testing/sign-off',               element: <SignOffQueue /> },
+      { path: 'testing', element: <TestingLayout />, children: [
+        { path: 'plans',    element: <TestPlans /> },
+        { path: 'cases',    element: <TestCases /> },
+        { path: 'runs',     element: <TestRuns /> },
+        { path: 'sign-off', element: <SignOffQueue /> },
+      ]},
       // Doc 5 — Service Health & Intelligence
-      { path: 'availability',                   element: <AvailabilityDashboard /> },
-      { path: 'availability/sla',               element: <SLATargets /> },
-      { path: 'availability/outages',           element: <Outages /> },
-      { path: 'capacity',                       element: <CapacityDashboard /> },
-      { path: 'capacity/forecast',              element: <CapacityForecast /> },
-      { path: 'capacity/thresholds',            element: <CapacityThresholds /> },
-      { path: 'continuity/bia',                 element: <BIAMatrixPage /> },
-      { path: 'continuity/dr-plans',            element: <DRPlans /> },
-      { path: 'continuity/tests',               element: <DRTests /> },
+      { path: 'availability', element: <AvailabilityLayout />, children: [
+        { index: true,          element: <AvailabilityDashboard /> },
+        { path: 'sla',          element: <SLATargets /> },
+        { path: 'outages',      element: <Outages /> },
+      ]},
+      { path: 'capacity', element: <CapacityLayout />, children: [
+        { index: true,        element: <CapacityDashboard /> },
+        { path: 'forecast',   element: <CapacityForecast /> },
+        { path: 'thresholds', element: <CapacityThresholds /> },
+      ]},
+      { path: 'continuity', element: <ContinuityLayout />, children: [
+        { path: 'bia',       element: <BIAMatrixPage /> },
+        { path: 'dr-plans',  element: <DRPlans /> },
+        { path: 'tests',     element: <DRTests /> },
+      ]},
       { path: 'dashboards/exec',                 element: <ExecutiveDashboard /> },
       { path: 'dashboards',                      element: <DashboardsIndex /> },
       { path: 'reports/builder',                 element: <ReportBuilder /> },
@@ -173,9 +195,11 @@ export const routes: RouteObject[] = [
       { path: 'inbox',                          element: <Inbox /> },
       { path: 'notifications/preferences',      element: <NotificationPreferences /> },
       { path: 'notifications',                  element: <Notifications /> },
-      { path: 'on-call',                        element: <OnCall /> },
-      { path: 'on-call/schedule',               element: <OnCallSchedule /> },
-      { path: 'on-call/overrides',              element: <OnCallOverrides /> },
+      { path: 'on-call', element: <OnCallLayout />, children: [
+        { index: true,        element: <OnCall /> },
+        { path: 'schedule',   element: <OnCallSchedule /> },
+        { path: 'overrides',  element: <OnCallOverrides /> },
+      ]},
       { path: 'status',                         element: <StatusPage /> },
       { path: 'profile',                        element: <Profile /> },
       // Settings

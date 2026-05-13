@@ -290,18 +290,7 @@ export const TestRuns: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-ois-text">Test Runs</h1>
-          <p className="text-sm text-ois-text-muted mt-0.5">
-            {activeRuns.length} currently running
-            {' · '}
-            <span className="font-semibold text-ois-text">{overallPassRate}%</span> pass rate (30d)
-            {' · '}
-            {TOTAL_RUNS_30D} runs (last 30d)
-          </p>
-        </div>
+      <div className="flex items-center justify-end gap-2">
         <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ois-primary text-white text-sm font-medium hover:bg-ois-primary/90 transition-colors shrink-0">
           <Plus size={14} />
           Trigger run

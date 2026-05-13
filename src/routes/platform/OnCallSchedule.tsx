@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, Phone, PlusCircle, Users } from 'lucide-react';
+import { PlusCircle, Users } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { ShiftCalendarGrid } from '@/src/components/oncall/ShiftCalendarGrid';
@@ -23,22 +22,7 @@ export const OnCallSchedule: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 py-6 px-6 max-w-screen-xl mx-auto">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <Link
-            to="/on-call"
-            className="inline-flex items-center gap-1.5 text-xs text-ois-text-muted hover:text-ois-primary transition-colors mb-2"
-          >
-            <ChevronLeft size={13} />
-            On-Call
-          </Link>
-          <div className="flex items-center gap-2.5">
-            <Phone size={18} className="text-ois-primary" />
-            <h1 className="text-2xl font-bold text-ois-text tracking-tight">Schedule View</h1>
-          </div>
-        </div>
-
+      <div className="flex items-center justify-end">
         <Can module="platform" action="manage">
           <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)}>
             <PlusCircle size={15} className="mr-1.5" />

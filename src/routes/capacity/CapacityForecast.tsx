@@ -44,17 +44,9 @@ export default function CapacityForecast() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Capacity Forecast</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {mockCapacityForecasts.length} forecasts active · {imminentBreaches.length} predicted breaches within 14 days
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Horizon toggle */}
-          <div className="flex rounded-md border border-gray-200 overflow-hidden">
+      <div className="flex items-center justify-end gap-2">
+        {/* Horizon toggle */}
+        <div className="flex rounded-md border border-gray-200 overflow-hidden">
             <button
               onClick={() => setHorizonFilter(30)}
               className={`px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -84,7 +76,6 @@ export default function CapacityForecast() {
           >
             {isGenerating ? 'Generating…' : 'Generate forecast'}
           </Button>
-        </div>
       </div>
 
       {/* Main layout: 3-col content + 1-col right rail */}

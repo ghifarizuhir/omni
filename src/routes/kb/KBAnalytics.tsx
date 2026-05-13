@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Clock, Download, BookOpen, Eye, ThumbsUp, Users, ArrowRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Clock, Download, Eye, ThumbsUp, Users, ArrowRight } from 'lucide-react';
 import { kbAnalytics } from '@/src/mocks/kbAnalytics';
 import { mockKBArticles, getArticleBySlug } from '@/src/mocks/kbArticles';
 import { mockKBFeedback } from '@/src/mocks/kbFeedback';
@@ -224,31 +224,14 @@ export function KBAnalytics() {
 
   return (
     <div className="min-h-full bg-gray-50">
-      {/* ── Page header ── */}
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Knowledge Base Analytics</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Last 30 days · {mockKBArticles.filter(a => a.status === 'published').length} articles ·{' '}
-              {kbAnalytics.totalViews.toLocaleString()} views ·{' '}
-              {Math.round(kbAnalytics.helpfulRate * 100)}% helpful rate
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
-              Last 30d <span className="text-gray-400">▾</span>
-            </button>
-            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
-              <Download className="w-3.5 h-3.5" /> Export
-            </button>
-            <Link
-              to="/kb"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-[#1F4FD4] text-white rounded-lg hover:bg-[#1a3fb0] transition-colors"
-            >
-              <BookOpen className="w-3.5 h-3.5" /> Browse KB
-            </Link>
-          </div>
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-end gap-2">
+          <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
+            Last 30d <span className="text-gray-400">▾</span>
+          </button>
+          <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
         </div>
       </div>
 

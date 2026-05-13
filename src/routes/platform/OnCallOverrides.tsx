@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, Phone, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
 import { OverrideCard } from '@/src/components/oncall/OverrideCard';
 import { RequestOverrideModal } from '@/src/components/oncall/RequestOverrideModal';
@@ -12,8 +11,6 @@ export const OnCallOverrides: React.FC = () => {
   const [overrides, setOverrides] = useState<OnCallOverride[]>(mockOnCallOverrides);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const pendingCount = overrides.filter(o => o.status === 'pending').length;
-  const approvedCount = overrides.filter(o => o.status === 'approved').length;
 
   const handleApprove = (id: string) => {
     setOverrides(prev =>
@@ -50,33 +47,7 @@ export const OnCallOverrides: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 py-6 px-6 max-w-screen-xl mx-auto">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <Link
-            to="/on-call"
-            className="inline-flex items-center gap-1.5 text-xs text-ois-text-muted hover:text-ois-primary transition-colors mb-2"
-          >
-            <ChevronLeft size={13} />
-            On-Call
-          </Link>
-          <div className="flex items-center gap-2.5 mb-1">
-            <Phone size={18} className="text-ois-primary" />
-            <h1 className="text-2xl font-bold text-ois-text tracking-tight">Overrides</h1>
-          </div>
-          <p className="text-sm text-ois-text-muted">
-            {overrides.length} total
-            {' · '}
-            {pendingCount > 0 ? (
-              <span className="text-ois-warning font-medium">{pendingCount} pending approval</span>
-            ) : (
-              <span>0 pending</span>
-            )}
-            {' · '}
-            {approvedCount} approved
-          </p>
-        </div>
-
+      <div className="flex items-center justify-end">
         <Can module="platform" action="manage">
           <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)}>
             <PlusCircle size={15} className="mr-1.5" />

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Plus, Search, X, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronRight, Plus, Search, X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { mockDRPlans } from '@/src/mocks/drPlans';
 import { DRPlan, DRPlanStatus } from '@/src/types/continuity';
@@ -102,8 +102,6 @@ export const DRPlans: React.FC = () => {
     return counts;
   }, []);
 
-  const activeCount = statusCounts['active'] ?? 0;
-  const underReviewCount = statusCounts['under_review'] ?? 0;
 
   const resetFilters = () => {
     setSearch('');
@@ -128,53 +126,13 @@ export const DRPlans: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Page header */}
-      <div className="px-6 pt-6 pb-4 border-b border-ois-border bg-white shrink-0">
-        <nav className="flex items-center gap-1.5 text-sm text-ois-text-subtle mb-3">
-          <Link to="/" className="hover:text-ois-text transition-colors">Dashboard</Link>
-          <ChevronRight size={13} />
-          <span className="text-ois-text font-medium">DR Plans</span>
-        </nav>
-
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Link
-                to="/continuity/bia"
-                className="flex items-center gap-1 text-sm text-ois-text-subtle hover:text-ois-text transition-colors"
-              >
-                <ArrowLeft size={14} />
-                Back
-              </Link>
-            </div>
-            <h1 className="text-2xl font-bold text-ois-text tracking-tight">DR Plans</h1>
-            <p className="text-sm text-ois-text-subtle mt-0.5">
-              {mockDRPlans.length} plans &middot; {activeCount} active &middot; {underReviewCount} under review &middot; {overduePlans.length} overdue for review
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/continuity/bia"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-ois-text-subtle hover:text-ois-text border border-ois-border rounded-lg hover:bg-ois-surface-muted transition-colors"
-            >
-              BIA
-              <ChevronRight size={14} />
-            </Link>
-            <Link
-              to="/continuity/tests"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-ois-text-subtle hover:text-ois-text border border-ois-border rounded-lg hover:bg-ois-surface-muted transition-colors"
-            >
-              Tests
-              <ChevronRight size={14} />
-            </Link>
-            <Can module="continuity" action="update">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-ois-primary hover:bg-ois-primary/90 rounded-lg transition-colors">
-                <Plus size={15} />
-                New plan
-              </button>
-            </Can>
-          </div>
-        </div>
+      <div className="px-6 pt-4 pb-2 flex items-center justify-end gap-2 shrink-0">
+        <Can module="continuity" action="update">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-ois-primary hover:bg-ois-primary/90 rounded-lg transition-colors">
+            <Plus size={15} />
+            New plan
+          </button>
+        </Can>
       </div>
 
       {/* Content */}

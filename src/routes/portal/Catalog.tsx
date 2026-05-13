@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 import {
-  Search, X, ChevronLeft, Clock, ArrowRight, Package,
+  Search, X, Clock, ArrowRight, Package,
   SearchX, ChevronDown, Zap, Star, CalendarClock, Sparkles,
   Key, Laptop, Download, Mail, Users, Folder, SlidersHorizontal,
 } from 'lucide-react';
@@ -289,7 +289,6 @@ const SortDropdown: React.FC<{ value: SortValue; onChange: (v: SortValue) => voi
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export const Catalog: React.FC = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const [query,     setQuery]     = useState(() => searchParams.get('q') ?? '');
@@ -331,23 +330,9 @@ export const Catalog: React.FC = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-full pb-16">
-
-      {/* ── PAGE HEADER ─────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => navigate('/portal')}
-          className="flex items-center gap-1.5 text-xs font-medium text-ois-text-muted hover:text-ois-primary transition-colors"
-        >
-          <ChevronLeft size={14} /> Portal
-        </button>
-        <span className="text-ois-border-strong">/</span>
-        <span className="text-xs font-medium text-ois-text">Service Catalog</span>
-      </div>
-
+    <div className="min-h-full pb-16 p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-ois-text tracking-tight">Service Catalog</h1>
-        <p className="text-sm text-ois-text-muted mt-1">
+        <p className="text-sm text-ois-text-muted">
           Request services, equipment, software, and access.{' '}
           <span className="font-medium text-ois-text">{allEnabled.length} items available.</span>
         </p>

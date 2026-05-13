@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Plus, GitMerge, FileText, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
@@ -32,7 +31,6 @@ const STATUS_TABS: { label: string; value: ReleaseStatus | 'all' }[] = [
 ];
 
 export const ReleasesList: React.FC = () => {
-  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReleaseStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<ReleaseType | 'all'>('all');
@@ -90,30 +88,13 @@ export const ReleasesList: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">Releases</h1>
-          <p className="text-sm text-ois-text-muted mt-0.5">
-            {allReleases.length} total · {active.length} active ·{' '}
-            {ready.length > 0 && <span className="text-ois-primary font-semibold">{ready.length} ready for prod approval · </span>}
-            {rolledBack.length} rolled back this quarter
-          </p>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => navigate('/releases/pipeline')}>
-            <GitMerge size={13} /> Pipeline view
+    <div className="space-y-5 p-6">
+      <div className="flex items-center justify-end gap-2">
+        <Can module="release" action="create">
+          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setNewReleaseOpen(true)}>
+            <Plus size={13} /> New release
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => navigate('/releases/notes')}>
-            <FileText size={13} /> Notes archive
-          </Button>
-          <Can module="release" action="create">
-            <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setNewReleaseOpen(true)}>
-              <Plus size={13} /> New release
-            </Button>
-          </Can>
-        </div>
+        </Can>
       </div>
 
       {/* Search + filters */}

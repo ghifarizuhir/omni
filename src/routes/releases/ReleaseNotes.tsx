@@ -36,15 +36,8 @@ export const ReleaseNotes: React.FC = () => {
   [search, component, typeFilter]);
 
   return (
-    <div className="space-y-5 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">Release Notes</h1>
-          <p className="text-sm text-ois-text-muted mt-0.5">
-            {PUBLISHED.length} published releases · Browse customer-facing release notes
-          </p>
-        </div>
+    <div className="space-y-5 max-w-3xl mx-auto p-6">
+      <div className="flex items-center justify-end">
         <div className="relative w-56 shrink-0">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ois-text-subtle" />
           <input

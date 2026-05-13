@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Plus, Search, X, Radio } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronRight, Plus, Search, X, Radio } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { mockDRTestRuns } from '@/src/mocks/drTestRuns';
 import { mockDRPlans } from '@/src/mocks/drPlans';
@@ -10,14 +10,6 @@ import { LiveDRTestPanel } from '@/src/components/continuity/LiveDRTestPanel';
 import { DRTestRunnerWizard } from '@/src/components/continuity/DRTestRunner/DRTestRunnerWizard';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { Can } from '@/src/lib/rbac';
-
-function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 function getRunningHoursMinutes(startedAt?: string): string {
   if (!startedAt) return '';
@@ -60,23 +52,6 @@ export const DRTests: React.FC = () => {
   const [planFilter, setPlanFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<DRTestType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<DRTestStatus | 'all'>('all');
-
-  // Computed stats
-  const stats = useMemo(() => {
-    const total = mockDRTestRuns.length;
-    const inProgress = mockDRTestRuns.filter((r) => r.status === 'in_progress').length;
-    const planned = mockDRTestRuns.filter((r) => r.status === 'planned').length;
-    const passed = mockDRTestRuns.filter((r) => r.status === 'passed').length;
-    const passedWithIssues = mockDRTestRuns.filter((r) => r.status === 'passed_with_issues').length;
-    const denominator = total - planned - inProgress;
-    const passRate = denominator > 0 ? Math.round(((passed + passedWithIssues) / denominator) * 100) : 0;
-
-    const lastTest = [...mockDRTestRuns]
-      .filter((r) => r.startedAt)
-      .sort((a, b) => new Date(b.startedAt!).getTime() - new Date(a.startedAt!).getTime())[0];
-
-    return { total, inProgress, passRate, lastTest };
-  }, []);
 
   const activeTest = useMemo(
     () => mockDRTestRuns.find((r) => r.status === 'in_progress') ?? null,
@@ -167,45 +142,16 @@ export const DRTests: React.FC = () => {
   return (
     <>
       <div className="flex flex-col h-full min-h-0">
-        {/* Page header */}
-        <div className="px-6 pt-6 pb-4 border-b border-ois-border bg-white shrink-0">
-          <nav className="flex items-center gap-1.5 text-sm text-ois-text-subtle mb-3">
-            <Link to="/" className="hover:text-ois-text transition-colors">Dashboard</Link>
-            <ChevronRight size={13} />
-            <span className="text-ois-text font-medium">DR Test History</span>
-          </nav>
-
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Link
-                  to="/continuity/dr-plans"
-                  className="flex items-center gap-1 text-sm text-ois-text-subtle hover:text-ois-text transition-colors"
-                >
-                  <ArrowLeft size={14} />
-                  Back
-                </Link>
-              </div>
-              <h1 className="text-2xl font-bold text-ois-text tracking-tight">DR Test History</h1>
-              <p className="text-sm text-ois-text-subtle mt-0.5">
-                {stats.total} tests total &middot; {stats.inProgress} in progress &middot; {stats.passRate}% pass rate
-                {stats.lastTest?.startedAt && (
-                  <> &middot; Last test: {formatDate(stats.lastTest.startedAt)}{stats.inProgress > 0 ? ' (running)' : ''}</>
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Can module="continuity" action="update">
-              <button
-                onClick={() => setShowWizard(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-ois-primary hover:bg-ois-primary/90 rounded-lg transition-colors"
-              >
-                <Plus size={15} />
-                Schedule test
-              </button>
-              </Can>
-            </div>
-          </div>
+        <div className="px-6 pt-4 pb-2 flex items-center justify-end gap-2 shrink-0">
+          <Can module="continuity" action="update">
+            <button
+              onClick={() => setShowWizard(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-ois-primary hover:bg-ois-primary/90 rounded-lg transition-colors"
+            >
+              <Plus size={15} />
+              Schedule test
+            </button>
+          </Can>
         </div>
 
         {/* Content */}

@@ -58,14 +58,7 @@ export const SLATargets: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">SLA Targets</h1>
-          <p className="mt-0.5 text-sm text-ois-text-subtle">
-            8 SLAs across 8 services · 6 meeting · 2 breached · Avg compliance: 75%
-          </p>
-        </div>
+      <div className="flex items-center justify-end gap-2">
         <Can module="availability" action="update">
           <Button variant="primary" size="sm">
             <Plus size={14} className="mr-1" />

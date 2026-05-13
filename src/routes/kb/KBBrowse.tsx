@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 import {
-  Search, X, Plus, BarChart2, BookOpen, Wrench, ListChecks,
+  Search, X, Plus, BookOpen, Wrench, ListChecks,
   FileText, HelpCircle, Microscope, Rocket, Eye, ThumbsUp,
   Clock, SlidersHorizontal, SearchX, ChevronDown, ChevronRight,
   Tag, Check, Edit3,
@@ -318,33 +318,16 @@ export const KBBrowse: React.FC = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-full pb-16">
-
-      {/* ── PAGE HEADER ───────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-ois-text tracking-tight">Knowledge Base</h1>
-          <p className="text-sm text-ois-text-muted mt-1">
-            <span className="font-semibold text-ois-text">{allArticles.length}</span> articles across{' '}
-            <span className="font-semibold text-ois-text">{mockKBCategories.filter(c => catCounts[c.id] > 0).length}</span> categories
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
+    <div className="min-h-full pb-16 p-6">
+      <div className="flex items-center justify-end gap-2 mb-6">
+        <Can module="knowledge" action="author">
           <button
-            onClick={() => navigate('/kb/analytics')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-ois-border text-xs font-semibold text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text transition-colors"
+            onClick={() => navigate('/kb/editor')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ois-primary text-white text-xs font-semibold hover:bg-ois-primary-hover transition-colors active:scale-95"
           >
-            <BarChart2 size={14} /> Analytics
+            <Plus size={14} /> New article
           </button>
-          <Can module="knowledge" action="author">
-            <button
-              onClick={() => navigate('/kb/editor')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ois-primary text-white text-xs font-semibold hover:bg-ois-primary-hover transition-colors active:scale-95"
-            >
-              <Plus size={14} /> New article
-            </button>
-          </Can>
-        </div>
+        </Can>
       </div>
 
       {/* ── SEARCH BAR ────────────────────────────────────────────────── */}

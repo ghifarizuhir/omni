@@ -82,24 +82,12 @@ export const ReleasePipeline: React.FC = () => {
     return true;
   });
 
-  const activeCount = mockReleases.filter((r) => activeStatuses.includes(r.status)).length;
   const readyCount = mockReleases.filter((r) => r.status === 'ready').length;
 
   return (
-    <div className="flex gap-6 min-h-0">
+    <div className="flex gap-6 min-h-0 p-6">
       {/* Main */}
       <div className="flex-1 min-w-0 space-y-4">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-ois-text">Release Pipeline</h1>
-            <p className="text-sm text-ois-text-muted mt-0.5">
-              {activeCount} active releases ·{' '}
-              {readyCount > 0 && <span className="text-ois-primary font-semibold">{readyCount} awaiting production approval</span>}
-            </p>
-          </div>
-        </div>
-
         {/* Filter tabs */}
         <div className="flex gap-2">
           {([

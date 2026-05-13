@@ -319,33 +319,10 @@ export const MyRequests: React.FC = () => {
     return sortRequests(base, sort);
   }, [tab, sort]);
 
-  // Summary stats for header
-  const completedLast30 = completed.filter(r => {
-    const d = r.closedAt ?? r.fulfilledAt;
-    if (!d) return false;
-    return Date.now() - new Date(d).getTime() < 30 * 86_400_000;
-  }).length;
-
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-full pb-16">
-
-      {/* ── HEADER ──────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-ois-text tracking-tight">My Requests</h1>
-          <p className="text-sm text-ois-text-muted mt-1">
-            {active.length > 0 && (
-              <span className="font-semibold text-ois-text">{active.length} active</span>
-            )}
-            {active.length > 0 && completedLast30 > 0 && ' · '}
-            {completedLast30 > 0 && (
-              <>{completedLast30} completed in last 30 days</>
-            )}
-            {active.length === 0 && completedLast30 === 0 && 'No requests yet'}
-          </p>
-        </div>
-
+    <div className="min-h-full pb-16 p-6">
+      <div className="flex items-center justify-end mb-6">
         <Link
           to="/portal/catalog"
           className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-ois-primary text-white text-sm font-semibold hover:bg-ois-primary-hover transition-colors active:scale-95"

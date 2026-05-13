@@ -46,13 +46,6 @@ export const SignOffQueue: React.FC = () => {
   const [rejectTarget, setRejectTarget] = useState<SignOff | null>(null);
   const [localStatuses, setLocalStatuses] = useState<Map<string, 'approved' | 'rejected'>>(new Map());
 
-  // Header counts
-  const totalCount = mockSignOffs.length;
-  const pendingCount = mockSignOffs.filter(s => s.status === 'pending').length;
-  const dueIn24hCount = mockSignOffs.filter(
-    s => s.status === 'pending' && isWithin24h(s.dueAt)
-  ).length;
-
   // Quick filter counts
   const myPendingCount = mockSignOffs.filter(
     s => s.approverId === CURRENT_USER_ID && s.status === 'pending'
@@ -147,19 +140,7 @@ export const SignOffQueue: React.FC = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      {/* Page header */}
-      <div className="flex items-start justify-between mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">Sign-Off Queue</h1>
-          <p className="text-sm text-ois-text-muted mt-0.5">
-            {totalCount} items &middot; {pendingCount} pending
-            {dueIn24hCount > 0 && (
-              <span className="text-[#DC6803] font-semibold">
-                {' '}&middot; {dueIn24hCount} due in &lt;24h
-              </span>
-            )}
-          </p>
-        </div>
+      <div className="flex items-center justify-end mb-6 gap-2">
         <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
           Filter <span className="opacity-60">▾</span>
         </Button>

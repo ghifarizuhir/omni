@@ -44,28 +44,11 @@ export const AvailabilityDashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">Availability</h1>
-          <p className="mt-0.5 text-sm text-ois-text-subtle">
-            8 services tracked · 2 SLA breaches active · 3 outages ongoing · 99.32% avg uptime (30d)
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button variant="secondary" size="sm" onClick={() => navigate('/availability/outages')}>
-            Outages
-            <ArrowRight size={14} className="ml-1" />
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => navigate('/availability/sla')}>
-            SLA Targets
-            <ArrowRight size={14} className="ml-1" />
-          </Button>
-          <Button variant="secondary" size="sm">
-            <Download size={14} className="mr-1" />
-            Export
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="secondary" size="sm">
+          <Download size={14} className="mr-1" />
+          Export
+        </Button>
       </div>
 
       {/* KPI Row */}

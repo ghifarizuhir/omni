@@ -1,22 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { Search, Plus, RotateCcw } from 'lucide-react';
 import { mockTestPlans } from '../../mocks/testPlans';
 import { TestPlanRow } from '../../components/testing/TestPlanRow';
 import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
-import { TestPlan, TestPlanType } from '../../types/testing';
+import { TestPlanType } from '../../types/testing';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import { Can } from '@/src/lib/rbac';
-
-// ── Quick-stat helpers ──────────────────────────────────────────────────────
-
-function avgPassRate(plans: TestPlan[]): number {
-  if (!plans.length) return 0;
-  return plans.reduce((acc, p) => acc + p.passRate30d, 0) / plans.length;
-}
-
-const activePlans = mockTestPlans.filter((p) => p.status === 'active');
 
 // ── Type chip colours ────────────────────────────────────────────────────────
 
@@ -143,8 +133,6 @@ export const TestPlans: React.FC = () => {
     setQualityChip('');
   };
 
-  const overallAvg = avgPassRate(mockTestPlans);
-
   // Chip toggle helpers
   const toggleTypeChip = (key: string) => {
     setTypeChip((prev) => (prev === key ? 'all' : key));
@@ -155,38 +143,13 @@ export const TestPlans: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-ois-text">Test Plans</h1>
-          <p className="text-sm text-ois-text-muted mt-0.5">
-            {mockTestPlans.length} test plans ·{' '}
-            {activePlans.length} active · Avg pass rate (30d):{' '}
-            <span className="font-semibold text-ois-text">
-              {Math.round(overallAvg * 100)}%
-            </span>
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Link
-            to="/testing/cases"
-            className="px-3 py-1.5 rounded-lg border border-ois-border text-sm text-ois-text hover:bg-ois-surface-muted transition-colors"
-          >
-            Cases →
-          </Link>
-          <Link
-            to="/testing/runs"
-            className="px-3 py-1.5 rounded-lg border border-ois-border text-sm text-ois-text hover:bg-ois-surface-muted transition-colors"
-          >
-            Runs →
-          </Link>
-          <Can module="testing" action="update">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ois-primary text-white text-sm font-medium hover:bg-ois-primary/90 transition-colors">
-              <Plus size={14} />
-              New plan
-            </button>
-          </Can>
-        </div>
+      <div className="flex items-center justify-end gap-2">
+        <Can module="testing" action="update">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ois-primary text-white text-sm font-medium hover:bg-ois-primary/90 transition-colors">
+            <Plus size={14} />
+            New plan
+          </button>
+        </Can>
       </div>
 
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}

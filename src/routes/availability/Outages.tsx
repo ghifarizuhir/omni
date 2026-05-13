@@ -90,24 +90,15 @@ export const Outages: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ois-text">Outage Log</h1>
-          <p className="mt-0.5 text-sm text-ois-text-subtle">
-            24 outages last 90d · 3 ongoing · 18% planned · Total downtime: 12h 47m
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button variant="secondary" size="sm">
-            Last 90d
-            <span className="ml-1 text-gray-400">▾</span>
-          </Button>
-          <Button variant="secondary" size="sm">
-            <Download size={14} className="mr-1" />
-            Export
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="secondary" size="sm">
+          Last 90d
+          <span className="ml-1 text-gray-400">▾</span>
+        </Button>
+        <Button variant="secondary" size="sm">
+          <Download size={14} className="mr-1" />
+          Export
+        </Button>
       </div>
 
       {/* Filter Bar */}

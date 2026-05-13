@@ -12,13 +12,6 @@ import { Can } from '@/src/lib/rbac';
 // ── Derived stats from mock data ─────────────────────────────────────────────
 
 const totalCases = mockTestCases.length;
-const automatedCount = mockTestCases.filter((c) => c.isAutomated).length;
-const manualCount = totalCases - automatedCount;
-const avgFlakeRate = (() => {
-  const withFlake = mockTestCases.filter((c) => c.flakeRate !== undefined);
-  if (!withFlake.length) return 0;
-  return withFlake.reduce((acc, c) => acc + (c.flakeRate ?? 0), 0) / withFlake.length;
-})();
 
 // ── Type chip colours ────────────────────────────────────────────────────────
 
@@ -160,14 +153,7 @@ export const TestCases: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-ois-text-primary">Test Cases</h1>
-          <p className="mt-0.5 text-sm text-ois-text-secondary">
-            {totalCases} cases · {automatedCount} automated · {manualCount} manual · Avg flake rate: {(avgFlakeRate * 100).toFixed(0)}%
-          </p>
-        </div>
+      <div className="flex items-center justify-end gap-2">
         <Can module="testing" action="update">
           <button
             type="button"
