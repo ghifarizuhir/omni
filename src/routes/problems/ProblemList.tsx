@@ -35,15 +35,16 @@ const SEVERITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
 interface CreateProblemModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onCreate: (problem: { title: string; description: string }) => void;
 }
 
-const CreateProblemModal: React.FC<CreateProblemModalProps> = ({ isOpen, onClose }) => {
+const CreateProblemModal: React.FC<CreateProblemModalProps> = ({ isOpen, onClose, onCreate }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
   const handleCreate = () => {
     if (!title.trim()) return;
-    console.log('Creating problem:', { title, description });
+    onCreate({ title: title.trim(), description: description.trim() });
     setTitle('');
     setDescription('');
     onClose();
@@ -126,23 +127,53 @@ export const ProblemList: React.FC = () => {
   const [sortKey, setSortKey] = useState<SortKey>('lastIncidentDate');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [createOpen, setCreateOpen] = useState(false);
+  const [extraProblems, setExtraProblems] = useState<Problem[]>([]);
+
+  const problems = useMemo(() => [...extraProblems, ...mockProblems], [extraProblems]);
+
+  const handleCreateProblem = ({ title, description }: { title: string; description: string }) => {
+    const now = new Date().toISOString();
+    const seq = (mockProblems.length + extraProblems.length + 1).toString().padStart(5, '0');
+    const newProblem: Problem = {
+      id: `prb-${Date.now()}`,
+      publicId: `PRB-${new Date().getFullYear()}-${seq}`,
+      title,
+      description,
+      status: 'identified',
+      severity: 'P3',
+      source: 'user_reported',
+      ownerId: mockUsers[0]?.id ?? 'user-current',
+      ownerTeamId: 'team-current',
+      affectedCIIds: [],
+      affectedCIPublicIds: [],
+      affectedServiceIds: [],
+      relatedIncidentIds: [],
+      relatedIncidentCount: 0,
+      linkedChangeIds: [],
+      linkedKBArticleIds: [],
+      tags: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    setExtraProblems(prev => [newProblem, ...prev]);
+  };
 
   // Stats
   const statusCounts = useMemo(
-    () => STATUSES.reduce((acc, s) => ({ ...acc, [s]: mockProblems.filter(p => p.status === s).length }), {} as Record<ProblemStatus, number>),
-    []
+    () => STATUSES.reduce((acc, s) => ({ ...acc, [s]: problems.filter(p => p.status === s).length }), {} as Record<ProblemStatus, number>),
+    [problems]
   );
   const sourceCounts = useMemo(
-    () => SOURCES.reduce((acc, s) => ({ ...acc, [s]: mockProblems.filter(p => p.source === s).length }), {} as Record<ProblemSource, number>),
-    []
+    () => SOURCES.reduce((acc, s) => ({ ...acc, [s]: problems.filter(p => p.source === s).length }), {} as Record<ProblemSource, number>),
+    [problems]
   );
 
-  const activeCount = mockProblems.filter(p => ['identified', 'investigating', 'fix_in_progress'].includes(p.status)).length;
+  const activeCount = problems.filter(p => ['identified', 'investigating', 'fix_in_progress'].includes(p.status)).length;
   const knownErrorCount = statusCounts['known_error'];
 
   // Filtering
   const filtered = useMemo(() => {
-    let result = [...mockProblems];
+    let result = [...problems];
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(p =>
@@ -171,7 +202,7 @@ export const ProblemList: React.FC = () => {
       return sortDir === 'asc' ? diff : -diff;
     });
     return result;
-  }, [search, statusFilter, sourceFilter, ownerFilter, sortKey, sortDir]);
+  }, [problems, search, statusFilter, sourceFilter, ownerFilter, sortKey, sortDir]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -188,7 +219,7 @@ export const ProblemList: React.FC = () => {
   const hasFilters = search || statusFilter !== 'all' || sourceFilter !== 'all' || ownerFilter !== 'all';
   const clearFilters = () => { setSearch(''); setStatusFilter('all'); setSourceFilter('all'); setOwnerFilter('all'); };
 
-  const uniqueOwners = [...new Set(mockProblems.map(p => p.ownerId))];
+  const uniqueOwners: string[] = Array.from(new Set(problems.map(p => p.ownerId)));
 
   return (
     <div className="space-y-5 pb-10">
@@ -197,7 +228,7 @@ export const ProblemList: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-ois-text">Problems</h1>
           <p className="text-sm text-ois-text-muted mt-0.5">
-            {mockProblems.length} total · {activeCount} active investigations · {knownErrorCount} known errors
+            {problems.length} total · {activeCount} active investigations · {knownErrorCount} known errors
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -226,7 +257,7 @@ export const ProblemList: React.FC = () => {
                 : 'bg-white text-ois-text border-ois-border hover:bg-ois-surface-muted'
             )}
           >
-            All {mockProblems.length}
+            All {problems.length}
           </button>
           {STATUSES.map(s => (
             statusCounts[s] > 0 && (
@@ -307,7 +338,7 @@ export const ProblemList: React.FC = () => {
         )}
 
         <p className="ml-auto text-xs text-ois-text-subtle">
-          {filtered.length} of {mockProblems.length} shown
+          {filtered.length} of {problems.length} shown
         </p>
       </div>
 
@@ -483,7 +514,7 @@ export const ProblemList: React.FC = () => {
       </div>
 
       {/* Create Problem Modal */}
-      <CreateProblemModal isOpen={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreateProblemModal isOpen={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreateProblem} />
     </div>
   );
 };

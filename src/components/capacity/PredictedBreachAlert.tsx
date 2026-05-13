@@ -1,5 +1,5 @@
 import { AlertTriangle, Flame, AlertCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { CapacityForecast, CapacityMetric } from '../../types';
 import { Button } from '../ui/Button';
 
@@ -9,7 +9,9 @@ interface PredictedBreachAlertProps {
 }
 
 export function PredictedBreachAlert({ forecast, metric }: PredictedBreachAlertProps) {
+  const navigate = useNavigate();
   const days = forecast.daysUntilBreach;
+  const handleTakeAction = () => navigate('/changes');
 
   if (days === undefined) return null;
 
@@ -65,7 +67,7 @@ export function PredictedBreachAlert({ forecast, metric }: PredictedBreachAlertP
           <Button
             variant="default"
             size="sm"
-            onClick={() => console.log('take action', forecast.metricId)}
+            onClick={handleTakeAction}
           >
             Take action
           </Button>
@@ -103,7 +105,7 @@ export function PredictedBreachAlert({ forecast, metric }: PredictedBreachAlertP
           <Button
             variant="default"
             size="sm"
-            onClick={() => console.log('take action', forecast.metricId)}
+            onClick={handleTakeAction}
           >
             Take action
           </Button>

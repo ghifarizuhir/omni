@@ -9,10 +9,28 @@ import {
   mockCapacityForecasts,
   getForecastsWithImminentBreach,
 } from '@/src/mocks/capacityForecasts';
+import { useToast, ToastView } from '@/src/lib/useToast';
 
 export default function CapacityForecast() {
   const navigate = useNavigate();
   const [horizonFilter, setHorizonFilter] = useState<30 | 90>(30);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { toast, showToast } = useToast();
+
+  const handleGenerateForecast = () => {
+    if (isGenerating) return;
+    setIsGenerating(true);
+    showToast(`Generating ${horizonFilter}-day forecast…`, 'info');
+    setTimeout(() => {
+      setIsGenerating(false);
+      showToast(`Forecast refreshed (${horizonFilter}d)`, 'success');
+    }, 1500);
+  };
+
+  const handleImplementViaChange = (forecastId: string) => {
+    showToast(`Drafting change for ${forecastId}…`, 'info');
+    setTimeout(() => navigate('/changes'), 500);
+  };
 
   const imminentBreaches = getForecastsWithImminentBreach()
     .slice()
@@ -61,9 +79,10 @@ export default function CapacityForecast() {
           <Button
             variant="default"
             size="sm"
-            onClick={() => console.log('generate forecast')}
+            onClick={handleGenerateForecast}
+            disabled={isGenerating}
           >
-            Generate forecast
+            {isGenerating ? 'Generating…' : 'Generate forecast'}
           </Button>
         </div>
       </div>
@@ -157,7 +176,7 @@ export default function CapacityForecast() {
                         variant="outline"
                         size="sm"
                         className="w-full"
-                        onClick={() => console.log('implement via change', forecast.id)}
+                        onClick={() => handleImplementViaChange(forecast.id)}
                       >
                         Implement via change →
                       </Button>
@@ -217,6 +236,7 @@ export default function CapacityForecast() {
           </Card>
         </div>
       </div>
+      <ToastView toast={toast} />
     </div>
   );
 }

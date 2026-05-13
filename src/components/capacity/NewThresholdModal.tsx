@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { CapacityMetric, CapacityThresholdSeverity } from '../../types';
+import { CapacityMetric, CapacityThreshold, CapacityThresholdSeverity } from '../../types';
 import { cn } from '../../lib/utils';
 
 interface NewThresholdModalProps {
   isOpen: boolean;
   onClose: () => void;
   metrics: CapacityMetric[];
+  onCreated?: (threshold: CapacityThreshold) => void;
 }
 
-export function NewThresholdModal({ isOpen, onClose, metrics }: NewThresholdModalProps) {
+export function NewThresholdModal({ isOpen, onClose, metrics, onCreated }: NewThresholdModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [metricId, setMetricId] = useState('');
@@ -23,11 +24,48 @@ export function NewThresholdModal({ isOpen, onClose, metrics }: NewThresholdModa
   const [scalingPolicy, setScalingPolicy] = useState('');
   const [autoRule, setAutoRule] = useState(false);
 
+  const resetForm = () => {
+    setName('');
+    setDescription('');
+    setMetricId('');
+    setSeverity('warning');
+    setThresholdValue('70');
+    setDuration('5');
+    setAlertRoute('ROUTE-CRITICAL-PROD');
+    setAutoScaling(false);
+    setScalingPolicy('');
+    setAutoRule(false);
+  };
+
   const handleCreate = () => {
-    console.log('Threshold created', {
-      name, description, metricId, severity, thresholdValue, duration,
-      alertRoute, autoScaling, scalingPolicy, autoRule,
-    });
+    const metric = metrics.find(m => m.id === metricId);
+    const now = new Date().toISOString();
+    const id = `thr-${Date.now()}`;
+    const threshold: CapacityThreshold = {
+      id,
+      publicId: `THR-${Date.now().toString().slice(-6)}`,
+      name,
+      description: description || undefined,
+      metricId: metricId || (metrics[0]?.id ?? ''),
+      metricPublicId: metric?.publicId ?? metrics[0]?.publicId ?? '',
+      metricName: metric?.name ?? metrics[0]?.name ?? '',
+      severity,
+      operator: '>',
+      thresholdValue: Number(thresholdValue) || 0,
+      durationMinutes: Number(duration) || 0,
+      alertChannel: alertRoute,
+      autoScalingEnabled: autoScaling,
+      autoScalingPolicy: autoScaling ? scalingPolicy || undefined : undefined,
+      enabled: true,
+      triggerCount30d: 0,
+      linkedRuleIds: [],
+      ownerId: 'user-current',
+      ownerName: 'You',
+      createdAt: now,
+      updatedAt: now,
+    };
+    onCreated?.(threshold);
+    resetForm();
     onClose();
   };
 

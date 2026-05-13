@@ -1,6 +1,8 @@
-import { AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { AlertTriangle, Check } from 'lucide-react';
 import { CapacityMetric } from '../../types';
 import { UtilizationBar } from './UtilizationBar';
+import { useToast, ToastView } from '../../lib/useToast';
 
 interface CriticalMetricsHeroProps {
   metrics: CapacityMetric[];
@@ -34,6 +36,13 @@ function getThresholdLabel(util: number, warning: number, critical: number): str
 
 export function CriticalMetricsHero({ metrics, onViewMetric }: CriticalMetricsHeroProps) {
   const sorted = [...metrics].sort((a, b) => b.utilizationPercent - a.utilizationPercent);
+  const [acknowledged, setAcknowledged] = useState<Set<string>>(new Set());
+  const { toast, showToast } = useToast();
+
+  const handleAcknowledge = (metric: CapacityMetric) => {
+    setAcknowledged(prev => new Set(prev).add(metric.id));
+    showToast(`Acknowledged ${metric.publicId}`, 'success');
+  };
 
   if (sorted.length === 0) return null;
 
@@ -100,18 +109,25 @@ export function CriticalMetricsHero({ metrics, onViewMetric }: CriticalMetricsHe
                       View metric →
                     </button>
                   )}
-                  <button
-                    className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                    onClick={() => console.log('acknowledge', metric.id)}
-                  >
-                    Acknowledge
-                  </button>
+                  {acknowledged.has(metric.id) ? (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                      <Check size={12} /> Acknowledged
+                    </span>
+                  ) : (
+                    <button
+                      className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                      onClick={() => handleAcknowledge(metric)}
+                    >
+                      Acknowledge
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+      <ToastView toast={toast} />
     </div>
   );
 }

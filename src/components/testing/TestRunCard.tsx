@@ -21,7 +21,7 @@ export const TestRunCard: React.FC<TestRunCardProps> = ({ run, isExpanded, onTog
   const isRunning = run.status === 'running';
   const isFailed = run.status === 'failed' || run.status === 'partial';
   const isPassed = run.status === 'passed';
-  const canExpand = isRunning || isFailed;
+  const canExpand = isRunning || isFailed || isPassed;
 
   const borderColor = isRunning
     ? '#0BA5EC'
@@ -128,7 +128,7 @@ export const TestRunCard: React.FC<TestRunCardProps> = ({ run, isExpanded, onTog
             </button>
           )}
           <div className="ml-auto">
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => {}}>
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={onToggleExpand}>
               {isRunning ? 'View live' : 'View test run'} <ArrowRight size={11} />
             </Button>
           </div>

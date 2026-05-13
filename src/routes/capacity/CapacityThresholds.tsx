@@ -5,8 +5,9 @@ import { ThresholdSeverityPill } from '@/src/components/capacity/ThresholdSeveri
 import { NewThresholdModal } from '@/src/components/capacity/NewThresholdModal';
 import { mockCapacityMetrics } from '@/src/mocks/capacityMetrics';
 import { mockCapacityThresholds } from '@/src/mocks/capacityThresholds';
-import { CapacityThresholdSeverity } from '@/src/types/capacity';
+import { CapacityThreshold, CapacityThresholdSeverity } from '@/src/types/capacity';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
+import { useToast, ToastView } from '@/src/lib/useToast';
 
 type StatusFilter = 'all' | 'enabled' | 'disabled';
 
@@ -16,6 +17,18 @@ export default function CapacityThresholds() {
   const [severityFilter, setSeverityFilter] = useState<CapacityThresholdSeverity | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const [extraThresholds, setExtraThresholds] = useState<CapacityThreshold[]>([]);
+  const { toast, showToast } = useToast();
+
+  const allThresholds = useMemo(
+    () => [...extraThresholds, ...mockCapacityThresholds],
+    [extraThresholds],
+  );
+
+  const handleCreated = (threshold: CapacityThreshold) => {
+    setExtraThresholds(prev => [threshold, ...prev]);
+    showToast(`Threshold "${threshold.name}" created`, 'success');
+  };
 
   const getEnabled = (id: string, fallback: boolean) => overrides[id] ?? fallback;
 
@@ -30,7 +43,7 @@ export default function CapacityThresholds() {
   };
 
   const filteredThresholds = useMemo(() => {
-    return mockCapacityThresholds
+    return allThresholds
       .filter(t => {
         const isEnabled = getEnabled(t.id, t.enabled);
         if (statusFilter === 'enabled' && !isEnabled) return false;
@@ -49,13 +62,13 @@ export default function CapacityThresholds() {
         return true;
       })
       .sort((a, b) => b.triggerCount30d - a.triggerCount30d);
-  }, [searchQuery, severityFilter, statusFilter, overrides]);
+  }, [allThresholds, searchQuery, severityFilter, statusFilter, overrides]);
 
   // Stats
-  const totalEnabled = mockCapacityThresholds.filter(t => getEnabled(t.id, t.enabled)).length;
-  const totalDisabled = mockCapacityThresholds.length - totalEnabled;
+  const totalEnabled = allThresholds.filter(t => getEnabled(t.id, t.enabled)).length;
+  const totalDisabled = allThresholds.length - totalEnabled;
   const countBySeverity = (sev: CapacityThresholdSeverity) =>
-    mockCapacityThresholds.filter(t => t.severity === sev).length;
+    allThresholds.filter(t => t.severity === sev).length;
 
   const thresholdsWithEffectiveEnabled = filteredThresholds.map(t => ({
     ...t,
@@ -69,7 +82,7 @@ export default function CapacityThresholds() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Capacity Thresholds</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {mockCapacityThresholds.length} thresholds configured · {totalEnabled} enabled · 3 currently triggering
+            {allThresholds.length} thresholds configured · {totalEnabled} enabled · 3 currently triggering
           </p>
         </div>
         <Button variant="default" size="sm" onClick={() => setIsModalOpen(true)}>
@@ -131,7 +144,7 @@ export default function CapacityThresholds() {
               : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
           }`}
         >
-          All {mockCapacityThresholds.length}
+          All {allThresholds.length}
         </button>
 
         {(['info', 'warning', 'critical'] as CapacityThresholdSeverity[]).map(sev => (
@@ -206,7 +219,9 @@ export default function CapacityThresholds() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         metrics={mockCapacityMetrics}
+        onCreated={handleCreated}
       />
+      <ToastView toast={toast} />
     </div>
   );
 }

@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Clock, DollarSign, Calendar, Link as LinkIcon } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ScalingRecommendation } from '../../types';
 import { recommendationPriorityMeta } from '../../lib/constants';
 import { Button } from '../ui/Button';
+import { useToast, ToastView } from '../../lib/useToast';
 
 interface ScalingRecommendationDetailProps {
   rec: ScalingRecommendation;
@@ -17,8 +19,32 @@ const statusMeta: Record<ScalingRecommendation['status'], { label: string; color
 };
 
 export function ScalingRecommendationDetail({ rec }: ScalingRecommendationDetailProps) {
+  const navigate = useNavigate();
+  const { toast, showToast } = useToast();
+  const [localStatus, setLocalStatus] = useState<ScalingRecommendation['status']>(rec.status);
+  const [dismissReason, setDismissReason] = useState<string | undefined>(rec.dismissedReason);
+
   const priorityMeta = recommendationPriorityMeta[rec.priority];
-  const status = statusMeta[rec.status];
+  const status = statusMeta[localStatus];
+
+  const handleAcknowledge = () => {
+    setLocalStatus('acknowledged');
+    showToast(`Acknowledged ${rec.publicId}`, 'success');
+  };
+
+  const handleImplement = () => {
+    showToast(`Drafting change for ${rec.publicId}…`, 'info');
+    setLocalStatus('in_progress');
+    setTimeout(() => navigate('/changes'), 600);
+  };
+
+  const handleDismiss = () => {
+    const reason = window.prompt('Why are you dismissing this recommendation?');
+    if (reason === null) return;
+    setDismissReason(reason || 'No reason provided');
+    setLocalStatus('dismissed');
+    showToast(`Dismissed ${rec.publicId}`, 'warning');
+  };
 
   const costSign = rec.estimatedCostMonthlyUSD !== undefined
     ? rec.estimatedCostMonthlyUSD >= 0
@@ -105,40 +131,38 @@ export function ScalingRecommendationDetail({ rec }: ScalingRecommendationDetail
       </div>
 
       {/* Dismissed reason */}
-      {rec.status === 'dismissed' && rec.dismissedReason && (
+      {localStatus === 'dismissed' && dismissReason && (
         <div className="rounded-md bg-gray-50 border border-gray-200 px-4 py-3 text-sm text-gray-500">
           <span className="font-medium text-gray-600">Dismissed reason: </span>
-          {rec.dismissedReason}
+          {dismissReason}
         </div>
       )}
 
       {/* Actions */}
-      {rec.status !== 'dismissed' && rec.status !== 'implemented' && (
+      {localStatus !== 'dismissed' && localStatus !== 'implemented' && (
         <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
           <Button
             variant="default"
             size="sm"
-            onClick={() => console.log('acknowledge', rec.id)}
+            onClick={handleAcknowledge}
+            disabled={localStatus === 'acknowledged' || localStatus === 'in_progress'}
           >
-            Acknowledge
+            {localStatus === 'acknowledged' ? 'Acknowledged' : 'Acknowledge'}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => console.log('implement via change', rec.id)}
-          >
+          <Button variant="outline" size="sm" onClick={handleImplement}>
             Implement via change
           </Button>
           <Button
             variant="ghost"
             size="sm"
             className="text-gray-500 hover:text-red-600"
-            onClick={() => console.log('dismiss', rec.id)}
+            onClick={handleDismiss}
           >
             Dismiss
           </Button>
         </div>
       )}
+      <ToastView toast={toast} />
     </div>
   );
 }
