@@ -47,7 +47,7 @@ const LABELS: Record<string, string> = {
   bia: 'BIA Matrix',
   'dr-plans': 'DR Plans',
   tests: 'DR Tests',
-  dashboards: 'Dashboards',
+  dashboards: 'Measurement',
   exec: 'Executive Dashboard',
   reports: 'Reports',
   builder: 'Report Builder',
@@ -105,7 +105,7 @@ function looksLikeId(segment: string): boolean {
 export function useBreadcrumbs(): Crumb[] {
   const { pathname } = useLocation();
 
-  if (pathname === '/') return [{ label: 'Dashboard' }];
+  if (pathname === '/') return [];
 
   const segments = pathname.split('/').filter(Boolean);
   const crumbs: Crumb[] = [];

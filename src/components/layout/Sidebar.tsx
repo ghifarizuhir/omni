@@ -7,7 +7,7 @@ import {
   BookOpen, Wrench, Package, Rocket, CheckCircle2, Store,
   Heart, Zap, Lock, Radio, CircleDot, Clock,
   Lightbulb, Database, Settings, ChevronLeft, ChevronRight,
-  Sparkles, Activity, Shield, GitBranch,
+  Sparkles, Activity, Shield, GitBranch, BarChart3,
 } from 'lucide-react';
 import { mockInboxItems, mockIncidents } from '@/src/mocks';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
@@ -144,7 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
             >
               <div className="flex-1 overflow-y-auto py-4 custom-scrollbar">
                 <SidebarSection label="Operations" collapsed={collapsed}>
-                  <SidebarItem icon={<LayoutDashboard size={18} />} label="Dashboard" to="/" collapsed={collapsed} />
+                  <SidebarItem icon={<LayoutDashboard size={18} />} label="Overview" to="/" collapsed={collapsed} />
                   <SidebarItem icon={<Inbox size={18} />} label="Inbox" to="/inbox" collapsed={collapsed} badge={urgentInboxCount} badgeVariant="urgent" />
                   <SidebarItem icon={<AlertCircle size={18} />} label="Incidents" to="/incidents" collapsed={collapsed} badge={openIncidentCount} />
                   <SidebarItem icon={<Bug size={18} />} label="Problems" to="/problems" collapsed={collapsed} />
@@ -172,7 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
                 </SidebarSection>
 
                 <SidebarSection label="Measurement" collapsed={collapsed}>
-                  <SidebarItem icon={<LayoutDashboard size={18} />} label="Measurement" to="/dashboards" collapsed={collapsed} />
+                  <SidebarItem icon={<BarChart3 size={18} />} label="Measurement" to="/dashboards" collapsed={collapsed} />
                 </SidebarSection>
 
                 <SidebarSection label="Platform" collapsed={collapsed}>
