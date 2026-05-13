@@ -6,6 +6,8 @@ import { Button } from '@/src/components/ui/Button';
 import { Step1Content, ContentData } from '@/src/components/measurement/ReportBuilderWizard/Step1Content';
 import { Step2Schedule, ScheduleData } from '@/src/components/measurement/ReportBuilderWizard/Step2Schedule';
 import { Step3Delivery } from '@/src/components/measurement/ReportBuilderWizard/Step3Delivery';
+import { useCan } from '@/src/lib/rbac';
+import { ShieldAlert } from 'lucide-react';
 
 type StepNumber = 1 | 2 | 3;
 
@@ -16,6 +18,26 @@ const STEPS: { number: StepNumber; label: string }[] = [
 ];
 
 export const ReportBuilder: React.FC = () => {
+  const allowed = useCan('measurement', 'author');
+  if (!allowed) return <ReportBuilderDenied />;
+  return <ReportBuilderForm />;
+};
+
+const ReportBuilderDenied: React.FC = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="max-w-xl mx-auto mt-16 p-8 bg-white rounded-xl border border-ois-border text-center">
+      <ShieldAlert className="mx-auto text-ois-danger" size={36} />
+      <h2 className="mt-3 text-lg font-bold text-ois-text">Cannot author reports</h2>
+      <p className="text-sm text-ois-text-muted mt-1">
+        Authoring reports requires Team Lead level or above.
+      </p>
+      <Button className="mt-4" onClick={() => navigate('/reports')}>Back to Reports</Button>
+    </div>
+  );
+};
+
+const ReportBuilderForm: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<StepNumber>(1);
   const [content, setContent] = useState<ContentData | null>(null);

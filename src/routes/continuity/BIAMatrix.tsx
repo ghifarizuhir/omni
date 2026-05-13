@@ -7,6 +7,7 @@ import { BIAEntry } from '@/src/types/continuity';
 import { BIAMatrix } from '@/src/components/continuity/BIAMatrix';
 import { BIAEntryRow } from '@/src/components/continuity/BIAEntryRow';
 import { BIADetailDrawer } from '@/src/components/continuity/BIADetailDrawer';
+import { Can } from '@/src/lib/rbac';
 
 export const BIAMatrixPage: React.FC = () => {
   const navigate = useNavigate();
@@ -65,10 +66,12 @@ export const BIAMatrixPage: React.FC = () => {
               DR Tests
               <ChevronRight size={14} />
             </Link>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-ois-primary hover:bg-ois-primary/90 rounded-lg transition-colors">
-              <Plus size={15} />
-              New BIA entry
-            </button>
+            <Can module="continuity" action="update">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-ois-primary hover:bg-ois-primary/90 rounded-lg transition-colors">
+                <Plus size={15} />
+                New BIA entry
+              </button>
+            </Can>
           </div>
         </div>
       </div>

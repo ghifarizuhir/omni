@@ -103,7 +103,7 @@ export const mockChanges: Change[] = [
     requesterName: 'David Okafor',
     ownerId: 'u-004',
     ownerName: 'David Okafor',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: ['ci-app-pay-001', 'ci-app-pay-002', 'ci-db-pay-001'],
     affectedCIPublicIds: ['CI-APP-PAY-001', 'CI-APP-PAY-002', 'CI-DB-PAY-001'],
     affectedServiceIds: ['svc-001'],
@@ -116,6 +116,80 @@ export const mockChanges: Change[] = [
     linkedReleaseId: 'rel-2026-00020',
     linkedReleasePublicId: 'REL-2026-00020',
     linkedKBSlugs: ['payment-pgbouncer-migration'],
+    technicalAssessment: {
+      status: 'approved',
+      objective:
+        'Replace per-pod direct Postgres connections from payment-api with a pgbouncer transaction-pooled topology so that connection count scales with worker count, not pod count, eliminating the recurring pool-exhaustion failure mode behind PRB-2026-00018.',
+      technicalScope:
+        'Introduce a pgbouncer StatefulSet in the payment VPC fronting the payment-db primary. Re-point payment-api and payment-worker connection strings via Terraform. No DB schema, ORM, or query change. Rolling restart of payment-api/payment-worker pods to pick up the new endpoint. No client- or partner-visible change.',
+      prerequisites: [
+        'pgbouncer instance provisioned and health-checked in payment VPC',
+        'Terraform plan reviewed for connection-string flip (PR #4421 merged)',
+        'Staging soak test ≥ 7 days at production-equivalent load — passed',
+        'RULE-PAY-005 monitoring rule for pgbouncer backend pool added',
+      ],
+      dependencies: [
+        'payment-db primary (CI-DB-PAY-001) reachable from pgbouncer subnet',
+        'Cert-manager has issued TLS cert for pgbouncer SNI',
+        'Release REL-2026-00020 must NOT ship in the same window (avoid co-deploy)',
+      ],
+      performanceImpact:
+        'Expected p95 latency neutral to -8% (connection acquisition cheaper). Throughput ceiling raised ~3.4× before pool saturation under load test. Brief connection drain ~30s during pod rollout.',
+      securityConsiderations:
+        'pgbouncer terminates TLS and re-uses pooled backend connections — verified that no per-session GUCs (search_path, role) are relied on. md5 auth removed in favor of SCRAM passthrough. No new ingress; pgbouncer is in-VPC only.',
+      observabilityNotes:
+        'pgbouncer exporter scraped by Prometheus; dashboard "Payment / Connections" updated. Alerts: backend_pool_size > 80%, server_login_retries > 0, client_wait_time_ms p99 > 50ms.',
+      risks: [
+        {
+          id: 'tar-091-1',
+          description:
+            'Transaction pooling breaks features that rely on session state (prepared statements, SET LOCAL outside a txn, advisory locks).',
+          likelihood: 'unlikely',
+          impact: 'major',
+          mitigation:
+            'Code audit completed — payment-api uses only short transactions, no advisory locks, no session-scoped prepared statements. Confirmed in staging via pg_stat_statements.',
+          owner: 'David Okafor',
+        },
+        {
+          id: 'tar-091-2',
+          description:
+            'pgbouncer becomes a single point of failure between payment-api and the DB.',
+          likelihood: 'possible',
+          impact: 'severe',
+          mitigation:
+            'Deploy as a 2-replica StatefulSet behind a headless service with readiness probes; both replicas tested for failover during staging soak. Rollback path A (config-only revert to direct connections) takes ~2 min.',
+          owner: 'David Okafor',
+        },
+        {
+          id: 'tar-091-3',
+          description:
+            'Connection drain during pod rollout causes spike in 5xx for in-flight checkouts.',
+          likelihood: 'likely',
+          impact: 'minor',
+          mitigation:
+            'Rolling restart with maxUnavailable=1 and 30s preStop hook. Synthetic checkout monitor on standby; auto-pause rollout if error rate > 0.5% for 5 min.',
+          owner: 'Sarah Chen',
+        },
+        {
+          id: 'tar-091-4',
+          description:
+            'pgbouncer auth mismatch on first connection (SCRAM vs md5) blocks all writes.',
+          likelihood: 'rare',
+          impact: 'severe',
+          mitigation:
+            'Auth mode pinned and validated in staging. Pre-flight check at 14:00 verifies a probe connection from each AZ before pod restarts begin.',
+          owner: 'David Okafor',
+        },
+      ],
+      reviewerId: 'u-009',
+      reviewerName: 'Priya Raman',
+      reviewerRole: 'Principal Engineer, Payments',
+      reviewedAt: '2026-05-08T09:15:00Z',
+      signOffNote:
+        'Technical approach is sound. Staging evidence is strong and the rollback story is well-rehearsed. Approved to proceed to CAB. Recommend keeping the synthetic checkout monitor as the rollout gate.',
+      submittedAt: '2026-05-07T16:40:00Z',
+      submittedBy: 'David Okafor',
+    },
     approvals: [
       {
         id: 'appr-091-001',
@@ -181,7 +255,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Yuki Tanaka',
     ownerId: 'u-005',
     ownerName: 'Yuki Tanaka',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: ['ci-app-auth-001'],
     affectedCIPublicIds: ['CI-APP-AUTH-001'],
     affectedServiceIds: ['svc-002'],
@@ -190,6 +264,51 @@ export const mockChanges: Change[] = [
     rollbackPlan:
       '## Rollback\n1. `kubectl rollout undo deployment/auth-service -n auth`\n2. Verify v3.0.2 is running\n3. Health check',
     testPlan: 'Staging validated (142/150 tests). Post-deploy: OAuth smoke tests.',
+    technicalAssessment: {
+      status: 'submitted',
+      objective:
+        'Ship auth-service v3.1.0 to align OAuth2 PKCE handling with RFC 7636 §4.6 and fix the session-expiry edge case (INC-2026-00171 root cause) before the Q2 compliance audit.',
+      technicalScope:
+        'Rolling deploy of auth-service container image v3.1.0 to the auth namespace. No schema migration. Two config-map keys added (PKCE_S256_ONLY=true, SESSION_GRACE_MS=15000). No client SDK change required.',
+      prerequisites: [
+        'Image v3.1.0 promoted to prod registry and signed',
+        'Staging regression suite passed (142/150 — 8 skips reviewed and acceptable)',
+        'Feature flag SESSION_GRACE_MS read path validated under load',
+      ],
+      dependencies: [
+        'Identity DB (CI-DB-AUTH-001) reachable — no schema change required',
+        'Downstream services tolerate 15s session grace (verified for payment-api, order-api)',
+      ],
+      performanceImpact:
+        'Neutral. Token-issue p95 measured -3% in staging (smaller JWT claims after PKCE normalization).',
+      securityConsiderations:
+        'PKCE_S256_ONLY rejects "plain" code challenges — clients still sending plain will fail auth. Inventory of clients confirms all production clients send S256. Audit logging unchanged.',
+      observabilityNotes:
+        'New metric authsvc_pkce_rejected_total — alert if > 0 in 5m sustained. Existing OAuth dashboards unchanged.',
+      risks: [
+        {
+          id: 'tar-090-1',
+          description:
+            'A partner integration still hardcodes PKCE method=plain and starts failing at cutover.',
+          likelihood: 'possible',
+          impact: 'major',
+          mitigation:
+            'Pre-deploy grep of access logs for code_challenge_method=plain over last 14d — zero hits. Adding a 24h shadow-log mode before strict rejection is in v3.1.1.',
+          owner: 'Yuki Tanaka',
+        },
+        {
+          id: 'tar-090-2',
+          description:
+            'Session grace window of 15s extends the blast radius of a stolen token by up to 15s after revocation.',
+          likelihood: 'rare',
+          impact: 'moderate',
+          mitigation:
+            'Trade-off accepted by Security Architecture (ticket SEC-422). Revocation list TTL shortened to 10s.',
+        },
+      ],
+      submittedAt: '2026-05-08T11:00:00Z',
+      submittedBy: 'Yuki Tanaka',
+    },
     linkedProblemIds: [],
     linkedIncidentIds: [],
     linkedReleaseId: 'rel-2026-00019',
@@ -262,7 +381,7 @@ export const mockChanges: Change[] = [
     requesterName: 'David Okafor',
     ownerId: 'u-004',
     ownerName: 'David Okafor',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: ['ci-app-ord-001'],
     affectedCIPublicIds: ['CI-APP-ORD-001'],
     affectedServiceIds: ['svc-003'],
@@ -333,7 +452,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Priya Raman',
     ownerId: 'u-003',
     ownerName: 'Priya Raman',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: [],
     affectedCIPublicIds: [],
     affectedServiceIds: [],
@@ -374,7 +493,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Sarah Chen',
     ownerId: 'u-003',
     ownerName: 'Priya Raman',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: [],
     affectedCIPublicIds: [],
     affectedServiceIds: ['svc-001', 'svc-002'],
@@ -420,7 +539,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Emma Müller',
     ownerId: 'u-010',
     ownerName: 'Emma Müller',
-    ownerTeamId: 't-platform',
+    ownerTeamId: 'team-core-loan',
     affectedCIIds: [],
     affectedCIPublicIds: [],
     affectedServiceIds: ['svc-007'],
@@ -492,7 +611,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Sarah Chen',
     ownerId: 'u-009',
     ownerName: 'Roberto Silva',
-    ownerTeamId: 't-network',
+    ownerTeamId: 'team-ifm-noc',
     affectedCIIds: [],
     affectedCIPublicIds: [],
     affectedServiceIds: ['svc-002'],
@@ -579,7 +698,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Sarah Chen',
     ownerId: 'u-004',
     ownerName: 'David Okafor',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: ['ci-app-pay-001', 'ci-db-pay-001'],
     affectedCIPublicIds: ['CI-APP-PAY-001', 'CI-DB-PAY-001'],
     affectedServiceIds: ['svc-001'],
@@ -672,7 +791,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Aisha Khan',
     ownerId: 'u-008',
     ownerName: 'Aisha Khan',
-    ownerTeamId: 't-data',
+    ownerTeamId: 'team-data-dwh',
     affectedCIIds: [],
     affectedCIPublicIds: [],
     affectedServiceIds: ['svc-006'],
@@ -765,7 +884,7 @@ export const mockChanges: Change[] = [
     requesterName: 'David Okafor',
     ownerId: 'u-004',
     ownerName: 'David Okafor',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: ['ci-app-pay-001', 'ci-db-pay-001'],
     affectedCIPublicIds: ['CI-APP-PAY-001', 'CI-DB-PAY-001'],
     affectedServiceIds: ['svc-001'],
@@ -835,7 +954,7 @@ export const mockChanges: Change[] = [
     requesterName: 'David Okafor',
     ownerId: 'u-004',
     ownerName: 'David Okafor',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: ['ci-db-pay-001'],
     affectedCIPublicIds: ['CI-DB-PAY-001'],
     affectedServiceIds: ['svc-001'],
@@ -905,7 +1024,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Sarah Chen',
     ownerId: 'u-003',
     ownerName: 'Priya Raman',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: [],
     affectedCIPublicIds: [],
     affectedServiceIds: [],
@@ -964,7 +1083,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Emma Müller',
     ownerId: 'u-010',
     ownerName: 'Emma Müller',
-    ownerTeamId: 't-platform',
+    ownerTeamId: 'team-core-loan',
     affectedCIIds: [],
     affectedCIPublicIds: [],
     affectedServiceIds: ['svc-007'],
@@ -1041,7 +1160,7 @@ export const mockChanges: Change[] = [
     requesterName: 'David Okafor',
     ownerId: 'u-004',
     ownerName: 'David Okafor',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: ['ci-app-pay-001'],
     affectedCIPublicIds: ['CI-APP-PAY-001'],
     affectedServiceIds: ['svc-001'],
@@ -1124,7 +1243,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Aisha Khan',
     ownerId: 'u-008',
     ownerName: 'Aisha Khan',
-    ownerTeamId: 't-data',
+    ownerTeamId: 'team-data-dwh',
     affectedCIIds: [],
     affectedCIPublicIds: [],
     affectedServiceIds: ['svc-006'],
@@ -1170,7 +1289,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Yuki Tanaka',
     ownerId: 'u-005',
     ownerName: 'Yuki Tanaka',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: [],
     affectedCIPublicIds: [],
     affectedServiceIds: [],
@@ -1211,7 +1330,7 @@ export const mockChanges: Change[] = [
     requesterName: 'Yuki Tanaka',
     ownerId: 'u-005',
     ownerName: 'Yuki Tanaka',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: ['ci-app-ord-001'],
     affectedCIPublicIds: ['CI-APP-ORD-001'],
     affectedServiceIds: ['svc-003'],
@@ -1264,7 +1383,7 @@ export const mockChanges: Change[] = [
     requesterName: "Liam O'Connor",
     ownerId: 'u-005',
     ownerName: 'Yuki Tanaka',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     affectedCIIds: [],
     affectedCIPublicIds: [],
     affectedServiceIds: ['svc-004'],

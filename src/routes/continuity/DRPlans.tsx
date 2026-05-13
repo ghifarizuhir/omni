@@ -7,6 +7,7 @@ import { DRPlan, DRPlanStatus } from '@/src/types/continuity';
 import { DRPlanCard } from '@/src/components/continuity/DRPlanCard';
 import { DRTestRunnerWizard } from '@/src/components/continuity/DRTestRunner/DRTestRunnerWizard';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
+import { Can } from '@/src/lib/rbac';
 
 const TODAY = new Date('2026-05-10');
 
@@ -166,10 +167,12 @@ export const DRPlans: React.FC = () => {
               Tests
               <ChevronRight size={14} />
             </Link>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-ois-primary hover:bg-ois-primary/90 rounded-lg transition-colors">
-              <Plus size={15} />
-              New plan
-            </button>
+            <Can module="continuity" action="update">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-ois-primary hover:bg-ois-primary/90 rounded-lg transition-colors">
+                <Plus size={15} />
+                New plan
+              </button>
+            </Can>
           </div>
         </div>
       </div>

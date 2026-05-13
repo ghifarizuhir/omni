@@ -19,6 +19,7 @@ import { CITreeNode, TreeDataNode } from '../../components/cmdb/CITreeNode';
 import { CreateCIModal } from '../../components/cmdb/modals/CreateCIModal';
 import { ImportCIModal } from '../../components/cmdb/modals/ImportCIModal';
 import { ciTypeMeta } from '../../lib/constants';
+import { Can } from '@/src/lib/rbac';
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 interface ToastState { message: string }
@@ -166,12 +167,14 @@ export const CMDBList: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="primary" size="sm" className="gap-2 h-9 px-4" onClick={() => setCreateOpen(true)}>
-             <Plus size={16} /> Add CI
-           </Button>
-           <Button variant="outline" size="sm" className="h-9 px-3 border-ois-border-strong bg-white" onClick={() => setImportOpen(true)}>
-             Import
-           </Button>
+           <Can module="cmdb" action="update">
+             <Button variant="primary" size="sm" className="gap-2 h-9 px-4" onClick={() => setCreateOpen(true)}>
+               <Plus size={16} /> Add CI
+             </Button>
+             <Button variant="outline" size="sm" className="h-9 px-3 border-ois-border-strong bg-white" onClick={() => setImportOpen(true)}>
+               Import
+             </Button>
+           </Can>
            <div className="w-px h-6 bg-ois-border mx-1" />
            <div className="flex items-center bg-white border border-ois-border-strong rounded-lg p-0.5">
              <button 

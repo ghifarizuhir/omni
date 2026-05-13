@@ -13,6 +13,7 @@ import {
   mockMonitoringRules
 } from '@/src/mocks';
 import { getIncidentsByCI } from '@/src/mocks/incidents';
+import { Can } from '@/src/lib/rbac';
 import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
 import { getChangesByCI } from '@/src/mocks/changes';
 import { getProblemsByCI } from '@/src/mocks/problems';
@@ -123,17 +124,19 @@ export const CMDBDetail: React.FC = () => {
                 }}>Save</Button>
               </>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 h-9 bg-white border-ois-border-strong"
-                onClick={() => {
-                  setEditDraft({ name: ci.name, status: ci.status, environment: ci.environment, criticality: ci.criticality });
-                  setEditMode(true);
-                }}
-              >
-                <Edit2 size={14} /> Edit
-              </Button>
+              <Can module="cmdb" action="update">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 h-9 bg-white border-ois-border-strong"
+                  onClick={() => {
+                    setEditDraft({ name: ci.name, status: ci.status, environment: ci.environment, criticality: ci.criticality });
+                    setEditMode(true);
+                  }}
+                >
+                  <Edit2 size={14} /> Edit
+                </Button>
+              </Can>
             )}
             <div className="relative">
               <Button

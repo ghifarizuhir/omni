@@ -18,6 +18,8 @@ import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import {
   KBContentType, KBVisibility, KBStatus,
 } from '@/src/types/knowledge';
+import { useCan } from '@/src/lib/rbac';
+import { ShieldAlert } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -516,6 +518,31 @@ const ChipsInput: React.FC<{
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export const KBEditor: React.FC = () => {
+  const allowed = useCan('knowledge', 'author');
+  if (!allowed) return <KBEditorDenied />;
+  return <KBEditorForm />;
+};
+
+const KBEditorDenied: React.FC = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="max-w-xl mx-auto mt-16 p-8 bg-white rounded-xl border border-ois-border text-center">
+      <ShieldAlert className="mx-auto text-ois-danger" size={36} />
+      <h2 className="mt-3 text-lg font-bold text-ois-text">Cannot author KB articles</h2>
+      <p className="text-sm text-ois-text-muted mt-1">
+        Authoring knowledge requires Team Lead level or above (IFM / APS / STA).
+      </p>
+      <button
+        onClick={() => navigate('/kb')}
+        className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-ois-primary text-white text-sm font-semibold hover:bg-ois-primary-hover"
+      >
+        Back to Knowledge Base
+      </button>
+    </div>
+  );
+};
+
+const KBEditorForm: React.FC = () => {
   const { slug }      = useParams<{ slug?: string }>();
   const navigate      = useNavigate();
   const [searchParams] = useSearchParams();

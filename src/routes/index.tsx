@@ -78,6 +78,15 @@ import StatusPage from './platform/StatusPage';
 import { Profile } from './platform/Profile';
 import { Settings } from './platform/Settings';
 import { AiWorkspace } from './ai/AiWorkspace';
+import { AdminLayout } from './admin/AdminLayout';
+import { AdminOverview } from './admin/AdminOverview';
+import { Divisions } from './admin/Divisions';
+import { Departments } from './admin/Departments';
+import { Teams as AdminTeams } from './admin/Teams';
+import { Users as AdminUsers } from './admin/Users';
+import { Applications as AdminApplications } from './admin/Applications';
+import { Roles as AdminRoles } from './admin/Roles';
+import { Permissions as AdminPermissions } from './admin/Permissions';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
@@ -171,6 +180,17 @@ export const routes: RouteObject[] = [
       { path: 'profile',                        element: <Profile /> },
       // Settings
       { path: 'settings',                       element: <Settings /> },
+      // RBAC Admin (superadmin only)
+      { path: 'admin', element: <AdminLayout />, children: [
+        { index: true,             element: <AdminOverview /> },
+        { path: 'divisions',       element: <Divisions /> },
+        { path: 'departments',     element: <Departments /> },
+        { path: 'teams',           element: <AdminTeams /> },
+        { path: 'users',           element: <AdminUsers /> },
+        { path: 'applications',    element: <AdminApplications /> },
+        { path: 'roles',           element: <AdminRoles /> },
+        { path: 'permissions',     element: <AdminPermissions /> },
+      ]},
       // 404
       { path: '*',                              element: <NotFound /> },
       // AI Workspace

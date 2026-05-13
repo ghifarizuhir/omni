@@ -9,6 +9,7 @@ import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { getDeploymentById } from '../../mocks/deployments';
+import { useCan, deploymentResource } from '@/src/lib/rbac';
 import { getLogsByDeploymentId } from '../../mocks/deploymentLogs';
 import { mockTestRuns } from '../../mocks/testRuns';
 import { formatDate, formatRelative } from '../../lib/format';
@@ -84,12 +85,23 @@ function StickyActionBar({
   deployment,
   onRollback,
   onRedeploy,
+  canDeploy,
 }: {
   deployment: ReturnType<typeof getDeploymentById>;
   onRollback: () => void;
   onRedeploy: () => void;
+  canDeploy: boolean;
 }) {
   if (!deployment) return null;
+  if (!canDeploy) {
+    return (
+      <div className="sticky bottom-0 z-20 bg-white border-t border-ois-border px-6 py-3 flex items-center">
+        <span className="text-xs text-ois-text-subtle italic">
+          Read-only — only the owning team or a Change Manager can rollback or re-deploy.
+        </span>
+      </div>
+    );
+  }
   const { status, stages, currentStageIndex, rollback } = deployment;
 
   const completedCount = stages.filter((s) => s.status === 'success').length;
@@ -189,6 +201,9 @@ export const DeploymentDetail: React.FC = () => {
   const [localStatus, setLocalStatus] = useState<string | null>(null);
 
   const deployment = getDeploymentById(deploymentId ?? '');
+  const canDeploy = useCan('release', 'implement', {
+    resource: deployment ? deploymentResource(deployment) : undefined,
+  });
   const logs = getLogsByDeploymentId(deployment?.id ?? '');
   const linkedTestRun = mockTestRuns.find(
     (r) => r.linkedDeploymentPublicId === deployment?.publicId,
@@ -551,6 +566,7 @@ export const DeploymentDetail: React.FC = () => {
           deployment={effectiveDeployment}
           onRollback={() => setRollbackOpen(true)}
           onRedeploy={() => setRedeployOpen(true)}
+          canDeploy={canDeploy}
         />
       </div>
 

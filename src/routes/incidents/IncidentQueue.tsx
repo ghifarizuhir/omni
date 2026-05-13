@@ -21,6 +21,7 @@ import { Button } from '@/src/components/ui/Button';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { Modal } from '@/src/components/ui/Modal';
 import { Input } from '@/src/components/ui/Input';
+import { Can, useCurrentUser, filterReadable, incidentResource } from '@/src/lib/rbac';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -83,8 +84,19 @@ export const IncidentQueue: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // mutable incidents state
-  const [incidents, setIncidents] = useState(() => [...mockIncidents]);
+  const { user, applications, teams, departments } = useCurrentUser();
+
+  // mutable incidents state — filtered to what the current user can read
+  const [allIncidents, setAllIncidents] = useState(() => [...mockIncidents]);
+  const incidents = useMemo(
+    () => filterReadable(
+      user,
+      'incident',
+      allIncidents.map(i => ({ ...i, ...incidentResource(i) })),
+    ) as typeof allIncidents,
+    [user, allIncidents, applications, teams, departments],
+  );
+  const setIncidents = setAllIncidents;
 
   // filter state
   const [search, setSearch] = useState('');
@@ -277,10 +289,12 @@ export const IncidentQueue: React.FC = () => {
               <BarChart2 size={15} className="mr-1.5" />
               Analytics
             </Button>
-            <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus size={15} className="mr-1.5" />
-              New incident
-            </Button>
+            <Can module="incident" action="create">
+              <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+                <Plus size={15} className="mr-1.5" />
+                New incident
+              </Button>
+            </Can>
           </div>
         </div>
 

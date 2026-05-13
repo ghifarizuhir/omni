@@ -14,6 +14,7 @@ import { DeploymentTriggerChip } from '../../components/deployments/DeploymentTr
 import { RollbackModal } from '../../components/deployments/DeploymentDetail/RollbackModal';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+import { useCan, deploymentResource } from '@/src/lib/rbac';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -43,9 +44,10 @@ const ActionsMenu: React.FC<{
   const [rollbackOpen, setRollbackOpen] = useState(false);
   const navigate = useNavigate();
 
-  const canRollback = dep.status === 'success' || dep.status === 'running';
-  const canCancel = dep.status === 'pending' || dep.status === 'running';
-  const canRedeploy = dep.status === 'failed' || dep.status === 'rolled_back';
+  const canDeploy = useCan('release', 'implement', { resource: deploymentResource(dep) });
+  const canRollback = canDeploy && (dep.status === 'success' || dep.status === 'running');
+  const canCancel = canDeploy && (dep.status === 'pending' || dep.status === 'running');
+  const canRedeploy = canDeploy && (dep.status === 'failed' || dep.status === 'rolled_back');
 
   useEffect(() => {
     if (!open) return;

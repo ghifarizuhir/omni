@@ -12,6 +12,7 @@ import { formatRelative } from '@/src/lib/format';
 import { mockKBArticles } from '@/src/mocks/kbArticles';
 import { mockKBCategories } from '@/src/mocks/kbCategories';
 import { KBArticle, KBStatus, KBContentType } from '@/src/types/knowledge';
+import { Can } from '@/src/lib/rbac';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -335,12 +336,14 @@ export const KBBrowse: React.FC = () => {
           >
             <BarChart2 size={14} /> Analytics
           </button>
-          <button
-            onClick={() => navigate('/kb/editor')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ois-primary text-white text-xs font-semibold hover:bg-ois-primary-hover transition-colors active:scale-95"
-          >
-            <Plus size={14} /> New article
-          </button>
+          <Can module="knowledge" action="author">
+            <button
+              onClick={() => navigate('/kb/editor')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ois-primary text-white text-xs font-semibold hover:bg-ois-primary-hover transition-colors active:scale-95"
+            >
+              <Plus size={14} /> New article
+            </button>
+          </Can>
         </div>
       </div>
 

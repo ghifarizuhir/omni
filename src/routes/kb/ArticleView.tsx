@@ -9,6 +9,7 @@ import {
 import { cn } from '@/src/lib/utils';
 import { formatDate, formatRelative } from '@/src/lib/format';
 import { getArticleBySlug, getRelatedArticles, mockKBArticles } from '@/src/mocks/kbArticles';
+import { Can } from '@/src/lib/rbac';
 import { mockKBCategories } from '@/src/mocks/kbCategories';
 import { Modal } from '@/src/components/ui/Modal';
 import { KBArticle, KBContentType, KBStatus } from '@/src/types/knowledge';
@@ -547,12 +548,14 @@ export const ArticleView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => navigate(`/kb/editor/${article.slug}`)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ois-border text-xs font-semibold text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text transition-colors"
-            >
-              <Edit3 size={13} /> Edit
-            </button>
+            <Can module="knowledge" action="author">
+              <button
+                onClick={() => navigate(`/kb/editor/${article.slug}`)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ois-border text-xs font-semibold text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text transition-colors"
+              >
+                <Edit3 size={13} /> Edit
+              </button>
+            </Can>
             <button
               onClick={handleShare}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ois-border text-xs font-semibold text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text transition-colors"

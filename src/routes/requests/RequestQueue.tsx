@@ -15,6 +15,7 @@ import {
   ServiceRequest, RequestStatus, CatalogCategory, WorkflowStepInstance,
 } from '@/src/types/request';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
+import { useCurrentUser, filterReadable, requestResource } from '@/src/lib/rbac';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -200,7 +201,15 @@ export const RequestQueue: React.FC = () => {
   const [slaFlt,     setSlaFlt]     = useState('');
   const [quickFlt,   setQuickFlt]   = useState<QuickFilter>(null);
 
-  const all = mockServiceRequests;
+  const { user, applications, teams, departments } = useCurrentUser();
+  const all = useMemo(
+    () => filterReadable(
+      user,
+      'request',
+      mockServiceRequests.map(r => ({ ...r, ...requestResource(r) })),
+    ) as typeof mockServiceRequests,
+    [user, applications, teams, departments],
+  );
 
   // ── Pre-computed counts for chips ──────────────────────────────────────────
   const counts = useMemo(() => ({

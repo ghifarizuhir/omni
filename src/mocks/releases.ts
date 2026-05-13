@@ -69,7 +69,7 @@ export const mockReleases: Release[] = [
     currentStageIndex: 0,
     releaseManagerId: 'u-006',
     releaseManagerName: 'Helena Vasquez',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     releaseNotes: `## Payment API 2.4.1
 
 ### What's new
@@ -166,7 +166,7 @@ export const mockReleases: Release[] = [
     currentStageIndex: 1,
     releaseManagerId: 'u-006',
     releaseManagerName: 'Helena Vasquez',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     releaseNotes: `## Auth Service 3.1.0
 
 ### What's new
@@ -265,7 +265,7 @@ export const mockReleases: Release[] = [
     currentStageIndex: 2,
     releaseManagerId: 'u-006',
     releaseManagerName: 'Helena Vasquez',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     releaseNotes: `## Order API 3.1.0
 
 ### What's new
@@ -347,7 +347,7 @@ export const mockReleases: Release[] = [
     currentStageIndex: 2,
     releaseManagerId: 'u-006',
     releaseManagerName: 'Helena Vasquez',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     releaseNotes: `## Auth Service 2.8.1
 
 ### Security
@@ -425,7 +425,7 @@ export const mockReleases: Release[] = [
     currentStageIndex: 2,
     releaseManagerId: 'u-006',
     releaseManagerName: 'Helena Vasquez',
-    ownerTeamId: 't-platform',
+    ownerTeamId: 'team-core-loan',
     releaseNotes: `## notification-gw 1.5.2
 
 ### What's new
@@ -522,7 +522,7 @@ export const mockReleases: Release[] = [
     currentStageIndex: 2,
     releaseManagerId: 'u-006',
     releaseManagerName: 'Helena Vasquez',
-    ownerTeamId: 't-sre',
+    ownerTeamId: 'team-ch-mobile',
     releaseNotes: `## Payment API 2.4.0
 
 ### Changes
@@ -599,7 +599,7 @@ export const mockReleases: Release[] = [
     currentStageIndex: 2,
     releaseManagerId: 'u-006',
     releaseManagerName: 'Helena Vasquez',
-    ownerTeamId: 't-platform',
+    ownerTeamId: 'team-core-loan',
     releaseNotes: `## Search Service 4.2.0
 
 ### What's new
@@ -688,7 +688,7 @@ export const mockReleases: Release[] = [
     currentStageIndex: 2,
     releaseManagerId: 'u-006',
     releaseManagerName: 'Helena Vasquez',
-    ownerTeamId: 't-data',
+    ownerTeamId: 'team-data-dwh',
     releaseNotes: `## Analytics Pipeline 2.0.0
 
 ### What's new

@@ -14,6 +14,7 @@ import { Avatar } from '@/src/components/ui/Avatar';
 import { ProblemStatusPill } from '@/src/components/problems/ProblemStatusPill';
 import { ProblemSourceChip } from '@/src/components/problems/ProblemSourceChip';
 import { mockProblems } from '@/src/mocks/problems';
+import { Can, useCurrentUser, filterReadable, problemResource } from '@/src/lib/rbac';
 import { mockUsers } from '@/src/mocks/users';
 import { problemStatusMeta, problemSourceMeta } from '@/src/lib/constants';
 import { formatRelative } from '@/src/lib/format';
@@ -128,8 +129,16 @@ export const ProblemList: React.FC = () => {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [createOpen, setCreateOpen] = useState(false);
   const [extraProblems, setExtraProblems] = useState<Problem[]>([]);
+  const { user, applications, teams, departments } = useCurrentUser();
 
-  const problems = useMemo(() => [...extraProblems, ...mockProblems], [extraProblems]);
+  const problems = useMemo(
+    () => filterReadable(
+      user,
+      'problem',
+      [...extraProblems, ...mockProblems].map(p => ({ ...p, ...problemResource(p) })),
+    ) as Problem[],
+    [extraProblems, user, applications, teams, departments],
+  );
 
   const handleCreateProblem = ({ title, description }: { title: string; description: string }) => {
     const now = new Date().toISOString();
@@ -238,10 +247,12 @@ export const ProblemList: React.FC = () => {
               KEDB
             </Button>
           </Link>
-          <Button variant="primary" size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
-            <Plus size={14} />
-            New problem
-          </Button>
+          <Can module="problem" action="create" fallback={null}>
+            <Button variant="primary" size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+              <Plus size={14} />
+              New problem
+            </Button>
+          </Can>
         </div>
       </div>
 

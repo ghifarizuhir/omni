@@ -7,6 +7,7 @@ import { cn } from '@/src/lib/utils';
 import { mockInboxItems, mockNotifications, currentUser } from '@/src/mocks';
 import { NotificationDropdown } from './NotificationDropdown';
 import { UserMenu } from './UserMenu';
+import { UserSwitcher } from './UserSwitcher';
 import { useBreadcrumbs } from '@/src/lib/breadcrumbs';
 
 interface TopBarProps {
@@ -91,6 +92,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) 
           {showNotifications && (
             <NotificationDropdown onClose={() => setShowNotifications(false)} />
           )}
+        </div>
+
+        <div className="ml-2 hidden lg:block">
+          <UserSwitcher />
         </div>
 
         <div className="relative ml-2">

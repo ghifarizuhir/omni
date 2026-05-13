@@ -8,6 +8,7 @@ import { SLACard as SLACardBase } from '@/src/components/availability/SLACard';
 import { Button } from '@/src/components/ui/Button';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { AvailabilitySLAStatus, SLATarget, SLABreach } from '@/src/types';
+import { Can } from '@/src/lib/rbac';
 
 const SLACard: React.FC<{ sla: SLATarget; breach?: SLABreach }> = (props) => (
   <SLACardBase {...props} />
@@ -65,10 +66,12 @@ export const SLATargets: React.FC = () => {
             8 SLAs across 8 services · 6 meeting · 2 breached · Avg compliance: 75%
           </p>
         </div>
-        <Button variant="primary" size="sm">
-          <Plus size={14} className="mr-1" />
-          New SLA Target
-        </Button>
+        <Can module="availability" action="update">
+          <Button variant="primary" size="sm">
+            <Plus size={14} className="mr-1" />
+            New SLA Target
+          </Button>
+        </Can>
       </div>
 
       {/* Filter Bar */}

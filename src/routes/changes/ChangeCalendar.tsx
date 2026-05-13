@@ -17,6 +17,7 @@ import { RiskBadge } from '../../components/changes/RiskBadge';
 import { formatDate } from '../../lib/format';
 import { Change, ChangeStatus, RiskLevel } from '../../types/change';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
+import { Can, useCurrentUser, filterReadable, changeResource } from '../../lib/rbac';
 
 type ViewMode = 'calendar' | 'board' | 'list';
 
@@ -50,36 +51,46 @@ export const ChangeCalendar: React.FC = () => {
   const [listStatusFilter, setListStatusFilter] = useState<ChangeStatus | ''>('');
   const [listRiskFilter, setListRiskFilter] = useState<RiskLevel | ''>('');
   const navigate = useNavigate();
+  const { user, applications, teams, departments } = useCurrentUser();
 
-  const activeChanges = useMemo(
-    () => mockChanges.filter(
-      (c) => !['closed_successful', 'closed_failed', 'rejected', 'cancelled'].includes(c.status),
-    ),
-    [],
+  const visibleChanges = useMemo(
+    () => filterReadable(
+      user,
+      'change',
+      mockChanges.map(c => ({ ...c, ...changeResource(c) })),
+    ) as Change[],
+    [user, applications, teams, departments],
   );
 
-  const thisWeekChanges = useMemo(() => getThisWeekChanges(mockChanges), []);
+  const activeChanges = useMemo(
+    () => visibleChanges.filter(
+      (c) => !['closed_successful', 'closed_failed', 'rejected', 'cancelled'].includes(c.status),
+    ),
+    [visibleChanges],
+  );
+
+  const thisWeekChanges = useMemo(() => getThisWeekChanges(visibleChanges), [visibleChanges]);
   const weekByDay = useMemo(() => groupByDay(thisWeekChanges), [thisWeekChanges]);
 
   const awaitingApproval = useMemo(
-    () => mockChanges.filter(
+    () => visibleChanges.filter(
       (c) => c.status === 'in_review' &&
         c.approvals.some((a) => a.approverId === 'u-001' && a.decision === 'pending'),
     ),
-    [],
+    [visibleChanges],
   );
 
   const activeConflicts = useMemo(
-    () => mockChanges.filter((c) => c.conflicts.some((cf) => !cf.resolvedAt)),
-    [],
+    () => visibleChanges.filter((c) => c.conflicts.some((cf) => !cf.resolvedAt)),
+    [visibleChanges],
   );
 
-  const implementingThisWeek = mockChanges.filter((c) => c.status === 'implementing').length;
-  const totalConflicts = mockChanges.reduce((n, c) => n + c.conflicts.filter((cf) => !cf.resolvedAt).length, 0);
+  const implementingThisWeek = visibleChanges.filter((c) => c.status === 'implementing').length;
+  const totalConflicts = visibleChanges.reduce((n, c) => n + c.conflicts.filter((cf) => !cf.resolvedAt).length, 0);
 
   const filteredListChanges = useMemo(() => {
     const query = listSearch.trim().toLowerCase();
-    return mockChanges
+    return visibleChanges
       .filter((c) => !['closed_successful', 'closed_failed', 'rejected', 'cancelled'].includes(c.status))
       .filter((c) => {
         if (query && !c.title.toLowerCase().includes(query) && !c.publicId.toLowerCase().includes(query)) return false;
@@ -87,7 +98,7 @@ export const ChangeCalendar: React.FC = () => {
         if (listRiskFilter && c.risk !== listRiskFilter) return false;
         return true;
       });
-  }, [listSearch, listStatusFilter, listRiskFilter]);
+  }, [listSearch, listStatusFilter, listRiskFilter, visibleChanges]);
 
   return (
     <div className="flex gap-6 h-full min-h-0">
@@ -99,7 +110,7 @@ export const ChangeCalendar: React.FC = () => {
             <h1 className="text-2xl font-bold text-ois-text">Change Calendar</h1>
             <p className="text-sm text-ois-text-muted mt-0.5">
               {activeChanges.length} changes ·{' '}
-              {mockChanges.filter((c) => c.status === 'in_review').length} awaiting approval ·{' '}
+              {visibleChanges.filter((c) => c.status === 'in_review').length} awaiting approval ·{' '}
               {implementingThisWeek > 0 ? `${implementingThisWeek} implementing` : '0 implementing'} this week ·{' '}
               {totalConflicts > 0
                 ? <span className="text-ois-warning font-semibold">{totalConflicts} conflicts detected</span>
@@ -128,14 +139,16 @@ export const ChangeCalendar: React.FC = () => {
                 );
               })}
             </div>
-            <Button
-              size="sm"
-              className="gap-1.5 h-8"
-              onClick={() => navigate('/changes/new')}
-            >
-              <Plus size={14} />
-              New change
-            </Button>
+            <Can module="change" action="create">
+              <Button
+                size="sm"
+                className="gap-1.5 h-8"
+                onClick={() => navigate('/changes/new')}
+              >
+                <Plus size={14} />
+                New change
+              </Button>
+            </Can>
           </div>
         </div>
 
@@ -152,7 +165,7 @@ export const ChangeCalendar: React.FC = () => {
         {view === 'board' && (
           <Card>
             <CardBody className="p-4 overflow-x-auto">
-              <ChangeBoard changes={mockChanges} />
+              <ChangeBoard changes={visibleChanges} />
             </CardBody>
           </Card>
         )}

@@ -17,9 +17,12 @@ import { ChangeTypeChip } from '../../components/changes/ChangeTypeChip';
 import { RiskBadge } from '../../components/changes/RiskBadge';
 import { ApprovalMatrix } from '../../components/changes/ApprovalMatrix';
 import { PIRPanel } from '../../components/changes/PIRPanel';
+import { TechAssessmentPanel } from '../../components/changes/TechAssessmentPanel';
+import { TechAssessmentModal } from '../../components/changes/TechAssessmentModal';
 import { RescheduleModal } from '../../components/changes/RescheduleModal';
 import { AuditTimeline, AuditEntry } from '../../components/common/AuditTimeline';
 import { formatDate, formatRelative } from '../../lib/format';
+import { Can, changeResource, useCan as useCanRbac } from '../../lib/rbac';
 
 const RISK_COLOR: Record<string, string> = {
   low: '#12B76A', medium: '#F79009', high: '#F04438', critical: '#B42318',
@@ -53,6 +56,15 @@ export const ChangeDetail: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [actionsOpen, setActionsOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
+
+  // RBAC capability flags — declared before the not-found early return so hook order is stable.
+  const changeRes = change ? changeResource(change) : undefined;
+  const canAssess = useCanRbac('change', 'assess', { resource: changeRes });
+  const canApprove = useCanRbac('change', 'approve', {
+    variant: change?.type, resource: changeRes,
+  });
+  const canImplement = useCanRbac('change', 'implement', { resource: changeRes });
 
   if (!rawChange || !change) {
     return (
@@ -68,9 +80,17 @@ export const ChangeDetail: React.FC = () => {
   const activeConflicts = change.conflicts.filter((c) => !c.resolvedAt);
   const isImplemented = ['implemented', 'closed_successful', 'closed_failed'].includes(changeStatus);
 
+  const techAssessmentReady = change.technicalAssessment?.status === 'approved';
+  const techAssessmentLabel = !change.technicalAssessment
+    ? 'Tech Assessment'
+    : techAssessmentReady
+      ? 'Tech Assessment ✓'
+      : 'Tech Assessment ●';
+
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'plans', label: 'Plans' },
+    { id: 'assessment', label: techAssessmentLabel },
     { id: 'approvals', label: `Approvals (${change.approvals.length})` },
     { id: 'conflicts', label: `Conflicts (${change.conflicts.length})` },
     { id: 'linked', label: `Linked (${change.linkedProblemIds.length + change.linkedIncidentIds.length + (change.linkedReleaseId ? 1 : 0) + change.linkedKBSlugs.length})` },
@@ -206,6 +226,57 @@ export const ChangeDetail: React.FC = () => {
             </SectionCard>
           )}
 
+          {/* Tech assessment readiness */}
+          <SectionCard title="Tech Assessment">
+            {(() => {
+              const ta = change.technicalAssessment;
+              if (!ta) {
+                return (
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle size={14} className="text-amber-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-ois-text">Not started</p>
+                      <p className="text-[10px] text-ois-text-muted">Required before CAB.</p>
+                    </div>
+                  </div>
+                );
+              }
+              const ready = ta.status === 'approved';
+              return (
+                <div className="flex items-start gap-2">
+                  {ready ? (
+                    <CheckCircle2 size={14} className="text-emerald-500 mt-0.5 shrink-0" />
+                  ) : ta.status === 'rework_required' ? (
+                    <XIcon size={14} className="text-ois-danger mt-0.5 shrink-0" />
+                  ) : (
+                    <Clock size={14} className="text-ois-info mt-0.5 shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-ois-text capitalize">
+                      {ta.status.replace(/_/g, ' ')}
+                    </p>
+                    <p className="text-[10px] text-ois-text-muted">
+                      {ready
+                        ? `Signed off by ${ta.reviewerName ?? 'reviewer'}`
+                        : ta.status === 'submitted'
+                          ? 'Awaiting reviewer sign-off'
+                          : 'Not ready for CAB'}
+                    </p>
+                    <p className="text-[10px] text-ois-text-subtle mt-0.5">
+                      {ta.risks.length} risk(s) logged
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+            <button
+              onClick={() => setActiveTab('assessment')}
+              className="mt-2 text-[11px] font-semibold text-ois-primary hover:underline"
+            >
+              Open assessment →
+            </button>
+          </SectionCard>
+
           {/* Approvals progress */}
           <SectionCard title="Approvals">
             <div className="flex gap-1 mb-2">
@@ -326,16 +397,74 @@ export const ChangeDetail: React.FC = () => {
               </div>
             )}
 
+            {/* Technical Assessment */}
+            {activeTab === 'assessment' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-end">
+                  <Can
+                    module="change" action="assess"
+                    resource={changeResource(change)}
+                    fallback={
+                      <span className="text-xs text-ois-text-subtle italic">
+                        Read-only — only the owning APS team can edit the assessment.
+                      </span>
+                    }
+                  >
+                    <Button
+                      size="sm"
+                      variant={change.technicalAssessment ? 'outline' : 'primary'}
+                      className="h-7 text-xs"
+                      onClick={() => setAssessmentModalOpen(true)}
+                    >
+                      {change.technicalAssessment ? 'Edit assessment' : 'Start assessment'}
+                    </Button>
+                  </Can>
+                </div>
+                <TechAssessmentPanel
+                  assessment={change.technicalAssessment}
+                  onStart={() => setAssessmentModalOpen(true)}
+                />
+              </div>
+            )}
+
             {/* Approvals */}
             {activeTab === 'approvals' && (
               <SectionCard title="Required Approvals">
+                {!techAssessmentReady && (
+                  <div className="mb-4 flex items-start gap-2 px-3 py-2.5 rounded-lg border border-amber-200 bg-amber-50">
+                    <AlertTriangle size={14} className="text-amber-600 mt-0.5 shrink-0" />
+                    <div className="flex-1 text-xs text-ois-text">
+                      <p className="font-semibold">
+                        {change.technicalAssessment
+                          ? 'Technical assessment is not yet approved.'
+                          : 'Technical assessment has not been completed.'}
+                      </p>
+                      <p className="text-ois-text-muted mt-0.5">
+                        Complete and sign off the technical assessment before tabling this change at
+                        CAB.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('assessment')}
+                      className="text-xs font-semibold text-ois-primary hover:underline shrink-0"
+                    >
+                      Open assessment →
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-4">
                   <span />
                   <Button
                     variant="outline"
                     size="sm"
                     className="h-7 text-xs gap-1"
+                    disabled={!techAssessmentReady}
                     onClick={() => navigate('/changes/cab')}
+                    title={
+                      techAssessmentReady
+                        ? undefined
+                        : 'Technical assessment must be approved before opening CAB.'
+                    }
                   >
                     Open CAB workspace <ExternalLink size={11} />
                   </Button>
@@ -611,16 +740,53 @@ export const ChangeDetail: React.FC = () => {
           <SectionCard title="Quick Actions">
             <div className="space-y-2">
               {[
-                { label: 'Approve change',     action: () => setActiveTab('approvals'), primary: true },
-                { label: 'Open CAB workspace', action: () => navigate('/changes/cab'),  primary: false },
-                { label: 'Reschedule',         action: () => setRescheduleOpen(true),   primary: false },
-              ].map(({ label, action, primary }) => (
-                <button key={label} onClick={action}
+                {
+                  label: techAssessmentReady ? 'Tech assessment ✓' : 'Open tech assessment',
+                  action: () => setActiveTab('assessment'),
+                  primary: !techAssessmentReady && canAssess,
+                  disabled: !canAssess,
+                  title: canAssess ? undefined : 'Only the owning APS team can edit the assessment.',
+                },
+                {
+                  label: 'Approve change',
+                  action: () => setActiveTab('approvals'),
+                  primary: techAssessmentReady && canApprove,
+                  disabled: !canApprove,
+                  title: canApprove
+                    ? undefined
+                    : `You are not authorised to approve ${change.type} changes.`,
+                },
+                {
+                  label: techAssessmentReady
+                    ? 'Open CAB workspace'
+                    : 'Open CAB workspace (locked)',
+                  action: () => navigate('/changes/cab'),
+                  primary: false,
+                  disabled: !techAssessmentReady || !canApprove,
+                  title: !techAssessmentReady
+                    ? 'Technical assessment must be approved before opening CAB.'
+                    : (canApprove ? undefined : 'CAB workspace is limited to approvers.'),
+                },
+                {
+                  label: 'Reschedule',
+                  action: () => setRescheduleOpen(true),
+                  primary: false,
+                  disabled: !canImplement,
+                  title: canImplement ? undefined : 'Only the owning team or Change Manager can reschedule.',
+                },
+              ].map(({ label, action, primary, disabled, title }) => (
+                <button
+                  key={label}
+                  onClick={disabled ? undefined : action}
+                  disabled={disabled}
+                  title={title}
                   className={cn(
                     'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left',
-                    primary
-                      ? 'bg-ois-primary text-white hover:bg-ois-primary-hover'
-                      : 'border border-ois-border text-ois-text hover:bg-ois-surface-muted',
+                    disabled
+                      ? 'border border-ois-border text-ois-text-subtle bg-ois-surface-muted cursor-not-allowed'
+                      : primary
+                        ? 'bg-ois-primary text-white hover:bg-ois-primary-hover'
+                        : 'border border-ois-border text-ois-text hover:bg-ois-surface-muted',
                   )}>
                   {label}
                 </button>
@@ -707,6 +873,16 @@ export const ChangeDetail: React.FC = () => {
           </>
         )}
       </Modal>
+
+      <TechAssessmentModal
+        isOpen={assessmentModalOpen}
+        onClose={() => setAssessmentModalOpen(false)}
+        initial={change.technicalAssessment}
+        changePublicId={change.publicId}
+        onSave={(assessment) =>
+          setChange((prev) => (prev ? { ...prev, technicalAssessment: assessment } : prev))
+        }
+      />
 
       <RescheduleModal
         isOpen={rescheduleOpen}

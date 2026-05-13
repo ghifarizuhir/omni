@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { cn } from '../../lib/utils';
 import { getReleaseById } from '../../mocks/releases';
+import { Can, useCan as useCanRbac, releaseResource } from '@/src/lib/rbac';
 import { ReleaseStatusPill } from '../../components/releases/ReleaseStatusPill';
 import { ReleaseTypeChip } from '../../components/releases/ReleaseTypeChip';
 import { StagesMiniStepper } from '../../components/releases/StagesMiniStepper';
@@ -107,6 +108,10 @@ export const ReleaseDetail: React.FC = () => {
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const canImplement = useCanRbac('release', 'implement', {
+    resource: release ? releaseResource(release) : undefined,
+  });
 
   const showToast = (message: string, variant: ToastState['variant'] = 'success') => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -360,7 +365,7 @@ export const ReleaseDetail: React.FC = () => {
                       key={stage.id}
                       stage={stage}
                       isCurrent={i === release.currentStageIndex}
-                      onDeploy={stage.status === 'pending' ? () => setDeployIdx(i) : undefined}
+                      onDeploy={stage.status === 'pending' && canImplement ? () => setDeployIdx(i) : undefined}
                     />
                   ))}
                 </div>
@@ -485,26 +490,36 @@ export const ReleaseDetail: React.FC = () => {
         {/* Right sidebar — 280px */}
         <aside className="w-[280px] shrink-0 overflow-y-auto border-l border-ois-border bg-white p-4 space-y-4">
           <SectionCard title="Quick Actions">
-            <div className="space-y-1.5">
-              <button onClick={() => setPromoteModalOpen(true)}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left bg-ois-primary text-white hover:bg-ois-primary-hover">
-                Promote to staging
-              </button>
-              <button disabled
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-left border border-ois-border text-ois-text opacity-40 cursor-not-allowed">
-                Lock composition
-              </button>
-              <button disabled
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-left border border-ois-border text-ois-text opacity-40 cursor-not-allowed">
-                Add change
-              </button>
-              <div className="pt-1 border-t border-ois-border">
-                <button onClick={() => setCancelModalOpen(true)}
-                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-danger hover:bg-ois-danger-pale">
-                  Cancel release
+            <Can
+              module="release" action="approve"
+              resource={releaseResource(release)}
+              fallback={
+                <p className="text-xs text-ois-text-subtle italic">
+                  View-only — releases for this team can only be promoted by its Team Lead or a Change Manager.
+                </p>
+              }
+            >
+              <div className="space-y-1.5">
+                <button onClick={() => setPromoteModalOpen(true)}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left bg-ois-primary text-white hover:bg-ois-primary-hover">
+                  Promote to staging
                 </button>
+                <button disabled
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-left border border-ois-border text-ois-text opacity-40 cursor-not-allowed">
+                  Lock composition
+                </button>
+                <button disabled
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-left border border-ois-border text-ois-text opacity-40 cursor-not-allowed">
+                  Add change
+                </button>
+                <div className="pt-1 border-t border-ois-border">
+                  <button onClick={() => setCancelModalOpen(true)}
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-danger hover:bg-ois-danger-pale">
+                    Cancel release
+                  </button>
+                </div>
               </div>
-            </div>
+            </Can>
           </SectionCard>
         </aside>
       </div>

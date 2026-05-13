@@ -9,6 +9,7 @@ import { DRTestCard } from '@/src/components/continuity/DRTestCard';
 import { LiveDRTestPanel } from '@/src/components/continuity/LiveDRTestPanel';
 import { DRTestRunnerWizard } from '@/src/components/continuity/DRTestRunner/DRTestRunnerWizard';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
+import { Can } from '@/src/lib/rbac';
 
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString('en-US', {
@@ -194,6 +195,7 @@ export const DRTests: React.FC = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Can module="continuity" action="update">
               <button
                 onClick={() => setShowWizard(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-ois-primary hover:bg-ois-primary/90 rounded-lg transition-colors"
@@ -201,6 +203,7 @@ export const DRTests: React.FC = () => {
                 <Plus size={15} />
                 Schedule test
               </button>
+              </Can>
             </div>
           </div>
         </div>

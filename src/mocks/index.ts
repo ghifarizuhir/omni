@@ -44,3 +44,4 @@ export * from './onCallSchedules';
 export * from './onCallOverrides';
 export * from './statusPageEntries';
 export * from './aiSessions';
+export * from './rbac';

@@ -7,6 +7,7 @@ import { Card, CardBody } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
 import { TestPlan, TestPlanType } from '../../types/testing';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
+import { Can } from '@/src/lib/rbac';
 
 // ── Quick-stat helpers ──────────────────────────────────────────────────────
 
@@ -179,10 +180,12 @@ export const TestPlans: React.FC = () => {
           >
             Runs →
           </Link>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ois-primary text-white text-sm font-medium hover:bg-ois-primary/90 transition-colors">
-            <Plus size={14} />
-            New plan
-          </button>
+          <Can module="testing" action="update">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ois-primary text-white text-sm font-medium hover:bg-ois-primary/90 transition-colors">
+              <Plus size={14} />
+              New plan
+            </button>
+          </Can>
         </div>
       </div>
 

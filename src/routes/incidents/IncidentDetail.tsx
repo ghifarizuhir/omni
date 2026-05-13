@@ -37,6 +37,7 @@ import { LinkCIModal } from '@/src/components/incidents/LinkCIModal';
 import { LinkProblemModal } from '@/src/components/incidents/LinkProblemModal';
 import { LinkChangeModal } from '@/src/components/incidents/LinkChangeModal';
 import { UserPickerModal } from '@/src/components/incidents/UserPickerModal';
+import { Can, useCan as useCanRbac, incidentResource } from '@/src/lib/rbac';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -653,14 +654,24 @@ export const IncidentDetail: React.FC = () => {
         <div className="text-center py-12">
           <CheckCircle2 size={36} className="mx-auto text-ois-text-subtle mb-3" />
           <p className="text-sm text-ois-text-muted">Not yet resolved.</p>
-          <Button
-            variant="primary"
-            size="sm"
-            className="mt-4"
-            onClick={() => setResolveOpen(true)}
+          <Can
+            module="incident" action="close"
+            resource={inc ? incidentResource(inc) : undefined}
+            fallback={
+              <p className="text-xs text-ois-text-subtle italic mt-4">
+                You don't have permission to resolve this incident.
+              </p>
+            }
           >
-            Mark as resolved
-          </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              className="mt-4"
+              onClick={() => setResolveOpen(true)}
+            >
+              Mark as resolved
+            </Button>
+          </Can>
         </div>
       )}
     </div>
@@ -693,7 +704,17 @@ export const IncidentDetail: React.FC = () => {
             Queue
           </button>
           <div className="flex items-center gap-2">
-            <StatusDropdown status={status} onChange={handleStatusChange} />
+            <Can
+              module="incident" action="update"
+              resource={inc ? incidentResource(inc) : undefined}
+              fallback={
+                <span className="text-xs text-ois-text-subtle italic px-2">
+                  Read-only — only IFM or the assigned APS team can change status.
+                </span>
+              }
+            >
+              <StatusDropdown status={status} onChange={handleStatusChange} />
+            </Can>
             <div className="relative">
               <button
                 onClick={() => setOverflowOpen(v => !v)}

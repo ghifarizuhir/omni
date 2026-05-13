@@ -9,6 +9,7 @@ import { ReleaseCard } from '../../components/releases/ReleaseCard';
 import { NewReleaseModal } from '../../components/releases/NewReleaseModal';
 import { Release, ReleaseStatus, ReleaseType } from '../../types/release';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
+import { Can, useCurrentUser, filterReadable, releaseResource } from '@/src/lib/rbac';
 
 interface ToastState { message: string; variant: 'success' | 'info' }
 const Toast: React.FC<ToastState> = ({ message, variant }) => (
@@ -40,7 +41,15 @@ export const ReleasesList: React.FC = () => {
   const [extraReleases, setExtraReleases] = useState<Release[]>([]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const allReleases = useMemo(() => [...extraReleases, ...mockReleases], [extraReleases]);
+  const { user, applications, teams, departments } = useCurrentUser();
+  const allReleases = useMemo(
+    () => filterReadable(
+      user,
+      'release',
+      [...extraReleases, ...mockReleases].map(r => ({ ...r, ...releaseResource(r) })),
+    ) as Release[],
+    [extraReleases, user, applications, teams, departments],
+  );
 
   const showToast = (message: string, variant: ToastState['variant'] = 'info') => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -99,9 +108,11 @@ export const ReleasesList: React.FC = () => {
           <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => navigate('/releases/notes')}>
             <FileText size={13} /> Notes archive
           </Button>
-          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setNewReleaseOpen(true)}>
-            <Plus size={13} /> New release
-          </Button>
+          <Can module="release" action="create">
+            <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setNewReleaseOpen(true)}>
+              <Plus size={13} /> New release
+            </Button>
+          </Can>
         </div>
       </div>
 

@@ -9,6 +9,8 @@ import { mockCIAuditEntries } from '@/src/mocks';
 import { CIAuditTimeline } from '../../components/cmdb/CIAuditTimeline';
 import { ExportAuditModal } from '../../components/cmdb/modals/ExportAuditModal';
 import { cn } from '../../lib/utils';
+import { useCan } from '@/src/lib/rbac';
+import { ShieldAlert } from 'lucide-react';
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 interface ToastState { message: string }
@@ -29,6 +31,26 @@ const DATE_RANGE_OPTIONS: { value: DateRange; label: string; ms: number | null }
 ];
 
 export const CMDBAudit: React.FC = () => {
+  const allowed = useCan('cmdb', 'audit_read');
+  if (!allowed) return <CMDBAuditDenied />;
+  return <CMDBAuditView />;
+};
+
+const CMDBAuditDenied: React.FC = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="max-w-xl mx-auto mt-16 p-8 bg-white rounded-xl border border-ois-border text-center">
+      <ShieldAlert className="mx-auto text-ois-danger" size={36} />
+      <h2 className="mt-3 text-lg font-bold text-ois-text">Audit log restricted</h2>
+      <p className="text-sm text-ois-text-muted mt-1">
+        Reading the CMDB audit log requires Department Head level or above.
+      </p>
+      <Button className="mt-4" onClick={() => navigate('/cmdb')}>Back to CMDB</Button>
+    </div>
+  );
+};
+
+const CMDBAuditView: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState<string>('all');

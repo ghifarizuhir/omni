@@ -11,6 +11,8 @@ import { Badge } from '../../components/ui/Badge';
 import { cn } from '../../lib/utils';
 import { ChangeType, RiskLevel, ImpactLevel } from '../../types/change';
 import { changeTypeMeta, riskMeta } from '../../lib/constants';
+import { useCan } from '../../lib/rbac';
+import { ShieldAlert } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -218,6 +220,27 @@ const CollapsiblePlan: React.FC<{ label: string; content: string }> = ({ label, 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export const NewChange: React.FC = () => {
+  const allowed = useCan('change', 'create');
+  if (!allowed) return <NewChangeDenied />;
+  return <NewChangeForm />;
+};
+
+const NewChangeDenied: React.FC = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="max-w-xl mx-auto mt-16 p-8 bg-white rounded-xl border border-ois-border text-center">
+      <ShieldAlert className="mx-auto text-ois-danger" size={36} />
+      <h2 className="mt-3 text-lg font-bold text-ois-text">Cannot create changes</h2>
+      <p className="text-sm text-ois-text-muted mt-1">
+        Only members of the APS Change &amp; Release team can create changes. Contact your team
+        lead if you believe this is in error.
+      </p>
+      <Button className="mt-4" onClick={() => navigate('/changes')}>Back to calendar</Button>
+    </div>
+  );
+};
+
+const NewChangeForm: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(INITIAL);

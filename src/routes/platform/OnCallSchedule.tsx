@@ -8,6 +8,7 @@ import { RequestOverrideModal } from '@/src/components/oncall/RequestOverrideMod
 import { mockOnCallSchedules, mockOnCallOverrides } from '@/src/mocks';
 import { OnCallOverride } from '@/src/types/platform';
 import { cn } from '@/src/lib/utils';
+import { Can } from '@/src/lib/rbac';
 
 export const OnCallSchedule: React.FC = () => {
   const [selectedScheduleId, setSelectedScheduleId] = useState(mockOnCallSchedules[0]?.id ?? '');
@@ -38,10 +39,12 @@ export const OnCallSchedule: React.FC = () => {
           </div>
         </div>
 
-        <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)}>
-          <PlusCircle size={15} className="mr-1.5" />
-          Request Override
-        </Button>
+        <Can module="platform" action="manage">
+          <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)}>
+            <PlusCircle size={15} className="mr-1.5" />
+            Request Override
+          </Button>
+        </Can>
       </div>
 
       {/* Schedule selector */}

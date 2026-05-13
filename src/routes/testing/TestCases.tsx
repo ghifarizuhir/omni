@@ -7,6 +7,7 @@ import { formatRelative } from '../../lib/format';
 import { testCasePriorityMeta, testStepResultMeta } from '../../lib/constants';
 import { TestCase, TestCaseType, TestCasePriority, TestStepResultStatus } from '../../types/testing';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
+import { Can } from '@/src/lib/rbac';
 
 // ── Derived stats from mock data ─────────────────────────────────────────────
 
@@ -167,12 +168,14 @@ export const TestCases: React.FC = () => {
             {totalCases} cases · {automatedCount} automated · {manualCount} manual · Avg flake rate: {(avgFlakeRate * 100).toFixed(0)}%
           </p>
         </div>
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-ois-btn border border-ois-border bg-ois-surface text-sm font-medium text-ois-text-primary hover:bg-ois-surface-muted transition-colors"
-        >
-          + New case
-        </button>
+        <Can module="testing" action="update">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-ois-btn border border-ois-border bg-ois-surface text-sm font-medium text-ois-text-primary hover:bg-ois-surface-muted transition-colors"
+          >
+            + New case
+          </button>
+        </Can>
       </div>
 
       {/* Filter bar */}

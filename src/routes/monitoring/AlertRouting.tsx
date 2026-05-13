@@ -13,6 +13,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { Can, useCan } from '@/src/lib/rbac';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import { ConfigureChannelModal, ChannelConfig } from '../../components/monitoring/modals/ConfigureChannelModal';
 import {
@@ -39,6 +40,7 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
 });
 
 export const AlertRouting: React.FC = () => {
+  const canManage = useCan('monitoring', 'update');
   // --- State ---
   const [routes, setRoutes] = useState<AlertRoute[]>(mockAlertRoutes);
   const [selectedRouteId, setSelectedRouteId] = useState<string>(mockAlertRoutes[0]?.id || '');
@@ -314,9 +316,11 @@ export const AlertRouting: React.FC = () => {
 
       {/* ── Action row ── */}
       <div className="shrink-0 flex items-center justify-end px-6 py-2.5 border-b border-ois-border bg-ois-surface">
-        <Button variant="primary" size="sm" className="gap-1.5" onClick={handleNewRoute}>
-          <Plus size={13} /> New route
-        </Button>
+        <Can module="monitoring" action="update">
+          <Button variant="primary" size="sm" className="gap-1.5" onClick={handleNewRoute}>
+            <Plus size={13} /> New route
+          </Button>
+        </Can>
       </div>
 
       {/* ── Body: split panel ── */}
@@ -432,8 +436,9 @@ export const AlertRouting: React.FC = () => {
                   </Button>
                   <Button
                     variant="primary"
-                    disabled={!isDirty}
+                    disabled={!isDirty || !canManage}
                     onClick={handleSaveChanges}
+                    title={!canManage ? 'You do not have permission to modify routes.' : undefined}
                     className="h-10 px-6 font-bold shadow-sm disabled:opacity-50"
                   >
                     Save changes

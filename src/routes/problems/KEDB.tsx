@@ -8,6 +8,7 @@ import { getKnownErrors } from '@/src/mocks/problems';
 import { mockIncidents } from '@/src/mocks/incidents';
 import { mockServices } from '@/src/mocks/services';
 import { cn } from '@/src/lib/utils';
+import { Can } from '@/src/lib/rbac';
 
 const HOT_SEARCHES = ['pool', 'connection', 'timeout', 'ssl', 'auth'];
 
@@ -65,12 +66,14 @@ export const KEDB: React.FC = () => {
             {knownErrors.length} known error{knownErrors.length !== 1 ? 's' : ''} · Search saves time during incident response
           </p>
         </div>
-        <Link to="/problems">
-          <Button variant="primary" size="sm" className="gap-1.5">
-            <Plus size={14} />
-            Add known error
-          </Button>
-        </Link>
+        <Can module="problem" action="update">
+          <Link to="/problems">
+            <Button variant="primary" size="sm" className="gap-1.5">
+              <Plus size={14} />
+              Add known error
+            </Button>
+          </Link>
+        </Can>
       </div>
 
       {/* Prominent search */}

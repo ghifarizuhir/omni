@@ -4,6 +4,7 @@ import { ArrowLeft, MoreVertical, ArrowRight } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatDate } from '@/src/lib/format';
 import { getImprovementById } from '@/src/mocks/improvements';
+import { Can, improvementResource } from '@/src/lib/rbac';
 import { getROICalculation } from '@/src/mocks/roiCalculations';
 import {
   improvementStatusMeta,
@@ -203,12 +204,22 @@ export const ImprovementDetail: React.FC = () => {
 
           <SectionCard title="Quick actions">
             <div className="space-y-1.5">
-              <button
-                onClick={() => setActiveTab('updates')}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left bg-ois-primary text-white hover:bg-ois-primary-hover"
+              <Can
+                module="improvement" action="update"
+                resource={improvementResource(initiative)}
+                fallback={
+                  <p className="text-xs text-ois-text-subtle italic px-1 py-1">
+                    View-only — only the owning team can log updates.
+                  </p>
+                }
               >
-                Log update
-              </button>
+                <button
+                  onClick={() => setActiveTab('updates')}
+                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left bg-ois-primary text-white hover:bg-ois-primary-hover"
+                >
+                  Log update
+                </button>
+              </Can>
               <Link
                 to="/improvement/kanban"
                 className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-text hover:bg-ois-surface-muted"

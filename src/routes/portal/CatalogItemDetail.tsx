@@ -13,6 +13,7 @@ import { mockKBArticles } from '@/src/mocks/kbArticles';
 import { mockTeams } from '@/src/mocks/teams';
 import { mockServiceRequests } from '@/src/mocks/serviceRequests';
 import { currentUser } from '@/src/mocks/users';
+import { Can } from '@/src/lib/rbac';
 import { CatalogItem, FormField, WorkflowStepTemplate, CatalogCategory } from '@/src/types/request';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 
@@ -789,6 +790,14 @@ export const CatalogItemDetail: React.FC = () => {
             >
               <ArrowLeft size={14} /> Edit form
             </button>
+            <Can
+              module="request" action="create"
+              fallback={
+                <span className="text-xs text-ois-text-subtle italic px-3 py-2">
+                  Sign in as an end user to submit requests.
+                </span>
+              }
+            >
             <button
               onClick={handleSubmit}
               disabled={submitting}
@@ -800,6 +809,7 @@ export const CatalogItemDetail: React.FC = () => {
                 <>Submit request <ArrowRight size={14} /></>
               )}
             </button>
+            </Can>
           </div>
         </div>
       )}

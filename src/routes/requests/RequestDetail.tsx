@@ -13,6 +13,7 @@ import { getRequestById } from '@/src/mocks/serviceRequests';
 import { getCatalogItemById } from '@/src/mocks/catalogItems';
 import { getArticleBySlug } from '@/src/mocks/kbArticles';
 import { mockUsers, currentUser } from '@/src/mocks/users';
+import { useCan as useCanRbac, requestResource } from '@/src/lib/rbac';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { Modal } from '@/src/components/ui/Modal';
 import {
@@ -102,7 +103,8 @@ const WorkflowStepper: React.FC<{
   steps: WorkflowStepInstance[];
   onApprove: (stepId: string) => void;
   onReject:  (stepId: string) => void;
-}> = ({ steps, onApprove, onReject }) => (
+  canApprove: boolean;
+}> = ({ steps, onApprove, onReject, canApprove }) => (
   <div className="overflow-x-auto">
     <div className="flex justify-center min-w-full">
       <div className="flex items-center gap-0 py-1">
@@ -112,7 +114,7 @@ const WorkflowStepper: React.FC<{
           const rejected = step.status === 'rejected';
           const skipped  = step.status === 'skipped';
           const pending  = step.status === 'pending';
-          const canAct   = isApprover(step);
+          const canAct   = isApprover(step) && canApprove;
           const prevDone = i > 0 && steps[i - 1].status === 'completed';
 
           const TypeIcon =
@@ -553,6 +555,9 @@ export const RequestDetail: React.FC = () => {
   const req = useMemo(() => getRequestById(requestId ?? ''), [requestId]);
   const catalogItem = useMemo(() => req ? getCatalogItemById(req.catalogItemId) : null, [req]);
 
+  const requestRes = req ? requestResource(req) : undefined;
+  const canApproveRequest = useCanRbac('request', 'approve', { resource: requestRes });
+
   if (!req) return <NotFound />;
 
   const statusMeta  = STATUS_META[req.status];
@@ -874,6 +879,7 @@ export const RequestDetail: React.FC = () => {
           steps={req.workflow.steps}
           onApprove={id => setApproveStep(id)}
           onReject={id => setRejectStep(id)}
+          canApprove={canApproveRequest}
         />
       </div>
 

@@ -12,6 +12,7 @@ import { mockServiceRequests } from '@/src/mocks/serviceRequests';
 import { getCatalogItemById } from '@/src/mocks/catalogItems';
 import { ServiceRequest, RequestStatus, WorkflowStepStatus, CatalogCategory } from '@/src/types/request';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
+import { useCurrentUser } from '@/src/lib/rbac';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -296,8 +297,14 @@ export const MyRequests: React.FC = () => {
   const [tab,  setTab]  = useState<TabKey>('all');
   const [sort, setSort] = useState<SortKey>('newest');
 
-  // Use all mock requests for demo richness
-  const all       = mockServiceRequests;
+  // Show only the current user's own requests. Superadmin sees all for demo richness.
+  const { user } = useCurrentUser();
+  const all = useMemo(
+    () => user?.isSuperadmin
+      ? mockServiceRequests
+      : mockServiceRequests.filter(r => r.requesterId === user?.id),
+    [user],
+  );
   const active    = all.filter(r => ACTIVE_STATUSES.includes(r.status));
   const completed = all.filter(r => COMPLETED_STATUSES.includes(r.status));
   const drafts    = all.filter(r => DRAFT_STATUSES.includes(r.status));

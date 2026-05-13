@@ -18,6 +18,8 @@ import { ImprovementRow } from '@/src/components/improvement/ImprovementRow';
 import { ImprovementStatus, ImprovementCategory, ImprovementPriority } from '@/src/types/improvement';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { Button } from '@/src/components/ui/Button';
+import { Can, useCurrentUser, filterReadable, improvementResource } from '@/src/lib/rbac';
+import type { ImprovementInitiative } from '@/src/types/improvement';
 
 const LOGGED_IN_USER = 'u-001';
 
@@ -39,6 +41,15 @@ const STATUS_ORDER: Record<ImprovementStatus, number> = {
 
 export const ImprovementRegister: React.FC = () => {
   const navigate = useNavigate();
+  const { user, applications, teams, departments } = useCurrentUser();
+  const visibleImprovements = useMemo(
+    () => filterReadable(
+      user,
+      'improvement',
+      mockImprovements.map(i => ({ ...i, ...improvementResource(i) })),
+    ) as ImprovementInitiative[],
+    [user, applications, teams, departments],
+  );
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -49,26 +60,26 @@ export const ImprovementRegister: React.FC = () => {
 
   const totalEstimated = getTotalEstimatedBenefitUSD();
   const totalActual = getTotalActualBenefitUSD();
-  const inProgressCount = mockImprovements.filter(i => i.status === 'in_progress').length;
-  const completedCount = mockImprovements.filter(i => i.status === 'completed').length;
+  const inProgressCount = visibleImprovements.filter(i => i.status === 'in_progress').length;
+  const completedCount = visibleImprovements.filter(i => i.status === 'completed').length;
 
   // Quick filter counts
-  const highCriticalCount = mockImprovements.filter(i => ['critical', 'high'].includes(i.priority)).length;
-  const overdueCount = mockImprovements.filter(i =>
+  const highCriticalCount = visibleImprovements.filter(i => ['critical', 'high'].includes(i.priority)).length;
+  const overdueCount = visibleImprovements.filter(i =>
     i.targetCompletionDate && i.targetCompletionDate < TODAY && !['completed', 'cancelled'].includes(i.status)
   ).length;
-  const myInitiativesCount = mockImprovements.filter(i => i.ownerId === LOGGED_IN_USER).length;
-  const highROICount = mockImprovements.filter(i => i.estimatedROIPercent > 1000).length;
+  const myInitiativesCount = visibleImprovements.filter(i => i.ownerId === LOGGED_IN_USER).length;
+  const highROICount = visibleImprovements.filter(i => i.estimatedROIPercent > 1000).length;
 
   // Owner options
   const ownerOptions = useMemo(() => {
     const seen = new Map<string, string>();
-    mockImprovements.forEach(i => seen.set(i.ownerId, i.ownerName));
+    visibleImprovements.forEach(i => seen.set(i.ownerId, i.ownerName));
     return [...seen.entries()];
-  }, []);
+  }, [visibleImprovements]);
 
   const filtered = useMemo(() => {
-    let result = [...mockImprovements];
+    let result = [...visibleImprovements];
 
     // Status tab
     if (activeStatusTab !== 'all') {
@@ -132,9 +143,9 @@ export const ImprovementRegister: React.FC = () => {
   const hasFilters = search || statusFilter || categoryFilter || priorityFilter || ownerFilter || quickFilter || activeStatusTab !== 'all';
 
   const statusTabCounts = useMemo(() => {
-    const counts: Partial<Record<ImprovementStatus | 'all', number>> = { all: mockImprovements.length };
+    const counts: Partial<Record<ImprovementStatus | 'all', number>> = { all: visibleImprovements.length };
     ALL_STATUSES.forEach(s => {
-      counts[s] = mockImprovements.filter(i => i.status === s).length;
+      counts[s] = visibleImprovements.filter(i => i.status === s).length;
     });
     return counts;
   }, []);
@@ -143,9 +154,11 @@ export const ImprovementRegister: React.FC = () => {
     <div className="flex flex-col flex-1 min-h-0">
       {/* Action row */}
       <div className="shrink-0 flex items-center justify-end px-6 py-2.5 border-b border-ois-border bg-ois-surface">
-        <Button variant="primary" size="sm" className="gap-1.5">
-          <Plus size={14} /> New initiative
-        </Button>
+        <Can module="improvement" action="create">
+          <Button variant="primary" size="sm" className="gap-1.5">
+            <Plus size={14} /> New initiative
+          </Button>
+        </Can>
       </div>
 
       {/* Scrollable body */}

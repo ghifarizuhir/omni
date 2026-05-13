@@ -27,6 +27,7 @@ import {
   mockAlertRoutes 
 } from '../../mocks';
 import { MonitoringRule, MonitoringRuleType, EventSource } from '../../types/monitoring';
+import { Can, useCan } from '@/src/lib/rbac';
 import { Severity } from '../../types/common';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { cn } from '../../lib/utils';
@@ -71,6 +72,7 @@ const generateSparklineData = () => Array.from({ length: 12 }, () => Math.floor(
 
 export const MonitoringRules: React.FC = () => {
   const navigate = useNavigate();
+  const canManage = useCan('monitoring', 'update');
 
   // --- State ---
   const [rules, setRules] = useState<MonitoringRule[]>(mockMonitoringRules);
@@ -368,41 +370,36 @@ export const MonitoringRules: React.FC = () => {
     {
        header: 'Actions',
        accessor: (rule) => (
-         <div className="flex items-center gap-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0" 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenWizard(rule);
-              }}
-            >
-               <Settings size={14} className="text-ois-text-muted" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                setTestModalRule(rule);
-              }}
-            >
-               <Play size={14} className="text-ois-text-muted" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDeleteConfirmRule(rule);
-              }}
-            >
-               <Trash2 size={14} className="text-ois-danger" />
-            </Button>
-         </div>
+         canManage ? (
+           <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => { e.stopPropagation(); handleOpenWizard(rule); }}
+              >
+                 <Settings size={14} className="text-ois-text-muted" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => { e.stopPropagation(); setTestModalRule(rule); }}
+              >
+                 <Play size={14} className="text-ois-text-muted" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => { e.stopPropagation(); setDeleteConfirmRule(rule); }}
+              >
+                 <Trash2 size={14} className="text-ois-danger" />
+              </Button>
+           </div>
+         ) : (
+           <span className="text-[10px] text-ois-text-subtle italic">read-only</span>
+         )
        ),
        className: 'w-28'
     }
@@ -413,9 +410,11 @@ export const MonitoringRules: React.FC = () => {
 
       {/* ── Action row ── */}
       <div className="shrink-0 flex items-center justify-end px-6 py-2.5 border-b border-ois-border bg-ois-surface">
-        <Button variant="primary" size="sm" className="gap-1.5" onClick={() => handleOpenWizard()}>
-          <Plus size={13} /> New rule
-        </Button>
+        <Can module="monitoring" action="update">
+          <Button variant="primary" size="sm" className="gap-1.5" onClick={() => handleOpenWizard()}>
+            <Plus size={13} /> New rule
+          </Button>
+        </Can>
       </div>
 
       {/* ── Body ── */}

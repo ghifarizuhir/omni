@@ -6,6 +6,7 @@ import { OverrideCard } from '@/src/components/oncall/OverrideCard';
 import { RequestOverrideModal } from '@/src/components/oncall/RequestOverrideModal';
 import { mockOnCallSchedules, mockOnCallOverrides } from '@/src/mocks';
 import { OnCallOverride } from '@/src/types/platform';
+import { Can } from '@/src/lib/rbac';
 
 export const OnCallOverrides: React.FC = () => {
   const [overrides, setOverrides] = useState<OnCallOverride[]>(mockOnCallOverrides);
@@ -76,10 +77,12 @@ export const OnCallOverrides: React.FC = () => {
           </p>
         </div>
 
-        <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)}>
-          <PlusCircle size={15} className="mr-1.5" />
-          Request Override
-        </Button>
+        <Can module="platform" action="manage">
+          <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)}>
+            <PlusCircle size={15} className="mr-1.5" />
+            Request Override
+          </Button>
+        </Can>
       </div>
 
       {/* Override cards */}

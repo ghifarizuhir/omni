@@ -12,7 +12,7 @@ export const mockCatalogItems: CatalogItem[] = [
     category: 'access',
     iconName: 'Database',
     estimatedFulfillmentDays: 1,
-    ownerTeamId: 't-platform',
+    ownerTeamId: 'team-core-loan',
     popularity: 92,
     formFields: [
       {
@@ -87,7 +87,7 @@ export const mockCatalogItems: CatalogItem[] = [
     category: 'access',
     iconName: 'Cloud',
     estimatedFulfillmentDays: 2,
-    ownerTeamId: 't-platform',
+    ownerTeamId: 'team-core-loan',
     popularity: 78,
     formFields: [
       {
@@ -143,7 +143,7 @@ export const mockCatalogItems: CatalogItem[] = [
     category: 'access',
     iconName: 'GitBranch',
     estimatedFulfillmentDays: 0,
-    ownerTeamId: 't-platform',
+    ownerTeamId: 'team-core-loan',
     popularity: 85,
     formFields: [
       {
@@ -195,7 +195,7 @@ export const mockCatalogItems: CatalogItem[] = [
     category: 'access',
     iconName: 'MessageSquare',
     estimatedFulfillmentDays: 0,
-    ownerTeamId: 't-servicedesk',
+    ownerTeamId: 'team-ifm-noc',
     popularity: 60,
     formFields: [
       {
@@ -238,7 +238,7 @@ export const mockCatalogItems: CatalogItem[] = [
     iconName: 'Laptop',
     estimatedFulfillmentDays: 5,
     cost: { amount: 1800, currency: 'USD' },
-    ownerTeamId: 't-servicedesk',
+    ownerTeamId: 'team-ifm-noc',
     popularity: 88,
     formFields: [
       {
@@ -299,7 +299,7 @@ export const mockCatalogItems: CatalogItem[] = [
     iconName: 'Monitor',
     estimatedFulfillmentDays: 3,
     cost: { amount: 450, currency: 'USD' },
-    ownerTeamId: 't-servicedesk',
+    ownerTeamId: 'team-ifm-noc',
     popularity: 72,
     formFields: [
       {
@@ -347,7 +347,7 @@ export const mockCatalogItems: CatalogItem[] = [
     iconName: 'Keyboard',
     estimatedFulfillmentDays: 2,
     cost: { amount: 120, currency: 'USD' },
-    ownerTeamId: 't-servicedesk',
+    ownerTeamId: 'team-ifm-noc',
     popularity: 65,
     formFields: [
       {
@@ -392,7 +392,7 @@ export const mockCatalogItems: CatalogItem[] = [
     category: 'software',
     iconName: 'Package',
     estimatedFulfillmentDays: 5,
-    ownerTeamId: 't-servicedesk',
+    ownerTeamId: 'team-ifm-noc',
     popularity: 55,
     formFields: [
       {
@@ -444,7 +444,7 @@ export const mockCatalogItems: CatalogItem[] = [
     category: 'software',
     iconName: 'Download',
     estimatedFulfillmentDays: 1,
-    ownerTeamId: 't-servicedesk',
+    ownerTeamId: 'team-ifm-noc',
     popularity: 50,
     formFields: [
       {
@@ -495,7 +495,7 @@ export const mockCatalogItems: CatalogItem[] = [
     category: 'communication',
     iconName: 'Mail',
     estimatedFulfillmentDays: 0,
-    ownerTeamId: 't-servicedesk',
+    ownerTeamId: 'team-ifm-noc',
     popularity: 40,
     formFields: [
       {
@@ -534,7 +534,7 @@ export const mockCatalogItems: CatalogItem[] = [
     category: 'communication',
     iconName: 'CalendarDays',
     estimatedFulfillmentDays: 0,
-    ownerTeamId: 't-servicedesk',
+    ownerTeamId: 'team-ifm-noc',
     popularity: 30,
     formFields: [
       {
@@ -596,7 +596,7 @@ export const mockCatalogItems: CatalogItem[] = [
     category: 'personnel',
     iconName: 'Users',
     estimatedFulfillmentDays: 5,
-    ownerTeamId: 't-servicedesk',
+    ownerTeamId: 'team-ifm-noc',
     popularity: 45,
     formFields: [
       {

@@ -15,6 +15,7 @@ import { cabVoteMeta, changeTypeMeta, riskMeta } from '../../lib/constants';
 import { RiskBadge } from '../../components/changes/RiskBadge';
 import { ChangeTypeChip } from '../../components/changes/ChangeTypeChip';
 import { formatDate } from '../../lib/format';
+import { Can, changeResource } from '../../lib/rbac';
 
 // ─── SectionCard ──────────────────────────────────────────────────────────────
 
@@ -286,9 +287,21 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
                     </td>
                     <td className="px-4 py-3">
                       {isMe && isPending ? (
-                        <Button size="sm" className="h-6 text-[10px] px-2" onClick={() => onCastVote(a)}>
-                          Cast vote
-                        </Button>
+                        <Can
+                          module="change"
+                          action="approve"
+                          variant={change.type}
+                          resource={changeResource(change)}
+                          fallback={
+                            <span className="text-[10px] text-ois-text-subtle italic">
+                              Not authorised
+                            </span>
+                          }
+                        >
+                          <Button size="sm" className="h-6 text-[10px] px-2" onClick={() => onCastVote(a)}>
+                            Cast vote
+                          </Button>
+                        </Can>
                       ) : (
                         <span className="text-ois-text-subtle">—</span>
                       )}
@@ -498,6 +511,28 @@ export const CABWorkspace: React.FC = () => {
                     )}
                   </div>
                   <p className={cn('text-[11px] leading-snug line-clamp-2', deferredIds.has(c.id) ? 'text-ois-text-muted line-through' : 'text-ois-text')}>{c.title}</p>
+                  {(() => {
+                    const ta = c.technicalAssessment;
+                    if (!ta) {
+                      return (
+                        <p className="mt-1 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide bg-red-50 text-ois-danger px-1.5 py-0.5 rounded">
+                          ⚠ No tech assessment
+                        </p>
+                      );
+                    }
+                    if (ta.status === 'approved') {
+                      return (
+                        <p className="mt-1 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">
+                          ✓ Tech assessment
+                        </p>
+                      );
+                    }
+                    return (
+                      <p className="mt-1 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">
+                        ● Assessment {ta.status.replace(/_/g, ' ')}
+                      </p>
+                    );
+                  })()}
                   <div className="flex gap-0.5 mt-1.5">
                     {c.approvals.map((a) => {
                       const v = getVote(c.id, a.id) ?? (a.decision !== 'pending' ? a.decision : 'pending');

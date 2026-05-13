@@ -13,6 +13,7 @@ import { Button } from '@/src/components/ui/Button';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { formatDate, formatRelative } from '@/src/lib/format';
+import { Can, problemResource } from '@/src/lib/rbac';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -478,13 +479,21 @@ export const RCAWorkspace: React.FC = () => {
           <button className="w-8 h-8 rounded-lg hover:bg-ois-surface-muted flex items-center justify-center text-ois-text-muted">
             <MoreVertical size={16} />
           </button>
-          <Button variant="secondary" size="sm" onClick={handleSave}>
-            <Save size={14} className="mr-1.5" />
-            Save draft
-          </Button>
-          <Button variant="primary" size="sm" onClick={handlePublish}>
-            {published ? 'Re-publish' : 'Publish RCA'}
-          </Button>
+          <Can
+            module="problem" action="update"
+            resource={problemResource(problem)}
+            fallback={
+              <span className="text-xs text-ois-text-subtle italic">View-only</span>
+            }
+          >
+            <Button variant="secondary" size="sm" onClick={handleSave}>
+              <Save size={14} className="mr-1.5" />
+              Save draft
+            </Button>
+            <Button variant="primary" size="sm" onClick={handlePublish}>
+              {published ? 'Re-publish' : 'Publish RCA'}
+            </Button>
+          </Can>
         </div>
       </div>
 
@@ -554,11 +563,19 @@ export const RCAWorkspace: React.FC = () => {
           Cancel
         </Link>
         <div className="flex items-center gap-2">
+          <Can
+            module="problem" action="update"
+            resource={problemResource(problem)}
+            fallback={
+              <span className="text-xs text-ois-text-subtle italic">View-only</span>
+            }
+          >
           <Button variant="secondary" onClick={handleSave}>Save draft</Button>
           <Button variant="primary" onClick={handlePublish}>
             <CheckCircle2 size={14} className="mr-1.5" />
             {published ? 'Re-publish' : 'Publish RCA'}
           </Button>
+          </Can>
         </div>
       </div>
     </div>

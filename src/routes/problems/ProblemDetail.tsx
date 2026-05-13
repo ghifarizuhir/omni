@@ -16,6 +16,7 @@ import { mockServices } from '@/src/mocks/services';
 import { mockCIs } from '@/src/mocks/cis';
 import { Problem, ProblemStatus } from '@/src/types/problem';
 import { problemStatusMeta } from '@/src/lib/constants';
+import { Can, problemResource } from '@/src/lib/rbac';
 import { Button } from '@/src/components/ui/Button';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { SeverityBadge } from '@/src/components/ui/StatusSeverityBadges';
@@ -514,7 +515,17 @@ export const ProblemDetail: React.FC = () => {
             Problems
           </button>
           <div className="flex items-center gap-2">
-            <StatusDropdown status={problem.status} onChange={handleStatusChange} />
+            <Can
+              module="problem" action="update"
+              resource={problemResource(problem)}
+              fallback={
+                <span className="text-xs text-ois-text-subtle italic px-2">
+                  Read-only — only IFM or the owning APS team can change status.
+                </span>
+              }
+            >
+              <StatusDropdown status={problem.status} onChange={handleStatusChange} />
+            </Can>
             <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-ois-border bg-white text-sm text-ois-text-muted hover:bg-ois-surface-muted transition-colors">
               <MoreVertical size={16} />
             </button>
@@ -860,30 +871,42 @@ export const ProblemDetail: React.FC = () => {
         <aside className="w-[280px] shrink-0 overflow-y-auto border-l border-ois-border bg-white p-4 space-y-4">
           <SectionCard title="Quick actions">
             <div className="space-y-1.5">
-              {quickActions.map(({ icon: Icon, label, action, primary }) => (
-                <button
-                  key={label}
-                  onClick={action}
-                  className={cn(
-                    'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left',
-                    primary
-                      ? 'bg-ois-primary text-white hover:bg-ois-primary-hover'
-                      : 'border border-ois-border text-ois-text hover:bg-ois-surface-muted'
-                  )}
-                >
-                  <Icon size={13} className={primary ? 'text-white' : 'text-ois-text-subtle'} />
-                  {label}
-                </button>
-              ))}
-              <div className="pt-1 border-t border-ois-border">
-                <button
-                  onClick={() => setCloseConfirmOpen(true)}
-                  className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-text-muted hover:bg-ois-surface-muted"
-                >
-                  <CheckCircle2 size={13} className="text-ois-text-subtle" />
-                  Close problem
-                </button>
-              </div>
+              <Can
+                module="problem" action="update"
+                resource={problemResource(problem)}
+                fallback={
+                  <p className="text-xs text-ois-text-subtle italic px-1">
+                    You can view this problem but cannot modify it.
+                  </p>
+                }
+              >
+                {quickActions.map(({ icon: Icon, label, action, primary }) => (
+                  <button
+                    key={label}
+                    onClick={action}
+                    className={cn(
+                      'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left',
+                      primary
+                        ? 'bg-ois-primary text-white hover:bg-ois-primary-hover'
+                        : 'border border-ois-border text-ois-text hover:bg-ois-surface-muted'
+                    )}
+                  >
+                    <Icon size={13} className={primary ? 'text-white' : 'text-ois-text-subtle'} />
+                    {label}
+                  </button>
+                ))}
+              </Can>
+              <Can module="problem" action="update" resource={problemResource(problem)}>
+                <div className="pt-1 border-t border-ois-border">
+                  <button
+                    onClick={() => setCloseConfirmOpen(true)}
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-text-muted hover:bg-ois-surface-muted"
+                  >
+                    <CheckCircle2 size={13} className="text-ois-text-subtle" />
+                    Close problem
+                  </button>
+                </div>
+              </Can>
             </div>
           </SectionCard>
         </aside>

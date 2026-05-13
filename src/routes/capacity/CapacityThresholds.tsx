@@ -8,10 +8,12 @@ import { mockCapacityThresholds } from '@/src/mocks/capacityThresholds';
 import { CapacityThreshold, CapacityThresholdSeverity } from '@/src/types/capacity';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { useToast, ToastView } from '@/src/lib/useToast';
+import { Can, useCan } from '@/src/lib/rbac';
 
 type StatusFilter = 'all' | 'enabled' | 'disabled';
 
 export default function CapacityThresholds() {
+  const canEdit = useCan('capacity', 'update');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<CapacityThresholdSeverity | 'all'>('all');
@@ -85,9 +87,11 @@ export default function CapacityThresholds() {
             {allThresholds.length} thresholds configured · {totalEnabled} enabled · 3 currently triggering
           </p>
         </div>
-        <Button variant="default" size="sm" onClick={() => setIsModalOpen(true)}>
-          + New threshold
-        </Button>
+        <Can module="capacity" action="update">
+          <Button variant="default" size="sm" onClick={() => setIsModalOpen(true)}>
+            + New threshold
+          </Button>
+        </Can>
       </div>
 
       {/* Filter Bar */}
@@ -208,7 +212,7 @@ export default function CapacityThresholds() {
         ) : (
           thresholdsWithEffectiveEnabled.map(threshold => (
             <div key={threshold.id}>
-              <ThresholdRow threshold={threshold} onToggle={handleToggle} />
+              <ThresholdRow threshold={threshold} onToggle={canEdit ? handleToggle : () => {}} />
             </div>
           ))
         )}

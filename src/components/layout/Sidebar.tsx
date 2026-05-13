@@ -10,6 +10,7 @@ import {
   FileText, Gauge, Sparkles, Activity, Shield, GitBranch,
 } from 'lucide-react';
 import { mockInboxItems, mockIncidents } from '@/src/mocks';
+import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -20,6 +21,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute, aiSidebarContent }) => {
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
   const urgentInboxCount = mockInboxItems.filter(i => i.priority === 'urgent').length;
   const openIncidentCount = mockIncidents.filter(i => !['resolved', 'closed'].includes(i.status)).length;
 
@@ -183,7 +185,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
               </div>
 
               {/* Footer Settings */}
-              <div className="p-2 border-t border-ois-sidebar-border shrink-0">
+              <div className="p-2 border-t border-ois-sidebar-border shrink-0 space-y-1">
+                {user?.isSuperadmin && (
+                  <SidebarItem icon={<Shield size={18} />} label="RBAC Admin" to="/admin" collapsed={collapsed} />
+                )}
                 <SidebarItem icon={<Settings size={18} />} label="Settings" to="/settings" collapsed={collapsed} />
               </div>
             </motion.div>

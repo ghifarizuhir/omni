@@ -8,6 +8,7 @@ import { SignOffRejectModal } from '../../components/testing/SignOffRejectModal'
 import { Button } from '../../components/ui/Button';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import { cn } from '../../lib/utils';
+import { useCan } from '@/src/lib/rbac';
 
 const CURRENT_USER_ID = 'u-001';
 
@@ -134,8 +135,15 @@ export const SignOffQueue: React.FC = () => {
     setQuickFilter(null);
   };
 
-  const handleApprove = (signOff: SignOff) => setApproveTarget(signOff);
-  const handleReject = (signOff: SignOff) => setRejectTarget(signOff);
+  const canApprove = useCan('testing', 'approve');
+  const handleApprove = (signOff: SignOff) => {
+    if (!canApprove) return;
+    setApproveTarget(signOff);
+  };
+  const handleReject = (signOff: SignOff) => {
+    if (!canApprove) return;
+    setRejectTarget(signOff);
+  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -269,11 +277,16 @@ export const SignOffQueue: React.FC = () => {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
+          {!canApprove && (
+            <div className="text-xs italic text-ois-text-subtle px-1">
+              You can view sign-offs but cannot approve or reject.
+            </div>
+          )}
           {filteredSignOffs.map(signOff => (
             <SignOffCard
               key={signOff.id}
               signOff={signOff}
-              currentUserId={CURRENT_USER_ID}
+              currentUserId={canApprove ? CURRENT_USER_ID : '__no_user__'}
               onApprove={() => handleApprove(signOff)}
               onReject={() => handleReject(signOff)}
             />

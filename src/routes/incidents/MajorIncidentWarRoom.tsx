@@ -17,6 +17,7 @@ import { UserPickerModal } from '@/src/components/incidents/UserPickerModal';
 import { LinkChangeModal } from '@/src/components/incidents/LinkChangeModal';
 import { LinkProblemModal } from '@/src/components/incidents/LinkProblemModal';
 import { getIncidentById, mockIncidents } from '@/src/mocks/incidents';
+import { Can, useCan, incidentResource } from '@/src/lib/rbac';
 import { mockIncidentTimelines } from '@/src/mocks/incidentTimelines';
 import { mockCIs } from '@/src/mocks/cis';
 import { Incident, IncidentTimelineEvent } from '@/src/types/incident';
@@ -119,6 +120,12 @@ export const MajorIncidentWarRoom: React.FC = () => {
 
   // Local state for timeline (so we can add new comms events)
   const incident = incidentId ? getIncidentById(incidentId) : undefined;
+  const canUpdate = useCan('incident', 'update', {
+    resource: incident ? incidentResource(incident) : undefined,
+  });
+  const canClose = useCan('incident', 'close', {
+    resource: incident ? incidentResource(incident) : undefined,
+  });
 
   const [addCommenterOpen, setAddCommenterOpen] = useState(false);
   const [linkChangeOpen, setLinkChangeOpen] = useState(false);
@@ -197,8 +204,8 @@ export const MajorIncidentWarRoom: React.FC = () => {
         {/* Hero header */}
         <WarRoomHero
           incident={incident}
-          onStandDown={() => setStandDownOpen(true)}
-          onResolve={() => setResolveOpen(true)}
+          onStandDown={canUpdate ? () => setStandDownOpen(true) : () => {}}
+          onResolve={canClose ? () => setResolveOpen(true) : () => {}}
         />
 
         {/* 3-column body */}
@@ -255,41 +262,56 @@ export const MajorIncidentWarRoom: React.FC = () => {
                   </span>
                 </div>
                 <div className="p-3 space-y-2">
-                  <button
-                    onClick={() => setAddCommenterOpen(true)}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors"
+                  <Can
+                    module="incident" action="update"
+                    resource={incidentResource(incident)}
+                    fallback={
+                      <p className="text-xs text-ois-text-subtle italic px-1">
+                        View-only — only IFM or the assigned APS team can act on this incident.
+                      </p>
+                    }
                   >
-                    <MessageSquarePlus size={13} className="text-ois-text-muted" />
-                    Add commenter
-                  </button>
-                  <button
-                    onClick={() => setLinkChangeOpen(true)}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors"
+                    <button
+                      onClick={() => setAddCommenterOpen(true)}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors"
+                    >
+                      <MessageSquarePlus size={13} className="text-ois-text-muted" />
+                      Add commenter
+                    </button>
+                    <button
+                      onClick={() => setLinkChangeOpen(true)}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors"
+                    >
+                      <LinkIcon size={13} className="text-ois-text-muted" />
+                      Link change
+                    </button>
+                    <button
+                      onClick={() => setLinkProblemOpen(true)}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors"
+                    >
+                      <LinkIcon size={13} className="text-ois-text-muted" />
+                      Link problem
+                    </button>
+                    <button
+                      onClick={() => setStandDownOpen(true)}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 border border-amber-200 transition-colors"
+                    >
+                      <AlertTriangle size={13} />
+                      Stand down to {incident.priority === 'P1' ? 'P2' : incident.priority}
+                    </button>
+                  </Can>
+                  <Can
+                    module="incident" action="close"
+                    resource={incidentResource(incident)}
                   >
-                    <LinkIcon size={13} className="text-ois-text-muted" />
-                    Link change
-                  </button>
-                  <button
-                    onClick={() => setLinkProblemOpen(true)}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-text hover:bg-ois-surface-muted border border-ois-border transition-colors"
-                  >
-                    <LinkIcon size={13} className="text-ois-text-muted" />
-                    Link problem
-                  </button>
-                  <button
-                    onClick={() => setStandDownOpen(true)}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 border border-amber-200 transition-colors"
-                  >
-                    <AlertTriangle size={13} />
-                    Stand down to {incident.priority === 'P1' ? 'P2' : incident.priority}
-                  </button>
-                  <button
-                    onClick={() => setResolveOpen(true)}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-success hover:bg-green-50 border border-green-200 transition-colors"
-                  >
-                    <CheckCircle2 size={13} />
-                    Resolve incident
-                  </button>
+                    <button
+                      onClick={() => setResolveOpen(true)}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-ois-success hover:bg-green-50 border border-green-200 transition-colors"
+                    >
+                      <CheckCircle2 size={13} />
+                      Resolve incident
+                    </button>
+                  </Can>
                 </div>
               </div>
             </div>
