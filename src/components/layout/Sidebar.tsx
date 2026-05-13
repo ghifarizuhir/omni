@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import {
@@ -9,7 +9,20 @@ import {
   Lightbulb, Database, Settings, ChevronLeft, ChevronRight,
   Sparkles, Activity, Shield, GitBranch, BarChart3,
 } from 'lucide-react';
-import { mockInboxItems, mockIncidents } from '@/src/mocks';
+import {
+  mockInboxItems,
+  mockIncidents,
+  mockProblems,
+  mockServiceRequests,
+  mockChanges,
+  mockDeployments,
+  mockReleases,
+  mockOutages,
+  mockSLATargets,
+  mockSignOffs,
+  mockOnCallSchedules,
+} from '@/src/mocks';
+import { mockImprovements } from '@/src/mocks/improvements';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
 
 interface SidebarProps {
@@ -22,8 +35,33 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute, aiSidebarContent }) => {
   const navigate = useNavigate();
   const { user } = useCurrentUser();
+  // ── Live signals ──────────────────────────────────────────────────────────
   const urgentInboxCount = mockInboxItems.filter(i => i.priority === 'urgent').length;
   const openIncidentCount = mockIncidents.filter(i => !['resolved', 'closed'].includes(i.status)).length;
+  const openProblemCount = mockProblems.filter(
+    p => !['closed'].includes(p.status),
+  ).length;
+  const requestsAwaitingUserCount = mockServiceRequests.filter(r => r.status === 'pending_user').length;
+  const changesAwaitingCabCount = mockChanges.filter(
+    c => c.status === 'submitted' || c.status === 'in_review',
+  ).length;
+  const deploymentsActiveCount = mockDeployments.filter(
+    d => d.status === 'running' || d.status === 'rolling_back',
+  ).length;
+  const releasesUrgentCount = mockReleases.filter(r => r.status === 'rolled_back').length;
+  const availabilityCriticalCount =
+    mockOutages.filter(o => !o.endedAt).length +
+    mockSLATargets.filter(s => s.status === 'breached').length;
+  const signOffsBreachedCount = mockSignOffs.filter(
+    s => s.status === 'pending' && new Date(s.dueAt).getTime() < Date.now(),
+  ).length;
+  const onCallActiveIncidentCount = mockOnCallSchedules.reduce(
+    (acc, s) => acc + s.activeIncidentCount,
+    0,
+  );
+  const improvementsBlockedCount = mockImprovements.filter(
+    i => i.priority === 'critical' && i.status === 'on_hold',
+  ).length;
 
   return (
     <aside
@@ -147,24 +185,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
                   <SidebarItem icon={<LayoutDashboard size={18} />} label="Overview" to="/" collapsed={collapsed} />
                   <SidebarItem icon={<Inbox size={18} />} label="Inbox" to="/inbox" collapsed={collapsed} badge={urgentInboxCount} badgeVariant="urgent" />
                   <SidebarItem icon={<AlertCircle size={18} />} label="Incidents" to="/incidents" collapsed={collapsed} badge={openIncidentCount} />
-                  <SidebarItem icon={<Bug size={18} />} label="Problems" to="/problems" collapsed={collapsed} />
+                  <SidebarItem icon={<Bug size={18} />} label="Problems" to="/problems" collapsed={collapsed} badge={openProblemCount} />
                 </SidebarSection>
 
                 <SidebarSection label="Service Delivery" collapsed={collapsed}>
                   <SidebarItem icon={<Store size={18} />} label="Self-Service Portal" to="/portal" collapsed={collapsed} />
-                  <SidebarItem icon={<ShoppingCart size={18} />} label="Service Requests" to="/requests" collapsed={collapsed} />
+                  <SidebarItem icon={<ShoppingCart size={18} />} label="Service Requests" to="/requests" collapsed={collapsed} badge={requestsAwaitingUserCount} badgeVariant="warning" />
                   <SidebarItem icon={<BookOpen size={18} />} label="Knowledge Base" to="/kb" collapsed={collapsed} />
                 </SidebarSection>
 
                 <SidebarSection label="Change & Delivery" collapsed={collapsed}>
-                  <SidebarItem icon={<Wrench size={18} />} label="Changes" to="/changes" collapsed={collapsed} />
-                  <SidebarItem icon={<Package size={18} />} label="Releases" to="/releases" collapsed={collapsed} />
-                  <SidebarItem icon={<Rocket size={18} />} label="Deployments" to="/deployments" collapsed={collapsed} />
-                  <SidebarItem icon={<CheckCircle2 size={18} />} label="Testing" to="/testing/plans" collapsed={collapsed} />
+                  <SidebarItem icon={<Wrench size={18} />} label="Changes" to="/changes" collapsed={collapsed} badge={changesAwaitingCabCount} />
+                  <SidebarItem icon={<Package size={18} />} label="Releases" to="/releases" collapsed={collapsed} badge={releasesUrgentCount} badgeVariant="urgent" />
+                  <SidebarItem icon={<Rocket size={18} />} label="Deployments" to="/deployments" collapsed={collapsed} badge={deploymentsActiveCount} />
+                  <SidebarItem icon={<CheckCircle2 size={18} />} label="Testing" to="/testing/plans" collapsed={collapsed} badge={signOffsBreachedCount} badgeVariant="urgent" />
                 </SidebarSection>
 
                 <SidebarSection label="Service Health" collapsed={collapsed}>
-                  <SidebarItem icon={<Heart size={18} />} label="Availability" to="/availability" collapsed={collapsed} />
+                  <SidebarItem icon={<Heart size={18} />} label="Availability" to="/availability" collapsed={collapsed} badge={availabilityCriticalCount} badgeVariant="urgent" />
                   <SidebarItem icon={<Zap size={18} />} label="Capacity" to="/capacity" collapsed={collapsed} />
                   <SidebarItem icon={<Lock size={18} />} label="Continuity" to="/continuity/bia" collapsed={collapsed} />
                   <SidebarItem icon={<CircleDot size={18} />} label="Status Page" to="/status" collapsed={collapsed} />
@@ -177,8 +215,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
 
                 <SidebarSection label="Foundation" collapsed={collapsed}>
                   <SidebarItem icon={<Database size={18} />} label="CMDB" to="/cmdb" collapsed={collapsed} />
-                  <SidebarItem icon={<Clock size={18} />} label="On-Call" to="/on-call" collapsed={collapsed} />
-                  <SidebarItem icon={<Lightbulb size={18} />} label="Improvements" to="/improvement" collapsed={collapsed} />
+                  <SidebarItem icon={<Clock size={18} />} label="On-Call" to="/on-call" collapsed={collapsed} badge={onCallActiveIncidentCount} badgeVariant="urgent" />
+                  <SidebarItem icon={<Lightbulb size={18} />} label="Improvements" to="/improvement" collapsed={collapsed} badge={improvementsBlockedCount} badgeVariant="urgent" />
                 </SidebarSection>
               </div>
 
@@ -198,7 +236,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
 };
 
 const SidebarSection: React.FC<{ label: string; collapsed: boolean; children: React.ReactNode }> = ({ label, collapsed, children }) => {
-  if (collapsed) return <div className="space-y-1 my-4">{children}</div>;
+  if (collapsed) {
+    return (
+      <div className="px-2 [&:not(:first-child)]:before:block [&:not(:first-child)]:before:border-t [&:not(:first-child)]:before:border-ois-sidebar-border [&:not(:first-child)]:before:mx-2 [&:not(:first-child)]:before:my-3 [&:first-child]:pt-3">
+        <div className="space-y-1">{children}</div>
+      </div>
+    );
+  }
   return (
     <div className="mb-6 px-3">
       <div className="px-3 mb-2 text-[10px] font-bold text-ois-sidebar-section-label uppercase tracking-[0.1em]">
@@ -215,14 +259,18 @@ const SidebarItem: React.FC<{
   to: string;
   collapsed: boolean;
   badge?: number;
-  badgeVariant?: 'default' | 'urgent';
+  badgeVariant?: 'default' | 'urgent' | 'warning';
 }> = ({ icon, label, to, collapsed, badge, badgeVariant = 'default' }) => {
-  const location = useLocation();
-  const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
+  const hasBadge = badge !== undefined && badge > 0;
+  const dotColor =
+    badgeVariant === 'urgent'  ? 'bg-ois-danger' :
+    badgeVariant === 'warning' ? 'bg-ois-warning' :
+    'bg-ois-text-subtle';
 
   return (
     <NavLink
       to={to}
+      end={to === '/'}
       className={({ isActive }) =>
         cn(
           "group relative flex items-center gap-3 px-3 py-2 rounded-ois-btn transition-colors overflow-hidden",
@@ -231,29 +279,44 @@ const SidebarItem: React.FC<{
             : "text-ois-sidebar-item hover:bg-ois-sidebar-item-hover-bg hover:text-ois-text"
         )
       }
-      title={collapsed ? label : undefined}
+      title={collapsed ? (hasBadge ? `${label} (${badge})` : label) : undefined}
     >
-      {isActive && (
-        <div
-          className="absolute left-0 top-0 bottom-0 w-[3px] bg-ois-primary"
-          style={{ boxShadow: 'inset 3px 0 0 0 var(--ois-primary)' }}
-        />
-      )}
-      <div className={cn("shrink-0", isActive ? "text-ois-primary font-bold" : "text-ois-text-muted group-hover:text-ois-text")}>
-        {icon}
-      </div>
-      {!collapsed && (
+      {({ isActive }) => (
         <>
-          <span className="flex-1 font-medium truncate shrink-0">{label}</span>
-          {badge !== undefined && badge > 0 && (
-            <span
-              className={cn(
-                "shrink-0 flex items-center justify-center min-w-[20px] h-5 rounded px-1.5 text-[10px] font-bold leading-none",
-                badgeVariant === 'urgent' ? "bg-ois-danger text-white" : "bg-ois-border-strong text-ois-text-muted"
+          {isActive && (
+            <div
+              className="absolute left-0 top-0 bottom-0 w-[3px] bg-ois-primary"
+              style={{ boxShadow: 'inset 3px 0 0 0 var(--ois-primary)' }}
+            />
+          )}
+          <div className={cn("shrink-0 relative", isActive ? "text-ois-primary font-bold" : "text-ois-text-muted group-hover:text-ois-text")}>
+            {icon}
+            {collapsed && hasBadge && (
+              <span
+                className={cn(
+                  "absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-ois-sidebar-bg",
+                  dotColor,
+                )}
+                aria-hidden
+              />
+            )}
+          </div>
+          {!collapsed && (
+            <>
+              <span className="flex-1 font-medium truncate shrink-0">{label}</span>
+              {hasBadge && (
+                <span
+                  className={cn(
+                    "shrink-0 flex items-center justify-center min-w-[20px] h-5 rounded px-1.5 text-[10px] font-bold leading-none",
+                    badgeVariant === 'urgent'  ? "bg-ois-danger text-white" :
+                    badgeVariant === 'warning' ? "bg-ois-warning text-white" :
+                    "bg-ois-border-strong text-ois-text-muted",
+                  )}
+                >
+                  {badge}
+                </span>
               )}
-            >
-              {badge}
-            </span>
+            </>
           )}
         </>
       )}
