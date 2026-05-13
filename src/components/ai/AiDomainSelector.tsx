@@ -18,9 +18,9 @@ interface DomainItem {
 const DOMAINS: DomainItem[] = [
   { domain: 'cmdb', label: 'CMDB', icon: Server },
   { domain: 'knowledge_base', label: 'Knowledge Base', icon: BookOpen },
-  { domain: 'incident', label: 'Incident', icon: AlertTriangle, comingSoon: true },
-  { domain: 'problem', label: 'Problem', icon: Bug, comingSoon: true },
-  { domain: 'change', label: 'Change', icon: GitPullRequest, comingSoon: true },
+  { domain: 'incident', label: 'Incident', icon: AlertTriangle },
+  { domain: 'problem', label: 'Problem', icon: Bug },
+  { domain: 'change', label: 'Change', icon: GitPullRequest },
   { domain: 'all', label: 'Semua domain', icon: Layers },
 ];
 

@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, AlertTriangle, CheckCircle2, Clock,
   ExternalLink, ClipboardCheck, History, MoreHorizontal,
+  FilePlus, Send, ThumbsUp, ThumbsDown, Play, X as XIcon,
+  RotateCcw, Calendar,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -16,6 +18,7 @@ import { RiskBadge } from '../../components/changes/RiskBadge';
 import { ApprovalMatrix } from '../../components/changes/ApprovalMatrix';
 import { PIRPanel } from '../../components/changes/PIRPanel';
 import { RescheduleModal } from '../../components/changes/RescheduleModal';
+import { AuditTimeline, AuditEntry } from '../../components/common/AuditTimeline';
 import { formatDate, formatRelative } from '../../lib/format';
 
 const RISK_COLOR: Record<string, string> = {
@@ -511,13 +514,92 @@ export const ChangeDetail: React.FC = () => {
             {/* History */}
             {activeTab === 'history' && (
               <SectionCard title="Audit History">
-                <div className="py-8 text-center">
-                  <History size={32} className="mx-auto text-ois-text-subtle mb-3" />
-                  <p className="text-sm font-bold text-ois-text">No history available</p>
-                  <p className="text-xs text-ois-text-muted mt-1">
-                    Audit log tracking is coming soon. Full change history will be recorded here.
-                  </p>
-                </div>
+                {(() => {
+                  const entries: AuditEntry[] = [];
+                  entries.push({
+                    id: `${change.id}-created`,
+                    timestamp: change.createdAt,
+                    icon: FilePlus,
+                    iconColor: '#1F4FD4',
+                    iconBg: '#EEF2FF',
+                    actor: change.requesterName,
+                    action: 'created this change',
+                    detail: `${change.type} change · risk ${change.risk}`,
+                  });
+                  if (change.cabReviewedAt) {
+                    entries.push({
+                      id: `${change.id}-cab`,
+                      timestamp: change.cabReviewedAt,
+                      icon: ClipboardCheck,
+                      iconColor: '#7E22CE',
+                      iconBg: '#F3E8FF',
+                      actor: 'CAB',
+                      action: 'reviewed the change',
+                      detail: change.cabSessionId ? `Session ${change.cabSessionId}` : undefined,
+                    });
+                  }
+                  change.approvals.forEach(approval => {
+                    if (!approval.decidedAt || approval.decision === 'pending') return;
+                    const isReject = approval.decision === 'reject';
+                    entries.push({
+                      id: `${change.id}-approval-${approval.id}`,
+                      timestamp: approval.decidedAt,
+                      icon: isReject ? ThumbsDown : ThumbsUp,
+                      iconColor: isReject ? '#B42318' : '#067647',
+                      iconBg: isReject ? '#FEE4E2' : '#DCFAE6',
+                      actor: approval.approverName,
+                      action: `${isReject ? 'rejected' : approval.decision === 'approve_with_conditions' ? 'approved (with conditions)' : approval.decision === 'abstain' ? 'abstained on' : 'approved'} the change`,
+                      detail: approval.rationale ?? approval.conditions ?? `Role: ${approval.approverRole}`,
+                    });
+                  });
+                  if (change.actualStart) {
+                    entries.push({
+                      id: `${change.id}-started`,
+                      timestamp: change.actualStart,
+                      icon: Play,
+                      iconColor: '#DC6803',
+                      iconBg: '#FEF0C7',
+                      actor: change.ownerName,
+                      action: 'started implementation',
+                    });
+                  }
+                  if (change.actualEnd) {
+                    const failed = change.status === 'closed_failed';
+                    entries.push({
+                      id: `${change.id}-ended`,
+                      timestamp: change.actualEnd,
+                      icon: failed ? XIcon : CheckCircle2,
+                      iconColor: failed ? '#B42318' : '#067647',
+                      iconBg: failed ? '#FEE4E2' : '#DCFAE6',
+                      actor: change.ownerName,
+                      action: failed ? 'finished implementation with failure' : 'completed implementation',
+                    });
+                  }
+                  if (change.pir?.reviewedAt) {
+                    entries.push({
+                      id: `${change.id}-pir`,
+                      timestamp: change.pir.reviewedAt,
+                      icon: ClipboardCheck,
+                      iconColor: '#1F4FD4',
+                      iconBg: '#EEF2FF',
+                      actor: change.pir.reviewedBy,
+                      action: `posted post-implementation review (${change.pir.outcome.replace('_', ' ')})`,
+                      detail: change.pir.whatWentWell?.slice(0, 140),
+                    });
+                  }
+                  if (change.closedAt) {
+                    entries.push({
+                      id: `${change.id}-closed`,
+                      timestamp: change.closedAt,
+                      icon: change.status === 'cancelled' ? XIcon : CheckCircle2,
+                      iconColor: change.status === 'cancelled' ? '#475467' : '#067647',
+                      iconBg: change.status === 'cancelled' ? '#F1F3F7' : '#DCFAE6',
+                      actor: 'System',
+                      action: change.status === 'cancelled' ? 'cancelled the change' : 'closed the change',
+                    });
+                  }
+                  return <AuditTimeline entries={entries} emptyLabel="No history yet for this change." />;
+                })()}
               </SectionCard>
             )}
 

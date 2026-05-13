@@ -166,8 +166,17 @@ const session2: AiSession = {
       sessionId: 'ai-sess-002',
       role: 'ai',
       createdAt: '2026-05-09T14:30:10Z',
-      text: 'I\'m preparing a root cause analysis draft for INC-2024-0892. This feature is coming soon.',
-      contentType: 'draft_placeholder',
+      text: 'Berikut ringkasan awal untuk INC-2024-0892:',
+      contentType: 'query_result_text',
+      contentPayload: {
+        kind: 'query_result_text',
+        query: 'Ringkas root cause INC-2024-0892',
+        answer:
+          'INC-2024-0892 dipicu oleh DB connection pool exhaustion pada payment-api setelah deploy 2.4.0. ' +
+          'Saat ini mitigated lewat rollback ke 2.3.9; problem terkait PRB-2026-00018 sudah dibuka untuk fix permanen. ' +
+          'Mau saya buatkan timeline lengkap lewat RCA workspace?',
+        timestamp: '2026-05-09T14:30:10Z',
+      },
     },
   ],
 };

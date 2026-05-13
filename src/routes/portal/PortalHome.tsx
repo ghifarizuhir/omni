@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Search, ShoppingBag, ClipboardList, BookOpen, MessageCircle,
   ArrowRight, ArrowUpRight, Clock, CheckCircle2, Circle,
   X, Phone, Mail, ChevronRight, Star, Zap, Shield,
   Users, Database, Laptop, Package, Key, Monitor,
-  BookMarked, AlertCircle, Eye, ThumbsUp,
+  BookMarked, AlertCircle, Eye, ThumbsUp, Send, Loader2,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/src/lib/utils';
@@ -94,47 +94,188 @@ const RECOMMENDED_SLUGS = [
   'troubleshooting-payment-api-5xx-errors',
 ];
 
-// ── Service Desk Modal ────────────────────────────────────────────────────────
+// ── Service Desk Chat Modal ───────────────────────────────────────────────────
 
-const ServiceDeskModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-    <div className="relative bg-ois-surface rounded-ois-modal shadow-ois-modal w-full max-w-md p-8 text-center">
-      <button onClick={onClose} className="absolute top-4 right-4 text-ois-text-subtle hover:text-ois-text transition-colors">
-        <X size={18} />
-      </button>
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'agent';
+  text: string;
+  timestamp: string;
+}
 
-      <div className="w-14 h-14 rounded-full bg-ois-primary-pale flex items-center justify-center mx-auto mb-4">
-        <MessageCircle size={26} className="text-ois-primary" />
-      </div>
-      <h3 className="text-lg font-bold text-ois-text mb-1">Talk to Service Desk</h3>
-      <p className="text-sm text-ois-text-muted mb-6">
-        Service desk chat is coming soon. In the meantime, reach us by phone or email.
-      </p>
+const AGENT_NAME = 'Riley · Service Desk';
 
-      <div className="space-y-3 text-left">
-        <a href="tel:+14357" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-ois-surface-muted hover:bg-ois-border transition-colors">
-          <div className="w-8 h-8 rounded-full bg-ois-success-pale flex items-center justify-center shrink-0">
-            <Phone size={14} className="text-ois-success" />
+const AGENT_GREETING = `Hi ${currentUser.name.split(' ')[0]}! I'm Riley from the Service Desk. What can I help you with today?`;
+
+function generateAgentReply(userText: string): string {
+  const t = userText.toLowerCase();
+  if (/password|reset|login/.test(t)) {
+    return 'For password resets, you can use the self-service portal at /portal/catalog → "Password reset". If that doesn\'t work, I can open a ticket for you — just confirm your username.';
+  }
+  if (/laptop|hardware|equipment/.test(t)) {
+    return 'Hardware requests go through the catalog. Want me to start a request for you? Let me know which model you need.';
+  }
+  if (/vpn|access|github|slack/.test(t)) {
+    return 'Access requests are typically fulfilled within 1 business day. I can route this to the appropriate approver — what system do you need access to?';
+  }
+  if (/incident|down|broken|not working/.test(t)) {
+    return 'That sounds like an incident. I\'m escalating to the on-call engineer. Could you share what error you\'re seeing and which service is affected?';
+  }
+  if (/thank|thanks|thx/i.test(t)) {
+    return 'Happy to help! Is there anything else I can do for you?';
+  }
+  return 'Thanks for reaching out. I\'ll look into that and get back to you shortly. In the meantime, is there a ticket number I should reference?';
+}
+
+const ServiceDeskModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    {
+      id: 'm-greet',
+      role: 'agent',
+      text: AGENT_GREETING,
+      timestamp: new Date().toISOString(),
+    },
+  ]);
+  const [draft, setDraft] = useState('');
+  const [agentTyping, setAgentTyping] = useState(false);
+  const replyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    return () => { if (replyTimer.current) clearTimeout(replyTimer.current); };
+  }, []);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, agentTyping]);
+
+  const handleSend = () => {
+    const text = draft.trim();
+    if (!text) return;
+    const userMsg: ChatMessage = {
+      id: `m-${Date.now()}`,
+      role: 'user',
+      text,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, userMsg]);
+    setDraft('');
+    setAgentTyping(true);
+    if (replyTimer.current) clearTimeout(replyTimer.current);
+    replyTimer.current = setTimeout(() => {
+      const reply: ChatMessage = {
+        id: `m-${Date.now()}-r`,
+        role: 'agent',
+        text: generateAgentReply(text),
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, reply]);
+      setAgentTyping(false);
+    }, 900 + Math.random() * 700);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-ois-surface rounded-ois-modal shadow-ois-modal w-full max-w-md h-[560px] max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-ois-border">
+          <div className="relative w-10 h-10 rounded-full bg-ois-primary-pale flex items-center justify-center shrink-0">
+            <MessageCircle size={18} className="text-ois-primary" />
+            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-ois-success border-2 border-ois-surface" />
           </div>
-          <div>
-            <div className="text-sm font-semibold text-ois-text">Call: ext. 4357</div>
-            <div className="text-xs text-ois-text-muted">Mon–Fri 8am–6pm UTC</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold text-ois-text">{AGENT_NAME}</div>
+            <div className="text-[11px] text-ois-success font-medium">Online · typically replies in &lt; 2 min</div>
           </div>
-        </a>
-        <a href="mailto:itservicedesk@acme.io" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-ois-surface-muted hover:bg-ois-border transition-colors">
-          <div className="w-8 h-8 rounded-full bg-ois-info-pale flex items-center justify-center shrink-0">
-            <Mail size={14} className="text-ois-info" />
+          <div className="flex items-center gap-1">
+            <a
+              href="tel:+14357"
+              className="text-ois-text-subtle hover:text-ois-text p-1.5 rounded-md hover:bg-ois-surface-muted"
+              title="Call ext. 4357"
+            >
+              <Phone size={15} />
+            </a>
+            <a
+              href="mailto:itservicedesk@acme.io"
+              className="text-ois-text-subtle hover:text-ois-text p-1.5 rounded-md hover:bg-ois-surface-muted"
+              title="Email"
+            >
+              <Mail size={15} />
+            </a>
+            <button
+              onClick={onClose}
+              className="text-ois-text-subtle hover:text-ois-text p-1.5 rounded-md hover:bg-ois-surface-muted"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <div>
-            <div className="text-sm font-semibold text-ois-text">itservicedesk@acme.io</div>
-            <div className="text-xs text-ois-text-muted">Typical reply within 2 hours</div>
-          </div>
-        </a>
+        </div>
+
+        {/* Messages */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-ois-bg/50">
+          {messages.map(m => {
+            const isUser = m.role === 'user';
+            return (
+              <div key={m.id} className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
+                <div className={cn(
+                  'max-w-[78%] rounded-2xl px-3.5 py-2 text-sm leading-snug shadow-sm',
+                  isUser
+                    ? 'bg-ois-primary text-white rounded-br-md'
+                    : 'bg-white text-ois-text border border-ois-border rounded-bl-md',
+                )}>
+                  <p className="whitespace-pre-wrap">{m.text}</p>
+                  <p className={cn(
+                    'text-[10px] mt-1',
+                    isUser ? 'text-white/70' : 'text-ois-text-subtle',
+                  )}>
+                    {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+          {agentTyping && (
+            <div className="flex justify-start">
+              <div className="rounded-2xl rounded-bl-md px-3.5 py-2 bg-white border border-ois-border text-ois-text-muted text-xs flex items-center gap-2">
+                <Loader2 size={12} className="animate-spin" />
+                Riley is typing…
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Composer */}
+        <form
+          onSubmit={e => { e.preventDefault(); handleSend(); }}
+          className="border-t border-ois-border bg-ois-surface p-3 flex items-end gap-2"
+        >
+          <textarea
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            rows={1}
+            placeholder="Type your message…"
+            className="flex-1 resize-none rounded-lg border border-ois-border px-3 py-2 text-sm text-ois-text placeholder:text-ois-text-subtle focus:outline-none focus:ring-2 focus:ring-ois-primary/30 focus:border-ois-primary max-h-32"
+          />
+          <button
+            type="submit"
+            disabled={!draft.trim()}
+            className="h-9 w-9 shrink-0 rounded-lg bg-ois-primary text-white flex items-center justify-center hover:bg-ois-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Send message"
+          >
+            <Send size={15} />
+          </button>
+        </form>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ── Main Component ────────────────────────────────────────────────────────────
 

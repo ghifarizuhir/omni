@@ -16,6 +16,40 @@ export const getDomainLabel = (domain: AiDomain): string => {
   return labels[domain];
 };
 
+function buildDomainTextAnswer(userMessage: string, domain: AiDomain): string {
+  const trimmed = userMessage.trim();
+  switch (domain) {
+    case 'incident':
+      if (/p1|critical|major/i.test(userMessage)) {
+        return 'There are 2 active P1 incidents this week — INC-2026-00184 (payment-api 5xx spike) and INC-2026-00179 (checkout latency). The on-call engineer is paged on both. Want me to summarize the latest update?';
+      }
+      if (/open|active|in progress/i.test(userMessage)) {
+        return '7 incidents are currently active across all severities. 2 are P1, 3 are P2, and 2 are P3. The longest-running one is INC-2026-00171 (4h 12m).';
+      }
+      return `For "${trimmed}", I\'d look at the incident queue at /incidents and recent post-mortems in the KB. Want me to draft an incident report skeleton?`;
+    case 'problem':
+      if (/known error|kedb/i.test(userMessage)) {
+        return 'The KEDB has 12 active known errors. The most frequently triggered one is PRB-2026-00018 (payment-api DB connection exhaustion) — linked to 6 incidents in the last 30 days.';
+      }
+      if (/rca|root cause/i.test(userMessage)) {
+        return 'I can help draft an RCA. Open the problem detail and use the RCA workspace — I\'ll auto-populate the timeline from linked incidents. Which problem are you investigating?';
+      }
+      return `For "${trimmed}", I\'d cross-reference recurring incidents and check whether a problem ticket exists. Want me to surface candidate problems from incident clustering?`;
+    case 'change':
+      if (/calendar|scheduled|upcoming/i.test(userMessage)) {
+        return 'There are 4 changes scheduled this week. CHG-2026-00342 (payment-api 2.4.1) is the highest-risk one, scheduled for Thursday 02:00 UTC. CAB review is pending.';
+      }
+      if (/risk|impact/i.test(userMessage)) {
+        return 'Risk is computed from blast radius, freshness of rollback plan, and historical change failures in the same service. The current backlog has 1 critical-risk change pending CAB approval.';
+      }
+      return `For "${trimmed}", I can pull up the change calendar at /changes/calendar or draft an RFC. Want me to start a new change request?`;
+    case 'all':
+      return 'I can answer across CMDB, KB, incidents, problems, and changes. Pick a more specific domain in the left rail to get focused suggestions.';
+    default:
+      return 'Saya memproses permintaan kamu. (Mode demo — response aktual tersedia setelah AI backend terhubung.)';
+  }
+}
+
 export const getMockAiResponse = (
   userMessage: string,
   domain: AiDomain,
@@ -25,7 +59,19 @@ export const getMockAiResponse = (
   const createdAt = new Date().toISOString();
 
   if (['incident', 'problem', 'change'].includes(domain)) {
-    return { id, sessionId, role: 'ai', contentType: 'draft_placeholder', createdAt };
+    return {
+      id,
+      sessionId,
+      role: 'ai',
+      contentType: 'query_result_text',
+      contentPayload: {
+        kind: 'query_result_text',
+        query: userMessage,
+        answer: buildDomainTextAnswer(userMessage, domain),
+        timestamp: createdAt,
+      },
+      createdAt,
+    };
   }
   if (domain === 'cmdb' && /tambah|buat|create|add/i.test(userMessage)) {
     return {

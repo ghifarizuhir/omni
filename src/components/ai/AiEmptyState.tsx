@@ -36,11 +36,32 @@ function getDomainContent(domain: AiDomain): DomainContent {
         ],
       };
     case 'incident':
-      return { type: 'coming_soon', route: '/incidents' };
+      return {
+        type: 'suggestions',
+        items: [
+          'Berapa P1 incident aktif minggu ini?',
+          'Ringkas update terbaru untuk INC-2026-00184',
+          'Siapa on-call engineer untuk payment service?',
+        ],
+      };
     case 'problem':
-      return { type: 'coming_soon', route: '/problems' };
+      return {
+        type: 'suggestions',
+        items: [
+          'Cari problem dengan incident berulang',
+          'Draft RCA five-whys untuk problem ini',
+          'Known error mana yang paling sering trigger?',
+        ],
+      };
     case 'change':
-      return { type: 'coming_soon', route: '/changes' };
+      return {
+        type: 'suggestions',
+        items: [
+          'Change apa saja yang dijadwalkan minggu ini?',
+          'Risk score CHG-2026-00342?',
+          'Bantu draft RFC untuk patch payment-api',
+        ],
+      };
     case 'all':
       return {
         type: 'suggestions',

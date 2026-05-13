@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreVertical, ExternalLink, Check, Loader2, X, Clock, Lock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, MoreVertical, ExternalLink, Check, Loader2, X, Clock, Lock, CheckCircle2, FilePlus, Rocket, Package } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
@@ -11,6 +11,7 @@ import { ReleaseTypeChip } from '../../components/releases/ReleaseTypeChip';
 import { StagesMiniStepper } from '../../components/releases/StagesMiniStepper';
 import { stageStatusMeta, riskMeta } from '../../lib/constants';
 import { ReleaseStage, ReleaseStatus } from '../../types/release';
+import { AuditTimeline, AuditEntry } from '../../components/common/AuditTimeline';
 import { formatDate } from '../../lib/format';
 
 const RELEASE_TYPE_COLOR: Record<string, string> = {
@@ -406,9 +407,75 @@ export const ReleaseDetail: React.FC = () => {
             {/* History */}
             {activeTab === 'history' && (
               <SectionCard title="Audit History">
-                <p className="text-sm text-ois-text-subtle italic">
-                  No history available — Audit log tracking is coming soon.
-                </p>
+                {(() => {
+                  const entries: AuditEntry[] = [];
+                  entries.push({
+                    id: `${release.id}-created`,
+                    timestamp: release.createdAt,
+                    icon: FilePlus,
+                    iconColor: '#1F4FD4',
+                    iconBg: '#EEF2FF',
+                    actor: release.releaseManagerName,
+                    action: `created release ${release.version}`,
+                    detail: `${release.type} · planned ${formatDate(release.plannedReleaseDate)}`,
+                  });
+                  localStages.forEach(stage => {
+                    if (stage.startedAt) {
+                      entries.push({
+                        id: `${release.id}-${stage.id}-start`,
+                        timestamp: stage.startedAt,
+                        icon: Rocket,
+                        iconColor: '#DC6803',
+                        iconBg: '#FEF0C7',
+                        actor: 'Deploy pipeline',
+                        action: `started deploying to ${stage.environment}`,
+                        detail: stage.deploymentPublicId ? `Deployment ${stage.deploymentPublicId}` : undefined,
+                      });
+                    }
+                    if (stage.completedAt) {
+                      const failed = stage.status === 'failed' || stage.status === 'rolled_back';
+                      entries.push({
+                        id: `${release.id}-${stage.id}-end`,
+                        timestamp: stage.completedAt,
+                        icon: failed ? X : Check,
+                        iconColor: failed ? '#B42318' : '#067647',
+                        iconBg: failed ? '#FEE4E2' : '#DCFAE6',
+                        actor: 'Deploy pipeline',
+                        action: stage.status === 'rolled_back'
+                          ? `rolled back ${stage.environment}`
+                          : stage.status === 'failed'
+                            ? `failed to deploy to ${stage.environment}`
+                            : `deployed successfully to ${stage.environment}`,
+                        detail: stage.testsTotal
+                          ? `${stage.testsPassed ?? 0}/${stage.testsTotal} tests passed`
+                          : undefined,
+                      });
+                    }
+                    if (stage.approvedAt) {
+                      entries.push({
+                        id: `${release.id}-${stage.id}-approval`,
+                        timestamp: stage.approvedAt,
+                        icon: CheckCircle2,
+                        iconColor: '#067647',
+                        iconBg: '#DCFAE6',
+                        actor: stage.approverId ?? 'Approver',
+                        action: `approved promotion to ${stage.environment}`,
+                      });
+                    }
+                  });
+                  if (release.actualReleaseDate) {
+                    entries.push({
+                      id: `${release.id}-released`,
+                      timestamp: release.actualReleaseDate,
+                      icon: Package,
+                      iconColor: '#067647',
+                      iconBg: '#DCFAE6',
+                      actor: 'System',
+                      action: `released version ${release.version} to production`,
+                    });
+                  }
+                  return <AuditTimeline entries={entries} emptyLabel="No release history yet." />;
+                })()}
               </SectionCard>
             )}
 
