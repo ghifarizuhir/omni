@@ -34,7 +34,6 @@ export const AppShell: React.FC = () => {
       {/* Sidebar — owns brand, mode toggle, and content switching internally */}
       <Sidebar
         collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         isAiRoute={isAiRoute}
         aiSidebarContent={aiSidebarContent}
       />

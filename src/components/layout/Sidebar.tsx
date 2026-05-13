@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Inbox, AlertCircle, Bug, ShoppingCart,
   BookOpen, Wrench, Package, Rocket, CheckCircle2, Store,
   Heart, Zap, Lock, Radio, CircleDot, Clock,
-  Lightbulb, Database, Settings, ChevronLeft, ChevronRight,
+  Lightbulb, Database, Settings,
   Sparkles, Activity, Shield, GitBranch, BarChart3,
 } from 'lucide-react';
 import {
@@ -27,12 +27,11 @@ import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
 
 interface SidebarProps {
   collapsed: boolean;
-  onToggle: () => void;
   isAiRoute: boolean;
   aiSidebarContent: React.ReactNode;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute, aiSidebarContent }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ collapsed, isAiRoute, aiSidebarContent }) => {
   const navigate = useNavigate();
   const { user } = useCurrentUser();
   // ── Live signals ──────────────────────────────────────────────────────────
@@ -106,7 +105,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
               <button
                 type="button"
                 onClick={() => navigate('/')}
-                disabled={!isAiRoute}
                 aria-pressed={!isAiRoute}
                 className={cn(
                   "relative flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-[6px] text-[11px] font-semibold transition-colors duration-150 z-10",
@@ -128,7 +126,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, isAiRoute
               <button
                 type="button"
                 onClick={() => navigate('/ai')}
-                disabled={isAiRoute}
                 aria-pressed={isAiRoute}
                 className={cn(
                   "relative flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-[6px] text-[11px] font-semibold transition-colors duration-150 z-10",
@@ -244,8 +241,8 @@ const SidebarSection: React.FC<{ label: string; collapsed: boolean; children: Re
     );
   }
   return (
-    <div className="mb-6 px-3">
-      <div className="px-3 mb-2 text-[10px] font-bold text-ois-sidebar-section-label uppercase tracking-[0.1em]">
+    <div className="mb-6 px-3 group/section">
+      <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-ois-sidebar-section-label group-has-[[aria-current='page']]/section:text-ois-primary transition-colors">
         {label}
       </div>
       <div className="space-y-1">{children}</div>
