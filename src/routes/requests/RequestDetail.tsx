@@ -411,9 +411,11 @@ const RequestInfoModal: React.FC<{
 const ReassignModal: React.FC<{
   currentAssignee?: string;
   users: { id: string; name: string; email: string; role?: string }[];
+  submitting?: boolean;
+  error?: string | null;
   onConfirm: (userId: string, userName: string) => void;
   onClose: () => void;
-}> = ({ currentAssignee, users, onConfirm, onClose }) => {
+}> = ({ currentAssignee, users, submitting, error, onConfirm, onClose }) => {
   const [selected, setSelected] = useState<string>('');
   const candidates = users.filter(u => u.name !== currentAssignee);
   return (
@@ -434,11 +436,14 @@ const ReassignModal: React.FC<{
             </button>
           ))}
         </div>
+        {error && (
+          <p className="text-xs text-ois-danger">{error}</p>
+        )}
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-ois-border-strong text-sm font-semibold text-ois-text hover:bg-ois-surface-muted transition-colors">Cancel</button>
-          <button onClick={() => { const u = candidates.find(c => c.id === selected); if (u) onConfirm(u.id, u.name); }} disabled={!selected}
+          <button onClick={onClose} disabled={submitting} className="px-4 py-2 rounded-lg border border-ois-border-strong text-sm font-semibold text-ois-text hover:bg-ois-surface-muted transition-colors disabled:opacity-50">Cancel</button>
+          <button onClick={() => { const u = candidates.find(c => c.id === selected); if (u && !submitting) onConfirm(u.id, u.name); }} disabled={!selected || !!submitting}
             className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-ois-primary text-white text-sm font-bold hover:bg-ois-primary-hover disabled:opacity-50 disabled:pointer-events-none transition-colors">
-            <UserCheck size={14} /> Reassign
+            <UserCheck size={14} /> {submitting ? 'Reassigning…' : 'Reassign'}
           </button>
         </div>
       </div>
@@ -496,9 +501,11 @@ const CancelModal: React.FC<{
 const AddWatcherModal: React.FC<{
   existingIds: Set<string>;
   users: { id: string; name: string; email: string; role?: string }[];
+  submitting?: boolean;
+  error?: string | null;
   onConfirm: (userId: string, userName: string) => void;
   onClose: () => void;
-}> = ({ existingIds, users, onConfirm, onClose }) => {
+}> = ({ existingIds, users, submitting, error, onConfirm, onClose }) => {
   const [selected, setSelected] = useState<string>('');
   const candidates = users.filter(u => !existingIds.has(u.id));
   return (
@@ -522,11 +529,14 @@ const AddWatcherModal: React.FC<{
             </button>
           ))}
         </div>
+        {error && (
+          <p className="text-xs text-ois-danger">{error}</p>
+        )}
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-ois-border-strong text-sm font-semibold text-ois-text hover:bg-ois-surface-muted transition-colors">Cancel</button>
-          <button onClick={() => { const u = candidates.find(c => c.id === selected); if (u) onConfirm(u.id, u.name); }} disabled={!selected || candidates.length === 0}
+          <button onClick={onClose} disabled={submitting} className="px-4 py-2 rounded-lg border border-ois-border-strong text-sm font-semibold text-ois-text hover:bg-ois-surface-muted transition-colors disabled:opacity-50">Cancel</button>
+          <button onClick={() => { const u = candidates.find(c => c.id === selected); if (u && !submitting) onConfirm(u.id, u.name); }} disabled={!selected || candidates.length === 0 || !!submitting}
             className="px-5 py-2 rounded-lg bg-ois-primary text-white text-sm font-bold hover:bg-ois-primary-hover disabled:opacity-50 disabled:pointer-events-none transition-colors">
-            Add watcher
+            {submitting ? 'Adding…' : 'Add watcher'}
           </button>
         </div>
       </div>
@@ -553,8 +563,13 @@ export const RequestDetail: React.FC = () => {
   const [showCancel,       setShowCancel]       = useState(false);
   const [showAddWatcher,   setShowAddWatcher]   = useState(false);
   const [postedComments,   setPostedComments]   = useState<{ id: string; author: string; text: string; ts: string }[]>([]);
-  const [cancelSubmitting, setCancelSubmitting] = useState(false);
-  const [cancelError,      setCancelError]      = useState<string | null>(null);
+  const [cancelSubmitting,   setCancelSubmitting]   = useState(false);
+  const [cancelError,        setCancelError]        = useState<string | null>(null);
+  const [reassignSubmitting, setReassignSubmitting] = useState(false);
+  const [reassignError,      setReassignError]      = useState<string | null>(null);
+  const [addWatcherSubmitting, setAddWatcherSubmitting] = useState(false);
+  const [addWatcherError,    setAddWatcherError]    = useState<string | null>(null);
+  const [watcherError,       setWatcherError]       = useState<string | null>(null);
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const jumpToComments = useCallback(() => {
@@ -1082,13 +1097,14 @@ export const RequestDetail: React.FC = () => {
                   {!autoWatcherIds.has(u.id) && explicitWatcherIds.includes(u.id) && (
                     <button
                       onClick={async () => {
+                        setWatcherError(null);
                         try {
                           await requestsService.removeWatcher(req.publicId, u.id);
+                          refreshRequests();
                         } catch (err) {
                           // eslint-disable-next-line no-console
                           console.error('Failed to remove watcher:', err);
-                        } finally {
-                          refreshRequests();
+                          setWatcherError((err as Error).message || `Failed to remove ${u.name}.`);
                         }
                       }}
                       aria-label={`Remove ${u.name}`}
@@ -1106,6 +1122,9 @@ export const RequestDetail: React.FC = () => {
                 </span>
                 Add watcher
               </button>
+              {watcherError && (
+                <p className="text-[11px] text-ois-danger mt-1.5">{watcherError}</p>
+              )}
             </div>
           </SideCard>
         </aside>
@@ -1167,20 +1186,26 @@ export const RequestDetail: React.FC = () => {
         <ReassignModal
           currentAssignee={activeStepCurrentAssignee}
           users={mockUsers}
-          onClose={() => setShowReassign(false)}
+          submitting={reassignSubmitting}
+          error={reassignError}
+          onClose={() => { if (!reassignSubmitting) { setShowReassign(false); setReassignError(null); } }}
           onConfirm={async (id, name) => {
             const step = req.workflow.steps.find(s => s.status === 'active');
             if (!step) { setShowReassign(false); return; }
+            setReassignSubmitting(true);
+            setReassignError(null);
             try {
               await requestsService.reassignStep(req.publicId, step.id, {
                 assigneeId: id, assigneeName: name,
               });
+              setShowReassign(false);
+              refreshRequests();
             } catch (err) {
               // eslint-disable-next-line no-console
               console.error('Failed to reassign step:', err);
+              setReassignError((err as Error).message || 'Failed to reassign step.');
             } finally {
-              setShowReassign(false);
-              refreshRequests();
+              setReassignSubmitting(false);
             }
           }}
         />
@@ -1213,16 +1238,23 @@ export const RequestDetail: React.FC = () => {
         <AddWatcherModal
           existingIds={watcherIdSet}
           users={mockUsers}
-          onClose={() => setShowAddWatcher(false)}
+          submitting={addWatcherSubmitting}
+          error={addWatcherError}
+          onClose={() => { if (!addWatcherSubmitting) { setShowAddWatcher(false); setAddWatcherError(null); } }}
           onConfirm={async (id, name) => {
+            setAddWatcherSubmitting(true);
+            setAddWatcherError(null);
             try {
               await requestsService.addWatcher(req.publicId, { userId: id, userName: name });
+              setShowAddWatcher(false);
+              setWatcherError(null);
+              refreshRequests();
             } catch (err) {
               // eslint-disable-next-line no-console
               console.error('Failed to add watcher:', err);
+              setAddWatcherError((err as Error).message || 'Failed to add watcher.');
             } finally {
-              setShowAddWatcher(false);
-              refreshRequests();
+              setAddWatcherSubmitting(false);
             }
           }}
         />
