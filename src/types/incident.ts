@@ -30,7 +30,11 @@ export type IncidentEventKind =
   | 'resolution_added'
   | 'resolved'
   | 'reopened'
-  | 'closed';
+  | 'closed'
+  | 'promoted_major'
+  | 'linked'
+  | 'watcher_added'
+  | 'watcher_removed';
 
 export interface Incident {
   id: string;
@@ -49,6 +53,7 @@ export interface Incident {
   incidentCommander?: string;
 
   assigneeId?: string;
+  assigneeName?: string;
   assigneeTeamId?: string;
 
   reporterId: string;
@@ -85,6 +90,9 @@ export interface Incident {
   closedAt?: string;
 
   tags: string[];
+
+  // M6.11 B1.4 — watchers persisted on the incident JSON snapshot.
+  watchers?: Array<{ userId: string; userName?: string }>;
 }
 
 export interface IncidentTimelineEvent {

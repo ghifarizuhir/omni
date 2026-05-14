@@ -136,6 +136,10 @@ export const incidentEventKindMeta: Record<IncidentEventKind, { label: string; i
   resolved:         { label: 'Resolved',          icon: 'CheckCircle2',  color: '#067647' },
   reopened:         { label: 'Reopened',          icon: 'RefreshCw',     color: '#DC6803' },
   closed:           { label: 'Closed',            icon: 'XCircle',       color: '#475467' },
+  promoted_major:   { label: 'Promoted to major', icon: 'Siren',         color: '#B42318' },
+  linked:           { label: 'Links updated',     icon: 'Link',          color: '#1F4FD4' },
+  watcher_added:    { label: 'Watcher added',     icon: 'UserPlus',      color: '#475467' },
+  watcher_removed:  { label: 'Watcher removed',   icon: 'UserMinus',     color: '#475467' },
 };
 
 export const problemStatusMeta: Record<ProblemStatus, { label: string; color: string; bg: string; dot: string }> = {

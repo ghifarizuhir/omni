@@ -8,14 +8,29 @@ export type {
   ResolveIncidentInput,
   AddIncidentCommentInput as AddCommentInput,
   SetIncidentStatusInput,
+  PromoteMajorInput,
+  AssignIncidentInput,
+  UpdateIncidentLinksInput,
+  AddWatcherInput,
 } from '../shared/schemas/incident';
 export {
   resolveIncidentSchema,
   addIncidentCommentSchema,
   setIncidentStatusSchema,
+  promoteMajorSchema,
+  assignIncidentSchema,
+  updateIncidentLinksSchema,
+  addWatcherSchema,
 } from '../shared/schemas/incident';
 
-import type { ResolveIncidentInput, AddIncidentCommentInput } from '../shared/schemas/incident';
+import type {
+  ResolveIncidentInput,
+  AddIncidentCommentInput,
+  PromoteMajorInput,
+  AssignIncidentInput,
+  UpdateIncidentLinksInput,
+  AddWatcherInput,
+} from '../shared/schemas/incident';
 
 export const incidentsService = {
   list: () => apiFetch<Incident[]>('/incidents'),
@@ -40,4 +55,24 @@ export const incidentsService = {
 
   addComment: (incidentId: string, input: AddIncidentCommentInput) =>
     apiFetch<IncidentComment>(`/incidents/${incidentId}/comments`, { method: 'POST', body: input }),
+
+  // M6.11 B1.4 — promote-major / assign / links / watchers. Each mirrors the
+  // POST/PATCH route under /incidents.
+  promoteMajor: (publicId: string, input: PromoteMajorInput) =>
+    apiFetch<Incident>(`/incidents/${publicId}/promote-major`, { method: 'POST', body: input }),
+
+  assign: (publicId: string, input: AssignIncidentInput) =>
+    apiFetch<Incident>(`/incidents/${publicId}/assign`, { method: 'PATCH', body: input }),
+
+  setLinks: (publicId: string, input: UpdateIncidentLinksInput) =>
+    apiFetch<Incident>(`/incidents/${publicId}/links`, { method: 'PATCH', body: input }),
+
+  addWatcher: (incidentId: string, input: AddWatcherInput) =>
+    apiFetch<{ watchers: Array<{ userId: string; userName?: string }>; added: boolean }>(
+      `/incidents/${incidentId}/watchers`,
+      { method: 'POST', body: input },
+    ),
+
+  removeWatcher: (incidentId: string, userId: string) =>
+    apiFetch<void>(`/incidents/${incidentId}/watchers/${userId}`, { method: 'DELETE' }),
 };

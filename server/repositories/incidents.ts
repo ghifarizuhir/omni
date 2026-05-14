@@ -24,6 +24,36 @@ export interface SetStatusInput {
   actorId: string;
 }
 
+export interface PromoteMajorRepoInput {
+  actorId: string;
+  incidentCommander?: { id: string; name: string };
+  summary?: string;
+}
+
+export interface AssignRepoInput {
+  actorId: string;
+  assigneeId: string | null;
+  assigneeName?: string;
+}
+
+export interface SetLinksRepoInput {
+  actorId: string;
+  affectedCIIds?: string[];
+  linkedProblemId?: string | null;
+  linkedChangeIds?: string[];
+}
+
+export interface WatcherRepoInput {
+  actorId: string;
+  userId: string;
+  userName?: string;
+}
+
+const diffArr = (a: string[] = [], b: string[] = []) => ({
+  added: b.filter(x => !a.includes(x)),
+  removed: a.filter(x => !b.includes(x)),
+});
+
 export const incidentsRepo = {
   async list(tenantId: string, filters: { active?: boolean; major?: boolean; ciId?: string; problemPublicId?: string }) {
     const rows = await prisma.incident.findMany({
@@ -193,6 +223,265 @@ export const incidentsRepo = {
           tenantId,
           incidentId: row.id,
           kind: 'status_changed',
+          timestamp: now,
+          data: JSON.stringify(timelineEvent),
+        },
+      }),
+    ]);
+    return { before, after, internalId: row.id };
+  },
+
+  // M6.11 B1.4 — flip the incident to major, optionally setting the
+  // commander. Appends a `promoted_major` timeline event.
+  async promoteMajor(tenantId: string, publicId: string, input: PromoteMajorRepoInput): Promise<{
+    before: Incident;
+    after: Incident;
+    internalId: string;
+  }> {
+    const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
+    if (!row) throw new Error(`Incident ${publicId} not found`);
+    const before = parseObj<Incident>(row.data, {} as Incident);
+    const now = new Date();
+    const after: Incident = {
+      ...before,
+      isMajor: true,
+      incidentCommander: input.incidentCommander?.id ?? before.incidentCommander,
+      majorDeclaredAt: now.toISOString(),
+      majorDeclaredBy: input.actorId,
+    };
+    const timelineId = randomUUID();
+    const timelineEvent = {
+      id: timelineId,
+      kind: 'promoted_major' as const,
+      timestamp: now.toISOString(),
+      actorId: input.actorId,
+      details: {
+        commanderId: input.incidentCommander?.id,
+        commanderName: input.incidentCommander?.name,
+        summary: input.summary,
+      },
+    };
+    await prisma.$transaction([
+      prisma.incident.update({
+        where: { id: row.id },
+        data: { isMajor: true, data: JSON.stringify(after), updatedAt: now },
+      }),
+      prisma.incidentTimelineEvent.create({
+        data: {
+          id: timelineId,
+          tenantId,
+          incidentId: row.id,
+          kind: 'promoted_major',
+          timestamp: now,
+          data: JSON.stringify(timelineEvent),
+        },
+      }),
+    ]);
+    return { before, after, internalId: row.id };
+  },
+
+  // Updates assignee snapshot + appends `assigned` timeline event.
+  async assign(tenantId: string, publicId: string, input: AssignRepoInput): Promise<{
+    before: Incident;
+    after: Incident;
+    internalId: string;
+  }> {
+    const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
+    if (!row) throw new Error(`Incident ${publicId} not found`);
+    const before = parseObj<Incident>(row.data, {} as Incident);
+    const now = new Date();
+    const after: Incident = {
+      ...before,
+      assigneeId: input.assigneeId ?? undefined,
+      assigneeName: input.assigneeId ? input.assigneeName ?? before.assigneeName : undefined,
+    };
+    const timelineId = randomUUID();
+    const timelineEvent = {
+      id: timelineId,
+      kind: 'assigned' as const,
+      timestamp: now.toISOString(),
+      actorId: input.actorId,
+      details: {
+        fromAssigneeId: before.assigneeId,
+        toAssigneeId: input.assigneeId,
+        assigneeName: input.assigneeName,
+      },
+    };
+    await prisma.$transaction([
+      prisma.incident.update({
+        where: { id: row.id },
+        data: { data: JSON.stringify(after), updatedAt: now },
+      }),
+      prisma.incidentTimelineEvent.create({
+        data: {
+          id: timelineId,
+          tenantId,
+          incidentId: row.id,
+          kind: 'assigned',
+          timestamp: now,
+          data: JSON.stringify(timelineEvent),
+        },
+      }),
+    ]);
+    return { before, after, internalId: row.id };
+  },
+
+  // Patch any subset of {affectedCIIds, linkedProblemId, linkedChangeIds}.
+  // Appends a single `linked` timeline event whose details capture added/
+  // removed IDs per field.
+  async setLinks(tenantId: string, publicId: string, input: SetLinksRepoInput): Promise<{
+    before: Incident;
+    after: Incident;
+    internalId: string;
+  }> {
+    const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
+    if (!row) throw new Error(`Incident ${publicId} not found`);
+    const before = parseObj<Incident>(row.data, {} as Incident);
+    const now = new Date();
+    const after: Incident = {
+      ...before,
+      ...(input.affectedCIIds !== undefined ? { affectedCIIds: input.affectedCIIds } : {}),
+      ...(input.linkedProblemId !== undefined
+        ? { linkedProblemId: input.linkedProblemId ?? undefined }
+        : {}),
+      ...(input.linkedChangeIds !== undefined ? { linkedChangeIds: input.linkedChangeIds } : {}),
+    };
+    const dataPatch: Record<string, unknown> = {};
+    if (input.affectedCIIds !== undefined) {
+      dataPatch.ci = diffArr(before.affectedCIIds, after.affectedCIIds);
+    }
+    if (input.linkedProblemId !== undefined) {
+      dataPatch.problem = { from: before.linkedProblemId, to: after.linkedProblemId };
+    }
+    if (input.linkedChangeIds !== undefined) {
+      dataPatch.change = diffArr(before.linkedChangeIds ?? [], after.linkedChangeIds ?? []);
+    }
+    const timelineId = randomUUID();
+    const timelineEvent = {
+      id: timelineId,
+      kind: 'linked' as const,
+      timestamp: now.toISOString(),
+      actorId: input.actorId,
+      details: dataPatch,
+    };
+    await prisma.$transaction([
+      prisma.incident.update({
+        where: { id: row.id },
+        data: {
+          data: JSON.stringify(after),
+          updatedAt: now,
+          ...(input.linkedProblemId !== undefined
+            ? { linkedProblemPublicId: input.linkedProblemId ?? null }
+            : {}),
+          ...(input.affectedCIIds !== undefined
+            ? { affectedCIIds: JSON.stringify(input.affectedCIIds) }
+            : {}),
+        },
+      }),
+      prisma.incidentTimelineEvent.create({
+        data: {
+          id: timelineId,
+          tenantId,
+          incidentId: row.id,
+          kind: 'linked',
+          timestamp: now,
+          data: JSON.stringify(timelineEvent),
+        },
+      }),
+    ]);
+    return { before, after, internalId: row.id };
+  },
+
+  // Add a watcher (idempotent — returns same `after` + `wasNew=false` if
+  // already present). The route handler decides 200 vs 201 from `wasNew`.
+  async addWatcher(tenantId: string, incidentId: string, input: WatcherRepoInput): Promise<{
+    before: Incident;
+    after: Incident;
+    internalId: string;
+    watcher: { userId: string; userName?: string };
+    wasNew: boolean;
+  }> {
+    const row = await prisma.incident.findFirst({ where: { tenantId, id: incidentId } });
+    if (!row) throw new Error(`Incident ${incidentId} not found`);
+    const before = parseObj<Incident>(row.data, {} as Incident);
+    const existing = before.watchers ?? [];
+    const wasNew = !existing.some(w => w.userId === input.userId);
+    const after: Incident = {
+      ...before,
+      watchers: wasNew
+        ? [...existing, { userId: input.userId, userName: input.userName }]
+        : existing,
+    };
+    if (!wasNew) {
+      return { before, after, internalId: row.id, watcher: { userId: input.userId, userName: input.userName }, wasNew };
+    }
+    const now = new Date();
+    const timelineId = randomUUID();
+    const timelineEvent = {
+      id: timelineId,
+      kind: 'watcher_added' as const,
+      timestamp: now.toISOString(),
+      actorId: input.actorId,
+      details: { userId: input.userId, userName: input.userName },
+    };
+    await prisma.$transaction([
+      prisma.incident.update({
+        where: { id: row.id },
+        data: { data: JSON.stringify(after), updatedAt: now },
+      }),
+      prisma.incidentTimelineEvent.create({
+        data: {
+          id: timelineId,
+          tenantId,
+          incidentId: row.id,
+          kind: 'watcher_added',
+          timestamp: now,
+          data: JSON.stringify(timelineEvent),
+        },
+      }),
+    ]);
+    return { before, after, internalId: row.id, watcher: { userId: input.userId, userName: input.userName }, wasNew };
+  },
+
+  // Remove a watcher. Throws if the parent incident is missing; the route
+  // maps that to 404. Throws `WATCHER_NOT_FOUND` if the user isn't on the
+  // list (route maps to 404 as well, per task spec).
+  async removeWatcher(tenantId: string, incidentId: string, userId: string, actorId: string): Promise<{
+    before: Incident;
+    after: Incident;
+    internalId: string;
+  }> {
+    const row = await prisma.incident.findFirst({ where: { tenantId, id: incidentId } });
+    if (!row) throw new Error(`Incident ${incidentId} not found`);
+    const before = parseObj<Incident>(row.data, {} as Incident);
+    const existing = before.watchers ?? [];
+    if (!existing.some(w => w.userId === userId)) {
+      throw new Error('WATCHER_NOT_FOUND');
+    }
+    const after: Incident = {
+      ...before,
+      watchers: existing.filter(w => w.userId !== userId),
+    };
+    const now = new Date();
+    const timelineId = randomUUID();
+    const timelineEvent = {
+      id: timelineId,
+      kind: 'watcher_removed' as const,
+      timestamp: now.toISOString(),
+      actorId,
+      details: { userId },
+    };
+    await prisma.$transaction([
+      prisma.incident.update({
+        where: { id: row.id },
+        data: { data: JSON.stringify(after), updatedAt: now },
+      }),
+      prisma.incidentTimelineEvent.create({
+        data: {
+          id: timelineId,
+          tenantId,
+          incidentId: row.id,
+          kind: 'watcher_removed',
           timestamp: now,
           data: JSON.stringify(timelineEvent),
         },

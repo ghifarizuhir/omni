@@ -319,14 +319,84 @@ export const IncidentDetail: React.FC = () => {
     }
   };
 
-  const handlePromoteMajor = (commanderId: string) => {
-    setInc(prev => prev ? {
-      ...prev,
+  const handlePromoteMajor = async (commanderId: string) => {
+    if (!inc) return;
+    const prev = inc;
+    const commander = mockUsers.find(u => u.id === commanderId);
+    setInc(curr => curr ? {
+      ...curr,
       isMajor: true,
       incidentCommander: commanderId,
       majorDeclaredAt: new Date().toISOString(),
       majorDeclaredBy: 'u-001',
-    } : prev);
+    } : curr);
+    try {
+      await incidentsService.promoteMajor(prev.publicId, {
+        incidentCommander: commander ? { id: commander.id, name: commander.name } : undefined,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to promote incident to major:', err);
+      setInc(prev);
+    } finally {
+      refreshIncident();
+    }
+  };
+
+  // M6.11 B1.4 — assign to me (or any user)
+  const handleAssign = async (userId: string | null, userName?: string) => {
+    if (!inc) return;
+    const prev = inc;
+    setInc(curr => curr ? { ...curr, assigneeId: userId ?? undefined, assigneeName: userName } : curr);
+    try {
+      await incidentsService.assign(prev.publicId, { assigneeId: userId, assigneeName: userName });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to assign incident:', err);
+      setInc(prev);
+    } finally {
+      refreshIncident();
+    }
+  };
+
+  // PATCH /links — affectedCIIds / linkedProblemId / linkedChangeIds (any subset)
+  const handleSetLinks = async (patch: {
+    affectedCIIds?: string[];
+    linkedProblemId?: string | null;
+    linkedChangeIds?: string[];
+  }) => {
+    if (!inc) return;
+    const prev = inc;
+    setInc(curr => curr ? {
+      ...curr,
+      ...(patch.affectedCIIds !== undefined ? { affectedCIIds: patch.affectedCIIds } : {}),
+      ...(patch.linkedProblemId !== undefined ? { linkedProblemId: patch.linkedProblemId ?? undefined } : {}),
+      ...(patch.linkedChangeIds !== undefined ? { linkedChangeIds: patch.linkedChangeIds } : {}),
+    } : curr);
+    try {
+      await incidentsService.setLinks(prev.publicId, patch);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to update incident links:', err);
+      setInc(prev);
+    } finally {
+      refreshIncident();
+    }
+  };
+
+  const handleAddWatcher = async (userId: string) => {
+    if (!inc) return;
+    const user = mockUsers.find(u => u.id === userId);
+    if (!user) return;
+    const prevWatchers = watchers;
+    setWatchers(curr => curr.some(w => w.id === userId) ? curr : [...curr, user]);
+    try {
+      await incidentsService.addWatcher(inc.id, { userId, userName: user.name });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to add watcher:', err);
+      setWatchers(prevWatchers);
+    }
   };
 
   // ── Loading / Not found ──────────────────────────────────────────────────────
@@ -960,8 +1030,8 @@ export const IncidentDetail: React.FC = () => {
           <SectionCard title="Quick actions">
             <div className="space-y-1.5">
               {[
-                { icon: UserPlus,      label: 'Assign to me',     action: () => setInc(prev => prev ? { ...prev, assigneeId: 'u-001' } : prev) },
-                { icon: Eye,           label: 'Acknowledge',       action: () => setInc(prev => prev ? { ...prev, status: 'triaging' } : prev) },
+                { icon: UserPlus,      label: 'Assign to me',     action: () => handleAssign('u-001', mockUsers.find(u => u.id === 'u-001')?.name) },
+                { icon: Eye,           label: 'Acknowledge',       action: () => handleStatusChange('triaging') },
                 { icon: CheckCircle2,  label: 'Resolve',           action: () => setResolveOpen(true), primary: !isResolved },
                 ...(inc!.isMajor ? [] : [{ icon: Siren, label: 'Promote to Major', action: () => setPromoteMajorOpen(true) }]),
                 { icon: MessageCircle, label: 'Add comment',       action: () => { setActiveTabId('comments'); setTimeout(() => commentTextareaRef.current?.focus(), 100); } },
@@ -1044,10 +1114,10 @@ export const IncidentDetail: React.FC = () => {
         onResolve={handleResolve}
       />
       <PromoteMajorModal incident={inc!} isOpen={promoteMajorOpen} onClose={() => setPromoteMajorOpen(false)} onConfirm={handlePromoteMajor} />
-      <LinkCIModal isOpen={linkCIOpen} onClose={() => setLinkCIOpen(false)} currentCIIds={inc!.affectedCIIds} onLink={newIds => setInc(prev => prev ? { ...prev, affectedCIIds: [...prev.affectedCIIds, ...newIds], affectedCIPublicIds: [...prev.affectedCIPublicIds] } : prev)} />
-      <LinkProblemModal isOpen={linkProblemOpen} onClose={() => setLinkProblemOpen(false)} currentProblemId={inc?.linkedProblemId} onLink={(id, pubId) => setInc(prev => prev ? { ...prev, linkedProblemId: id, linkedProblemPublicId: pubId } : prev)} />
-      <LinkChangeModal isOpen={linkChangeOpen} onClose={() => setLinkChangeOpen(false)} currentChangeIds={inc?.linkedChangeIds ?? []} onLink={newIds => setInc(prev => prev ? { ...prev, linkedChangeIds: [...(prev.linkedChangeIds ?? []), ...newIds] } : prev)} />
-      <UserPickerModal isOpen={addWatcherOpen} onClose={() => setAddWatcherOpen(false)} title="Add Watcher" excludeIds={watchers.map(w => w.id)} onSelect={userId => { const user = mockUsers.find(u => u.id === userId); if (user) setWatchers(prev => [...prev, user]); }} />
+      <LinkCIModal isOpen={linkCIOpen} onClose={() => setLinkCIOpen(false)} currentCIIds={inc!.affectedCIIds} onLink={newIds => handleSetLinks({ affectedCIIds: [...inc!.affectedCIIds, ...newIds] })} />
+      <LinkProblemModal isOpen={linkProblemOpen} onClose={() => setLinkProblemOpen(false)} currentProblemId={inc?.linkedProblemId} onLink={(id) => handleSetLinks({ linkedProblemId: id })} />
+      <LinkChangeModal isOpen={linkChangeOpen} onClose={() => setLinkChangeOpen(false)} currentChangeIds={inc?.linkedChangeIds ?? []} onLink={newIds => handleSetLinks({ linkedChangeIds: [...(inc!.linkedChangeIds ?? []), ...newIds] })} />
+      <UserPickerModal isOpen={addWatcherOpen} onClose={() => setAddWatcherOpen(false)} title="Add Watcher" excludeIds={watchers.map(w => w.id)} onSelect={userId => handleAddWatcher(userId)} />
     </div>
   );
 };

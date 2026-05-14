@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Plus, UserPlus, ArrowUpDown, RefreshCw, MessageCircle,
+  Plus, UserPlus, UserMinus, ArrowUpDown, RefreshCw, MessageCircle,
   Link, Unlink, Radio, AlertTriangle, AlertOctagon,
   ArrowUpRight, Siren, Megaphone, CheckCheck, CheckCircle2,
   XCircle,
@@ -29,6 +29,10 @@ const ICON_MAP: Record<IncidentEventKind, React.ComponentType<{ size?: number }>
   resolved:         CheckCircle2,
   reopened:         RefreshCw,
   closed:           XCircle,
+  promoted_major:   Siren,
+  linked:           Link,
+  watcher_added:    UserPlus,
+  watcher_removed:  UserMinus,
 };
 
 interface Props {

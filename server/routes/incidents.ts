@@ -8,6 +8,10 @@ import {
   resolveIncidentSchema,
   addIncidentCommentSchema,
   setIncidentStatusSchema,
+  promoteMajorSchema,
+  assignIncidentSchema,
+  updateIncidentLinksSchema,
+  addWatcherSchema,
 } from '../../src/shared/schemas/incident';
 
 export const incidentsRouter = Router();
@@ -131,5 +135,150 @@ incidentsRouter.post(
       after: result.after,
     });
     res.json(result.after);
+  }),
+);
+
+// M6.11 B1.4 — promote to major. `incident.major` is not yet in the RBAC
+// catalog (see prisma/seedRbac.ts), so we guard with `incident.write`.
+incidentsRouter.post(
+  '/incidents/:publicId/promote-major',
+  requirePermission('incident.write'),
+  asyncHandler(async (req, res) => {
+    const body = promoteMajorSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    let result;
+    try {
+      result = await incidentsRepo.promoteMajor(req.tenantId, req.params.publicId, {
+        actorId: req.session.userId,
+        incidentCommander: body.incidentCommander,
+        summary: body.summary,
+      });
+    } catch {
+      throw new HttpError(404, 'Incident not found');
+    }
+    await audit(req, {
+      action: 'promote_major',
+      resourceKind: 'Incident',
+      resourceId: result.internalId,
+      before: result.before,
+      after: result.after,
+    });
+    res.json(result.after);
+  }),
+);
+
+incidentsRouter.patch(
+  '/incidents/:publicId/assign',
+  requirePermission('incident.write'),
+  asyncHandler(async (req, res) => {
+    const body = assignIncidentSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    let result;
+    try {
+      result = await incidentsRepo.assign(req.tenantId, req.params.publicId, {
+        actorId: req.session.userId,
+        assigneeId: body.assigneeId,
+        assigneeName: body.assigneeName,
+      });
+    } catch {
+      throw new HttpError(404, 'Incident not found');
+    }
+    await audit(req, {
+      action: 'assign',
+      resourceKind: 'Incident',
+      resourceId: result.internalId,
+      before: result.before,
+      after: result.after,
+    });
+    res.json(result.after);
+  }),
+);
+
+incidentsRouter.patch(
+  '/incidents/:publicId/links',
+  requirePermission('incident.write'),
+  asyncHandler(async (req, res) => {
+    const body = updateIncidentLinksSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    let result;
+    try {
+      result = await incidentsRepo.setLinks(req.tenantId, req.params.publicId, {
+        actorId: req.session.userId,
+        affectedCIIds: body.affectedCIIds,
+        linkedProblemId: body.linkedProblemId,
+        linkedChangeIds: body.linkedChangeIds,
+      });
+    } catch {
+      throw new HttpError(404, 'Incident not found');
+    }
+    await audit(req, {
+      action: 'update_links',
+      resourceKind: 'Incident',
+      resourceId: result.internalId,
+      before: result.before,
+      after: result.after,
+    });
+    res.json(result.after);
+  }),
+);
+
+// Watcher add — idempotent. Returns 201 if newly added, 200 if already
+// present. Body validated against addWatcherSchema. Uses internal incidentId.
+incidentsRouter.post(
+  '/incidents/:incidentId/watchers',
+  requirePermission('incident.write'),
+  asyncHandler(async (req, res) => {
+    const body = addWatcherSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    let result;
+    try {
+      result = await incidentsRepo.addWatcher(req.tenantId, req.params.incidentId, {
+        actorId: req.session.userId,
+        userId: body.userId,
+        userName: body.userName,
+      });
+    } catch {
+      throw new HttpError(404, 'Incident not found');
+    }
+    if (result.wasNew) {
+      await audit(req, {
+        action: 'add_watcher',
+        resourceKind: 'Incident',
+        resourceId: result.internalId,
+        before: result.before,
+        after: result.after,
+      });
+    }
+    res.status(result.wasNew ? 201 : 200).json({
+      watchers: result.after.watchers ?? [],
+      added: result.wasNew,
+    });
+  }),
+);
+
+incidentsRouter.delete(
+  '/incidents/:incidentId/watchers/:userId',
+  requirePermission('incident.write'),
+  asyncHandler(async (req, res) => {
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    let result;
+    try {
+      result = await incidentsRepo.removeWatcher(
+        req.tenantId,
+        req.params.incidentId,
+        req.params.userId,
+        req.session.userId,
+      );
+    } catch (e) {
+      throw new HttpError(404, (e as Error).message === 'WATCHER_NOT_FOUND' ? 'Watcher not found' : 'Incident not found');
+    }
+    await audit(req, {
+      action: 'remove_watcher',
+      resourceKind: 'Incident',
+      resourceId: result.internalId,
+      before: result.before,
+      after: result.after,
+    });
+    res.status(204).end();
   }),
 );
