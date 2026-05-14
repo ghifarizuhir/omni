@@ -4,34 +4,62 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**OIS — Omni Intelligence Suite** is a React SPA serving as the UI layer for an ITSM/operational intelligence platform. It runs on Google AI Studio and integrates with the Gemini API. All data is currently served from mock files; there is no real backend API layer yet.
+**OIS — Omni Intelligence Suite** is an ITSM/operational intelligence platform with two halves in this repo:
+
+- **Frontend** — React 19 SPA (Vite) under `src/`. Originally built on Google AI Studio against the Gemini API.
+- **Backend** — Express + Prisma + Postgres API under `server/`, with Socket.io for realtime and an in-process job scheduler. Local dev stack (Postgres 16, Redis) runs via `docker-compose.yml`. See `docs/PRODUCTION-READINESS-STRATEGY.md` for M7 (production-readiness) milestones.
+
+Some frontend routes still read from `src/mocks/` while migration to the real API is in progress.
 
 ## Commands
 
 ```bash
-npm run dev       # Start Vite dev server on port 3000
-npm run build     # Production build (Vite)
-npm run preview   # Preview production build locally
-npm run lint      # TypeScript type-check (tsc --noEmit)
-npm run clean     # Remove dist/
-```
+# Frontend
+npm run dev          # Vite dev server on :3000
+npm run build        # Production build
+npm run preview      # Preview build locally
 
-There are no tests configured. `npm run lint` is the only CI-like check.
+# Backend
+npm run server       # Start API (tsx server/index.ts) on :3001
+npm run server:watch # API with watch mode
+npm run dev:all      # API + Vite together
+npm run start:worker # Worker-only process (server/worker.ts)
+
+# Database (Prisma + Postgres)
+npm run db:migrate   # prisma migrate dev
+npm run db:seed      # Dev seed (prisma/seed.ts)
+npm run db:seed:prod # Prod seed: root tenant + admin + RBAC catalog
+npm run db:reset     # Reset DB and reseed (dev only)
+
+# Quality
+npm run lint         # tsc --noEmit for both src/ and server/
+npm run test         # vitest run
+npm run clean        # Remove dist/
+```
 
 Set `DISABLE_HMR=true` in `.env.local` to turn off hot module replacement if needed.
 
 ## Required Environment Variables
 
+Frontend:
 - `GEMINI_API_KEY` — Gemini API access (injected by AI Studio at runtime)
 - `APP_URL` — Application base URL (injected by AI Studio)
+- `VITE_API_BASE_URL` (default `/api/v1`), `VITE_API_PROXY_TARGET` (default `http://localhost:3001`)
 
-Copy `.env.example` to `.env.local` for local development.
+Backend:
+- `DATABASE_URL` — Postgres connection string (e.g. `postgresql://ois:ois@localhost:5432/ois?schema=public`)
+- `PORT` (default 3001), `HOST` (default 0.0.0.0)
+- `API_ONLY=true` on API nodes when running the scheduler in a separate worker process
+
+Copy `.env.example` to `.env.local` for local development. For local Postgres + Redis: `docker compose up -d postgres redis`.
 
 ## Architecture
 
 ### Entry Point Flow
 
-`index.html` → `src/main.tsx` → `src/App.tsx` (RouterProvider) → `src/routes/index.tsx` (all routes under `AppShell`)
+Frontend: `index.html` → `src/main.tsx` → `src/App.tsx` (RouterProvider) → `src/routes/index.tsx` (all routes under `AppShell`)
+
+Backend: `server/index.ts` boots telemetry, creates the Express app via `server/app.ts`, attaches Socket.io via `server/realtime.ts`, and (unless `API_ONLY=true`) starts the in-process scheduler from `server/jobs/`.
 
 ### Directory Layout
 
@@ -43,10 +71,15 @@ Copy `.env.example` to `.env.local` for local development.
 | `src/components/monitoring/` | Monitoring-specific composed components |
 | `src/components/cmdb/` | CMDB-specific composed components |
 | `src/components/charts/` | D3-based SparkLine and DonutChart |
-| `src/types/` | TypeScript interfaces for all domain models |
-| `src/mocks/` | Static mock data that stands in for API responses |
-| `src/lib/` | Utilities: `cn()` (class merging), `format.ts`, `constants.ts` |
-| `docs/` | Product specs and ITIL 4 mapping documents |
+| `src/types/` | TypeScript interfaces for domain models (shared shape with API) |
+| `src/mocks/` | Legacy static mock data — being replaced by API calls |
+| `src/lib/` | Utilities: `cn()`, `format.ts`, `constants.ts` |
+| `server/` | Express API entry, app wiring, auth, realtime, jobs, audit, logger |
+| `server/routes/` | API routers: auth, admin, cmdb, events, monitoring, incidents, itsm, availability, capacity, integrations, platform |
+| `server/middleware/` | Auth/session middleware |
+| `server/jobs/` | In-process scheduler and job handlers |
+| `prisma/` | `schema.prisma`, `migrations/` (squashed `0001_init_postgres`), `seed.ts`, `seed.prod.ts` |
+| `docs/` | Product specs, ITIL 4 mapping, and `PRODUCTION-READINESS-STRATEGY.md` |
 
 ### Layout
 
@@ -73,9 +106,11 @@ Key interfaces to know before adding features:
 - `AlertRoute` — Escalation routing rule
 - `Severity` / `Status` enums in `src/types/common.ts`
 
-### Mock Data Pattern
+### Data Layer
 
-All `src/mocks/*.ts` files export typed arrays. Route components import directly from mocks. When adding a new feature, add its mock data to `src/mocks/` and wire it into the route component. When a real API layer is introduced, mock imports get replaced with fetch/query calls.
+The real API lives under `server/routes/` and is served at `/api/v1/...`, backed by Prisma against Postgres. The Prisma schema (`prisma/schema.prisma`) is the source of truth for persisted models; many columns currently store serialized JSON in `String` fields and are tracked for conversion to `jsonb` as part of M7 hardening.
+
+Some frontend routes still import from `src/mocks/` as a transitional shim. When wiring a new feature, prefer fetching from the API; only fall back to mocks if the corresponding endpoint doesn't exist yet, and add a TODO to remove the mock once it does.
 
 ### Styling
 

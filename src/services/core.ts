@@ -27,7 +27,9 @@ export interface RequestOptions {
 }
 
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const url = new URL(path, window.location.origin.replace(/\/$/, '') + API_BASE_URL);
+  const base = API_BASE_URL.replace(/\/$/, '');
+  const suffix = path.startsWith('/') ? path : `/${path}`;
+  const url = new URL(window.location.origin.replace(/\/$/, '') + base + suffix);
   if (opts.query) {
     for (const [k, v] of Object.entries(opts.query)) {
       if (v !== undefined) url.searchParams.set(k, String(v));
