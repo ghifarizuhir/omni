@@ -6,6 +6,9 @@ import type { mockBenefitMeasurements } from '../mocks/benefitMeasurements';
 import type { mockROICalculations, getROICalculation } from '../mocks/roiCalculations';
 import { apiFetch } from './core';
 import type { RescheduleChangeInput } from '../shared/schemas/change';
+import type {
+  CancelRequestInput, ReassignRequestStepInput, AddRequestWatcherInput,
+} from '../shared/schemas/request';
 
 export const problemsService = {
   list: () => apiFetch<Problem[]>('/problems'),
@@ -83,6 +86,30 @@ export const requestsService = {
     apiFetch<RequestComment>(`/requests/${publicId}/comments`, {
       method: 'POST', body: { body },
     }),
+
+  // M6.11 (B2.2) — cancel a service request. 409 if already in a terminal state.
+  cancel: (publicId: string, input: CancelRequestInput) =>
+    apiFetch<ServiceRequest>(`/requests/${publicId}/cancel`, {
+      method: 'PATCH', body: input,
+    }),
+
+  // M6.11 (B2.2) — reassign the active workflow step. 409 if the step is not
+  // active. `stepId` lives in the path; the body carries assigneeId/Name.
+  reassignStep: (publicId: string, stepId: string, input: Omit<ReassignRequestStepInput, 'stepId'>) =>
+    apiFetch<ServiceRequest>(`/requests/${publicId}/steps/${stepId}/reassign`, {
+      method: 'PATCH', body: input,
+    }),
+
+  // M6.11 (B2.2) — add a watcher. Idempotent: server returns `{ watchers, wasNew }`.
+  addWatcher: (publicId: string, input: AddRequestWatcherInput) =>
+    apiFetch<{ watchers: Array<{ userId: string; userName?: string }>; wasNew: boolean }>(
+      `/requests/${publicId}/watchers`,
+      { method: 'POST', body: input },
+    ),
+
+  // M6.11 (B2.2) — remove a watcher. Always 204.
+  removeWatcher: (publicId: string, userId: string) =>
+    apiFetch<null>(`/requests/${publicId}/watchers/${userId}`, { method: 'DELETE' }),
 };
 
 export const improvementsService = {

@@ -14,6 +14,9 @@ import {
   createKBArticleSchema, updateKBArticleSchema, setKBArticleStatusSchema,
 } from '../../src/shared/schemas/kbArticle';
 import { rescheduleChangeSchema } from '../../src/shared/schemas/change';
+import {
+  cancelRequestSchema, reassignRequestStepSchema, addRequestWatcherSchema,
+} from '../../src/shared/schemas/request';
 
 export const itsmRouter = Router();
 
@@ -202,6 +205,111 @@ itsmRouter.post(
       after: result.comment,
     });
     res.status(201).json(result.comment);
+  }),
+);
+
+// ── Request lifecycle writes (M6.11 B2.2) ────────────────────────────────────
+// Cancel + reassign-active-step + watcher add/remove. Schemas live in
+// src/shared/schemas/request.ts so the client form + service share them.
+
+itsmRouter.patch(
+  '/requests/:publicId/cancel',
+  requirePermission('request.write'),
+  asyncHandler(async (req, res) => {
+    const body = cancelRequestSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    const actor = await prisma.user.findUniqueOrThrow({
+      where: { id: req.session.userId }, select: { id: true, name: true },
+    });
+    const result = await requestsRepo.cancel(req.tenantId, req.params.publicId, body.reason, actor);
+    if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
+    if (result.kind === 'closed')    throw new HttpError(409, 'Request is already in a closed state');
+    await audit(req, {
+      action: 'request.cancel',
+      resourceKind: 'ServiceRequest',
+      resourceId: result.internalId,
+      before: { status: result.before.status },
+      after:  { status: result.after.status, cancellationReason: result.after.cancellationReason, closedAt: result.after.closedAt },
+    });
+    res.json(result.after);
+  }),
+);
+
+itsmRouter.patch(
+  '/requests/:publicId/steps/:stepId/reassign',
+  requirePermission('request.write'),
+  asyncHandler(async (req, res) => {
+    const body = reassignRequestStepSchema.parse({ ...req.body, stepId: req.params.stepId });
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    const actor = await prisma.user.findUniqueOrThrow({
+      where: { id: req.session.userId }, select: { id: true, name: true },
+    });
+    const result = await requestsRepo.reassignStep(
+      req.tenantId, req.params.publicId, body.stepId,
+      { id: body.assigneeId, name: body.assigneeName },
+      actor,
+    );
+    if (result.kind === 'not-found-request') throw new HttpError(404, 'Request not found');
+    if (result.kind === 'not-found-step')    throw new HttpError(404, 'Step not found');
+    if (result.kind === 'not-active')        throw new HttpError(409, 'Only the active step can be reassigned');
+    await audit(req, {
+      action: 'request.reassign',
+      resourceKind: 'ServiceRequest',
+      resourceId: result.internalId,
+      before: { step: result.before.workflow.steps.find(s => s.id === body.stepId) },
+      after:  { step: result.after.workflow.steps.find(s => s.id === body.stepId) },
+    });
+    res.json(result.after);
+  }),
+);
+
+itsmRouter.post(
+  '/requests/:publicId/watchers',
+  requirePermission('request.write'),
+  asyncHandler(async (req, res) => {
+    const body = addRequestWatcherSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    const actor = await prisma.user.findUniqueOrThrow({
+      where: { id: req.session.userId }, select: { id: true, name: true },
+    });
+    const result = await requestsRepo.addWatcher(req.tenantId, req.params.publicId, body, actor);
+    if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
+    if (result.wasNew) {
+      await audit(req, {
+        action: 'request.watcher.add',
+        resourceKind: 'ServiceRequest',
+        resourceId: result.internalId,
+        before: { watchers: result.before.watchers ?? [] },
+        after:  { watchers: result.after.watchers ?? [] },
+      });
+    }
+    res.status(result.wasNew ? 201 : 200).json({
+      watchers: result.after.watchers ?? [],
+      wasNew: result.wasNew,
+    });
+  }),
+);
+
+itsmRouter.delete(
+  '/requests/:publicId/watchers/:userId',
+  requirePermission('request.write'),
+  asyncHandler(async (req, res) => {
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    const actor = await prisma.user.findUniqueOrThrow({
+      where: { id: req.session.userId }, select: { id: true, name: true },
+    });
+    const result = await requestsRepo.removeWatcher(req.tenantId, req.params.publicId, req.params.userId, actor);
+    if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
+    if (result.wasPresent) {
+      await audit(req, {
+        action: 'request.watcher.remove',
+        resourceKind: 'ServiceRequest',
+        resourceId: result.internalId,
+        before: { watchers: result.before.watchers ?? [] },
+        after:  { watchers: result.after.watchers ?? [] },
+      });
+    }
+    res.status(204).end();
   }),
 );
 

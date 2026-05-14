@@ -450,9 +450,11 @@ const ReassignModal: React.FC<{
 
 const CancelModal: React.FC<{
   reqId: string;
+  submitting?: boolean;
+  error?: string | null;
   onConfirm: (reason: string) => void;
   onClose: () => void;
-}> = ({ reqId, onConfirm, onClose }) => {
+}> = ({ reqId, submitting, error, onConfirm, onClose }) => {
   const [reason, setReason] = useState('');
   const valid = reason.trim().length >= 10;
   return (
@@ -474,11 +476,14 @@ const CancelModal: React.FC<{
             {valid ? <><Check size={10} className="inline mr-0.5" />{reason.length} / 10 minimum</> : <>{reason.length} / 10 minimum</>}
           </div>
         </div>
+        {error && (
+          <p className="text-xs text-ois-danger">{error}</p>
+        )}
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-ois-border-strong text-sm font-semibold text-ois-text hover:bg-ois-surface-muted transition-colors">Keep request</button>
-          <button onClick={() => valid && onConfirm(reason)} disabled={!valid}
+          <button onClick={onClose} disabled={submitting} className="px-4 py-2 rounded-lg border border-ois-border-strong text-sm font-semibold text-ois-text hover:bg-ois-surface-muted transition-colors disabled:opacity-50">Keep request</button>
+          <button onClick={() => valid && !submitting && onConfirm(reason)} disabled={!valid || !!submitting}
             className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-ois-danger text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none transition-colors">
-            <Ban size={14} /> Cancel request
+            <Ban size={14} /> {submitting ? 'Cancelling…' : 'Cancel request'}
           </button>
         </div>
       </div>
@@ -548,8 +553,8 @@ export const RequestDetail: React.FC = () => {
   const [showCancel,       setShowCancel]       = useState(false);
   const [showAddWatcher,   setShowAddWatcher]   = useState(false);
   const [postedComments,   setPostedComments]   = useState<{ id: string; author: string; text: string; ts: string }[]>([]);
-  const [activeStepAssignee, setActiveStepAssignee] = useState<string | undefined>(undefined);
-  const [extraWatcherIds,  setExtraWatcherIds]  = useState<string[]>([]);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [cancelError,      setCancelError]      = useState<string | null>(null);
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const jumpToComments = useCallback(() => {
@@ -589,18 +594,32 @@ export const RequestDetail: React.FC = () => {
   const slaElapsed  = slaPercent(req);
   const canUserApprove = req.workflow.steps.some(s => isApprover(s, userId));
 
-  const watchers = useMemo(() => {
+  // Auto-watchers: requester + each step's assignee. These are always
+  // included and never user-removable. `req.watchers` adds the explicit
+  // (user-added) watchers from the server snapshot.
+  const autoWatcherIds = useMemo(() => {
     const ids = new Set<string>();
     ids.add(req.requesterId);
     req.workflow.steps.forEach(s => { if (s.assigneeId) ids.add(s.assigneeId); });
-    extraWatcherIds.forEach(id => ids.add(id));
+    return ids;
+  }, [req]);
+
+  const explicitWatcherIds = useMemo(
+    () => (req.watchers ?? []).map(w => w.userId),
+    [req.watchers],
+  );
+
+  const watchers = useMemo(() => {
+    const ids = new Set<string>();
+    autoWatcherIds.forEach(id => ids.add(id));
+    explicitWatcherIds.forEach(id => ids.add(id));
     return Array.from(ids).map(id => mockUsers.find(u => u.id === id)).filter(Boolean);
-  }, [req, extraWatcherIds, mockUsers]);
+  }, [autoWatcherIds, explicitWatcherIds, mockUsers]);
 
   const watcherIdSet = useMemo(() => new Set(watchers.map(u => u!.id)), [watchers]);
 
   const activeStep = req.workflow.steps.find(s => s.status === 'active');
-  const activeStepCurrentAssignee = activeStepAssignee ?? activeStep?.assigneeName;
+  const activeStepCurrentAssignee = activeStep?.assigneeName;
 
   // ── Overview tab ────────────────────────────────────────────────────────────
   const OverviewTab = (
@@ -1054,10 +1073,31 @@ export const RequestDetail: React.FC = () => {
           <SideCard title={`Watchers (${watchers.length})`}>
             <div className="space-y-2">
               {watchers.map(u => u && (
-                <div key={u.id} className="flex items-center gap-2">
+                <div key={u.id} className="flex items-center gap-2 group">
                   <Avatar name={u.name} size="xs" />
-                  <span className="text-xs text-ois-text">{u.name}</span>
+                  <span className="text-xs text-ois-text flex-1 min-w-0 truncate">{u.name}</span>
                   {u.id === req.requesterId && <span className="text-[10px] text-ois-text-subtle">(req.)</span>}
+                  {/* Only explicit (user-added) watchers can be removed; auto-watchers
+                      (requester + step assignees) are derived from the workflow snapshot. */}
+                  {!autoWatcherIds.has(u.id) && explicitWatcherIds.includes(u.id) && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await requestsService.removeWatcher(req.publicId, u.id);
+                        } catch (err) {
+                          // eslint-disable-next-line no-console
+                          console.error('Failed to remove watcher:', err);
+                        } finally {
+                          refreshRequests();
+                        }
+                      }}
+                      aria-label={`Remove ${u.name}`}
+                      title="Remove watcher"
+                      className="opacity-60 hover:opacity-100 text-ois-text-subtle hover:text-ois-danger transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
               ))}
               <button onClick={() => setShowAddWatcher(true)} className="flex items-center gap-1.5 text-xs text-ois-primary hover:underline mt-1">
@@ -1128,9 +1168,20 @@ export const RequestDetail: React.FC = () => {
           currentAssignee={activeStepCurrentAssignee}
           users={mockUsers}
           onClose={() => setShowReassign(false)}
-          onConfirm={(_id, name) => {
-            setActiveStepAssignee(name);
-            setShowReassign(false);
+          onConfirm={async (id, name) => {
+            const step = req.workflow.steps.find(s => s.status === 'active');
+            if (!step) { setShowReassign(false); return; }
+            try {
+              await requestsService.reassignStep(req.publicId, step.id, {
+                assigneeId: id, assigneeName: name,
+              });
+            } catch (err) {
+              // eslint-disable-next-line no-console
+              console.error('Failed to reassign step:', err);
+            } finally {
+              setShowReassign(false);
+              refreshRequests();
+            }
           }}
         />
       )}
@@ -1138,8 +1189,23 @@ export const RequestDetail: React.FC = () => {
       {showCancel && (
         <CancelModal
           reqId={req.publicId}
-          onClose={() => setShowCancel(false)}
-          onConfirm={_reason => { setShowCancel(false); navigate('/requests'); }}
+          submitting={cancelSubmitting}
+          error={cancelError}
+          onClose={() => { if (!cancelSubmitting) { setShowCancel(false); setCancelError(null); } }}
+          onConfirm={async reason => {
+            setCancelSubmitting(true);
+            setCancelError(null);
+            try {
+              await requestsService.cancel(req.publicId, { reason });
+              setShowCancel(false);
+              refreshRequests();
+              navigate('/requests');
+            } catch (err) {
+              setCancelError((err as Error).message || 'Failed to cancel request.');
+            } finally {
+              setCancelSubmitting(false);
+            }
+          }}
         />
       )}
 
@@ -1148,9 +1214,16 @@ export const RequestDetail: React.FC = () => {
           existingIds={watcherIdSet}
           users={mockUsers}
           onClose={() => setShowAddWatcher(false)}
-          onConfirm={(id, _name) => {
-            setExtraWatcherIds(prev => [...prev, id]);
-            setShowAddWatcher(false);
+          onConfirm={async (id, name) => {
+            try {
+              await requestsService.addWatcher(req.publicId, { userId: id, userName: name });
+            } catch (err) {
+              // eslint-disable-next-line no-console
+              console.error('Failed to add watcher:', err);
+            } finally {
+              setShowAddWatcher(false);
+              refreshRequests();
+            }
           }}
         />
       )}

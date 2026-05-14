@@ -236,6 +236,10 @@ type StepDecideResult =
   | { kind: 'not-found-step' }
   | { kind: 'already-decided' };
 
+// M6.11 (B2.2) — terminal states for a ServiceRequest. `cancel` refuses to
+// transition into 'cancelled' from any of these.
+const CLOSED_REQUEST_STATES = new Set(['fulfilled', 'closed', 'cancelled', 'rejected']);
+
 export const requestsRepo = {
   list: (tenantId: string) => listDocs<ServiceRequest>(prisma.serviceRequest, tenantId),
   get: (tenantId: string, publicId: string) => getDocByPublicId<ServiceRequest>(prisma.serviceRequest, tenantId, publicId),
@@ -333,6 +337,146 @@ export const requestsRepo = {
       data: { data: JSON.stringify(after) },
     });
     return { comment, internalId: row.id };
+  },
+
+  // M6.11 (B2.2) — cancel a service request. Sets status to 'cancelled',
+  // stamps cancellationReason + closedAt, and skips any remaining
+  // pending/active workflow steps so the UI stops showing "next up".
+  // Idempotency: refuses to cancel a request already in a terminal state
+  // (returns `{ kind: 'closed' }` → route maps to 409).
+  async cancel(
+    tenantId: string,
+    publicId: string,
+    reason: string,
+    _actor: { id: string; name: string },
+  ): Promise<
+    | { kind: 'ok'; before: ServiceRequest; after: ServiceRequest; internalId: string }
+    | { kind: 'not-found' }
+    | { kind: 'closed' }
+  > {
+    return prisma.$transaction(async (tx) => {
+      const row = await tx.serviceRequest.findFirst({ where: { tenantId, publicId } });
+      if (!row) return { kind: 'not-found' as const };
+      const before = parse<ServiceRequest>(row.data, {} as ServiceRequest);
+      if (CLOSED_REQUEST_STATES.has(before.status)) return { kind: 'closed' as const };
+
+      const now = new Date().toISOString();
+      const steps = (before.workflow?.steps ?? []).map(s =>
+        s.status === 'pending' || s.status === 'active' ? { ...s, status: 'skipped' as const } : s,
+      );
+      const after: ServiceRequest = {
+        ...before,
+        status: 'cancelled',
+        cancellationReason: reason,
+        closedAt: now,
+        workflow: { ...before.workflow, steps },
+      };
+      await tx.serviceRequest.update({
+        where: { id: row.id },
+        data: { status: 'cancelled', data: JSON.stringify(after) },
+      });
+      return { kind: 'ok' as const, before, after, internalId: row.id };
+    });
+  },
+
+  // M6.11 (B2.2) — reassign the *active* workflow step. Only the active step
+  // is reassignable; any other step (pending, completed, skipped, rejected)
+  // surfaces as `not-active` (409).
+  async reassignStep(
+    tenantId: string,
+    publicId: string,
+    stepId: string,
+    assignee: { id: string; name?: string },
+    _actor: { id: string; name: string },
+  ): Promise<
+    | { kind: 'ok'; before: ServiceRequest; after: ServiceRequest; internalId: string }
+    | { kind: 'not-found-request' }
+    | { kind: 'not-found-step' }
+    | { kind: 'not-active' }
+  > {
+    return prisma.$transaction(async (tx) => {
+      const row = await tx.serviceRequest.findFirst({ where: { tenantId, publicId } });
+      if (!row) return { kind: 'not-found-request' as const };
+      const before = parse<ServiceRequest>(row.data, {} as ServiceRequest);
+      const stepIdx = (before.workflow?.steps ?? []).findIndex(s => s.id === stepId);
+      if (stepIdx === -1) return { kind: 'not-found-step' as const };
+      const step = before.workflow.steps[stepIdx];
+      if (step.status !== 'active') return { kind: 'not-active' as const };
+
+      const steps = [...before.workflow.steps];
+      steps[stepIdx] = { ...step, assigneeId: assignee.id, assigneeName: assignee.name ?? step.assigneeName };
+      const after: ServiceRequest = { ...before, workflow: { ...before.workflow, steps } };
+      await tx.serviceRequest.update({
+        where: { id: row.id },
+        data: { data: JSON.stringify(after) },
+      });
+      return { kind: 'ok' as const, before, after, internalId: row.id };
+    });
+  },
+
+  // M6.11 (B2.2) — add a watcher. Idempotent: if the userId is already on
+  // the list, returns `wasNew=false` without writing.
+  async addWatcher(
+    tenantId: string,
+    publicId: string,
+    watcher: { userId: string; userName?: string },
+    _actor: { id: string; name: string },
+  ): Promise<
+    | { kind: 'ok'; before: ServiceRequest; after: ServiceRequest; internalId: string; wasNew: boolean }
+    | { kind: 'not-found' }
+  > {
+    return prisma.$transaction(async (tx) => {
+      const row = await tx.serviceRequest.findFirst({ where: { tenantId, publicId } });
+      if (!row) return { kind: 'not-found' as const };
+      const before = parse<ServiceRequest>(row.data, {} as ServiceRequest);
+      const existing = before.watchers ?? [];
+      const wasNew = !existing.some(w => w.userId === watcher.userId);
+      if (!wasNew) {
+        return { kind: 'ok' as const, before, after: before, internalId: row.id, wasNew };
+      }
+      const after: ServiceRequest = {
+        ...before,
+        watchers: [...existing, { userId: watcher.userId, userName: watcher.userName }],
+      };
+      await tx.serviceRequest.update({
+        where: { id: row.id },
+        data: { data: JSON.stringify(after) },
+      });
+      return { kind: 'ok' as const, before, after, internalId: row.id, wasNew };
+    });
+  },
+
+  // M6.11 (B2.2) — remove a watcher. Idempotent: if the user isn't on the
+  // list, returns `wasPresent=false` without writing. Route maps to 204
+  // either way.
+  async removeWatcher(
+    tenantId: string,
+    publicId: string,
+    userId: string,
+    _actor: { id: string; name: string },
+  ): Promise<
+    | { kind: 'ok'; before: ServiceRequest; after: ServiceRequest; internalId: string; wasPresent: boolean }
+    | { kind: 'not-found' }
+  > {
+    return prisma.$transaction(async (tx) => {
+      const row = await tx.serviceRequest.findFirst({ where: { tenantId, publicId } });
+      if (!row) return { kind: 'not-found' as const };
+      const before = parse<ServiceRequest>(row.data, {} as ServiceRequest);
+      const existing = before.watchers ?? [];
+      const wasPresent = existing.some(w => w.userId === userId);
+      if (!wasPresent) {
+        return { kind: 'ok' as const, before, after: before, internalId: row.id, wasPresent };
+      }
+      const after: ServiceRequest = {
+        ...before,
+        watchers: existing.filter(w => w.userId !== userId),
+      };
+      await tx.serviceRequest.update({
+        where: { id: row.id },
+        data: { data: JSON.stringify(after) },
+      });
+      return { kind: 'ok' as const, before, after, internalId: row.id, wasPresent };
+    });
   },
 };
 

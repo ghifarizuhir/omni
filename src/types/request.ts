@@ -118,6 +118,8 @@ export interface ServiceRequest {
   commentCount: number;
   tags: string[];
   comments?: RequestComment[];
+  watchers?: Array<{ userId: string; userName?: string }>;
+  cancellationReason?: string;
 }
 
 export interface RequestComment {
