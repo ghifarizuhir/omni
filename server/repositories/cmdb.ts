@@ -4,6 +4,7 @@
 
 import type { ConfigurationItem, CIRelationship, CIAuditEntry } from '../../src/types';
 import { prisma } from '../db';
+import type { UpdateCIInput } from '../../src/shared/schemas/ci';
 
 const parseTags = (s: string): string[] => {
   try { return JSON.parse(s); } catch { return []; }
@@ -84,6 +85,37 @@ export const cmdbRepo = {
     });
     return rows.map(toRel);
   },
+  // M6.11 (B1.3) — Partial update of a ConfigurationItem. CI lives in typed
+  // Prisma columns, so we update the columns the schema accepts; `attributes`
+  // and `tags` are JSON-serialized on the way in. Returns `{ before, after,
+  // internalId }` so the route can emit an audit log without re-reading.
+  async updateCI(
+    tenantId: string,
+    publicId: string,
+    patch: UpdateCIInput,
+  ): Promise<{ before: ConfigurationItem; after: ConfigurationItem; internalId: string } | null> {
+    const row = await prisma.configurationItem.findFirst({ where: { tenantId, publicId } });
+    if (!row) return null;
+    const before = toCI(row);
+
+    const data: Record<string, unknown> = {};
+    if (patch.name !== undefined) data.name = patch.name;
+    if (patch.status !== undefined) data.status = patch.status;
+    if (patch.environment !== undefined) data.environment = patch.environment;
+    if (patch.criticality !== undefined) data.criticality = patch.criticality;
+    if (patch.health !== undefined) data.health = patch.health;
+    if (patch.ownerId !== undefined) data.ownerId = patch.ownerId;
+    if (patch.ownerTeamId !== undefined) data.ownerTeamId = patch.ownerTeamId;
+    if (patch.serviceId !== undefined) data.serviceId = patch.serviceId;
+    if (patch.tags !== undefined) data.tags = JSON.stringify(patch.tags);
+    if (patch.attributes !== undefined) data.attributes = JSON.stringify(patch.attributes);
+
+    const [updated] = await prisma.$transaction([
+      prisma.configurationItem.update({ where: { id: row.id }, data }),
+    ]);
+    return { before, after: toCI(updated), internalId: row.id };
+  },
+
   async listAudit(tenantId: string, ciId?: string) {
     const rows = await prisma.cIAuditEntry.findMany({
       where: { tenantId, ...(ciId ? { ciId } : {}) },

@@ -71,7 +71,7 @@ export const CMDBDetail: React.FC = () => {
   const [showJson, setShowJson] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
-  const { data: cisData, loading: cisLoading } = useResource(() => cisService.list(), []);
+  const { data: cisData, loading: cisLoading, refresh: refreshCIs } = useResource(() => cisService.list(), []);
   const mockCIs = cisData ?? [];
   const { data: relsData } = useResource(() => cisService.relationshipsAll(), []);
   const mockCIRelationships = relsData ?? [];
@@ -93,6 +93,37 @@ export const CMDBDetail: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [editDraft, setEditDraft] = useState({ name: '', status: 'active', environment: 'production', criticality: 'critical' });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // M6.11 (B1.3) — Save handler: optimistic local update → PATCH /cis/:publicId
+  // → refresh the CI list. On failure, revert to the snapshot and surface the
+  // error inline.
+  const handleSave = async () => {
+    if (!ci) return;
+    const previous = ci;
+    const patch = {
+      name: editDraft.name,
+      status: editDraft.status as ConfigurationItem['status'],
+      environment: editDraft.environment as ConfigurationItem['environment'],
+      criticality: editDraft.criticality as ConfigurationItem['criticality'],
+    };
+    setSaving(true);
+    setSaveError(null);
+    // Optimistic local update.
+    setCi({ ...previous, ...patch });
+    try {
+      await cisService.update(previous.publicId, patch);
+      setEditMode(false);
+      refreshCIs();
+    } catch (err) {
+      // Revert on failure.
+      setCi(previous);
+      setSaveError(err instanceof Error ? err.message : 'Failed to save CI');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (cisLoading && !ci) {
     return <div className="flex items-center justify-center py-20 text-sm text-ois-text-muted">Loading…</div>;
@@ -138,11 +169,20 @@ export const CMDBDetail: React.FC = () => {
           <div className="flex items-center gap-2">
             {editMode ? (
               <>
-                <Button variant="ghost" size="sm" onClick={() => setEditMode(false)}>Cancel</Button>
-                <Button variant="primary" size="sm" onClick={() => {
-                  setCi(prev => prev ? { ...prev, name: editDraft.name, status: editDraft.status as any, environment: editDraft.environment as any, criticality: editDraft.criticality as any } : prev);
-                  setEditMode(false);
-                }}>Save</Button>
+                {saveError && (
+                  <span className="text-xs text-ois-danger font-medium mr-2" role="alert">{saveError}</span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={saving}
+                  onClick={() => { setSaveError(null); setEditMode(false); }}
+                >
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" disabled={saving} onClick={handleSave}>
+                  {saving ? 'Saving…' : 'Save'}
+                </Button>
               </>
             ) : (
               <Can module="cmdb" action="update">
