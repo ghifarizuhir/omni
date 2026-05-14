@@ -1,14 +1,20 @@
-// OIS Prisma schema — pilot domains for M1.
-// Provider is SQLite for dev so the repo runs without external services;
-// switch the datasource block to `postgresql` for staging/prod — the schema
-// is written to be portable (no SQLite-specific types).
+// OIS Prisma schema — pilot domains.
+// M7.1: ported from SQLite to Postgres. Dev, staging, and prod all run on
+// Postgres now (managed Postgres in cloud envs; docker-compose locally —
+// see docs/PRODUCTION-READINESS-STRATEGY.md M7.4).
+//
+// FUTURE (out of scope for M7.1): the many `data String` columns currently
+// hold serialized JSON. Convert them to `Json` (jsonb) and add GIN indexes
+// on hot lookup paths (e.g. Incident.data, MonitoringRule.data) once the
+// repository layer is updated to read/write structured values instead of
+// pre-serialized strings. Tracked as part of M7's hardening work.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -47,13 +53,14 @@ model TenantMembership {
   tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   roles     MembershipRole[]
+
   @@unique([tenantId, userId])
 }
 
 // ── RBAC (M2: flat role → permission) ────────────────────────────────────────
 
 model Permission {
-  key         String           @id              // dotted, e.g. "cmdb.write"
+  key         String           @id // dotted, e.g. "cmdb.write"
   description String?
   createdAt   DateTime         @default(now())
   roles       RolePermission[]
@@ -61,15 +68,16 @@ model Permission {
 
 model Role {
   id          String           @id @default(cuid())
-  tenantId    String?                            // null = system role (admin/operator/...)
+  tenantId    String? // null = system role (admin/operator/...)
   name        String
   description String?
-  isSystem    Boolean          @default(false)   // built-ins are protected from edit/delete
+  isSystem    Boolean          @default(false) // built-ins are protected from edit/delete
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   tenant      Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   permissions RolePermission[]
   memberships MembershipRole[]
+
   @@unique([tenantId, name])
 }
 
@@ -78,6 +86,7 @@ model RolePermission {
   permissionKey String
   role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission    Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
   @@id([roleId, permissionKey])
   @@index([permissionKey])
 }
@@ -87,6 +96,7 @@ model MembershipRole {
   roleId       String
   membership   TenantMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   role         Role             @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
   @@id([membershipId, roleId])
   @@index([roleId])
 }
@@ -97,14 +107,15 @@ model Session {
   tenantId  String
   expiresAt DateTime
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
 // ── CMDB ──────────────────────────────────────────────────────────────────────
 
 model ConfigurationItem {
-  id                  String            @id // mirrors mock id when seeded
-  publicId            String            @unique
+  id                  String           @id // mirrors mock id when seeded
+  publicId            String           @unique
   tenantId            String
   name                String
   type                String
@@ -115,54 +126,57 @@ model ConfigurationItem {
   ownerTeamId         String
   serviceId           String?
   health              String
-  attributes          String            // JSON
-  tags                String            // JSON string array
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  attributes          String // JSON
+  tags                String // JSON string array
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   lastDiscoveredAt    DateTime?
-  openIncidentCount   Int               @default(0)
-  recentChangeCount   Int               @default(0)
-  monitoringRuleCount Int               @default(0)
-  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  fromRelationships   CIRelationship[]  @relation("FromCI")
-  toRelationships     CIRelationship[]  @relation("ToCI")
+  openIncidentCount   Int              @default(0)
+  recentChangeCount   Int              @default(0)
+  monitoringRuleCount Int              @default(0)
+  tenant              Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fromRelationships   CIRelationship[] @relation("FromCI")
+  toRelationships     CIRelationship[] @relation("ToCI")
   auditEntries        CIAuditEntry[]
+
   @@index([tenantId, type])
   @@index([tenantId, environment])
 }
 
 model CIRelationship {
-  id          String   @id
+  id          String            @id
   tenantId    String
   fromCiId    String
   toCiId      String
   type        String
   description String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime          @default(now())
   fromCi      ConfigurationItem @relation("FromCI", fields: [fromCiId], references: [id], onDelete: Cascade)
-  toCi        ConfigurationItem @relation("ToCI",   fields: [toCiId],   references: [id], onDelete: Cascade)
+  toCi        ConfigurationItem @relation("ToCI", fields: [toCiId], references: [id], onDelete: Cascade)
+
   @@index([tenantId])
   @@index([fromCiId])
   @@index([toCiId])
 }
 
 model CIAuditEntry {
-  id           String   @id
-  tenantId     String
-  ciId         String
-  ciPublicId   String
-  ciName       String
-  action       String
-  actorId      String
-  actorName    String
-  actorType    String
-  field        String?
-  beforeValue  String?  // serialized as JSON when not null
-  afterValue   String?
-  source       String
-  description  String?
-  timestamp    DateTime
-  ci           ConfigurationItem @relation(fields: [ciId], references: [id], onDelete: Cascade)
+  id          String            @id
+  tenantId    String
+  ciId        String
+  ciPublicId  String
+  ciName      String
+  action      String
+  actorId     String
+  actorName   String
+  actorType   String
+  field       String?
+  beforeValue String? // serialized as JSON when not null
+  afterValue  String?
+  source      String
+  description String?
+  timestamp   DateTime
+  ci          ConfigurationItem @relation(fields: [ciId], references: [id], onDelete: Cascade)
+
   @@index([tenantId, ciId])
   @@index([tenantId, timestamp])
 }
@@ -170,8 +184,8 @@ model CIAuditEntry {
 // ── Monitoring ────────────────────────────────────────────────────────────────
 
 model Event {
-  id                  String   @id
-  publicId            String   @unique
+  id                  String    @id
+  publicId            String    @unique
   tenantId            String
   type                String
   status              String
@@ -182,10 +196,10 @@ model Event {
   ruleId              String?
   rulePublicId        String?
   ruleName            String?
-  affectedCIIds       String   // JSON array
-  affectedCIPublicIds String   // JSON array
+  affectedCIIds       String // JSON array
+  affectedCIPublicIds String // JSON array
   correlationKey      String
-  groupCount          Int      @default(1)
+  groupCount          Int       @default(1)
   firedAt             DateTime
   lastSeenAt          DateTime
   acknowledgedAt      DateTime?
@@ -193,22 +207,24 @@ model Event {
   resolvedAt          DateTime?
   resolvedBy          String?
   linkedIncidentId    String?
-  payload             String   @default("{}") // JSON
-  tags                String   // JSON array
-  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payload             String    @default("{}") // JSON
+  tags                String // JSON array
+  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([tenantId, status])
   @@index([tenantId, severity])
   @@index([tenantId, firedAt])
 }
 
 model MonitoringRule {
-  id              String   @id
-  publicId        String   @unique
+  id              String    @id
+  publicId        String    @unique
   tenantId        String
-  data            String   // JSON — full rule snapshot; fields are heterogeneous per type
-  enabled         Boolean  @default(true)
+  data            String // JSON — full rule snapshot; fields are heterogeneous per type
+  enabled         Boolean   @default(true)
   lastTriggeredAt DateTime?
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([tenantId, enabled])
 }
 
@@ -218,28 +234,30 @@ model AlertRoute {
   tenantId String
   data     String // JSON
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([tenantId])
 }
 
 // ── Incidents ────────────────────────────────────────────────────────────────
 
 model Incident {
-  id                       String   @id
-  publicId                 String   @unique
-  tenantId                 String
-  data                     String   // JSON — full incident snapshot
-  status                   String
-  priority                 String
-  severity                 String
-  isMajor                  Boolean  @default(false)
-  linkedProblemPublicId    String?
-  affectedCIIds            String   // JSON array (for filtering)
-  affectedCIPublicIds      String   // JSON array
-  createdAt                DateTime
-  updatedAt                DateTime
-  tenant                   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  comments                 IncidentComment[]
-  timeline                 IncidentTimelineEvent[]
+  id                    String                  @id
+  publicId              String                  @unique
+  tenantId              String
+  data                  String // JSON — full incident snapshot
+  status                String
+  priority              String
+  severity              String
+  isMajor               Boolean                 @default(false)
+  linkedProblemPublicId String?
+  affectedCIIds         String // JSON array (for filtering)
+  affectedCIPublicIds   String // JSON array
+  createdAt             DateTime
+  updatedAt             DateTime
+  tenant                Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  comments              IncidentComment[]
+  timeline              IncidentTimelineEvent[]
+
   @@index([tenantId, status])
   @@index([tenantId, isMajor])
   @@index([tenantId, linkedProblemPublicId])
@@ -249,9 +267,10 @@ model IncidentComment {
   id         String   @id
   tenantId   String
   incidentId String
-  data       String   // JSON
+  data       String // JSON
   createdAt  DateTime @default(now())
   incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
   @@index([tenantId, incidentId])
 }
 
@@ -261,8 +280,9 @@ model IncidentTimelineEvent {
   incidentId String
   kind       String
   timestamp  DateTime
-  data       String   // JSON
+  data       String // JSON
   incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
   @@index([tenantId, incidentId])
 }
 
@@ -271,9 +291,10 @@ model IncidentTimelineEvent {
 // column out of the JSON for indexed access. Everything else stays in `data`.
 
 model Service {
-  id        String @id
-  tenantId  String
-  data      String
+  id       String @id
+  tenantId String
+  data     String
+
   @@index([tenantId])
 }
 
@@ -284,57 +305,63 @@ model Problem {
   status    String
   data      String
   createdAt DateTime @default(now())
+
   @@index([tenantId, status])
 }
 
 model Change {
-  id          String   @id
-  publicId    String   @unique
-  tenantId    String
-  status      String
-  riskLevel   String?
-  data        String
+  id             String    @id
+  publicId       String    @unique
+  tenantId       String
+  status         String
+  riskLevel      String?
+  data           String
   scheduledStart DateTime?
+
   @@index([tenantId, status])
   @@index([tenantId, scheduledStart])
 }
 
 model Release {
-  id        String @id
-  publicId  String @unique
-  tenantId  String
-  status    String
-  data      String
+  id       String @id
+  publicId String @unique
+  tenantId String
+  status   String
+  data     String
+
   @@index([tenantId, status])
 }
 
 model Deployment {
-  id           String   @id
-  publicId     String   @unique
-  tenantId     String
-  status       String
-  environment  String
-  startedAt    DateTime?
-  data         String
-  logs         DeploymentLog[]
+  id          String          @id
+  publicId    String          @unique
+  tenantId    String
+  status      String
+  environment String
+  startedAt   DateTime?
+  data        String
+  logs        DeploymentLog[]
+
   @@index([tenantId, status])
 }
 
 model DeploymentLog {
-  id           String   @id
+  id           String     @id
   tenantId     String
   deploymentId String
   data         String
   deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
   @@index([tenantId, deploymentId])
 }
 
 model ServiceRequest {
-  id        String @id
-  publicId  String @unique
-  tenantId  String
-  status    String
-  data      String
+  id       String @id
+  publicId String @unique
+  tenantId String
+  status   String
+  data     String
+
   @@index([tenantId, status])
 }
 
@@ -342,6 +369,7 @@ model CatalogItem {
   id       String @id
   tenantId String
   data     String
+
   @@index([tenantId])
 }
 
@@ -351,15 +379,17 @@ model Integration {
   enabled  Boolean @default(true)
   status   String
   data     String
+
   @@index([tenantId, enabled])
 }
 
 model KBArticle {
-  id        String @id
-  publicId  String @unique
-  tenantId  String
-  status    String
-  data      String
+  id       String @id
+  publicId String @unique
+  tenantId String
+  status   String
+  data     String
+
   @@index([tenantId, status])
 }
 
@@ -372,12 +402,13 @@ model KBArticle {
 model Document {
   id        String   @id @default(cuid())
   tenantId  String
-  kind      String   // e.g. "outage", "sla-target", "ai-session"
-  key       String?  // optional secondary key (id from the source data)
+  kind      String // e.g. "outage", "sla-target", "ai-session"
+  key       String? // optional secondary key (id from the source data)
   publicId  String?
-  data      String   // JSON
+  data      String // JSON
   position  Int      @default(0) // preserves seed ordering
   createdAt DateTime @default(now())
+
   @@unique([tenantId, kind, key])
   @@index([tenantId, kind])
   @@index([tenantId, kind, publicId])
@@ -392,11 +423,12 @@ model AuditLog {
   action       String
   resourceKind String
   resourceId   String
-  before       String?  // JSON
-  after        String?  // JSON
+  before       String? // JSON
+  after        String? // JSON
   ip           String?
   userAgent    String?
   createdAt    DateTime @default(now())
+
   @@index([tenantId, resourceKind, resourceId])
   @@index([tenantId, createdAt])
 }
