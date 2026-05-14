@@ -12,6 +12,7 @@
     "dev:all": "tsx watch server/index.ts & vite --port=3000 --host=0.0.0.0",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:prod": "tsx prisma/seed.prod.ts",
     "db:reset": "prisma migrate reset --force --skip-seed && tsx prisma/seed.ts",
     "test": "vitest run",
     "build": "vite build",
