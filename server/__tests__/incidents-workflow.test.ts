@@ -47,8 +47,26 @@ const rand = () => Math.random().toString(36).slice(2, 8);
 describe('POST /api/v1/incidents/:publicId/promote-major', () => {
   let publicId: string;
   let internalId: string;
+  // Captured by the 403 RBAC test so cleanup survives any assertion failure.
+  let pmCustomRoleId: string | null = null;
+  let pmMembershipId: string | null = null;
   beforeAll(async () => {
     ({ publicId, internalId } = await cloneIncident(`pm-${rand()}`));
+  });
+
+  afterAll(async () => {
+    if (pmMembershipId) {
+      const adminCookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
+      const opRole = await prisma.role.findFirstOrThrow({
+        where: { name: 'operator', isSystem: true, tenantId: null },
+      });
+      await request(app).put(`/api/v1/admin/memberships/${pmMembershipId}/roles`)
+        .set('Cookie', adminCookie)
+        .send({ roleIds: [opRole.id] });
+      if (pmCustomRoleId) {
+        await request(app).delete(`/api/v1/admin/roles/${pmCustomRoleId}`).set('Cookie', adminCookie);
+      }
+    }
   });
 
   it('401 unauth', async () => {
@@ -91,22 +109,20 @@ describe('POST /api/v1/incidents/:publicId/promote-major', () => {
     const created = await request(app).post('/api/v1/admin/roles').set('Cookie', adminCookie)
       .send({ name: `m6-incwf-pm-${Date.now()}`, permissions: ['incident.read'] });
     expect(created.status).toBe(201);
+    pmCustomRoleId = created.body.id;
 
     const op = await prisma.user.findFirstOrThrow({ where: { email: { not: ADMIN_EMAIL } } });
     const membership = await prisma.tenantMembership.findFirstOrThrow({
       where: { userId: op.id, tenantId: 'tenant-demo' },
     });
+    pmMembershipId = membership.id;
     await request(app).put(`/api/v1/admin/memberships/${membership.id}/roles`).set('Cookie', adminCookie)
       .send({ roleIds: [created.body.id] });
 
     const opCookie = await login(app, op.email, 'demo');
     const res = await request(app).post(`/api/v1/incidents/${publicId}/promote-major`).set('Cookie', opCookie).send({});
     expect(res.status).toBe(403);
-
-    const opRole = await prisma.role.findFirstOrThrow({ where: { name: 'operator', isSystem: true, tenantId: null } });
-    await request(app).put(`/api/v1/admin/memberships/${membership.id}/roles`).set('Cookie', adminCookie)
-      .send({ roleIds: [opRole.id] });
-    await request(app).delete(`/api/v1/admin/roles/${created.body.id}`).set('Cookie', adminCookie);
+    // Restoration happens in afterAll so it survives an assertion failure here.
   });
 });
 
@@ -160,8 +176,26 @@ describe('PATCH /api/v1/incidents/:publicId/assign', () => {
 describe('PATCH /api/v1/incidents/:publicId/links', () => {
   let publicId: string;
   let internalId: string;
+  // Captured by the 403 RBAC test so cleanup survives any assertion failure.
+  let lkCustomRoleId: string | null = null;
+  let lkMembershipId: string | null = null;
   beforeAll(async () => {
     ({ publicId, internalId } = await cloneIncident(`lk-${rand()}`));
+  });
+
+  afterAll(async () => {
+    if (lkMembershipId) {
+      const adminCookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
+      const opRole = await prisma.role.findFirstOrThrow({
+        where: { name: 'operator', isSystem: true, tenantId: null },
+      });
+      await request(app).put(`/api/v1/admin/memberships/${lkMembershipId}/roles`)
+        .set('Cookie', adminCookie)
+        .send({ roleIds: [opRole.id] });
+      if (lkCustomRoleId) {
+        await request(app).delete(`/api/v1/admin/roles/${lkCustomRoleId}`).set('Cookie', adminCookie);
+      }
+    }
   });
 
   it('401 unauth', async () => {
@@ -200,11 +234,13 @@ describe('PATCH /api/v1/incidents/:publicId/links', () => {
     const created = await request(app).post('/api/v1/admin/roles').set('Cookie', adminCookie)
       .send({ name: `m6-incwf-lk-${Date.now()}`, permissions: ['incident.read'] });
     expect(created.status).toBe(201);
+    lkCustomRoleId = created.body.id;
 
     const op = await prisma.user.findFirstOrThrow({ where: { email: { not: ADMIN_EMAIL } } });
     const membership = await prisma.tenantMembership.findFirstOrThrow({
       where: { userId: op.id, tenantId: 'tenant-demo' },
     });
+    lkMembershipId = membership.id;
     await request(app).put(`/api/v1/admin/memberships/${membership.id}/roles`).set('Cookie', adminCookie)
       .send({ roleIds: [created.body.id] });
 
@@ -212,11 +248,7 @@ describe('PATCH /api/v1/incidents/:publicId/links', () => {
     const res = await request(app).patch(`/api/v1/incidents/${publicId}/links`).set('Cookie', opCookie)
       .send({ affectedCIIds: ['x'] });
     expect(res.status).toBe(403);
-
-    const opRole = await prisma.role.findFirstOrThrow({ where: { name: 'operator', isSystem: true, tenantId: null } });
-    await request(app).put(`/api/v1/admin/memberships/${membership.id}/roles`).set('Cookie', adminCookie)
-      .send({ roleIds: [opRole.id] });
-    await request(app).delete(`/api/v1/admin/roles/${created.body.id}`).set('Cookie', adminCookie);
+    // Restoration happens in afterAll so it survives an assertion failure here.
   });
 });
 

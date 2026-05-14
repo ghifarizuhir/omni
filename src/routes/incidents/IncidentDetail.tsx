@@ -202,16 +202,18 @@ export const IncidentDetail: React.FC = () => {
   const [linkChangeOpen, setLinkChangeOpen] = useState(false);
   const [addWatcherOpen, setAddWatcherOpen] = useState(false);
 
-  // Comments and watchers as local state
+  // Comments as local state; watchers derived from inc.watchers snapshot.
   const [comments, setComments] = useState<IncidentComment[]>([]);
   React.useEffect(() => { if (commentsData) setComments(commentsData); }, [commentsData]);
-  const [watchers, setWatchers] = useState<typeof mockUsers>([]);
-  React.useEffect(() => {
-    if (!incident || mockUsers.length === 0) return;
-    const ids = new Set([incident.assigneeId, incident.incidentCommander, 'u-006'].filter(Boolean) as string[]);
-    setWatchers([...ids].map(id => getUserById(mockUsers, id)).filter(Boolean) as typeof mockUsers);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incident?.id, usersData]);
+
+  // Derive watcher display objects from the snapshot field (set in inc state).
+  const watchers = useMemo<Array<{ id: string; name: string }>>(() => {
+    const list = inc?.watchers ?? [];
+    return list.map(w => {
+      const u = getUserById(mockUsers, w.userId);
+      return u ? { id: u.id, name: u.name } : { id: w.userId, name: w.userName ?? w.userId };
+    });
+  }, [inc?.watchers, mockUsers]);
 
   // Ref for focusing the comment textarea
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -388,14 +390,20 @@ export const IncidentDetail: React.FC = () => {
     if (!inc) return;
     const user = mockUsers.find(u => u.id === userId);
     if (!user) return;
-    const prevWatchers = watchers;
-    setWatchers(curr => curr.some(w => w.id === userId) ? curr : [...curr, user]);
+    const snapshot = inc;
+    setInc(prev => {
+      if (!prev) return prev;
+      const existing = prev.watchers ?? [];
+      if (existing.some(w => w.userId === userId)) return prev;
+      return { ...prev, watchers: [...existing, { userId, userName: user.name }] };
+    });
     try {
       await incidentsService.addWatcher(inc.id, { userId, userName: user.name });
+      await refreshIncident();
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to add watcher:', err);
-      setWatchers(prevWatchers);
+      setInc(snapshot);
     }
   };
 
