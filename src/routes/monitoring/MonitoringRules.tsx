@@ -73,9 +73,13 @@ export const MonitoringRules: React.FC = () => {
   const navigate = useNavigate();
   const canManage = useCan('monitoring', 'update');
 
-  const { data: rulesData } = useResource(() => monitoringRulesService.list(), []);
+  const { data: rulesData, refresh: refreshRules } = useResource(() => monitoringRulesService.list(), []);
   const { data: routesData } = useResource(() => alertRoutesService.list(), []);
   const mockAlertRoutes = routesData ?? [];
+
+  // M6.11 (B7) — surface mutation state to the wizard / delete confirm.
+  const [mutationError, setMutationError] = useState<string | null>(null);
+  const [mutationSubmitting, setMutationSubmitting] = useState(false);
 
   // --- State ---
   const [rules, setRules] = useState<MonitoringRule[]>([]);
@@ -97,6 +101,7 @@ export const MonitoringRules: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [editingRulePublicId, setEditingRulePublicId] = useState<string | null>(null);
 
   const [testModalRule, setTestModalRule] = useState<MonitoringRule | null>(null);
   const [testedChannels, setTestedChannels] = useState<Set<string>>(new Set());
@@ -163,14 +168,25 @@ export const MonitoringRules: React.FC = () => {
   }, [rules]);
 
   // --- Handlers ---
-  const handleToggleRule = (id: string) => {
-    setRules(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
+  // M6.11 (B7) — optimistic toggle with rollback on API failure.
+  const handleToggleRule = async (rule: MonitoringRule) => {
+    const next = !rule.enabled;
+    setRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: next } : r));
+    try {
+      await monitoringRulesService.update(rule.publicId, { enabled: next });
+      refreshRules();
+    } catch (err) {
+      // Revert optimistic toggle.
+      setRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: !next } : r));
+      setMutationError(err instanceof Error ? err.message : 'Failed to toggle rule');
+    }
   };
 
   const handleOpenWizard = (rule?: MonitoringRule) => {
     if (rule) {
       setIsEditMode(true);
       setEditingRuleId(rule.id);
+      setEditingRulePublicId(rule.publicId);
       setFormData({
         name: rule.name,
         description: rule.description || '',
@@ -191,6 +207,7 @@ export const MonitoringRules: React.FC = () => {
     } else {
       setIsEditMode(false);
       setEditingRuleId(null);
+      setEditingRulePublicId(null);
       setFormData({
         name: '',
         description: '',
@@ -213,60 +230,79 @@ export const MonitoringRules: React.FC = () => {
     setIsWizardOpen(true);
   };
 
-  const handleCreateOrUpdateRule = () => {
-    if (isEditMode && editingRuleId) {
-      setRules(prev => prev.map(r => r.id === editingRuleId ? {
-        ...r,
-        name: formData.name,
-        description: formData.description,
-        source: formData.source,
-        type: formData.type,
-        query: formData.query,
-        severity: formData.severity,
-        enabled: r.enabled, // Keep current status
-        alertRouteId: formData.alertRouteId,
-        alertRoutePublicId: mockAlertRoutes.find(ar => ar.id === formData.alertRouteId)?.publicId || 'UNKNOWN',
-        targetCount: formData.targetCIIds.length,
-        updatedAt: new Date().toISOString()
-      } : r));
-    } else {
-      const newRule: MonitoringRule = {
-        id: `rule-${Date.now()}`,
-        publicId: `RULE-${Math.random().toString(36).substring(2, 5).toUpperCase()}-${Math.floor(Math.random() * 999).toString().padStart(3, '0')}`,
-        name: formData.name,
-        description: formData.description,
-        source: formData.source,
-        type: formData.type,
-        query: formData.query,
-        enabled: true,
-        targetMode: formData.targetMode,
-        targetCIIds: formData.targetCIIds,
-        targetCount: formData.targetCIIds.length,
-        condition: {
-          threshold: formData.threshold,
-          operator: formData.operator as any,
-          duration: formData.duration
-        },
-        severity: formData.severity,
-        cooldown: formData.cooldown,
-        alertRouteId: formData.alertRouteId,
-        alertRoutePublicId: mockAlertRoutes.find(ar => ar.id === formData.alertRouteId)?.publicId || 'UNKNOWN',
-        lastTriggeredAt: null,
-        totalFires30d: 0,
-        signalToNoiseRatio: 1.0,
-        createdBy: 'u-001',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        tags: formData.tags
+  // M6.11 (B7) — wire wizard submit to POST/PATCH /monitoring/rules.
+  const handleCreateOrUpdateRule = async () => {
+    setMutationError(null);
+    setMutationSubmitting(true);
+    try {
+      const condition = {
+        threshold: formData.threshold,
+        operator: formData.operator as '>' | '<' | '>=' | '<=' | '==' | '!=',
+        duration: formData.duration,
       };
-      setRules([newRule, ...rules]);
+      if (isEditMode && editingRulePublicId) {
+        const updated = await monitoringRulesService.update(editingRulePublicId, {
+          name: formData.name,
+          description: formData.description,
+          source: formData.source,
+          type: formData.type,
+          query: formData.query,
+          severity: formData.severity,
+          cooldown: formData.cooldown,
+          alertRouteId: formData.alertRouteId,
+          targetMode: formData.targetMode,
+          targetCIIds: formData.targetCIIds,
+          targetSelector: formData.targetSelector,
+          condition,
+          tags: formData.tags,
+        });
+        setRules(prev => prev.map(r => r.publicId === updated.publicId ? updated : r));
+      } else {
+        const created = await monitoringRulesService.create({
+          name: formData.name,
+          description: formData.description,
+          source: formData.source,
+          type: formData.type,
+          query: formData.query,
+          severity: formData.severity,
+          cooldown: formData.cooldown,
+          alertRouteId: formData.alertRouteId,
+          targetMode: formData.targetMode,
+          targetCIIds: formData.targetCIIds,
+          targetSelector: formData.targetSelector,
+          condition,
+          tags: formData.tags,
+          enabled: true,
+        });
+        setRules(prev => [created, ...prev]);
+      }
+      refreshRules();
+      setIsWizardOpen(false);
+    } catch (err) {
+      // Keep the wizard open so the user can correct + retry.
+      setMutationError(err instanceof Error ? err.message : 'Failed to save rule');
+    } finally {
+      setMutationSubmitting(false);
     }
-    setIsWizardOpen(false);
   };
 
-  const handleDeleteRule = (id: string) => {
-    setRules(prev => prev.filter(r => r.id !== id));
-    setDeleteConfirmRule(null);
+  // M6.11 (B7) — optimistic delete with rollback on API failure.
+  const handleDeleteRule = async (rule: MonitoringRule) => {
+    setMutationError(null);
+    setMutationSubmitting(true);
+    const snapshot = rules;
+    setRules(prev => prev.filter(r => r.id !== rule.id));
+    try {
+      await monitoringRulesService.remove(rule.publicId);
+      refreshRules();
+      setDeleteConfirmRule(null);
+    } catch (err) {
+      // Restore.
+      setRules(snapshot);
+      setMutationError(err instanceof Error ? err.message : 'Failed to delete rule');
+    } finally {
+      setMutationSubmitting(false);
+    }
   };
 
   // --- Table Columns ---
@@ -291,7 +327,7 @@ export const MonitoringRules: React.FC = () => {
       accessor: (rule) => (
         <RuleStatusToggle 
           enabled={rule.enabled} 
-          onToggle={() => handleToggleRule(rule.id)} 
+          onToggle={() => handleToggleRule(rule)}
         />
       ),
       className: 'w-20'
@@ -430,6 +466,25 @@ export const MonitoringRules: React.FC = () => {
       {/* ── Body ── */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto px-6 py-5 space-y-5 pb-20">
+
+      {/* M6.11 (B7) — inline mutation-error banner. */}
+      {mutationError && (
+        <div className="flex items-start gap-3 rounded-xl border border-ois-danger/30 bg-ois-danger/5 px-4 py-3 text-sm text-ois-danger">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="font-bold">Couldn't save changes</p>
+            <p className="text-xs text-ois-danger/80 leading-snug">{mutationError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMutationError(null)}
+            className="text-ois-danger hover:text-ois-danger/70"
+            aria-label="Dismiss"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Filter Bar */}
       <Card className="p-4 border-ois-border bg-white/50 backdrop-blur-sm">
@@ -633,12 +688,13 @@ export const MonitoringRules: React.FC = () => {
            </Button>
            <div className="flex items-center gap-3">
               {currentStep === 3 && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-10 px-6 font-bold border-ois-border-strong bg-white hover:bg-ois-bg"
                   onClick={handleCreateOrUpdateRule}
+                  disabled={mutationSubmitting}
                 >
-                   Save as draft
+                   {mutationSubmitting ? 'Saving…' : 'Save as draft'}
                 </Button>
               )}
               {currentStep < 3 ? (
@@ -650,12 +706,13 @@ export const MonitoringRules: React.FC = () => {
                    Next: {currentStep === 1 ? 'Set thresholds' : 'Configure routing'} <ArrowRight size={18} />
                 </Button>
               ) : (
-                <Button 
-                  variant="primary" 
+                <Button
+                  variant="primary"
                   className="h-10 px-8 font-bold gap-2"
                   onClick={handleCreateOrUpdateRule}
+                  disabled={mutationSubmitting}
                 >
-                   {isEditMode ? 'Save changes' : 'Create rule'} <CheckCircle2 size={18} />
+                   {mutationSubmitting ? 'Saving…' : (isEditMode ? 'Save changes' : 'Create rule')} <CheckCircle2 size={18} />
                 </Button>
               )}
            </div>
@@ -781,9 +838,10 @@ export const MonitoringRules: React.FC = () => {
             <Button
               variant="destructive"
               className="h-10 px-6 font-bold"
-              onClick={() => deleteConfirmRule && handleDeleteRule(deleteConfirmRule.id)}
+              onClick={() => deleteConfirmRule && handleDeleteRule(deleteConfirmRule)}
+              disabled={mutationSubmitting}
             >
-              Delete rule
+              {mutationSubmitting ? 'Deleting…' : 'Delete rule'}
             </Button>
           </div>
         </div>

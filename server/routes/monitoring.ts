@@ -4,6 +4,10 @@ import { audit } from '../audit';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, required } from '../util';
 import { createAlertRouteSchema, updateAlertRouteSchema } from '../../src/shared/schemas/alertRoute';
+import {
+  createMonitoringRuleSchema,
+  updateMonitoringRuleSchema,
+} from '../../src/shared/schemas/monitoringRule';
 
 export const monitoringRouter = Router();
 
@@ -68,6 +72,85 @@ monitoringRouter.delete(
     await audit(req, {
       action: 'delete',
       resourceKind: 'AlertRoute',
+      resourceId: result.internalId,
+      before: result.before,
+    });
+    res.status(204).end();
+  }),
+);
+
+// ── Monitoring rule writes (M6.11 B7) ────────────────────────────────────────
+// Mirrors the alert-route block above. POST/PATCH/DELETE on /monitoring/rules,
+// all gated by `rule.write`. A bad alertRouteId surfaces as 400 (not 500).
+
+monitoringRouter.post(
+  '/monitoring/rules',
+  requirePermission('rule.write'),
+  asyncHandler(async (req, res) => {
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    const body = createMonitoringRuleSchema.parse(req.body);
+    let rule;
+    try {
+      rule = await monitoringRepo.createRule(
+        req.tenantId,
+        body as Parameters<typeof monitoringRepo.createRule>[1],
+        { id: req.session.userId },
+      );
+    } catch (err) {
+      if (err instanceof Error && err.message === 'ALERT_ROUTE_NOT_FOUND') {
+        throw new HttpError(400, 'Alert route not found');
+      }
+      throw err;
+    }
+    await audit(req, {
+      action: 'create',
+      resourceKind: 'MonitoringRule',
+      resourceId: rule.id,
+      after: rule,
+    });
+    res.status(201).json(rule);
+  }),
+);
+
+monitoringRouter.patch(
+  '/monitoring/rules/:publicId',
+  requirePermission('rule.write'),
+  asyncHandler(async (req, res) => {
+    const body = updateMonitoringRuleSchema.parse(req.body);
+    let result;
+    try {
+      result = await monitoringRepo.updateRule(
+        req.tenantId,
+        req.params.publicId,
+        body as Parameters<typeof monitoringRepo.updateRule>[2],
+      );
+    } catch (err) {
+      if (err instanceof Error && err.message === 'ALERT_ROUTE_NOT_FOUND') {
+        throw new HttpError(400, 'Alert route not found');
+      }
+      throw err;
+    }
+    if (!result) throw new HttpError(404, 'MonitoringRule not found');
+    await audit(req, {
+      action: 'update',
+      resourceKind: 'MonitoringRule',
+      resourceId: result.internalId,
+      before: result.before,
+      after: result.after,
+    });
+    res.json(result.after);
+  }),
+);
+
+monitoringRouter.delete(
+  '/monitoring/rules/:publicId',
+  requirePermission('rule.write'),
+  asyncHandler(async (req, res) => {
+    const result = await monitoringRepo.deleteRule(req.tenantId, req.params.publicId);
+    if (!result) throw new HttpError(404, 'MonitoringRule not found');
+    await audit(req, {
+      action: 'delete',
+      resourceKind: 'MonitoringRule',
       resourceId: result.internalId,
       before: result.before,
     });

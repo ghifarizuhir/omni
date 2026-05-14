@@ -210,4 +210,127 @@ export const monitoringRepo = {
     ]);
     return { before, internalId: row.id };
   },
+
+  // M6.11 (B7) — Monitoring rule writes. Mirror of alert-route helpers above.
+  // The MonitoringRule table has a dedicated `enabled` column (used by indices
+  // and the events dashboard stats) so we mirror it from the JSON snapshot on
+  // every write to keep the two in sync.
+  async createRule(
+    tenantId: string,
+    input: Partial<MonitoringRule> & { name: string; alertRouteId: string },
+    actor: { id: string },
+  ): Promise<MonitoringRule> {
+    // Look up the referenced alert route inside the same tenant. Surfacing a
+    // sentinel error keeps the route layer in charge of HTTP status mapping.
+    const routeRow = await prisma.alertRoute.findFirst({
+      where: { tenantId, id: input.alertRouteId },
+    });
+    if (!routeRow) throw new Error('ALERT_ROUTE_NOT_FOUND');
+    const routeSnapshot = parseObj<AlertRoute>(routeRow.data, {} as AlertRoute);
+
+    const now = new Date();
+    const id = `rule-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const publicId = `RULE-${now.getTime().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+    const targetCIIds = input.targetCIIds ?? [];
+    const rule: MonitoringRule = {
+      id,
+      publicId,
+      name: input.name,
+      description: input.description,
+      type: (input.type ?? 'threshold') as MonitoringRule['type'],
+      enabled: input.enabled ?? false,
+      source: (input.source ?? 'prometheus') as MonitoringRule['source'],
+      query: input.query ?? '',
+      targetMode: (input.targetMode ?? 'explicit') as MonitoringRule['targetMode'],
+      targetCIIds,
+      targetSelector: input.targetSelector,
+      targetCount: targetCIIds.length,
+      condition: input.condition ?? {},
+      severity: (input.severity ?? 'P3') as MonitoringRule['severity'],
+      cooldown: input.cooldown ?? '10m',
+      alertRouteId: input.alertRouteId,
+      alertRoutePublicId: routeSnapshot.publicId ?? routeRow.publicId,
+      lastTriggeredAt: undefined,
+      totalFires30d: 0,
+      signalToNoiseRatio: 1.0,
+      createdBy: actor.id,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      tags: input.tags,
+    };
+
+    await prisma.$transaction([
+      prisma.monitoringRule.create({
+        data: {
+          id,
+          publicId,
+          tenantId,
+          data: JSON.stringify(rule),
+          enabled: rule.enabled,
+        },
+      }),
+    ]);
+    return rule;
+  },
+
+  async updateRule(
+    tenantId: string,
+    publicId: string,
+    patch: Partial<MonitoringRule>,
+  ): Promise<{ before: MonitoringRule; after: MonitoringRule; internalId: string } | null> {
+    const row = await prisma.monitoringRule.findFirst({ where: { tenantId, publicId } });
+    if (!row) return null;
+    const before = parseObj<MonitoringRule>(row.data, {} as MonitoringRule);
+
+    // If the patch changes the alert route, re-look-up its publicId for the
+    // denormalised field — same contract as createRule.
+    let alertRoutePublicId = before.alertRoutePublicId;
+    if (patch.alertRouteId && patch.alertRouteId !== before.alertRouteId) {
+      const routeRow = await prisma.alertRoute.findFirst({
+        where: { tenantId, id: patch.alertRouteId },
+      });
+      if (!routeRow) throw new Error('ALERT_ROUTE_NOT_FOUND');
+      const routeSnapshot = parseObj<AlertRoute>(routeRow.data, {} as AlertRoute);
+      alertRoutePublicId = routeSnapshot.publicId ?? routeRow.publicId;
+    }
+
+    const after: MonitoringRule = {
+      ...before,
+      ...patch,
+      // Identity fields stay pinned to the original row.
+      id: before.id,
+      publicId: before.publicId,
+      createdAt: before.createdAt,
+      createdBy: before.createdBy,
+      alertRoutePublicId,
+      // Re-derive targetCount if targets changed.
+      targetCount: patch.targetCIIds ? patch.targetCIIds.length : before.targetCount,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.$transaction([
+      prisma.monitoringRule.update({
+        where: { id: row.id },
+        data: {
+          data: JSON.stringify(after),
+          enabled: after.enabled,
+        },
+      }),
+    ]);
+    return { before, after, internalId: row.id };
+  },
+
+  async deleteRule(
+    tenantId: string,
+    publicId: string,
+  ): Promise<{ before: MonitoringRule; internalId: string } | null> {
+    const row = await prisma.monitoringRule.findFirst({ where: { tenantId, publicId } });
+    if (!row) return null;
+    const before = parseObj<MonitoringRule>(row.data, {} as MonitoringRule);
+    await prisma.$transaction([
+      prisma.monitoringRule.delete({ where: { id: row.id } }),
+    ]);
+    return { before, internalId: row.id };
+  },
 };
