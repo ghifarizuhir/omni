@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
+    "start": "tsx server/index.ts",
+    "start:worker": "tsx server/worker.ts",
     "server": "tsx server/index.ts",
     "server:watch": "tsx watch server/index.ts",
     "dev:all": "tsx watch server/index.ts & vite --port=3000 --host=0.0.0.0",

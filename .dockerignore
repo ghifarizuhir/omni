@@ -1,0 +1,50 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Node / build artifacts
+node_modules
+dist
+coverage
+.vite
+*.tsbuildinfo
+
+# Local DB (SQLite dev) — Postgres is the prod target
+*.db
+*.db-journal
+dev.db*
+prisma/dev.db*
+
+# Secrets — NEVER ship
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker meta (avoid recursive copy)
+Dockerfile
+Dockerfile.*
+.dockerignore
+docker-compose*.yml
+
+# Docs (kept out of the image; not needed at runtime)
+docs
+*.md
+!README.md
+
+# Tests (server tests aren't needed in prod image)
+**/__tests__
+**/*.test.ts
+**/*.spec.ts
