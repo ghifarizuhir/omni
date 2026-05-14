@@ -16,6 +16,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { hash } from '@node-rs/argon2';
+import { seedRbac } from './seedRbac';
 
 const prisma = new PrismaClient();
 
@@ -23,12 +24,9 @@ const prisma = new PrismaClient();
 const ARGON_OPTS = { memoryCost: 19_456, timeCost: 2, parallelism: 1 } as const;
 
 // The built-in system "admin" role grants every permission in the catalog.
-// Its id and name match `prisma/seedRbac.ts` so membership rows are compatible
-// with whichever seed populated the role catalog. This script ensures the row
-// exists (without permissions) so a fresh prod DB has a usable privileged role
-// even before the full RBAC catalog is seeded.
+// Its id matches `prisma/seedRbac.ts`; we delegate role + permission seeding
+// to seedRbac() so the role row has its full permission set before we link it.
 const SYSTEM_ADMIN_ROLE_ID = 'role-system-admin';
-const SYSTEM_ADMIN_ROLE_NAME = 'admin';
 
 function requireEnv(name: string): string {
   const v = process.env[name];
@@ -60,22 +58,7 @@ async function main() {
     console.log(`[seed.prod] tenant created: ${tenant.slug} (id ${tenant.id}).`);
   }
 
-  // 2. Ensure the system 'admin' role row exists. We deliberately don't seed
-  //    its full permission set here — that's the job of seedRbac. But the
-  //    MembershipRole FK needs a target, so we upsert a stub by id/name.
-  const adminRole = await prisma.role.upsert({
-    where: { id: SYSTEM_ADMIN_ROLE_ID },
-    update: {},
-    create: {
-      id: SYSTEM_ADMIN_ROLE_ID,
-      tenantId: null,
-      name: SYSTEM_ADMIN_ROLE_NAME,
-      description: 'Full access to every module and admin surface.',
-      isSystem: true,
-    },
-  });
-
-  // 3. Admin user — look up by email, create if missing.
+  // 2. Admin user — look up by email, create if missing.
   let user = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (user) {
     console.log(`[seed.prod] user '${adminEmail}' already exists — skipping create (password not touched).`);
@@ -91,7 +74,7 @@ async function main() {
     console.log(`[seed.prod] admin user created: ${user.email} (id ${user.id}).`);
   }
 
-  // 4. TenantMembership — unique on (tenantId, userId).
+  // 3. TenantMembership — unique on (tenantId, userId).
   let membership = await prisma.tenantMembership.findUnique({
     where: { tenantId_userId: { tenantId: tenant.id, userId: user.id } },
   });
@@ -104,7 +87,21 @@ async function main() {
     console.log(`[seed.prod] membership created: ${user.id} <-> ${tenant.id}.`);
   }
 
-  // 5. MembershipRole — ensure the admin role is attached.
+  // 4. RBAC catalog — seed permission catalog + system roles (with permission
+  //    attachments) BEFORE linking the admin role to the membership, so that
+  //    once the link is created the admin role actually carries permissions.
+  //    Idempotent: seedRbac uses upserts and is safe to re-run.
+  console.log('[seed.prod] seeding RBAC permission catalog…');
+  const rbacResult = await seedRbac(prisma);
+  console.log(
+    `[seed.prod] RBAC catalog seeded (${rbacResult.permissions} permissions, ${rbacResult.roles} system roles)`,
+  );
+
+  // 5. MembershipRole — ensure the admin role is attached. After step 4 the
+  //    role row exists with its full permission set already attached.
+  const adminRole = await prisma.role.findUniqueOrThrow({
+    where: { id: SYSTEM_ADMIN_ROLE_ID },
+  });
   const existingRoleLink = await prisma.membershipRole.findUnique({
     where: { membershipId_roleId: { membershipId: membership.id, roleId: adminRole.id } },
   });

@@ -125,25 +125,52 @@ export const SYSTEM_ROLES: { id: string; name: string; description: string; perm
   },
 ];
 
-export async function seedRbac(prisma: PrismaClient): Promise<void> {
-  await prisma.permission.createMany({
-    data: PERMISSION_CATALOG.map(p => ({ key: p.key, description: p.description })),
-  });
+export async function seedRbac(
+  prisma: PrismaClient,
+): Promise<{ permissions: number; roles: number }> {
+  // Idempotent: upsert every permission so re-runs are safe.
+  for (const p of PERMISSION_CATALOG) {
+    await prisma.permission.upsert({
+      where: { key: p.key },
+      update: { description: p.description },
+      create: { key: p.key, description: p.description },
+    });
+  }
 
   for (const role of SYSTEM_ROLES) {
-    await prisma.role.create({
-      data: {
+    await prisma.role.upsert({
+      where: { id: role.id },
+      update: {
+        name: role.name,
+        description: role.description,
+        isSystem: true,
+      },
+      create: {
         id: role.id,
         tenantId: null,
         name: role.name,
         description: role.description,
         isSystem: true,
-        permissions: {
-          create: role.permissions.map(key => ({ permissionKey: key })),
-        },
       },
     });
+
+    // Reconcile role permission attachments without disturbing existing rows.
+    const existing = await prisma.rolePermission.findMany({
+      where: { roleId: role.id },
+      select: { permissionKey: true },
+    });
+    const have = new Set(existing.map(r => r.permissionKey));
+    const want = new Set(role.permissions);
+
+    const toAdd = [...want].filter(k => !have.has(k));
+    if (toAdd.length > 0) {
+      await prisma.rolePermission.createMany({
+        data: toAdd.map(permissionKey => ({ roleId: role.id, permissionKey })),
+      });
+    }
   }
+
+  return { permissions: PERMISSION_CATALOG.length, roles: SYSTEM_ROLES.length };
 }
 
 // Returns the system role id for a given role name. Used by seed when
