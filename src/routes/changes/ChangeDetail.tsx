@@ -70,6 +70,8 @@ export const ChangeDetail: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [actionsOpen, setActionsOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
 
   // RBAC capability flags — declared before the not-found early return so hook order is stable.
@@ -938,14 +940,42 @@ export const ChangeDetail: React.FC = () => {
 
       <RescheduleModal
         isOpen={rescheduleOpen}
-        onClose={() => setRescheduleOpen(false)}
+        onClose={() => {
+          if (rescheduleSubmitting) return;
+          setRescheduleOpen(false);
+          setRescheduleError(null);
+        }}
         currentStart={change!.plannedStart}
         currentEnd={change!.plannedEnd}
-        onReschedule={(newStart, newEnd) =>
+        submitting={rescheduleSubmitting}
+        error={rescheduleError}
+        onReschedule={async (newStart, newEnd, reason) => {
+          // Optimistic: snapshot prior values so we can revert on failure.
+          const prevStart = change!.plannedStart;
+          const prevEnd   = change!.plannedEnd;
+          setRescheduleError(null);
+          setRescheduleSubmitting(true);
           setChange(prev =>
-            prev ? { ...prev, plannedStart: newStart, plannedEnd: newEnd } : prev
-          )
-        }
+            prev ? { ...prev, plannedStart: newStart, plannedEnd: newEnd } : prev,
+          );
+          try {
+            await changesService.reschedule(change!.publicId, {
+              plannedStart: newStart,
+              plannedEnd: newEnd,
+              reason,
+            });
+            refreshChange();
+            setRescheduleOpen(false);
+          } catch (err) {
+            // Revert optimistic update on failure.
+            setChange(prev =>
+              prev ? { ...prev, plannedStart: prevStart, plannedEnd: prevEnd } : prev,
+            );
+            setRescheduleError(err instanceof Error ? err.message : 'Failed to reschedule change');
+          } finally {
+            setRescheduleSubmitting(false);
+          }
+        }}
       />
     </div>
   );

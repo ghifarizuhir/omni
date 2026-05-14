@@ -5,6 +5,7 @@ import type {
 import type { mockBenefitMeasurements } from '../mocks/benefitMeasurements';
 import type { mockROICalculations, getROICalculation } from '../mocks/roiCalculations';
 import { apiFetch } from './core';
+import type { RescheduleChangeInput } from '../shared/schemas/change';
 
 export const problemsService = {
   list: () => apiFetch<Problem[]>('/problems'),
@@ -40,6 +41,11 @@ export const changesService = {
   // M6.11 — save the technical assessment block. Server stamps reviewerId/Name.
   setTechnicalAssessment: (publicId: string, assessment: Record<string, unknown>) =>
     apiFetch<Change>(`/changes/${publicId}/tech-assessment`, { method: 'PATCH', body: assessment }),
+
+  // M6.11 (B2.1) — reschedule planned window with a reason; appends to
+  // rescheduleHistory. 409 if the change is already closed.
+  reschedule: (publicId: string, input: RescheduleChangeInput) =>
+    apiFetch<Change>(`/changes/${publicId}/reschedule`, { method: 'PATCH', body: input }),
 };
 
 export const releasesService = {

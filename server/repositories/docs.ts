@@ -135,6 +135,55 @@ export const changesRepo = {
     return { before, after };
   },
 
+  // M6.11 (B2.1) — Reschedule an active change: update plannedStart/plannedEnd,
+  // refresh implementationWindow, append a rescheduleHistory entry, and mirror
+  // the new plannedStart to the column-level `scheduledStart` (matches `create`).
+  // Refuses to reschedule changes in a terminal state (returns sentinel).
+  async reschedule(
+    tenantId: string,
+    publicId: string,
+    input: { plannedStart: string; plannedEnd: string; reason: string },
+    actor: { id: string; name: string },
+  ): Promise<
+    | { kind: 'ok'; before: Change; after: Change }
+    | { kind: 'not-found' }
+    | { kind: 'closed' }
+  > {
+    return prisma.$transaction(async (tx) => {
+      const row = await tx.change.findFirst({ where: { tenantId, publicId } });
+      if (!row) return { kind: 'not-found' as const };
+      const before = parse<Change>(row.data, {} as Change);
+      if (CLOSED_CHANGE_STATES.has(before.status)) return { kind: 'closed' as const };
+
+      const rescheduledAt = new Date().toISOString();
+      const historyEntry = {
+        plannedStart: input.plannedStart,
+        plannedEnd:   input.plannedEnd,
+        reason:       input.reason,
+        rescheduledBy: actor.id,
+        rescheduledByName: actor.name,
+        rescheduledAt,
+      };
+
+      const after: Change = {
+        ...before,
+        plannedStart: input.plannedStart,
+        plannedEnd:   input.plannedEnd,
+        implementationWindow: `${input.plannedStart} → ${input.plannedEnd}`,
+        rescheduleHistory: [...(before.rescheduleHistory ?? []), historyEntry],
+      } as unknown as Change;
+
+      await tx.change.update({
+        where: { id: row.id },
+        data: {
+          scheduledStart: new Date(input.plannedStart),
+          data: JSON.stringify(after),
+        },
+      });
+      return { kind: 'ok' as const, before, after };
+    });
+  },
+
   // Merges a partial TechnicalAssessment onto the change and stamps the
   // reviewer. Caller passes a tech-assessment object; we overwrite (not deep
   // merge — the modal collects the whole block at once).

@@ -13,6 +13,7 @@ import type { ImprovementInitiative } from '../../src/types';
 import {
   createKBArticleSchema, updateKBArticleSchema, setKBArticleStatusSchema,
 } from '../../src/shared/schemas/kbArticle';
+import { rescheduleChangeSchema } from '../../src/shared/schemas/change';
 
 export const itsmRouter = Router();
 
@@ -63,6 +64,23 @@ itsmRouter.patch('/changes/:publicId/cancel', requirePermission('change.write'),
   await audit(req, {
     action: 'cancel', resourceKind: 'Change', resourceId: result.after.id,
     before: result.before, after: result.after,
+  });
+  res.json(result.after);
+}));
+
+itsmRouter.patch('/changes/:publicId/reschedule', requirePermission('change.write'), asyncHandler(async (req, res) => {
+  const body = rescheduleChangeSchema.parse(req.body);
+  if (!req.session) throw new HttpError(401, 'Authentication required');
+  const actor = await prisma.user.findUniqueOrThrow({
+    where: { id: req.session.userId }, select: { id: true, name: true },
+  });
+  const result = await changesRepo.reschedule(req.tenantId, req.params.publicId, body, actor);
+  if (result.kind === 'not-found') throw new HttpError(404, 'Change not found');
+  if (result.kind === 'closed') throw new HttpError(409, 'Change is in a closed state');
+  await audit(req, {
+    action: 'reschedule', resourceKind: 'Change', resourceId: result.after.id,
+    before: { plannedStart: result.before.plannedStart, plannedEnd: result.before.plannedEnd },
+    after:  { plannedStart: result.after.plannedStart,  plannedEnd: result.after.plannedEnd, reason: body.reason },
   });
   res.json(result.after);
 }));

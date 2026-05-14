@@ -85,6 +85,15 @@ export interface Change {
   closedAt?: string;
 
   cancellationReason?: string;
+
+  rescheduleHistory?: Array<{
+    plannedStart: string;
+    plannedEnd: string;
+    reason: string;
+    rescheduledBy: string;
+    rescheduledByName: string;
+    rescheduledAt: string;
+  }>;
 }
 
 export type TechAssessmentStatus =
