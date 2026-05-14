@@ -55,6 +55,21 @@ export interface UpdateRepoInput {
   tags?: string[];
 }
 
+export interface StandDownRepoInput {
+  actorId: string;
+  actorName: string;
+  reason: string;
+  newPriority?: 'P2' | 'P3' | 'P4';
+}
+
+export interface PostCommsRepoInput {
+  actorId: string;
+  actorName: string;
+  audience: 'internal' | 'all_staff' | 'customer';
+  message: string;
+  channels: string[];
+}
+
 const diffArr = (a: string[] = [], b: string[] = []) => ({
   added: b.filter(x => !a.includes(x)),
   removed: a.filter(x => !b.includes(x)),
@@ -554,5 +569,107 @@ export const incidentsRepo = {
     }
     await prisma.$transaction(updateOps);
     return { before, after, internalId: row.id };
+  },
+
+  // M6.11 B5.1 — flip a major incident back to non-major. Mirrors
+  // `promoteMajor` but in reverse: clears `isMajor`, sets the new priority
+  // (defaulting to P2 when omitted), and writes a `major_stood_down` timeline
+  // event whose `details.reason` carries the legally required business
+  // justification.
+  async standDown(tenantId: string, publicId: string, input: StandDownRepoInput): Promise<{
+    before: Incident;
+    after: Incident;
+    internalId: string;
+  }> {
+    const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
+    if (!row) throw new Error(`Incident ${publicId} not found`);
+    const before = parseObj<Incident>(row.data, {} as Incident);
+    const now = new Date();
+    const toPriority = input.newPriority ?? 'P2';
+    const after: Incident = {
+      ...before,
+      isMajor: false,
+      priority: toPriority,
+    };
+    const timelineId = randomUUID();
+    const timelineEvent = {
+      id: timelineId,
+      kind: 'major_stood_down' as const,
+      timestamp: now.toISOString(),
+      actorId: input.actorId,
+      details: {
+        fromPriority: before.priority,
+        toPriority,
+        reason: input.reason,
+        actorId: input.actorId,
+        actorName: input.actorName,
+      },
+    };
+    await prisma.$transaction([
+      prisma.incident.update({
+        where: { id: row.id },
+        data: {
+          isMajor: false,
+          priority: toPriority,
+          data: JSON.stringify(after),
+          updatedAt: now,
+        },
+      }),
+      prisma.incidentTimelineEvent.create({
+        data: {
+          id: timelineId,
+          tenantId,
+          incidentId: row.id,
+          kind: 'major_stood_down',
+          timestamp: now,
+          data: JSON.stringify(timelineEvent),
+        },
+      }),
+    ]);
+    return { before, after, internalId: row.id };
+  },
+
+  // M6.11 B5.1 — append a `comms_posted` timeline event. Does not change the
+  // incident snapshot; the route still bumps `updatedAt` so list views resort.
+  async postComms(tenantId: string, publicId: string, input: PostCommsRepoInput): Promise<{
+    event: IncidentTimelineEvent;
+    incidentInternalId: string;
+  }> {
+    const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
+    if (!row) throw new Error(`Incident ${publicId} not found`);
+    const now = new Date();
+    const timelineId = randomUUID();
+    const timelineEvent: IncidentTimelineEvent = {
+      id: timelineId,
+      incidentId: row.id,
+      kind: 'comms_posted',
+      timestamp: now.toISOString(),
+      actorId: input.actorId,
+      actorName: input.actorName,
+      details: {
+        commsAudience: input.audience,
+        commsBody: input.message,
+        channels: input.channels,
+        actorId: input.actorId,
+        actorName: input.actorName,
+      },
+    };
+    await prisma.$transaction([
+      prisma.incident.update({
+        where: { id: row.id },
+        data: { updatedAt: now },
+      }),
+      prisma.incidentTimelineEvent.create({
+        data: {
+          id: timelineId,
+          tenantId,
+          incidentId: row.id,
+          kind: 'comms_posted',
+          timestamp: now,
+          data: JSON.stringify(timelineEvent),
+        },
+      }),
+    ]);
+    return { event: timelineEvent, incidentInternalId: row.id };
   },
 };

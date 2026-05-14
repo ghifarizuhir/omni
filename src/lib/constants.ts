@@ -137,6 +137,7 @@ export const incidentEventKindMeta: Record<IncidentEventKind, { label: string; i
   reopened:         { label: 'Reopened',          icon: 'RefreshCw',     color: '#DC6803' },
   closed:           { label: 'Closed',            icon: 'XCircle',       color: '#475467' },
   promoted_major:   { label: 'Promoted to major', icon: 'Siren',         color: '#B42318' },
+  major_stood_down: { label: 'Major stood down',  icon: 'ShieldCheck',   color: '#067647' },
   linked:           { label: 'Links updated',     icon: 'Link',          color: '#1F4FD4' },
   watcher_added:    { label: 'Watcher added',     icon: 'UserPlus',      color: '#475467' },
   watcher_removed:  { label: 'Watcher removed',   icon: 'UserMinus',     color: '#475467' },

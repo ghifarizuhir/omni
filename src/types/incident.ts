@@ -32,6 +32,7 @@ export type IncidentEventKind =
   | 'reopened'
   | 'closed'
   | 'promoted_major'
+  | 'major_stood_down'
   | 'linked'
   | 'watcher_added'
   | 'watcher_removed';
@@ -114,6 +115,10 @@ export interface IncidentTimelineEvent {
     problemPublicId?: string;
     commsBody?: string;
     commsAudience?: 'internal' | 'all_staff' | 'customer';
+    channels?: string[];
+    reason?: string;
+    actorId?: string;
+    actorName?: string;
     note?: string;
   };
 }

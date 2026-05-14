@@ -3,7 +3,7 @@ import {
   Plus, UserPlus, UserMinus, ArrowUpDown, RefreshCw, MessageCircle,
   Link, Unlink, Radio, AlertTriangle, AlertOctagon,
   ArrowUpRight, Siren, Megaphone, CheckCheck, CheckCircle2,
-  XCircle,
+  XCircle, ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { IncidentTimelineEvent, IncidentEventKind } from '@/src/types/incident';
@@ -30,6 +30,7 @@ const ICON_MAP: Record<IncidentEventKind, React.ComponentType<{ size?: number }>
   reopened:         RefreshCw,
   closed:           XCircle,
   promoted_major:   Siren,
+  major_stood_down: ShieldCheck,
   linked:           Link,
   watcher_added:    UserPlus,
   watcher_removed:  UserMinus,

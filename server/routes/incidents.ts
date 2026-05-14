@@ -13,6 +13,8 @@ import {
   updateIncidentLinksSchema,
   addWatcherSchema,
   updateIncidentSchema,
+  standDownIncidentSchema,
+  postCommsSchema,
 } from '../../src/shared/schemas/incident';
 
 export const incidentsRouter = Router();
@@ -165,6 +167,77 @@ incidentsRouter.post(
       after: result.after,
     });
     res.json(result.after);
+  }),
+);
+
+// M6.11 B5.1 — war-room stand-down. Inverse of promote-major: demotes a major
+// incident, sets the new priority (defaults P2), records the legally required
+// `reason` on the timeline event. Same `incident.write` permission as
+// promote-major (the `incident.major` key isn't in the RBAC catalog yet — see
+// prisma/seedRbac.ts).
+incidentsRouter.post(
+  '/incidents/:publicId/stand-down',
+  requirePermission('incident.write'),
+  asyncHandler(async (req, res) => {
+    const body = standDownIncidentSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    const actor = await prisma.user.findUniqueOrThrow({
+      where: { id: req.session.userId },
+      select: { id: true, name: true },
+    });
+    let result;
+    try {
+      result = await incidentsRepo.standDown(req.tenantId, req.params.publicId, {
+        actorId: actor.id,
+        actorName: actor.name,
+        reason: body.reason,
+        newPriority: body.newPriority,
+      });
+    } catch {
+      throw new HttpError(404, 'Incident not found');
+    }
+    await audit(req, {
+      action: 'stand_down',
+      resourceKind: 'Incident',
+      resourceId: result.internalId,
+      before: result.before,
+      after: result.after,
+    });
+    res.json(result.after);
+  }),
+);
+
+// M6.11 B5.1 — append a `comms_posted` timeline event. No incident snapshot
+// change. Returns the created timeline event.
+incidentsRouter.post(
+  '/incidents/:publicId/comms',
+  requirePermission('incident.write'),
+  asyncHandler(async (req, res) => {
+    const body = postCommsSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    const actor = await prisma.user.findUniqueOrThrow({
+      where: { id: req.session.userId },
+      select: { id: true, name: true },
+    });
+    let result;
+    try {
+      result = await incidentsRepo.postComms(req.tenantId, req.params.publicId, {
+        actorId: actor.id,
+        actorName: actor.name,
+        audience: body.audience,
+        message: body.message,
+        channels: body.channels,
+      });
+    } catch {
+      throw new HttpError(404, 'Incident not found');
+    }
+    await audit(req, {
+      action: 'comms_posted',
+      resourceKind: 'Incident',
+      resourceId: result.incidentInternalId,
+      after: result.event,
+    });
+    res.status(201).json(result.event);
   }),
 );
 

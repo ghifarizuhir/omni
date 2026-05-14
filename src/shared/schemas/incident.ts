@@ -95,3 +95,25 @@ export const updateIncidentSchema = z
   });
 
 export type UpdateIncidentInput = z.infer<typeof updateIncidentSchema>;
+
+// M6.11 B5.1 — war-room stand-down + comms. Stand-down legally requires a
+// `reason` (see docs/audits/mutation-audit.md Top 10 #3). `newPriority`
+// defaults to P2 on the server when omitted.
+export const standDownIncidentSchema = z
+  .object({
+    reason: z.string().min(10).max(2000),
+    newPriority: z.enum(['P2', 'P3', 'P4']).optional(),
+  })
+  .strict();
+
+export type StandDownIncidentInput = z.infer<typeof standDownIncidentSchema>;
+
+export const postCommsSchema = z
+  .object({
+    audience: z.enum(['internal', 'all_staff', 'customer']),
+    message: z.string().min(1).max(4000),
+    channels: z.array(z.string().min(1).max(40)).min(1).max(10),
+  })
+  .strict();
+
+export type PostCommsInput = z.infer<typeof postCommsSchema>;

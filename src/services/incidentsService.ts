@@ -13,6 +13,8 @@ export type {
   UpdateIncidentLinksInput,
   AddWatcherInput,
   UpdateIncidentInput,
+  StandDownIncidentInput,
+  PostCommsInput,
 } from '../shared/schemas/incident';
 export {
   resolveIncidentSchema,
@@ -23,6 +25,8 @@ export {
   updateIncidentLinksSchema,
   addWatcherSchema,
   updateIncidentSchema,
+  standDownIncidentSchema,
+  postCommsSchema,
 } from '../shared/schemas/incident';
 
 import type {
@@ -33,6 +37,8 @@ import type {
   UpdateIncidentLinksInput,
   AddWatcherInput,
   UpdateIncidentInput,
+  StandDownIncidentInput,
+  PostCommsInput,
 } from '../shared/schemas/incident';
 
 export const incidentsService = {
@@ -83,4 +89,13 @@ export const incidentsService = {
   // own endpoints (assign, status, links, …). Will be consumed by B4.2 bulk UI.
   update: (publicId: string, input: UpdateIncidentInput) =>
     apiFetch<Incident>(`/incidents/${publicId}`, { method: 'PATCH', body: input }),
+
+  // M6.11 B5.1 — war-room stand-down + comms. `standDown` demotes the
+  // incident; `postComms` appends a comms timeline event without changing the
+  // incident snapshot. UI wiring lands in B5.2.
+  standDown: (publicId: string, input: StandDownIncidentInput) =>
+    apiFetch<Incident>(`/incidents/${publicId}/stand-down`, { method: 'POST', body: input }),
+
+  postComms: (publicId: string, input: PostCommsInput) =>
+    apiFetch<IncidentTimelineEvent>(`/incidents/${publicId}/comms`, { method: 'POST', body: input }),
 };
