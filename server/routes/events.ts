@@ -13,7 +13,7 @@ const SEVERITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
 
 export const eventsRouter = Router();
 
-eventsRouter.get('/events', asyncHandler(async (req, res) => {
+eventsRouter.get('/events', requirePermission('event.read'), asyncHandler(async (req, res) => {
   const events = await eventsRepo.list(req.tenantId, {
     status: qStringArray(req.query.status) as EventStatus[] | undefined,
     severities: qStringArray(req.query.severities) as Severity[] | undefined,
@@ -27,11 +27,11 @@ eventsRouter.get('/events', asyncHandler(async (req, res) => {
   res.json(sorted);
 }));
 
-eventsRouter.get('/events/dashboard-stats', asyncHandler(async (req, res) => {
+eventsRouter.get('/events/dashboard-stats', requirePermission('event.read'), asyncHandler(async (req, res) => {
   res.json(await eventsRepo.dashboardStats(req.tenantId));
 }));
 
-eventsRouter.get('/events/:publicId', asyncHandler(async (req, res) => {
+eventsRouter.get('/events/:publicId', requirePermission('event.read'), asyncHandler(async (req, res) => {
   res.json(required(await eventsRepo.get(req.tenantId, req.params.publicId), 'Event'));
 }));
 

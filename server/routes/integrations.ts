@@ -3,11 +3,12 @@ import type { Integration } from '../../src/types/integration';
 import { integrationsRepo } from '../repositories/docs';
 import { prisma } from '../db';
 import { audit } from '../audit';
+import { requirePermission } from '../middleware/auth';
 import { asyncHandler, required } from '../util';
 
 export const integrationsRouter = Router();
 
-integrationsRouter.get('/integrations', asyncHandler(async (req, res) => {
+integrationsRouter.get('/integrations', requirePermission('integration.read'), asyncHandler(async (req, res) => {
   const list = await integrationsRepo.list(req.tenantId);
   const domain = typeof req.query.domain === 'string' ? req.query.domain : undefined;
   if (domain) {
@@ -17,7 +18,7 @@ integrationsRouter.get('/integrations', asyncHandler(async (req, res) => {
   res.json(list);
 }));
 
-integrationsRouter.get('/integrations/stats', asyncHandler(async (req, res) => {
+integrationsRouter.get('/integrations/stats', requirePermission('integration.read'), asyncHandler(async (req, res) => {
   const items = await integrationsRepo.list(req.tenantId);
   const enabled = items.filter(i => i.enabled);
   res.json({
@@ -31,11 +32,11 @@ integrationsRouter.get('/integrations/stats', asyncHandler(async (req, res) => {
   });
 }));
 
-integrationsRouter.get('/integrations/:id', asyncHandler(async (req, res) => {
+integrationsRouter.get('/integrations/:id', requirePermission('integration.read'), asyncHandler(async (req, res) => {
   res.json(required(await integrationsRepo.get(req.tenantId, req.params.id), 'Integration'));
 }));
 
-integrationsRouter.post('/integrations', asyncHandler(async (req, res) => {
+integrationsRouter.post('/integrations', requirePermission('integration.write'), asyncHandler(async (req, res) => {
   const body = req.body as Integration;
   const created = await prisma.integration.create({
     data: {
@@ -47,7 +48,7 @@ integrationsRouter.post('/integrations', asyncHandler(async (req, res) => {
   res.status(201).json(body);
 }));
 
-integrationsRouter.patch('/integrations/:id', asyncHandler(async (req, res) => {
+integrationsRouter.patch('/integrations/:id', requirePermission('integration.write'), asyncHandler(async (req, res) => {
   const existing = await integrationsRepo.get(req.tenantId, req.params.id);
   if (!existing) throw Object.assign(new Error('Integration not found'), { status: 404 });
   const patch = req.body as Partial<Integration>;
@@ -60,7 +61,7 @@ integrationsRouter.patch('/integrations/:id', asyncHandler(async (req, res) => {
   res.json(next);
 }));
 
-integrationsRouter.delete('/integrations/:id', asyncHandler(async (req, res) => {
+integrationsRouter.delete('/integrations/:id', requirePermission('integration.write'), asyncHandler(async (req, res) => {
   await prisma.integration.deleteMany({ where: { tenantId: req.tenantId, id: req.params.id } });
   await audit(req, { action: 'integration.delete', resourceKind: 'Integration', resourceId: req.params.id });
   res.status(204).end();

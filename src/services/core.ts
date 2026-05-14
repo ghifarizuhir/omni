@@ -43,6 +43,16 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   const text = await res.text();
   const json = text ? (JSON.parse(text) as unknown) : null;
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== 'undefined') {
+      // M6.6 — broadcast session-expiry so the top-level listener can flush
+      // the cached `useAuthSession` and route to /login with a banner. A DOM
+      // event keeps `services/core` free of upstream coupling on
+      // `lib/auth/session`. The login-flow 401 (bad credentials) is filtered
+      // out by the listener via `location.pathname`.
+      window.dispatchEvent(new CustomEvent('auth:session-expired', {
+        detail: { from: window.location.pathname + window.location.search },
+      }));
+    }
     throw new ApiError(res.status, (json as { message?: string })?.message ?? res.statusText, json);
   }
   return json as T;

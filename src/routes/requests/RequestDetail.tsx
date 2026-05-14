@@ -10,7 +10,7 @@ import {
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
 import { requestsService, knowledgeService, usersService, useResource } from '@/src/services';
-import { currentUser } from '@/src/mocks/users';
+import { useAuthSession } from '@/src/lib/auth/session';
 import { useCan as useCanRbac, requestResource } from '@/src/lib/rbac';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { Modal } from '@/src/components/ui/Modal';
@@ -81,8 +81,9 @@ function resolveFieldValue(field: FormField, raw: unknown): string {
   return raw != null && String(raw).trim() ? String(raw) : '—';
 }
 
-function isApprover(step: WorkflowStepInstance): boolean {
-  return step.type === 'approval' && step.status === 'active' && step.assigneeId === currentUser.id;
+function isApprover(step: WorkflowStepInstance, userId: string | undefined): boolean {
+  if (!userId) return false;
+  return step.type === 'approval' && step.status === 'active' && step.assigneeId === userId;
 }
 
 function stepSlaLabel(step: WorkflowStepInstance): string {
@@ -102,7 +103,8 @@ const WorkflowStepper: React.FC<{
   onApprove: (stepId: string) => void;
   onReject:  (stepId: string) => void;
   canApprove: boolean;
-}> = ({ steps, onApprove, onReject, canApprove }) => (
+  userId: string | undefined;
+}> = ({ steps, onApprove, onReject, canApprove, userId }) => (
   <div className="overflow-x-auto">
     <div className="flex justify-center min-w-full">
       <div className="flex items-center gap-0 py-1">
@@ -112,7 +114,7 @@ const WorkflowStepper: React.FC<{
           const rejected = step.status === 'rejected';
           const skipped  = step.status === 'skipped';
           const pending  = step.status === 'pending';
-          const canAct   = isApprover(step) && canApprove;
+          const canAct   = isApprover(step, userId) && canApprove;
           const prevDone = i > 0 && steps[i - 1].status === 'completed';
 
           const TypeIcon =
@@ -532,6 +534,9 @@ const AddWatcherModal: React.FC<{
 export const RequestDetail: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
+  const session = useAuthSession();
+  const userId = session?.user.id;
+  const userName = session?.user.name ?? '';
 
   const [approveStep,      setApproveStep]      = useState<string | null>(null);
   const [rejectStep,       setRejectStep]       = useState<string | null>(null);
@@ -552,7 +557,7 @@ export const RequestDetail: React.FC = () => {
     setTimeout(() => commentTextareaRef.current?.focus(), 50);
   }, []);
 
-  const { data: requestsData } = useResource(() => requestsService.list(), []);
+  const { data: requestsData, refresh: refreshRequests } = useResource(() => requestsService.list(), []);
   const { data: catalogData } = useResource(() => requestsService.catalog(), []);
   const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
   const { data: usersData } = useResource(() => usersService.list(), []);
@@ -582,7 +587,7 @@ export const RequestDetail: React.FC = () => {
   const activeStepForApproval = req.workflow.steps.find(s => s.id === approveStep);
   const activeStepForReject   = req.workflow.steps.find(s => s.id === rejectStep);
   const slaElapsed  = slaPercent(req);
-  const canUserApprove = req.workflow.steps.some(isApprover);
+  const canUserApprove = req.workflow.steps.some(s => isApprover(s, userId));
 
   const watchers = useMemo(() => {
     const ids = new Set<string>();
@@ -749,7 +754,7 @@ export const RequestDetail: React.FC = () => {
 
       {/* New comment box */}
       <div className="flex gap-3 pt-2 border-t border-ois-border">
-        <Avatar name={currentUser.name} size="sm" className="shrink-0" />
+        <Avatar name={userName || '—'} size="sm" className="shrink-0" />
         <div className="flex-1">
           <textarea
             ref={commentTextareaRef}
@@ -766,7 +771,7 @@ export const RequestDetail: React.FC = () => {
                 if (!comment.trim()) return;
                 setPostedComments(prev => [...prev, {
                   id: `c-${Date.now()}`,
-                  author: currentUser.name,
+                  author: userName,
                   text: comment.trim(),
                   ts: new Date().toISOString(),
                 }]);
@@ -896,6 +901,7 @@ export const RequestDetail: React.FC = () => {
           onApprove={id => setApproveStep(id)}
           onReject={id => setRejectStep(id)}
           canApprove={canApproveRequest}
+          userId={userId}
         />
       </div>
 
@@ -993,7 +999,7 @@ export const RequestDetail: React.FC = () => {
               {canUserApprove && !approved && (
                 <button
                   onClick={() => {
-                    const step = req.workflow.steps.find(isApprover);
+                    const step = req.workflow.steps.find(s => isApprover(s, userId));
                     if (step) setApproveStep(step.id);
                   }}
                   className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left bg-ois-primary text-white hover:bg-ois-primary-hover"
@@ -1004,7 +1010,7 @@ export const RequestDetail: React.FC = () => {
               {canUserApprove && !approved && (
                 <button
                   onClick={() => {
-                    const step = req.workflow.steps.find(isApprover);
+                    const step = req.workflow.steps.find(s => isApprover(s, userId));
                     if (step) setRejectStep(step.id);
                   }}
                   className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left border border-ois-border text-ois-text hover:bg-ois-surface-muted"
@@ -1071,7 +1077,18 @@ export const RequestDetail: React.FC = () => {
           stepName={activeStepForApproval.name}
           reqId={req.publicId}
           onClose={() => setApproveStep(null)}
-          onConfirm={_note => { setApproved(true); setApproveStep(null); }}
+          onConfirm={async note => {
+            try {
+              await requestsService.approveStep(req.publicId, approveStep, note || undefined);
+              setApproved(true);
+            } catch (err) {
+              // eslint-disable-next-line no-console
+              console.error('Failed to approve request step:', err);
+            } finally {
+              setApproveStep(null);
+              refreshRequests();
+            }
+          }}
         />
       )}
 
@@ -1080,7 +1097,18 @@ export const RequestDetail: React.FC = () => {
           stepName={activeStepForReject.name}
           reqId={req.publicId}
           onClose={() => setRejectStep(null)}
-          onConfirm={_reason => { setRejectStep(null); navigate('/requests'); }}
+          onConfirm={async reason => {
+            try {
+              await requestsService.rejectStep(req.publicId, rejectStep, reason);
+            } catch (err) {
+              // eslint-disable-next-line no-console
+              console.error('Failed to reject request step:', err);
+            } finally {
+              setRejectStep(null);
+              refreshRequests();
+              navigate('/requests');
+            }
+          }}
         />
       )}
 

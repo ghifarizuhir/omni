@@ -8,16 +8,34 @@ import type {
   Application,
   RbacTeam,
   Department,
+  Division,
   HierarchyLevel,
 } from '@/src/types/rbac';
 import { LEVEL_RANK } from '@/src/types/rbac';
 import { permissionRules } from './permissions';
-import {
-  mockApplications,
-  mockRbacTeams,
-  mockDepartments,
-  mockDivisions,
-} from '@/src/mocks/rbac';
+
+// ── Org-tree registry ────────────────────────────────────────────────────────
+// engine.ts used to import org tree from src/mocks/rbac directly. That coupled
+// authorization to mock data and blocked M6.1's "no value imports from mocks"
+// goal. Now the tree is registered at app boot by CurrentUserProvider, which
+// loads it from /api/v1/rbac/*. Callers that override via CanOptions
+// (`Can` / `useCan` already do) continue to work unchanged.
+
+let registry: {
+  applications: Application[];
+  teams: RbacTeam[];
+  departments: Department[];
+  divisions: Division[];
+} = { applications: [], teams: [], departments: [], divisions: [] };
+
+export function registerRbacOrgTree(tree: {
+  applications: Application[];
+  teams: RbacTeam[];
+  departments: Department[];
+  divisions: Division[];
+}): void {
+  registry = tree;
+}
 
 export interface CanOptions {
   variant?: string;
@@ -45,8 +63,8 @@ export interface CanResult {
 // - group_head at division Z → all teams in any dept of division Z
 export function teamsInUserScope(
   user: RbacUser,
-  teams: RbacTeam[] = mockRbacTeams,
-  departments: Department[] = mockDepartments,
+  teams: RbacTeam[] = registry.teams,
+  departments: Department[] = registry.departments,
 ): string[] {
   if (!user.divisionId || !user.level) return [];
   const lvl = user.level;
@@ -68,9 +86,9 @@ export function teamsInUserScope(
 // - group_head at division Z → apps owned by any team in any dept in division Z
 export function appsInUserScope(
   user: RbacUser,
-  apps: Application[] = mockApplications,
-  teams: RbacTeam[] = mockRbacTeams,
-  departments: Department[] = mockDepartments,
+  apps: Application[] = registry.applications,
+  teams: RbacTeam[] = registry.teams,
+  departments: Department[] = registry.departments,
 ): string[] {
   if (!user.divisionId || !user.level) return [];
   const lvl = user.level;
@@ -107,7 +125,7 @@ function divisionMatches(
 ): boolean {
   if (!required || required.length === 0) return true;
   if (!user.divisionId) return false;
-  const divCode = mockDivisions.find(d => d.id === user.divisionId)?.code;
+  const divCode = registry.divisions.find(d => d.id === user.divisionId)?.code;
   if (!divCode) return false;
   return required.includes(divCode);
 }
@@ -164,9 +182,9 @@ export function can(
     return { allowed: true, reason: 'Superadmin bypass.' };
   }
 
-  const apps = opts.applications ?? mockApplications;
-  const teams = opts.teams ?? mockRbacTeams;
-  const departments = opts.departments ?? mockDepartments;
+  const apps = opts.applications ?? registry.applications;
+  const teams = opts.teams ?? registry.teams;
+  const departments = opts.departments ?? registry.departments;
   const rules = opts.rules ?? permissionRules;
 
   const candidates = rules.filter(r => {

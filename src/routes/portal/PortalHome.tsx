@@ -10,7 +10,7 @@ import {
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
-import { currentUser } from '@/src/mocks/users';
+import { useAuthSession } from '@/src/lib/auth/session';
 import { requestsService, knowledgeService, useResource } from '@/src/services';
 import { RequestStatus, WorkflowStepStatus } from '@/src/types/request';
 
@@ -103,7 +103,8 @@ interface ChatMessage {
 
 const AGENT_NAME = 'Riley · Service Desk';
 
-const AGENT_GREETING = `Hi ${currentUser.name.split(' ')[0]}! I'm Riley from the Service Desk. What can I help you with today?`;
+const agentGreeting = (firstName: string): string =>
+  `Hi ${firstName}! I'm Riley from the Service Desk. What can I help you with today?`;
 
 function generateAgentReply(userText: string): string {
   const t = userText.toLowerCase();
@@ -126,11 +127,13 @@ function generateAgentReply(userText: string): string {
 }
 
 const ServiceDeskModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const session = useAuthSession();
+  const firstName = session?.user.name.split(' ')[0] ?? 'there';
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: 'm-greet',
       role: 'agent',
-      text: AGENT_GREETING,
+      text: agentGreeting(firstName),
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -279,6 +282,7 @@ const ServiceDeskModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 export const PortalHome: React.FC = () => {
   const navigate = useNavigate();
+  const session = useAuthSession();
   const [searchQuery, setSearchQuery] = useState('');
   const [chatModalOpen, setChatModalOpen] = useState(false);
 
@@ -290,8 +294,8 @@ export const PortalHome: React.FC = () => {
   const mockKBArticles = articlesData ?? [];
 
   const myRequests = useMemo(
-    () => mockServiceRequests.filter(r => r.requesterId === currentUser.id && !['closed', 'cancelled'].includes(r.status)),
-    [mockServiceRequests]
+    () => mockServiceRequests.filter(r => r.requesterId === session?.user.id && !['closed', 'cancelled'].includes(r.status)),
+    [mockServiceRequests, session?.user.id]
   );
   const activeRequests = myRequests.filter(r => !['fulfilled', 'closed', 'cancelled', 'rejected'].includes(r.status)).slice(0, 3);
 
@@ -329,7 +333,7 @@ export const PortalHome: React.FC = () => {
         <div className="relative max-w-2xl mx-auto text-center">
           <h1 className="text-3xl font-extrabold text-ois-text tracking-tight mb-1">
             What can we help you with today,{' '}
-            <span className="text-ois-primary">{currentUser.name.split(' ')[0]}</span>?
+            <span className="text-ois-primary">{session?.user.name.split(' ')[0] ?? 'there'}</span>?
           </h1>
           <p className="text-sm text-ois-text-muted mb-7">
             Request services, find answers, or track your open items.

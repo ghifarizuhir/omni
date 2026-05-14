@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { TODAY } from '@/src/mocks/improvements';
 import { improvementsService, useResource } from '@/src/services';
+
+const TODAY = new Date().toISOString().slice(0, 10);
 import {
   improvementStatusMeta,
   improvementCategoryMeta,

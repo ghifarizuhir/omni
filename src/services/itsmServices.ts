@@ -1,6 +1,6 @@
 import type {
   Problem, Change, Release, Deployment, DeploymentLogEntry, EnvironmentInfo,
-  ServiceRequest, CatalogItem, ImprovementInitiative,
+  ServiceRequest, RequestComment, CatalogItem, ImprovementInitiative,
 } from '../types';
 import type { mockBenefitMeasurements } from '../mocks/benefitMeasurements';
 import type { mockROICalculations, getROICalculation } from '../mocks/roiCalculations';
@@ -11,9 +11,35 @@ export const problemsService = {
   get: (publicId: string) => apiFetch<Problem>(`/problems/${publicId}`),
 };
 
+export interface CreateChangeInput {
+  title: string;
+  description?: string;
+  justification?: string;
+  type?: 'standard' | 'normal' | 'emergency';
+  risk?: 'low' | 'medium' | 'high' | 'critical';
+  impact?: 'minimal' | 'minor' | 'moderate' | 'major' | 'extensive';
+  plannedStart: string;
+  plannedEnd: string;
+  implementationPlan?: string;
+  rollbackPlan?: string;
+  affectedCIIds?: string[];
+}
+
 export const changesService = {
   list: () => apiFetch<Change[]>('/changes'),
   get: (publicId: string) => apiFetch<Change>(`/changes/${publicId}`),
+
+  // M6.11 — create a change in draft status. Returns the persisted Change.
+  create: (input: CreateChangeInput) =>
+    apiFetch<Change>('/changes', { method: 'POST', body: input }),
+
+  // M6.11 — cancel an active change. 409 if already closed.
+  cancel: (publicId: string, reason: string) =>
+    apiFetch<Change>(`/changes/${publicId}/cancel`, { method: 'PATCH', body: { reason } }),
+
+  // M6.11 — save the technical assessment block. Server stamps reviewerId/Name.
+  setTechnicalAssessment: (publicId: string, assessment: Record<string, unknown>) =>
+    apiFetch<Change>(`/changes/${publicId}/tech-assessment`, { method: 'PATCH', body: assessment }),
 };
 
 export const releasesService = {
@@ -33,6 +59,24 @@ export const requestsService = {
   list: () => apiFetch<ServiceRequest[]>('/requests'),
   get: (publicId: string) => apiFetch<ServiceRequest>(`/requests/${publicId}`),
   catalog: () => apiFetch<CatalogItem[]>('/catalog'),
+
+  // M6.11 — workflow approve/reject + comments. Server enforces that the step
+  // is the active approval step (409 otherwise) and returns the full updated
+  // ServiceRequest so the UI can re-render off the response.
+  approveStep: (publicId: string, stepId: string, note?: string) =>
+    apiFetch<ServiceRequest>(`/requests/${publicId}/steps/${stepId}/approve`, {
+      method: 'POST', body: { note },
+    }),
+
+  rejectStep: (publicId: string, stepId: string, note: string) =>
+    apiFetch<ServiceRequest>(`/requests/${publicId}/steps/${stepId}/reject`, {
+      method: 'POST', body: { note },
+    }),
+
+  addComment: (publicId: string, body: string) =>
+    apiFetch<RequestComment>(`/requests/${publicId}/comments`, {
+      method: 'POST', body: { body },
+    }),
 };
 
 export const improvementsService = {

@@ -2,16 +2,20 @@ import React, { createContext, useContext, useMemo, useState, useCallback, useEf
 import type {
   RbacUser, Division, Department, RbacTeam, Application, FunctionalRole,
 } from '@/src/types/rbac';
-import {
-  mockRbacUsers, mockDivisions, mockDepartments, mockRbacTeams,
-  mockApplications, mockFunctionalRoles,
-} from '@/src/mocks/rbac';
+import type { CatalogItem } from '@/src/types/request';
+import type { Release } from '@/src/types/release';
+import { rbacService, requestsService, releasesService } from '@/src/services';
+import { registerRbacOrgTree } from './engine';
+import { registerCatalogItems } from './requestResource';
+import { registerReleases } from './deploymentResource';
 
 interface CurrentUserContextValue {
   user: RbacUser | null;
   setUserById: (id: string) => void;
 
-  // Master data (mutable in mock mode)
+  // Master data (mutable locally for the admin/persona UI; the source of
+  // truth is the API, but the admin panel may experiment with "what-if"
+  // changes without persisting).
   users: RbacUser[];
   divisions: Division[];
   departments: Department[];
@@ -44,12 +48,51 @@ const CurrentUserContext = createContext<CurrentUserContextValue | null>(null);
 const STORAGE_KEY = 'ois.rbac.currentUserId';
 
 export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<RbacUser[]>(mockRbacUsers);
-  const [divisions, setDivisions] = useState<Division[]>(mockDivisions);
-  const [departments, setDepartments] = useState<Department[]>(mockDepartments);
-  const [teams, setTeams] = useState<RbacTeam[]>(mockRbacTeams);
-  const [applications, setApplications] = useState<Application[]>(mockApplications);
-  const [functionalRoles, setFunctionalRoles] = useState<FunctionalRole[]>(mockFunctionalRoles);
+  const [users, setUsers] = useState<RbacUser[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [teams, setTeams] = useState<RbacTeam[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [functionalRoles, setFunctionalRoles] = useState<FunctionalRole[]>([]);
+
+  // Load the org tree (plus catalog + releases for the resource helpers) from
+  // the live API on mount. The previous implementation seeded from mocks; the
+  // mock import is gone as part of M6.1 leakage sweep.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      rbacService.users() as Promise<RbacUser[]>,
+      rbacService.divisions() as Promise<Division[]>,
+      rbacService.departments() as Promise<Department[]>,
+      rbacService.teams() as Promise<RbacTeam[]>,
+      rbacService.applications() as Promise<Application[]>,
+      rbacService.roles() as Promise<FunctionalRole[]>,
+      requestsService.catalog() as Promise<CatalogItem[]>,
+      releasesService.list() as Promise<Release[]>,
+    ]).then(([usersResp, divs, depts, tms, apps, roles, cat, rels]) => {
+      if (cancelled) return;
+      setUsers(usersResp);
+      setDivisions(divs);
+      setDepartments(depts);
+      setTeams(tms);
+      setApplications(apps);
+      setFunctionalRoles(roles);
+      registerRbacOrgTree({ applications: apps, teams: tms, departments: depts, divisions: divs });
+      registerCatalogItems(cat);
+      registerReleases(rels);
+    }).catch(() => {
+      // Anonymous sessions hit 401 and the UI redirects to /login via
+      // RequireAuth — leave state empty until the user signs in.
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Re-register whenever the in-memory state diverges from the API (e.g. the
+  // persona-switcher admin panel mutates `users` locally). Keeps the engine's
+  // registry in sync with what `useCan` sees.
+  useEffect(() => {
+    registerRbacOrgTree({ applications, teams, departments, divisions });
+  }, [applications, teams, departments, divisions]);
 
   const initialUserId = (() => {
     try {

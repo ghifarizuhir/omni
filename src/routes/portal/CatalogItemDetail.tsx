@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { requestsService, knowledgeService, teamsService, useResource } from '@/src/services';
-import { currentUser } from '@/src/mocks/users';
 import { Can } from '@/src/lib/rbac';
 import { CatalogItem, FormField, WorkflowStepTemplate, CatalogCategory } from '@/src/types/request';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';

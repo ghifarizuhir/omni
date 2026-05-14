@@ -2,9 +2,10 @@ import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ListChecks, KanbanSquare, Grid3x3, DollarSign } from 'lucide-react';
 import { improvementsService, useResource } from '@/src/services';
-import { TODAY } from '@/src/mocks/improvements';
 import { formatBenefitUSD } from '@/src/lib/constants';
 import { cn } from '@/src/lib/utils';
+
+const today = (): string => new Date().toISOString().slice(0, 10);
 
 const TABS = [
   { label: 'Register', to: '/improvement',          icon: ListChecks,    end: true },
@@ -22,8 +23,9 @@ export const ImprovementsLayout: React.FC = () => {
   const activeCount = mockImprovements.filter(
     i => !['completed', 'cancelled'].includes(i.status),
   ).length;
+  const todayStr = today();
   const overdueCount = mockImprovements.filter(
-    i => i.targetCompletionDate && i.targetCompletionDate < TODAY
+    i => i.targetCompletionDate && i.targetCompletionDate < todayStr
       && !['completed', 'cancelled'].includes(i.status),
   ).length;
   const criticalBlocked = mockImprovements.filter(

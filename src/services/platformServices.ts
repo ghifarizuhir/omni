@@ -6,22 +6,15 @@ import type {
 // Pull shape information from the mock modules so route components keep their
 // strong typing for the catch-all endpoints (notifications, on-call, etc).
 import type { mockNotifications } from '../mocks/notifications';
-import type {
-  mockNotificationPreferences, mockQuietHours,
-} from '../mocks/notificationPreferences';
+import type { mockNotificationPreferences, mockQuietHours } from '../mocks/notificationPreferences';
 import type { legacyMockInboxItems } from '../mocks/inbox';
 import type { mockInboxItems } from '../mocks/inboxItems';
 import type { mockOnCallSchedules } from '../mocks/onCallSchedules';
 import type { mockOnCallOverrides } from '../mocks/onCallOverrides';
 import type { mockKBFeedback } from '../mocks/kbFeedback';
 import type { kbAnalytics } from '../mocks/kbAnalytics';
-import type {
-  mockStatusPageEntries, mockStatusPageIncidents,
-} from '../mocks/statusPageEntries';
-import type {
-  mockRbacUsers, mockRbacTeams, mockApplications,
-  mockDepartments, mockDivisions, mockFunctionalRoles,
-} from '../mocks/rbac';
+import type { mockStatusPageEntries, mockStatusPageIncidents } from '../mocks/statusPageEntries';
+import type { mockRbacUsers, mockRbacTeams, mockApplications, mockDepartments, mockDivisions, mockFunctionalRoles } from '../mocks/rbac';
 import type { mockReports } from '../mocks/reports';
 import type { mockROICalculations } from '../mocks/roiCalculations';
 import type { mockBenefitMeasurements } from '../mocks/benefitMeasurements';

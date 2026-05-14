@@ -6,11 +6,14 @@ import { Card, CardBody } from '../components/ui/Card';
 import { CheckCircle2, Eye, EyeOff, ShieldCheck, Globe, Zap } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { apiFetch, ApiError } from '../services/core';
+import { refreshAuthSession } from '../lib/auth/session';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
+  const navState = location.state as { from?: string; reason?: 'expired' } | null;
+  const redirectTo = navState?.from ?? '/';
+  const sessionExpired = navState?.reason === 'expired';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,6 +37,7 @@ export const Login: React.FC = () => {
     setLoading(true);
     try {
       await apiFetch('/auth/login', { method: 'POST', body: { email, password } });
+      await refreshAuthSession();
       navigate(redirectTo, { replace: true });
     } catch (err) {
       const msg = err instanceof ApiError && err.status === 401
@@ -100,6 +104,11 @@ export const Login: React.FC = () => {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
+            {sessionExpired && !errors.form && (
+              <div className="rounded-[8px] border border-[#FEC84B] bg-[#FFFAEB] px-4 py-3 text-[14px] text-[#B54708]">
+                Your session expired. Please sign in again to pick up where you left off.
+              </div>
+            )}
             {errors.form && (
               <div className="rounded-[8px] border border-[#FDA29B] bg-[#FEF3F2] px-4 py-3 text-[14px] text-[#B42318]">
                 {errors.form}

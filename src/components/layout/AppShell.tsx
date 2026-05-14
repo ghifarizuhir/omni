@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { InboxDrawer } from './InboxDrawer';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { AiQuickPanel } from '@/src/components/ai/AiQuickPanel';
@@ -15,7 +15,27 @@ export const AppShell: React.FC = () => {
   const [aiSidebarContent, setAiSidebarContent] = useState<React.ReactNode>(null);
 
   const location = useLocation();
+  const navigate = useNavigate();
   const isAiRoute = location.pathname.startsWith('/ai');
+
+  // M6.6 — listen for mid-session 401s. `apiFetch` dispatches
+  // `auth:session-expired` on every 401 (`src/services/core.ts`). When that
+  // fires, route to /login with the originating path so the user lands back
+  // where they were after re-auth, and pass `reason: 'expired'` so the
+  // login page can show a banner.
+  useEffect(() => {
+    const onExpired = (e: Event) => {
+      const detail = (e as CustomEvent<{ from?: string }>).detail;
+      // Avoid a navigation loop if the user is already on /login.
+      if (window.location.pathname === '/login') return;
+      navigate('/login', {
+        replace: true,
+        state: { from: detail?.from ?? location.pathname + location.search, reason: 'expired' as const },
+      });
+    };
+    window.addEventListener('auth:session-expired', onExpired);
+    return () => window.removeEventListener('auth:session-expired', onExpired);
+  }, [navigate, location.pathname, location.search]);
 
   // Cmd+K / Ctrl+K shortcut to toggle AI panel
   useEffect(() => {

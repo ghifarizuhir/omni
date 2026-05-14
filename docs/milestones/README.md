@@ -7,9 +7,10 @@ One doc per milestone from [BACKEND-MIGRATION-STRATEGY.md](../BACKEND-MIGRATION-
 | M0 | (folded into strategy doc + `server/README.md`) | ✅ Done — Express scaffold |
 | M1 | [M1.md](./M1.md) | ✅ Done — Prisma schema, seed, pilot domains live |
 | M2 | [M2.md](./M2.md) | ✅ Done — session cookies, RBAC, audit log |
-| M3 | [M3.md](./M3.md) | ✅ Done — all domains live via dedicated tables or generic `Document`; `VITE_API_MODE` removed |
+| M3 | [M3.md](./M3.md) | 🟡 Reads done, writes deferred — M6.4 audit (2026-05-14) found that the "every UI mutation has a write endpoint" exit criterion was unmet; tracked under M6.11 |
 | M4 | [M4.md](./M4.md) | ✅ Done — `POST /events/ingest`, Socket.IO fan-out, frontend `realtime` client + `useRealtime` hook |
 | M5 | [M5.md](./M5.md) | ✅ Code-complete — helmet/rate-limit/logging/health, CSP env-gated, per-tenant limiter, OTel scaffold, DR runbook. Operational items (pentest, exporter wiring, real backup tests) remain |
+| M6–GA | [../PRODUCTION-READINESS-STRATEGY.md](../PRODUCTION-READINESS-STRATEGY.md) | 🟡 Planned — integration audit, Postgres + CI/CD, observability + DR drill, security + e2e, GA launch gate |
 
 ## Test posture
 

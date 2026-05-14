@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../db';
 import { listByKind, findByKey, firstByKind } from '../repositories/documents';
+import { requirePermission } from '../middleware/auth';
 import { asyncHandler, qBool, qString, required } from '../util';
 import type {
   Team, KBCategory, TestPlan, TestCase, TestRun, SignOff, AiSession,
@@ -8,6 +9,23 @@ import type {
 } from '../../src/types';
 
 export const platformRouter = Router();
+
+// Path-prefixed guards. `requireAuth` already gates the whole api router, so
+// `/users/me` reaches this point only with a valid session — but the explicit
+// guards below also enforce that the caller has the right read permission.
+
+platformRouter.use('/users', requirePermission('user.read'));
+platformRouter.use('/teams', requirePermission('user.read'));
+platformRouter.use('/notifications', requirePermission('notification.read'));
+platformRouter.use('/inbox', requirePermission('inbox.read'));
+platformRouter.use('/on-call', requirePermission('oncall.read'));
+platformRouter.use('/kb', requirePermission('kb.read'));
+platformRouter.use('/testing', requirePermission('testing.read'));
+platformRouter.use('/status-page', requirePermission('statuspage.read'));
+platformRouter.use('/ai', requirePermission('ai.read'));
+platformRouter.use('/rbac', requirePermission('rbac.read'));
+platformRouter.use('/continuity', requirePermission('continuity.read'));
+platformRouter.use('/measurement', requirePermission('measurement.read'));
 
 // users + teams — users live in the User table (auth), teams in documents.
 platformRouter.get('/users', asyncHandler(async (_req, res) => {

@@ -4,9 +4,12 @@ import type {
   ScalingRecommendation,
 } from '../../src/types';
 import { listByKind } from '../repositories/documents';
+import { requirePermission } from '../middleware/auth';
 import { asyncHandler, qBool, qString } from '../util';
 
 export const capacityRouter = Router();
+
+capacityRouter.use('/capacity', requirePermission('capacity.read'));
 
 // "Critical" surfaces metrics at or above their critical threshold (or in the
 // upper warning band). Matches the mock helper `getCriticalMetrics()`.

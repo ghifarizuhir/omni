@@ -1,6 +1,14 @@
 import type { ServiceRequest, CatalogItem } from '@/src/types/request';
 import type { RbacResource } from '@/src/types/rbac';
-import { mockCatalogItems } from '@/src/mocks/catalogItems';
+
+// Catalog items are registered at app boot by CurrentUserProvider once they're
+// fetched from /api/v1/catalog. Previously this helper imported the mock array
+// directly, which coupled authorization to seed data.
+let registry: CatalogItem[] = [];
+
+export function registerCatalogItems(items: CatalogItem[]): void {
+  registry = items;
+}
 
 // Map a ServiceRequest to RbacResource.
 // - ownerUserId from requesterId → enables 'own' scope for requesters.
@@ -8,7 +16,7 @@ import { mockCatalogItems } from '@/src/mocks/catalogItems';
 //   for the fulfilling APS/IFM team.
 export function requestResource(
   req: ServiceRequest,
-  items: CatalogItem[] = mockCatalogItems,
+  items: CatalogItem[] = registry,
 ): RbacResource {
   const item = items.find(c => c.id === req.catalogItemId);
   return {

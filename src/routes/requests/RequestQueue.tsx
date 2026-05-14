@@ -8,7 +8,7 @@ import {
 import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
 import { requestsService, usersService, useResource } from '@/src/services';
-import { currentUser } from '@/src/mocks/users';
+import { useAuthSession } from '@/src/lib/auth/session';
 import { Avatar } from '@/src/components/ui/Avatar';
 import {
   ServiceRequest, RequestStatus, CatalogCategory, WorkflowStepInstance,
@@ -66,17 +66,19 @@ function slaRemaining(step: WorkflowStepInstance | null): { label: string; color
   return { label, color: 'text-ois-success', dot: 'bg-ois-success' };
 }
 
-function isMyApproval(req: ServiceRequest): boolean {
+function isMyApproval(req: ServiceRequest, userId: string | undefined): boolean {
+  if (!userId) return false;
   return req.workflow.steps.some(
-    s => s.status === 'active' && s.type === 'approval' && s.assigneeId === currentUser.id
+    s => s.status === 'active' && s.type === 'approval' && s.assigneeId === userId
   );
 }
 
-function isMyTeam(req: ServiceRequest, users: { id: string; team?: string }[]): boolean {
-  const step = getActiveStep(req);
-  if (!step?.assigneeId) return false;
-  const u = users.find(u => u.id === step.assigneeId);
-  return u?.team === currentUser.team;
+// "My team" filter — the legacy mock User had a `team` string; the backend
+// `User` table doesn't yet expose team membership, so the filter resolves to
+// false until `/auth/me` (or a future `/users/me/teams`) returns one. Track
+// in M6.4 follow-ups.
+function isMyTeam(_req: ServiceRequest, _users: { id: string; team?: string }[]): boolean {
+  return false;
 }
 
 function isLast24h(req: ServiceRequest): boolean {
@@ -86,9 +88,14 @@ function isLast24h(req: ServiceRequest): boolean {
 
 type QuickFilter = 'my_approval' | 'sla_risk' | 'my_team' | 'last_24h' | null;
 
-function applyQuick(reqs: ServiceRequest[], qf: QuickFilter, users: { id: string; team?: string }[]): ServiceRequest[] {
+function applyQuick(
+  reqs: ServiceRequest[],
+  qf: QuickFilter,
+  users: { id: string; team?: string }[],
+  userId: string | undefined,
+): ServiceRequest[] {
   if (!qf) return reqs;
-  if (qf === 'my_approval') return reqs.filter(isMyApproval);
+  if (qf === 'my_approval') return reqs.filter(r => isMyApproval(r, userId));
   if (qf === 'sla_risk')    return reqs.filter(r => r.slaBreached || r.workflow.steps.some(s => s.slaStatus === 'warning' || s.slaStatus === 'breached'));
   if (qf === 'my_team')     return reqs.filter(r => isMyTeam(r, users));
   if (qf === 'last_24h')    return reqs.filter(isLast24h);
@@ -135,9 +142,10 @@ const QChip: React.FC<{
 // ── Row actions dropdown ──────────────────────────────────────────────────────
 
 const RowActions: React.FC<{ req: ServiceRequest; onOpen: () => void }> = ({ req, onOpen }) => {
+  const session = useAuthSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const canApprove = isMyApproval(req);
+  const canApprove = isMyApproval(req, session?.user.id);
 
   useEffect(() => {
     if (!open) return;
@@ -200,6 +208,8 @@ export const RequestQueue: React.FC = () => {
   const [slaFlt,     setSlaFlt]     = useState('');
   const [quickFlt,   setQuickFlt]   = useState<QuickFilter>(null);
 
+  const session = useAuthSession();
+  const userId = session?.user.id;
   const { user, applications, teams, departments } = useCurrentUser();
   const { data: requestsData } = useResource(() => requestsService.list(), []);
   const { data: usersData } = useResource(() => usersService.list(), []);
@@ -219,17 +229,17 @@ export const RequestQueue: React.FC = () => {
     myApproval: number; slaRisk: number; myTeam: number;
     last24h: number; active: number; breached: number;
   }>(() => ({
-    myApproval: all.filter(isMyApproval).length,
+    myApproval: all.filter(r => isMyApproval(r, userId)).length,
     slaRisk:    all.filter(r => r.slaBreached || r.workflow.steps.some(s => s.slaStatus === 'warning' || s.slaStatus === 'breached')).length,
     myTeam:     all.filter(r => isMyTeam(r, mockUsers)).length,
     last24h:    all.filter(isLast24h).length,
     active:     all.filter(r => ['submitted', 'approved', 'in_fulfillment', 'pending_user'].includes(r.status)).length,
     breached:   all.filter(r => r.slaBreached).length,
-  }), [all, mockUsers]);
+  }), [all, mockUsers, userId]);
 
   // ── Filtered + sorted results ──────────────────────────────────────────────
   const results = useMemo(() => {
-    let r = applyQuick(all, quickFlt, mockUsers);
+    let r = applyQuick(all, quickFlt, mockUsers, userId);
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -257,12 +267,12 @@ export const RequestQueue: React.FC = () => {
 
     // Sort: my pending approvals first, then by submitted desc
     return [...r].sort((a, b) => {
-      const aApproval = isMyApproval(a) ? 0 : 1;
-      const bApproval = isMyApproval(b) ? 0 : 1;
+      const aApproval = isMyApproval(a, userId) ? 0 : 1;
+      const bApproval = isMyApproval(b, userId) ? 0 : 1;
       if (aApproval !== bApproval) return aApproval - bApproval;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [all, mockUsers, search, statusFlt, catFlt, stepFlt, slaFlt, quickFlt]);
+  }, [all, mockUsers, userId, search, statusFlt, catFlt, stepFlt, slaFlt, quickFlt]);
 
   const hasFilters = !!(search || statusFlt || catFlt || stepFlt || slaFlt || quickFlt);
 
@@ -463,7 +473,7 @@ export const RequestQueue: React.FC = () => {
                 const activeStep  = getActiveStep(req);
                 const assigneeName = getAssigneeName(activeStep);
                 const sla         = slaRemaining(activeStep);
-                const myApproval  = isMyApproval(req);
+                const myApproval  = isMyApproval(req, userId);
 
                 return (
                   <tr

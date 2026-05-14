@@ -8,7 +8,12 @@ import { asyncHandler, HttpError, qString } from '../util';
 
 export const adminRouter = Router();
 
-adminRouter.use(requirePermission('system.admin'));
+// Scoped to /admin/* — adminRouter is mounted at the api root alongside other
+// routers, so an unscoped `.use(requirePermission(...))` would gate every
+// request that reaches this router (including ones destined for cmdb, events,
+// etc., since Express middleware on a router runs for all paths that arrive
+// at it). Path-prefix the guard so it only fires on actual admin routes.
+adminRouter.use('/admin', requirePermission('system.admin'));
 
 adminRouter.get('/admin/tenants', asyncHandler(async (_req, res) => {
   res.json(await prisma.tenant.findMany({ orderBy: { createdAt: 'desc' } }));

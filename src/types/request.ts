@@ -117,6 +117,15 @@ export interface ServiceRequest {
   linkedKBSlugs: string[];
   commentCount: number;
   tags: string[];
+  comments?: RequestComment[];
+}
+
+export interface RequestComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
 }
 
 export interface WorkflowInstance {

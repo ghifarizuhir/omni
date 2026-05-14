@@ -5,9 +5,12 @@ import type {
 import type { mockDailyServiceHealth as DailyHealth } from '../../src/mocks/dailyServiceHealth';
 import type { mockAvailabilityData as AvailSeries } from '../../src/mocks/availabilityData';
 import { listByKind } from '../repositories/documents';
+import { requirePermission } from '../middleware/auth';
 import { asyncHandler, qBool } from '../util';
 
 export const availabilityRouter = Router();
+
+availabilityRouter.use('/availability', requirePermission('availability.read'));
 
 availabilityRouter.get('/availability/outages', asyncHandler(async (req, res) => {
   res.json(await listByKind<Outage>(req.tenantId, 'outage'));

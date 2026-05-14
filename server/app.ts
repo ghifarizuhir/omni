@@ -21,7 +21,7 @@ import { platformRouter } from './routes/platform';
 import { authRouter } from './routes/auth';
 import { adminRouter } from './routes/admin';
 import { HttpError } from './util';
-import { sessionMiddleware } from './middleware/auth';
+import { requireAuth, sessionMiddleware } from './middleware/auth';
 import { logger } from './logger';
 import { prisma } from './db';
 
@@ -112,7 +112,14 @@ export const createApp = () => {
   });
 
   const api = express.Router();
+  // Public auth surface: login/logout/me handle their own session checks.
   api.use(authRouter);
+  // M6.9: global auth gate. Every route below requires a valid session, so
+  // `req.tenantId` and `req.permissions` are guaranteed to be set. Without this,
+  // unauthenticated requests would reach repositories with `req.tenantId =
+  // undefined`, which Prisma silently treats as "no filter" — a cross-tenant
+  // read. Per-route `requirePermission(...)` guards layer on top of this.
+  api.use(requireAuth);
   api.use(adminRouter);
   api.use(cmdbRouter);
   api.use(eventsRouter);

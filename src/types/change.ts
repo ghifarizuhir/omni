@@ -83,6 +83,8 @@ export interface Change {
   createdAt: string;
   updatedAt: string;
   closedAt?: string;
+
+  cancellationReason?: string;
 }
 
 export type TechAssessmentStatus =

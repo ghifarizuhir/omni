@@ -12,6 +12,7 @@ import { cn } from '../../lib/utils';
 import { ChangeType, RiskLevel, ImpactLevel } from '../../types/change';
 import { changeTypeMeta, riskMeta } from '../../lib/constants';
 import { useCan } from '../../lib/rbac';
+import { changesService } from '../../services';
 import { ShieldAlert } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -260,13 +261,17 @@ const NewChangeForm: React.FC = () => {
 
   const score = riskScore(form.risk, form.riskFactors);
 
-  // Auto-navigate after submit
+  // Holds the publicId returned by the server after a successful POST /changes.
+  const [createdPublicId, setCreatedPublicId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Auto-navigate after submit lands the created change ID.
   useEffect(() => {
-    if (submitted) {
-      const t = setTimeout(() => navigate('/changes/CHG-2026-00092'), 3000);
+    if (submitted && createdPublicId) {
+      const t = setTimeout(() => navigate(`/changes/${createdPublicId}`), 1500);
       return () => clearTimeout(t);
     }
-  }, [submitted, navigate]);
+  }, [submitted, createdPublicId, navigate]);
 
   // Restore draft on mount
   useEffect(() => {
@@ -783,22 +788,21 @@ const NewChangeForm: React.FC = () => {
       </p>
 
       <div className="bg-ois-bg border border-ois-border rounded-xl px-8 py-5 mb-8 text-left w-full max-w-sm">
-        <p className="font-mono text-lg font-bold text-ois-primary mb-1">CHG-2026-00092</p>
+        <p className="font-mono text-lg font-bold text-ois-primary mb-1">{createdPublicId ?? '—'}</p>
         <p className="text-sm text-ois-text font-medium mb-4">{form.title || 'Your change request'}</p>
         <div className="space-y-1.5 text-xs text-ois-text-muted">
-          <p><span className="font-semibold">Status:</span> In Review</p>
-          <p><span className="font-semibold">Awaiting:</span> Service Owner, Change Manager</p>
-          <p><span className="font-semibold">Next CAB session:</span> Thursday May 9, 10:00 UTC</p>
+          <p><span className="font-semibold">Status:</span> Draft</p>
+          <p><span className="font-semibold">Next step:</span> Submit for review</p>
         </div>
       </div>
 
-      <p className="text-xs text-ois-text-subtle mb-6">Navigating to change detail in 3 seconds…</p>
+      <p className="text-xs text-ois-text-subtle mb-6">Opening change detail…</p>
 
       <div className="flex gap-3">
-        <Button variant="outline" onClick={() => { localStorage.removeItem('new-change-draft'); setStep(0); setForm(INITIAL); setSubmitted(false); }}>
+        <Button variant="outline" onClick={() => { localStorage.removeItem('new-change-draft'); setStep(0); setForm(INITIAL); setSubmitted(false); setCreatedPublicId(null); }}>
           Submit another
         </Button>
-        <Button onClick={() => navigate('/changes/CHG-2026-00092')}>
+        <Button onClick={() => createdPublicId && navigate(`/changes/${createdPublicId}`)} disabled={!createdPublicId}>
           View change →
         </Button>
       </div>
@@ -813,12 +817,32 @@ const NewChangeForm: React.FC = () => {
     return true;
   };
 
-  const handleNext = () => {
-    if (step < 3) setStep(step + 1);
-    else {
+  const handleNext = async () => {
+    if (step < 3) { setStep(step + 1); return; }
+    // Final step: POST to server. Note that `<input type="datetime-local">`
+    // yields a naive local-time string ("2026-06-01T22:00"); coerce to an
+    // ISO timestamp the server can parse.
+    setSubmitError(null);
+    try {
+      const change = await changesService.create({
+        title: form.title,
+        description: form.description,
+        justification: form.justification,
+        type: form.type,
+        risk: form.risk,
+        impact: form.impact,
+        plannedStart: new Date(form.plannedStart).toISOString(),
+        plannedEnd: new Date(form.plannedEnd).toISOString(),
+        implementationPlan: form.implementationPlan,
+        rollbackPlan: form.rollbackPlan,
+        affectedCIIds: form.affectedCIs,
+      });
       localStorage.removeItem('new-change-draft');
+      setCreatedPublicId(change.publicId);
       setSubmitted(true);
       setStep(4);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to submit change');
     }
   };
 
@@ -873,15 +897,20 @@ const NewChangeForm: React.FC = () => {
                 {(step === 2 || step === 3) && (
                   <Button variant="outline" size="sm" onClick={handleSaveDraft}>Save as draft</Button>
                 )}
-                <Button
-                  onClick={handleNext}
-                  disabled={!canAdvance()}
-                  className="gap-1.5"
-                >
-                  {step === 3 ? 'Submit for review' : (
-                    <>Next: {STEPS[step + 1]} <ArrowRight size={14} /></>
+                <div className="flex flex-col items-end gap-1">
+                  <Button
+                    onClick={handleNext}
+                    disabled={!canAdvance()}
+                    className="gap-1.5"
+                  >
+                    {step === 3 ? 'Submit for review' : (
+                      <>Next: {STEPS[step + 1]} <ArrowRight size={14} /></>
+                    )}
+                  </Button>
+                  {submitError && (
+                    <p className="text-xs text-ois-danger">{submitError}</p>
                   )}
-                </Button>
+                </div>
               </div>
             </div>
           )}

@@ -134,7 +134,7 @@ export const IncidentDetail: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
 
-  const { data: incidentData, loading: incidentLoading } = useResource(
+  const { data: incidentData, loading: incidentLoading, refresh: refreshIncident } = useResource(
     () => (incidentId ? incidentsService.get(incidentId) : Promise.resolve(null)),
     [incidentId],
   );
@@ -159,7 +159,7 @@ export const IncidentDetail: React.FC = () => {
     () => (incident ? incidentsService.timeline(incident.id) : Promise.resolve([])),
     [incident?.id],
   );
-  const { data: commentsData } = useResource(
+  const { data: commentsData, refresh: refreshComments } = useResource(
     () => (incident ? incidentsService.comments(incident.id) : Promise.resolve([])),
     [incident?.id],
   );
@@ -278,17 +278,45 @@ export const IncidentDetail: React.FC = () => {
   const reporter = getUserById(mockUsers, inc?.reporterId);
   const commander = getUserById(mockUsers, inc?.incidentCommander);
 
-  const handleStatusChange = (s: IncidentStatus) => {
+  const handleStatusChange = async (s: IncidentStatus) => {
+    if (!inc) return;
     if (s === 'resolved' && !resolvedData) {
       setResolveOpen(true);
       return;
     }
-    setStatus(s);
+    if (s === 'resolved') return; // handleResolve covers this path explicitly
+    const prev = inc.status;
+    setStatus(s); // optimistic
+    try {
+      await incidentsService.setStatus(inc.publicId, s);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to update incident status:', err);
+      setStatus(prev); // revert on failure
+    } finally {
+      refreshIncident();
+    }
   };
 
-  const handleResolve = (data: ResolveData) => {
+  const handleResolve = async (data: ResolveData) => {
+    if (!inc) return;
+    // Optimistic UI — flip the local state so the resolve modal closes and the
+    // banner switches immediately. If the server rejects (RBAC / validation),
+    // the refresh below pulls authoritative state back.
     setResolvedData(data);
     setStatus('resolved');
+    try {
+      await incidentsService.resolve(inc.publicId, {
+        summary: data.summary,
+        rootCause: data.rootCause,
+        workaround: data.workaround,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to persist incident resolution:', err);
+    } finally {
+      refreshIncident();
+    }
   };
 
   const handlePromoteMajor = (commanderId: string) => {
@@ -475,21 +503,24 @@ export const IncidentDetail: React.FC = () => {
               variant="primary"
               size="sm"
               disabled={!newComment.trim()}
-              onClick={() => {
-                if (!newComment.trim()) return;
-                const newCmt: IncidentComment = {
-                  id: `cmt-new-${Date.now()}`,
-                  incidentId: inc!.id,
-                  authorId: 'u-001',
-                  authorName: 'Sarah Chen',
-                  body: newComment.trim(),
-                  isInternal,
-                  mentions: [],
-                  createdAt: new Date().toISOString(),
-                };
-                setComments(prev => [...prev, newCmt]);
+              onClick={async () => {
+                if (!newComment.trim() || !inc) return;
+                const text = newComment.trim();
+                const internal = isInternal;
+                // Clear the composer immediately for snappy UX. If the post
+                // fails, the user sees nothing in the feed and can retry.
                 setNewComment('');
                 setIsInternal(false);
+                try {
+                  await incidentsService.addComment(inc.id, { body: text, isInternal: internal });
+                } catch (err) {
+                  // eslint-disable-next-line no-console
+                  console.error('Failed to post comment:', err);
+                  setNewComment(text);
+                  setIsInternal(internal);
+                  return;
+                }
+                refreshComments();
               }}
             >
               Comment

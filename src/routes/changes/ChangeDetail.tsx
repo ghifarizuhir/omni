@@ -48,7 +48,7 @@ const SectionCard: React.FC<{ title?: string; children: React.ReactNode; classNa
 export const ChangeDetail: React.FC = () => {
   const { changeId } = useParams<{ changeId: string }>();
   const navigate = useNavigate();
-  const { data: rawChange, loading: changeLoading } = useResource(
+  const { data: rawChange, loading: changeLoading, refresh: refreshChange } = useResource(
     () => changeId ? changesService.get(changeId).catch(() => null as any) : Promise.resolve(null as any),
     [changeId],
   );
@@ -64,6 +64,9 @@ export const ChangeDetail: React.FC = () => {
     if (rawChange) setChangeStatus(rawChange.status);
   }, [rawChange?.id]);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [actionsOpen, setActionsOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
@@ -865,23 +868,46 @@ export const ChangeDetail: React.FC = () => {
                 </p>
               </div>
             </div>
+            <label className="block text-xs font-semibold text-ois-text mb-1">
+              Reason <span className="text-ois-danger">*</span>
+            </label>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={3}
+              placeholder="Why is this change being cancelled?"
+              className="w-full rounded-md border border-ois-border-strong px-2.5 py-1.5 text-xs text-ois-text focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary"
+            />
+            {cancelError && <p className="mt-2 text-xs text-ois-danger">{cancelError}</p>}
             <div className="flex gap-2 mt-5">
               <Button
                 variant="outline"
                 size="sm"
                 className="flex-1"
                 onClick={handleCloseModal}
+                disabled={cancelSubmitting}
               >
                 Keep change
               </Button>
               <Button
                 size="sm"
                 className="flex-1 bg-ois-danger hover:bg-red-600 border-ois-danger text-white"
-                onClick={() => {
-                  setChangeStatus('cancelled');
+                disabled={!cancelReason.trim() || cancelSubmitting}
+                onClick={async () => {
+                  setCancelError(null);
+                  setCancelSubmitting(true);
+                  try {
+                    await changesService.cancel(change.publicId, cancelReason.trim());
+                    setChangeStatus('cancelled');
+                    refreshChange();
+                  } catch (err) {
+                    setCancelError(err instanceof Error ? err.message : 'Failed to cancel change');
+                  } finally {
+                    setCancelSubmitting(false);
+                  }
                 }}
               >
-                Confirm cancel
+                {cancelSubmitting ? 'Cancelling…' : 'Confirm cancel'}
               </Button>
             </div>
           </>
@@ -893,9 +919,21 @@ export const ChangeDetail: React.FC = () => {
         onClose={() => setAssessmentModalOpen(false)}
         initial={change.technicalAssessment}
         changePublicId={change.publicId}
-        onSave={(assessment) =>
-          setChange((prev) => (prev ? { ...prev, technicalAssessment: assessment } : prev))
-        }
+        onSave={async (assessment) => {
+          // Optimistic local update for snappy modal close.
+          setChange((prev) => (prev ? { ...prev, technicalAssessment: assessment } : prev));
+          try {
+            await changesService.setTechnicalAssessment(
+              change.publicId,
+              assessment as unknown as Record<string, unknown>,
+            );
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to persist tech assessment:', err);
+          } finally {
+            refreshChange();
+          }
+        }}
       />
 
       <RescheduleModal
