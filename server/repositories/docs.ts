@@ -296,7 +296,150 @@ export const integrationsRepo = {
   get: (tenantId: string, id: string) => getDocById<Integration>(prisma.integration, tenantId, id),
 };
 
+// Terminal status — `setStatus` refuses transitions away from it.
+const TERMINAL_KB_STATES = new Set(['archived']);
+
 export const kbRepo = {
   list: (tenantId: string) => listDocs<KBArticle>(prisma.kBArticle, tenantId),
   get: (tenantId: string, publicId: string) => getDocByPublicId<KBArticle>(prisma.kBArticle, tenantId, publicId),
+
+  // M6.11 (B1.5) — Create a new KB article in `draft` status. Allocates a
+  // sequential `KB-NNNNN` publicId via count + 1 (best-effort; collisions
+  // surface as P2002). Returns `{ after, internalId }` (no `before` for
+  // create) so the route can emit an audit log without re-reading.
+  async create(
+    tenantId: string,
+    author: { id: string; name: string },
+    input: {
+      title: string;
+      summary: string;
+      body: string;
+      categoryId: string;
+      contentType: KBArticle['contentType'];
+      visibility: KBArticle['visibility'];
+      tags: string[];
+      relatedCIPublicIds: string[];
+      linkedProblemIds: string[];
+      linkedIncidentIds: string[];
+    },
+  ): Promise<{ after: KBArticle; internalId: string }> {
+    const now = new Date();
+    const id = `kba-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const count = await prisma.kBArticle.count({ where: { tenantId } });
+    const publicId = `KB-${String(count + 1).padStart(5, '0')}`;
+    const slug = (input.title || publicId)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || publicId.toLowerCase();
+
+    const article: KBArticle = {
+      id,
+      slug,
+      publicId,
+      title: input.title,
+      summary: input.summary,
+      body: input.body,
+      status: 'draft',
+      visibility: input.visibility,
+      contentType: input.contentType,
+      categoryId: input.categoryId,
+      categoryName: '',
+      tags: input.tags,
+      authorId: author.id,
+      authorName: author.name,
+      contributorIds: [],
+      relatedCIIds: [],
+      relatedCIPublicIds: input.relatedCIPublicIds,
+      linkedIncidentIds: input.linkedIncidentIds,
+      linkedProblemIds: input.linkedProblemIds,
+      relatedArticleSlugs: [],
+      viewCount: 0,
+      helpfulCount: 0,
+      unhelpfulCount: 0,
+      averageReadTimeSeconds: 0,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      version: 1,
+    };
+
+    await prisma.$transaction([
+      prisma.kBArticle.create({
+        data: {
+          id,
+          publicId,
+          tenantId,
+          status: 'draft',
+          data: JSON.stringify(article),
+        },
+      }),
+    ]);
+    return { after: article, internalId: id };
+  },
+
+  // Partial update of editable fields. Status is NOT mutable here — callers
+  // use `setStatus`. Returns `{ before, after, internalId }` for the audit log.
+  async update(
+    tenantId: string,
+    publicId: string,
+    patch: Partial<Pick<KBArticle,
+      'title' | 'summary' | 'body' | 'categoryId' | 'contentType' | 'visibility'
+      | 'tags' | 'relatedCIPublicIds' | 'linkedProblemIds' | 'linkedIncidentIds'
+    >>,
+  ): Promise<{ before: KBArticle; after: KBArticle; internalId: string } | null> {
+    const row = await prisma.kBArticle.findFirst({ where: { tenantId, publicId } });
+    if (!row) return null;
+    const before = parse<KBArticle>(row.data, {} as KBArticle);
+    const after: KBArticle = {
+      ...before,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+      version: (before.version ?? 1) + 1,
+    };
+    await prisma.$transaction([
+      prisma.kBArticle.update({
+        where: { id: row.id },
+        data: { data: JSON.stringify(after) },
+      }),
+    ]);
+    return { before, after, internalId: row.id };
+  },
+
+  // Dedicated status transition. Refuses no-op (same-status) and refuses to
+  // leave a terminal state (`archived`). Stamps publishedAt/By on `published`.
+  // Sentinel return shape lets the route map to 400/404 without re-querying.
+  async setStatus(
+    tenantId: string,
+    publicId: string,
+    nextStatus: KBArticle['status'],
+    actor: { id: string; name: string },
+  ): Promise<
+    | { kind: 'ok'; before: KBArticle; after: KBArticle; internalId: string }
+    | { kind: 'not-found' }
+    | { kind: 'same-status' }
+    | { kind: 'terminal'; from: KBArticle['status'] }
+  > {
+    const row = await prisma.kBArticle.findFirst({ where: { tenantId, publicId } });
+    if (!row) return { kind: 'not-found' };
+    const before = parse<KBArticle>(row.data, {} as KBArticle);
+    if (before.status === nextStatus) return { kind: 'same-status' };
+    if (TERMINAL_KB_STATES.has(before.status)) return { kind: 'terminal', from: before.status };
+
+    const now = new Date().toISOString();
+    const after: KBArticle = {
+      ...before,
+      status: nextStatus,
+      updatedAt: now,
+      ...(nextStatus === 'published'
+        ? { publishedAt: now, publishedBy: actor.id, publishedByName: actor.name }
+        : {}),
+    };
+    await prisma.$transaction([
+      prisma.kBArticle.update({
+        where: { id: row.id },
+        data: { status: nextStatus, data: JSON.stringify(after) },
+      }),
+    ]);
+    return { kind: 'ok', before, after, internalId: row.id };
+  },
 };

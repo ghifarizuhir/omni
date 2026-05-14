@@ -546,7 +546,7 @@ const KBEditorForm: React.FC = () => {
   const navigate      = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
+  const { data: articlesData, refresh: refreshArticles } = useResource(() => knowledgeService.articles(), []);
   const { data: categoriesData } = useResource(() => knowledgeService.categories(), []);
   const mockKBCategories = categoriesData ?? [];
   const existingArticle = useMemo(
@@ -588,6 +588,11 @@ const KBEditorForm: React.FC = () => {
   const [pendingAction,  setPendingAction]  = useState<'publish' | 'review' | 'draft' | null>(null);
   const [published,      setPublished]      = useState(false);
   const [lastBody,       setLastBody]       = useState(state.body);
+  // M6.11 (B1.5) — server write state. `currentPublicId` is set after the
+  // first successful create so subsequent saves go through PATCH /:publicId.
+  const [currentPublicId, setCurrentPublicId] = useState<string | null>(existingArticle?.publicId ?? null);
+  const [saving,         setSaving]         = useState(false);
+  const [saveError,      setSaveError]      = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -694,14 +699,87 @@ const KBEditorForm: React.FC = () => {
     setPendingAction(action);
   };
 
+  // M6.11 (B1.5) — persist current editor state. POSTs on first save, PATCHes
+  // thereafter. Returns the server-allocated publicId on success so callers
+  // (e.g. publish flow) can chain the status transition.
+  const saveArticle = useCallback(async (): Promise<string | null> => {
+    setSaveError(null);
+    if (!state.title.trim()) { setSaveError('Title is required'); return null; }
+    if (!state.summary.trim()) { setSaveError('Summary is required'); return null; }
+    setSaving(true);
+    try {
+      if (currentPublicId) {
+        await knowledgeService.update(currentPublicId, {
+          title:       state.title,
+          summary:     state.summary,
+          body:        state.body,
+          categoryId:  state.categoryId,
+          contentType: state.contentType,
+          visibility:  state.visibility,
+          tags:        state.tags,
+          relatedCIPublicIds: state.linkedCIs,
+          linkedProblemIds:   state.linkedItems.filter(x => x.startsWith('PRB')),
+          linkedIncidentIds:  state.linkedItems.filter(x => x.startsWith('INC')),
+        });
+        refreshArticles();
+        setAutoSavedAt(new Date());
+        return currentPublicId;
+      }
+      const created = await knowledgeService.create({
+        title:       state.title,
+        summary:     state.summary,
+        body:        state.body,
+        categoryId:  state.categoryId,
+        contentType: state.contentType,
+        visibility:  state.visibility,
+        tags:        state.tags,
+        relatedCIPublicIds: state.linkedCIs,
+        linkedProblemIds:   state.linkedItems.filter(x => x.startsWith('PRB')),
+        linkedIncidentIds:  state.linkedItems.filter(x => x.startsWith('INC')),
+      });
+      setCurrentPublicId(created.publicId);
+      refreshArticles();
+      setAutoSavedAt(new Date());
+      return created.publicId;
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Save failed');
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  }, [state, currentPublicId, refreshArticles]);
+
+  const handleSaveDraft = useCallback(async () => {
+    await saveArticle();
+  }, [saveArticle]);
+
   const handleConfirmPublish = (_days: number | null) => {
     const status: KBStatus = pendingAction === 'publish' ? 'published' : pendingAction === 'review' ? 'in_review' : 'draft';
-    set('status', status);
+    const prevStatus = state.status;
+    set('status', status); // optimistic
     setPendingAction(null);
-    if (status === 'published') {
-      setPublished(true);
-      setTimeout(() => navigate('/kb'), 1200);
-    }
+    void (async () => {
+      // Save current edits first (creates if new, updates otherwise).
+      const publicId = await saveArticle();
+      if (!publicId) {
+        set('status', prevStatus); // revert
+        return;
+      }
+      if (status !== prevStatus) {
+        try {
+          await knowledgeService.setStatus(publicId, status);
+          refreshArticles();
+        } catch (e) {
+          set('status', prevStatus);
+          setSaveError(e instanceof Error ? e.message : 'Status change failed');
+          return;
+        }
+      }
+      if (status === 'published') {
+        setPublished(true);
+        setTimeout(() => navigate('/kb'), 1200);
+      }
+    })();
   };
 
   const wordCount = useMemo(() => countWords(state.body), [state.body]);
@@ -736,10 +814,11 @@ const KBEditorForm: React.FC = () => {
         {/* Right */}
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => { setAutoSavedAt(new Date()); }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-ois-border text-xs font-semibold text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text transition-colors"
+            onClick={handleSaveDraft}
+            disabled={saving}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-ois-border text-xs font-semibold text-ois-text-muted hover:bg-ois-surface-muted hover:text-ois-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save size={13} /> Save draft
+            <Save size={13} /> {saving ? 'Saving…' : 'Save draft'}
           </button>
           <button
             onClick={() => setShowPreview(v => !v)}
@@ -760,6 +839,11 @@ const KBEditorForm: React.FC = () => {
       {/* ── SCROLLABLE CONTENT ────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-6 py-6">
+          {saveError && (
+            <div className="mb-3 px-3 py-2 rounded-lg border border-ois-danger/40 bg-ois-danger-pale text-[11px] font-semibold text-ois-danger">
+              {saveError}
+            </div>
+          )}
 
           {/* ── METADATA FORM ───────────────────────────────────────── */}
           <div className="space-y-4 mb-6">

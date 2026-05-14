@@ -55,6 +55,8 @@ export interface KBArticle {
   unhelpfulCount: number;
   averageReadTimeSeconds: number;
   publishedAt?: string;
+  publishedBy?: string;
+  publishedByName?: string;
   reviewedAt?: string;
   reviewDueAt?: string;
   expiresAt?: string;

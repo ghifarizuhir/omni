@@ -1,8 +1,11 @@
 import { apiFetch } from './core';
 import type {
-  User, Team, KBArticle, KBCategory, TestPlan, TestCase, TestRun, SignOff,
+  User, Team, KBArticle, KBCategory, KBStatus, TestPlan, TestCase, TestRun, SignOff,
   AiSession, DRPlan, DRTestRun, BIAEntry,
 } from '../types';
+import type {
+  CreateKBArticleInput, UpdateKBArticleInput,
+} from '../shared/schemas/kbArticle';
 // Pull shape information from the mock modules so route components keep their
 // strong typing for the catch-all endpoints (notifications, on-call, etc).
 import type { mockNotifications } from '../mocks/notifications';
@@ -54,6 +57,16 @@ export const knowledgeService = {
   categories: () => apiFetch<KBCategory[]>('/kb/categories'),
   feedback: (articleId?: string) => apiFetch<typeof mockKBFeedback>('/kb/feedback', { query: { articleId } }),
   analytics: () => apiFetch<typeof kbAnalytics>('/kb/analytics'),
+
+  // M6.11 (B1.5) — KB article writes. Create starts in draft; status changes
+  // go through the dedicated setStatus endpoint so the server can stamp
+  // publishedAt/By and enforce same-status / terminal-state guards.
+  create: (input: CreateKBArticleInput) =>
+    apiFetch<KBArticle>('/kb/articles', { method: 'POST', body: input }),
+  update: (publicId: string, patch: UpdateKBArticleInput) =>
+    apiFetch<KBArticle>(`/kb/articles/${publicId}`, { method: 'PATCH', body: patch }),
+  setStatus: (publicId: string, status: KBStatus) =>
+    apiFetch<KBArticle>(`/kb/articles/${publicId}/status`, { method: 'PATCH', body: { status } }),
 };
 
 export const testingService = {

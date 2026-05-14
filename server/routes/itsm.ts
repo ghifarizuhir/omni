@@ -10,6 +10,9 @@ import { prisma } from '../db';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qBool, required } from '../util';
 import type { ImprovementInitiative } from '../../src/types';
+import {
+  createKBArticleSchema, updateKBArticleSchema, setKBArticleStatusSchema,
+} from '../../src/shared/schemas/kbArticle';
 
 export const itsmRouter = Router();
 
@@ -218,4 +221,48 @@ itsmRouter.get('/improvements/:publicId', requirePermission('improvement.read'),
 itsmRouter.get('/kb/articles', requirePermission('kb.read'), asyncHandler(async (req, res) => res.json(await kbRepo.list(req.tenantId))));
 itsmRouter.get('/kb/articles/:publicId', requirePermission('kb.read'), asyncHandler(async (req, res) => {
   res.json(required(await kbRepo.get(req.tenantId, req.params.publicId), 'KBArticle'));
+}));
+
+// ── KB writes (M6.11 B1.5) ───────────────────────────────────────────────────
+// Three endpoints: create (draft), partial update (no status), and dedicated
+// status transition. Shared Zod schemas live in src/shared/schemas/kbArticle.ts
+// so client services + forms can reuse them.
+
+itsmRouter.post('/kb/articles', requirePermission('kb.write'), asyncHandler(async (req, res) => {
+  const body = createKBArticleSchema.parse(req.body);
+  if (!req.session) throw new HttpError(401, 'Authentication required');
+  const author = await prisma.user.findUniqueOrThrow({
+    where: { id: req.session.userId }, select: { id: true, name: true },
+  });
+  const { after, internalId } = await kbRepo.create(req.tenantId, author, body);
+  await audit(req, { action: 'create', resourceKind: 'KBArticle', resourceId: internalId, after });
+  res.status(201).json(after);
+}));
+
+itsmRouter.patch('/kb/articles/:publicId', requirePermission('kb.write'), asyncHandler(async (req, res) => {
+  const body = updateKBArticleSchema.parse(req.body);
+  const result = await kbRepo.update(req.tenantId, req.params.publicId, body);
+  if (!result) throw new HttpError(404, 'KB article not found');
+  await audit(req, {
+    action: 'update', resourceKind: 'KBArticle', resourceId: result.internalId,
+    before: result.before, after: result.after,
+  });
+  res.json(result.after);
+}));
+
+itsmRouter.patch('/kb/articles/:publicId/status', requirePermission('kb.write'), asyncHandler(async (req, res) => {
+  const body = setKBArticleStatusSchema.parse(req.body);
+  if (!req.session) throw new HttpError(401, 'Authentication required');
+  const actor = await prisma.user.findUniqueOrThrow({
+    where: { id: req.session.userId }, select: { id: true, name: true },
+  });
+  const result = await kbRepo.setStatus(req.tenantId, req.params.publicId, body.status, actor);
+  if (result.kind === 'not-found') throw new HttpError(404, 'KB article not found');
+  if (result.kind === 'same-status') throw new HttpError(400, `Article is already in status '${body.status}'`);
+  if (result.kind === 'terminal') throw new HttpError(400, `Cannot transition from terminal status '${result.from}'`);
+  await audit(req, {
+    action: 'status_change', resourceKind: 'KBArticle', resourceId: result.internalId,
+    before: { status: result.before.status }, after: { status: result.after.status, publishedAt: result.after.publishedAt, publishedBy: result.after.publishedBy },
+  });
+  res.json(result.after);
 }));
