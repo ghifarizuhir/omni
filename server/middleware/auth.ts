@@ -2,7 +2,7 @@
 // and exposes `req.session`, `req.user`, `req.tenantId`, `req.permissions`.
 
 import type { Request, Response, NextFunction } from 'express';
-import { permissionsForRoles, type Permission } from '../auth/permissions';
+import { permissionsForRoleIds, permissionsForSystemRole, type Permission } from '../auth/permissions';
 import { getSessionIdFromRequest, resolveSession, type SessionContext } from '../auth/session';
 import { HttpError } from '../util';
 
@@ -25,12 +25,12 @@ export const sessionMiddleware = async (req: Request, _res: Response, next: Next
     if (session) {
       req.session = session;
       req.tenantId = session.tenantId;
-      req.permissions = permissionsForRoles(session.roles);
+      req.permissions = await permissionsForRoleIds(session.roles.map(r => r.id));
       return next();
     }
     if (!AUTH_REQUIRED) {
       req.tenantId = DEMO_TENANT_ID;
-      req.permissions = permissionsForRoles(['admin']);
+      req.permissions = await permissionsForSystemRole('admin');
       return next();
     }
     next();

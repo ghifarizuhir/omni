@@ -20,6 +20,7 @@ model Tenant {
   name        String
   createdAt   DateTime            @default(now())
   memberships TenantMembership[]
+  roles       Role[]
   cis         ConfigurationItem[]
   events      Event[]
   rules       MonitoringRule[]
@@ -39,14 +40,55 @@ model User {
 }
 
 model TenantMembership {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   tenantId  String
   userId    String
-  roles     String   @default("[]") // JSON array of role names
-  createdAt DateTime @default(now())
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles     MembershipRole[]
   @@unique([tenantId, userId])
+}
+
+// ── RBAC (M2: flat role → permission) ────────────────────────────────────────
+
+model Permission {
+  key         String           @id              // dotted, e.g. "cmdb.write"
+  description String?
+  createdAt   DateTime         @default(now())
+  roles       RolePermission[]
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  tenantId    String?                            // null = system role (admin/operator/...)
+  name        String
+  description String?
+  isSystem    Boolean          @default(false)   // built-ins are protected from edit/delete
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  tenant      Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  memberships MembershipRole[]
+  @@unique([tenantId, name])
+}
+
+model RolePermission {
+  roleId        String
+  permissionKey String
+  role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+  @@id([roleId, permissionKey])
+  @@index([permissionKey])
+}
+
+model MembershipRole {
+  membershipId String
+  roleId       String
+  membership   TenantMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  role         Role             @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  @@id([membershipId, roleId])
+  @@index([roleId])
 }
 
 model Session {
@@ -319,6 +361,26 @@ model KBArticle {
   status    String
   data      String
   @@index([tenantId, status])
+}
+
+// ── Generic Document store ────────────────────────────────────────────────────
+// Catch-all for small catalogs and snapshot data that doesn't need its own
+// table. Keyed by (tenantId, kind, id). Lookups are list-by-kind and
+// get-by-id; never query by inner JSON fields here — those domains stay as
+// dedicated tables.
+
+model Document {
+  id        String   @id @default(cuid())
+  tenantId  String
+  kind      String   // e.g. "outage", "sla-target", "ai-session"
+  key       String?  // optional secondary key (id from the source data)
+  publicId  String?
+  data      String   // JSON
+  position  Int      @default(0) // preserves seed ordering
+  createdAt DateTime @default(now())
+  @@unique([tenantId, kind, key])
+  @@index([tenantId, kind])
+  @@index([tenantId, kind, publicId])
 }
 
 // ── Audit log (cross-cutting; populated from M2 onwards) ──────────────────────

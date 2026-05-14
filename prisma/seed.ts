@@ -23,6 +23,8 @@ import { mockCatalogItems } from '../src/mocks/catalogItems';
 import { mockIntegrations } from '../src/mocks/integrations';
 import { mockKBArticles } from '../src/mocks/kbArticles';
 import { hash } from '@node-rs/argon2';
+import { seedDocuments } from './seedDocuments';
+import { seedRbac, systemRoleId } from './seedRbac';
 
 const prisma = new PrismaClient();
 
@@ -35,6 +37,7 @@ const TENANT = { id: 'tenant-demo', slug: 'demo', name: 'Demo Organization' };
 async function main() {
   console.log('[seed] resetting all domains…');
   await prisma.$transaction([
+    prisma.document.deleteMany(),
     prisma.deploymentLog.deleteMany(),
     prisma.deployment.deleteMany(),
     prisma.release.deleteMany(),
@@ -55,7 +58,11 @@ async function main() {
     prisma.cIRelationship.deleteMany(),
     prisma.configurationItem.deleteMany(),
     prisma.auditLog.deleteMany(),
+    prisma.membershipRole.deleteMany(),
     prisma.tenantMembership.deleteMany(),
+    prisma.rolePermission.deleteMany(),
+    prisma.role.deleteMany(),
+    prisma.permission.deleteMany(),
     prisma.session.deleteMany(),
     prisma.user.deleteMany(),
     prisma.tenant.deleteMany(),
@@ -63,6 +70,9 @@ async function main() {
 
   console.log('[seed] tenant…');
   await prisma.tenant.create({ data: TENANT });
+
+  console.log('[seed] rbac (permission catalog + system roles)…');
+  await seedRbac(prisma);
 
   console.log(`[seed] users (${mockUsers.length})…`);
   const passwordHash = await hash(DEMO_PASSWORD, { memoryCost: 19_456, timeCost: 2, parallelism: 1 });
@@ -78,11 +88,18 @@ async function main() {
 
   console.log(`[seed] memberships…`);
   await prisma.tenantMembership.createMany({
-    data: mockUsers.map((u, idx) => ({
+    data: mockUsers.map(u => ({
       id: `mem-${u.id}`,
       tenantId: TENANT.id,
       userId: u.id,
-      roles: JSON.stringify(idx === 0 ? ['admin'] : ['operator']),
+    })),
+  });
+
+  console.log(`[seed] membership roles…`);
+  await prisma.membershipRole.createMany({
+    data: mockUsers.map((u, idx) => ({
+      membershipId: `mem-${u.id}`,
+      roleId: systemRoleId(idx === 0 ? 'admin' : 'operator'),
     })),
   });
 
@@ -322,6 +339,9 @@ async function main() {
       status: a.status, data: JSON.stringify(a),
     })),
   });
+
+  console.log('[seed] documents (catalogs + snapshots)…');
+  await seedDocuments(prisma, TENANT.id);
 
   console.log('[seed] done.');
 }

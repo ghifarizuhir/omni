@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardBody } from '../components/ui/Card';
 import { CheckCircle2, Eye, EyeOff, ShieldCheck, Globe, Zap } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
+import { apiFetch, ApiError } from '../services/core';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const nextErrors: { email?: string; password?: string } = {};
 
@@ -29,19 +32,24 @@ export const Login: React.FC = () => {
 
     setErrors({});
     setLoading(true);
-
-    // Mock network delay
-    setTimeout(() => {
+    try {
+      await apiFetch('/auth/login', { method: 'POST', body: { email, password } });
+      navigate(redirectTo, { replace: true });
+    } catch (err) {
+      const msg = err instanceof ApiError && err.status === 401
+        ? 'Invalid email or password'
+        : err instanceof Error ? err.message : 'Login failed';
+      setErrors({ form: msg });
+    } finally {
       setLoading(false);
-      navigate('/');
-    }, 600);
+    }
   };
 
   const handleSSO = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      navigate('/');
+      navigate(redirectTo, { replace: true });
     }, 600);
   };
 
@@ -92,6 +100,11 @@ export const Login: React.FC = () => {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
+            {errors.form && (
+              <div className="rounded-[8px] border border-[#FDA29B] bg-[#FEF3F2] px-4 py-3 text-[14px] text-[#B42318]">
+                {errors.form}
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-[14px] font-[600] text-[#374151]">Email</label>
               <Input 

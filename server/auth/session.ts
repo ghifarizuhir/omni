@@ -18,11 +18,16 @@ export const verifyPassword = (h: string, plain: string) => verify(h, plain, ARG
 
 const newSessionId = () => randomBytes(24).toString('base64url');
 
+export interface SessionRole {
+  id: string;
+  name: string;
+}
+
 export interface SessionContext {
   sessionId: string;
   userId: string;
   tenantId: string;
-  roles: string[];
+  roles: SessionRole[];
 }
 
 export const createSession = async (userId: string, tenantId: string): Promise<SessionContext> => {
@@ -37,12 +42,13 @@ export const destroySession = async (sessionId: string) => {
   await prisma.session.deleteMany({ where: { id: sessionId } });
 };
 
-const rolesForMembership = async (tenantId: string, userId: string): Promise<string[]> => {
+const rolesForMembership = async (tenantId: string, userId: string): Promise<SessionRole[]> => {
   const m = await prisma.tenantMembership.findUnique({
     where: { tenantId_userId: { tenantId, userId } },
+    include: { roles: { include: { role: { select: { id: true, name: true } } } } },
   });
   if (!m) return [];
-  try { return JSON.parse(m.roles) as string[]; } catch { return []; }
+  return m.roles.map(mr => ({ id: mr.role.id, name: mr.role.name }));
 };
 
 export const resolveSession = async (sessionId: string | undefined): Promise<SessionContext | null> => {

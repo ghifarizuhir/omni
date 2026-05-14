@@ -11,10 +11,30 @@ import type {
 } from '@/src/types/rbac';
 import { LEVEL_LABEL } from '@/src/types/rbac';
 import { Pencil, Trash2, ShieldCheck } from 'lucide-react';
+import { Tabs } from '@/src/components/ui/Tabs';
+import { UserSystemRoles } from './UserSystemRoles';
 
 const ALL_LEVELS: HierarchyLevel[] = ['group_head', 'dept_head', 'team_lead', 'officer', 'requester'];
 
+const USER_TABS = [
+  { id: 'system', label: 'System Roles' },
+  { id: 'profile', label: 'Profile & Functional Roles' },
+];
+
 export const Users: React.FC = () => {
+  return (
+    <Tabs tabs={USER_TABS}>
+      <div className="bg-white border border-ois-border rounded-xl p-5">
+        <UserSystemRoles />
+      </div>
+      <div className="bg-white border border-ois-border rounded-xl p-5">
+        <UserProfiles />
+      </div>
+    </Tabs>
+  );
+};
+
+const UserProfiles: React.FC = () => {
   const {
     users, divisions, departments, teams, functionalRoles,
     upsertUser, removeUser,
@@ -36,7 +56,7 @@ export const Users: React.FC = () => {
   const roleName = (code: string) => functionalRoles.find(r => r.code === code)?.name ?? code;
 
   return (
-    <div className="bg-white border border-ois-border rounded-xl p-5">
+    <>
       <EntityToolbar
         title="Users" count={filtered.length}
         search={search} onSearchChange={setSearch}
@@ -108,7 +128,7 @@ export const Users: React.FC = () => {
           onSave={(u) => { upsertUser(u); setOpen(false); }}
         />
       )}
-    </div>
+    </>
   );
 };
 

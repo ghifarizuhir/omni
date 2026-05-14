@@ -4,12 +4,32 @@ import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { Table, THead, TBody, TR, TH, TD } from '@/src/components/ui/Table';
 import { Badge } from '@/src/components/ui/Badge';
+import { Tabs } from '@/src/components/ui/Tabs';
 import { EntityToolbar } from '@/src/components/admin/EntityToolbar';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
 import type { FunctionalRole } from '@/src/types/rbac';
 import { Pencil, Trash2, Lock } from 'lucide-react';
+import { SystemRoles } from './SystemRoles';
+
+const ROLE_TABS = [
+  { id: 'system', label: 'System Roles' },
+  { id: 'functional', label: 'Functional Roles' },
+];
 
 export const Roles: React.FC = () => {
+  return (
+    <Tabs tabs={ROLE_TABS}>
+      <div className="bg-white border border-ois-border rounded-xl p-5">
+        <SystemRoles />
+      </div>
+      <div className="bg-white border border-ois-border rounded-xl p-5">
+        <FunctionalRoles />
+      </div>
+    </Tabs>
+  );
+};
+
+const FunctionalRoles: React.FC = () => {
   const { functionalRoles, users, upsertFunctionalRole, removeFunctionalRole } = useCurrentUser();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<FunctionalRole | null>(null);
@@ -24,7 +44,7 @@ export const Roles: React.FC = () => {
     users.filter(u => (u.functionalRoles as string[]).includes(code)).length;
 
   return (
-    <div className="bg-white border border-ois-border rounded-xl p-5">
+    <>
       <EntityToolbar
         title="Functional Roles" count={filtered.length}
         search={search} onSearchChange={setSearch}
@@ -74,7 +94,7 @@ export const Roles: React.FC = () => {
           onSave={(r) => { upsertFunctionalRole(r); setOpen(false); }}
         />
       )}
-    </div>
+    </>
   );
 };
 

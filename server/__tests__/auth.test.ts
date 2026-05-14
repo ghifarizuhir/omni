@@ -18,7 +18,8 @@ describe('M2 auth + session + RBAC', () => {
     expect(res.status).toBe(200);
     expect(res.body.user.email).toBe(ADMIN_EMAIL);
     expect(res.body.tenantId).toBe('tenant-demo');
-    expect(res.body.roles).toContain('admin');
+    expect(res.body.roleNames).toContain('admin');
+    expect(res.body.roles).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'admin' })]));
     expect(res.headers['set-cookie']).toBeDefined();
   });
 

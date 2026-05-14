@@ -97,10 +97,13 @@ import { Users as AdminUsers } from './admin/Users';
 import { Applications as AdminApplications } from './admin/Applications';
 import { Roles as AdminRoles } from './admin/Roles';
 import { Permissions as AdminPermissions } from './admin/Permissions';
+import { RequireAuth } from '../components/auth/RequireAuth';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
   {
+    element: <RequireAuth />,
+    children: [{
     path: '/',
     element: <AppShell />,
     children: [
@@ -233,5 +236,6 @@ export const routes: RouteObject[] = [
       { path: 'ai',            element: <AiWorkspace /> },
       { path: 'ai/:sessionId', element: <AiWorkspace /> },
     ]
+  }],
   },
 ];

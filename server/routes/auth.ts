@@ -31,7 +31,8 @@ authRouter.post('/auth/login', asyncHandler(async (req, res) => {
   res.json({
     user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl },
     tenantId: session.tenantId,
-    roles: session.roles,
+    roles: session.roles,             // [{ id, name }, …]
+    roleNames: session.roles.map(r => r.name),
   });
 }));
 
@@ -49,7 +50,8 @@ authRouter.get('/auth/me', asyncHandler(async (req, res) => {
   res.json({
     user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl },
     tenantId: req.session.tenantId,
-    roles: req.session.roles,
+    roles: req.session.roles,         // [{ id, name }, …]
+    roleNames: req.session.roles.map(r => r.name),
     permissions: Array.from(req.permissions ?? []),
   });
 }));

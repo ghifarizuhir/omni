@@ -6,7 +6,7 @@ import express, {
 } from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import { randomUUID } from 'node:crypto';
 import { cmdbRouter } from './routes/cmdb';
@@ -33,10 +33,25 @@ export const createApp = () => {
   app.set('trust proxy', 1);
 
   // ── Security headers ──────────────────────────────────────────────────────
-  // CSP defaults are restrictive; the SPA is served from a separate origin in
-  // dev (Vite) so we let the proxy handle headers there. In production the
-  // CSP would be configured by whichever edge serves the static bundle.
-  app.use(helmet({ contentSecurityPolicy: false }));
+  // CSP is opt-in via env. In dev the Vite origin needs `'unsafe-inline'` etc.
+  // so we leave CSP off; in prod set `CSP_ENABLED=true` and override directives
+  // through `CSP_CONNECT_SRC` (CSV) for any extra origins (e.g. analytics).
+  const cspEnabled = process.env.CSP_ENABLED === 'true';
+  const extraConnect = (process.env.CSP_CONNECT_SRC ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  app.use(helmet({
+    contentSecurityPolicy: cspEnabled ? {
+      useDefaults: true,
+      directives: {
+        'default-src': ["'self'"],
+        'connect-src': ["'self'", 'ws:', 'wss:', ...extraConnect],
+        'img-src': ["'self'", 'data:', 'blob:'],
+        'script-src': ["'self'"],
+        'style-src': ["'self'", "'unsafe-inline'"],
+        'object-src': ["'none'"],
+        'frame-ancestors': ["'none'"],
+      },
+    } : false,
+  }));
 
   // ── Request logging (skipped under tests for clean output) ─────────────────
   if (!isTest) {
@@ -58,7 +73,8 @@ export const createApp = () => {
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
 
-  // ── Rate limit on auth to slow credential stuffing ─────────────────────────
+  // ── Rate limits ────────────────────────────────────────────────────────────
+  // Auth endpoints: per-IP, slows credential stuffing.
   const authLimiter = rateLimit({
     windowMs: 60_000,
     max: isTest ? 1_000 : 20,
@@ -68,6 +84,18 @@ export const createApp = () => {
   app.use('/api/v1/auth/', authLimiter);
 
   app.use(sessionMiddleware);
+
+  // Per-tenant limiter on the wider API surface. Once the session middleware
+  // resolves `req.tenantId`, throttle requests keyed by tenant so a single
+  // noisy customer can't crowd out others. Falls back to IP when unresolved.
+  const tenantLimiter = rateLimit({
+    windowMs: 60_000,
+    max: isTest ? 10_000 : Number(process.env.TENANT_RATE_LIMIT ?? 600),
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    keyGenerator: (req, res) => req.tenantId ?? ipKeyGenerator(req.ip ?? 'unknown'),
+  });
+  app.use('/api/v1/', tenantLimiter);
 
   // ── Operational endpoints ──────────────────────────────────────────────────
   app.get('/health', (_req, res) => {
