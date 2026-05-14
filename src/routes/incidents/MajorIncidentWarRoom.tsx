@@ -26,16 +26,27 @@ const StandDownModal: React.FC<{
   incident: Incident;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (reason: string) => void;
-}> = ({ incident, isOpen, onClose, onConfirm }) => {
+  // M6.11 (B5.2) — parent owns submit / error state so the modal stays open on
+  // server failures. Mirrors the RescheduleModal pattern from B2.1.
+  onConfirm: (reason: string) => void | Promise<void>;
+  submitting?: boolean;
+  error?: string | null;
+}> = ({ incident, isOpen, onClose, onConfirm, submitting = false, error = null }) => {
   const [reason, setReason] = useState('');
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
 
-  const handleConfirm = () => {
-    if (!reason.trim()) { setError('Reason is required.'); return; }
-    onConfirm(reason.trim());
-    onClose();
+  const handleConfirm = async () => {
+    // Server schema requires reason length 10–2000 — match here so we don't
+    // round-trip a 400.
+    if (reason.trim().length < 10) {
+      setLocalError('Reason must be at least 10 characters.');
+      return;
+    }
+    setLocalError('');
+    await onConfirm(reason.trim());
   };
+
+  const displayError = localError || error;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Stand down major incident`} size="md">
@@ -62,15 +73,22 @@ const StandDownModal: React.FC<{
             rows={3}
             placeholder="e.g. Customer impact contained, core service restored..."
             value={reason}
-            onChange={e => { setReason(e.target.value); setError(''); }}
-            className="w-full border border-ois-border rounded-lg px-3 py-2 text-sm text-ois-text bg-white placeholder:text-ois-text-subtle focus:outline-none focus:ring-2 focus:ring-ois-primary/30 focus:border-ois-primary transition-colors resize-none"
+            onChange={e => { setReason(e.target.value); setLocalError(''); }}
+            disabled={submitting}
+            className="w-full border border-ois-border rounded-lg px-3 py-2 text-sm text-ois-text bg-white placeholder:text-ois-text-subtle focus:outline-none focus:ring-2 focus:ring-ois-primary/30 focus:border-ois-primary transition-colors resize-none disabled:opacity-60"
           />
-          {error && <p className="text-xs text-ois-danger">{error}</p>}
+          {displayError && <p className="text-xs text-ois-danger">{displayError}</p>}
         </div>
 
         <div className="flex justify-end gap-2 pt-2 border-t border-ois-border">
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button variant="destructive" onClick={handleConfirm}>Stand down</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={submitting || reason.trim().length < 10}
+          >
+            {submitting ? 'Standing down…' : 'Stand down'}
+          </Button>
         </div>
       </div>
     </Modal>
@@ -111,7 +129,7 @@ export const MajorIncidentWarRoom: React.FC = () => {
   const [resolveOpen, setResolveOpen] = useState(false);
 
   // Local state for timeline (so we can add new comms events)
-  const { data: incidentData, loading: incidentLoading } = useResource(
+  const { data: incidentData, loading: incidentLoading, refresh: refreshIncident } = useResource(
     () => (incidentId ? incidentsService.get(incidentId) : Promise.resolve(null)),
     [incidentId],
   );
@@ -120,10 +138,21 @@ export const MajorIncidentWarRoom: React.FC = () => {
   const mockCIs = cisData ?? [];
   const getCIName = (publicId: string): string =>
     mockCIs.find(ci => ci.publicId === publicId)?.name ?? publicId;
-  const { data: timelineData } = useResource(
+  const { data: timelineData, refresh: refreshTimeline } = useResource(
     () => (incident ? incidentsService.timeline(incident.id) : Promise.resolve([] as IncidentTimelineEvent[])),
     [incident?.id],
   );
+
+  // M6.11 (B5.2) — submit/error slots so the war-room modals + composer can
+  // surface server failures without losing user input.
+  const [commsError, setCommsError] = useState<string | null>(null);
+  const [commsSubmitting, setCommsSubmitting] = useState(false);
+  const [standDownError, setStandDownError] = useState<string | null>(null);
+  const [standDownSubmitting, setStandDownSubmitting] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [resolveSubmitting, setResolveSubmitting] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
 
   const canUpdate = useCan('incident', 'update', {
     resource: incident ? incidentResource(incident) : undefined,
@@ -188,9 +217,12 @@ export const MajorIncidentWarRoom: React.FC = () => {
       )
     : undefined;
 
-  const handlePostComms = (data: { audience: string; message: string; channels: string[] }) => {
-    const newEvent: IncidentTimelineEvent = {
-      id: `tl-new-${Date.now()}`,
+  const handlePostComms = async (data: { audience: string; message: string; channels: string[] }) => {
+    // Optimistic — append a placeholder so the comms log feels instant. On
+    // success we swap by refreshing the timeline; on failure we drop it.
+    const tmpId = `tmp-${Date.now()}`;
+    const placeholder: IncidentTimelineEvent = {
+      id: tmpId,
       incidentId: incident.id,
       kind: 'comms_posted',
       actorId: 'u-001',
@@ -201,15 +233,114 @@ export const MajorIncidentWarRoom: React.FC = () => {
         commsBody: data.message,
       },
     };
-    setEvents(prev => [...prev, newEvent]);
+    setEvents(prev => [...prev, placeholder]);
+    setCommsError(null);
+    setCommsSubmitting(true);
+    try {
+      await incidentsService.postComms(incident.publicId, {
+        audience: data.audience as 'internal' | 'all_staff' | 'customer',
+        message: data.message,
+        channels: data.channels,
+      });
+      refreshTimeline();
+    } catch (err) {
+      setEvents(prev => prev.filter(e => e.id !== tmpId));
+      const msg = err instanceof Error ? err.message : 'Failed to post communication.';
+      setCommsError(msg);
+      // eslint-disable-next-line no-console
+      console.error('Failed to post war-room comms:', err);
+    } finally {
+      setCommsSubmitting(false);
+    }
   };
 
-  const handleStandDown = (_reason: string) => {
-    navigate(`/incidents/${incident.publicId}`);
+  const handleStandDown = async (reason: string) => {
+    // Server defaults newPriority to P2; mirror the button label which demotes
+    // P1 → P2 and leaves P2/P3/P4 alone.
+    const newPriority = incident.priority === 'P1' ? 'P2' : incident.priority;
+    setStandDownError(null);
+    setStandDownSubmitting(true);
+    try {
+      await incidentsService.standDown(incident.publicId, {
+        reason,
+        newPriority: newPriority as 'P2' | 'P3' | 'P4',
+      });
+      setStandDownOpen(false);
+      refreshIncident();
+      navigate(`/incidents/${incident.publicId}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to stand down incident.';
+      setStandDownError(msg);
+      // eslint-disable-next-line no-console
+      console.error('Failed to stand down major incident:', err);
+    } finally {
+      setStandDownSubmitting(false);
+    }
   };
 
-  const handleResolve = (_data: unknown) => {
-    navigate(`/incidents/${incident.publicId}`);
+  const handleResolve = async (data: {
+    summary: string;
+    rootCause?: string;
+    workaround?: string;
+  }) => {
+    setResolveError(null);
+    setResolveSubmitting(true);
+    try {
+      await incidentsService.resolve(incident.publicId, {
+        summary: data.summary,
+        rootCause: data.rootCause,
+        workaround: data.workaround,
+      });
+      setResolveOpen(false);
+      refreshIncident();
+      navigate(`/incidents/${incident.publicId}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to resolve incident.';
+      setResolveError(msg);
+      // eslint-disable-next-line no-console
+      console.error('Failed to resolve incident:', err);
+    } finally {
+      setResolveSubmitting(false);
+    }
+  };
+
+  const handleLinkChanges = async (newIds: string[]) => {
+    const prev = linkedChangeIds;
+    const next = [...prev, ...newIds];
+    setLinkedChangeIds(next);
+    setLinkError(null);
+    setLinkSubmitting(true);
+    try {
+      await incidentsService.setLinks(incident.publicId, { linkedChangeIds: next });
+      refreshIncident();
+    } catch (err) {
+      setLinkedChangeIds(prev);
+      const msg = err instanceof Error ? err.message : 'Failed to link change.';
+      setLinkError(msg);
+      // eslint-disable-next-line no-console
+      console.error('Failed to link changes to incident:', err);
+    } finally {
+      setLinkSubmitting(false);
+    }
+  };
+
+  const handleLinkProblem = async (id: string) => {
+    const prev = linkedProblemId;
+    setLinkedProblemId(id);
+    setLinkError(null);
+    setLinkSubmitting(true);
+    try {
+      await incidentsService.setLinks(incident.publicId, { linkedProblemId: id });
+      refreshIncident();
+    } catch (err) {
+      setLinkedProblemId(prev);
+      const msg = err instanceof Error ? err.message : 'Failed to link problem.';
+      setLinkError(msg);
+      // eslint-disable-next-line no-console
+      console.error('Failed to link problem to incident:', err);
+    } finally {
+      setLinkSubmitting(false);
+    }
   };
 
   return (
@@ -236,6 +367,17 @@ export const MajorIncidentWarRoom: React.FC = () => {
             <div className="flex-1 min-h-0 overflow-hidden">
               <CommunicationLog commsEvents={commsEvents} />
             </div>
+            {(commsError || commsSubmitting) && (
+              <div
+                className={
+                  commsError
+                    ? 'mx-4 mt-2 rounded-md border border-ois-danger/30 bg-red-50 px-3 py-2 text-xs text-ois-danger'
+                    : 'mx-4 mt-2 rounded-md border border-ois-border bg-ois-surface-muted px-3 py-2 text-xs text-ois-text-muted'
+                }
+              >
+                {commsError ? commsError : 'Posting communication…'}
+              </div>
+            )}
             <CommunicationComposer
               incident={incident}
               lastCommsAt={lastCommsAt}
@@ -339,17 +481,30 @@ export const MajorIncidentWarRoom: React.FC = () => {
       <StandDownModal
         incident={incident}
         isOpen={standDownOpen}
-        onClose={() => setStandDownOpen(false)}
+        onClose={() => { setStandDownOpen(false); setStandDownError(null); }}
         onConfirm={handleStandDown}
+        submitting={standDownSubmitting}
+        error={standDownError}
       />
 
       <ResolveIncidentModal
         incident={incident}
         isOpen={resolveOpen}
-        onClose={() => setResolveOpen(false)}
+        onClose={() => { setResolveOpen(false); setResolveError(null); }}
         onResolve={handleResolve}
       />
+      {resolveError && resolveOpen && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-md border border-ois-danger/30 bg-red-50 px-3 py-2 text-xs text-ois-danger shadow">
+          {resolveError}
+        </div>
+      )}
+      {resolveSubmitting && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-md border border-ois-border bg-white px-3 py-2 text-xs text-ois-text-muted shadow">
+          Resolving incident…
+        </div>
+      )}
 
+      {/* TODO: B5 follow-up — wire commenters via watcher endpoint with role */}
       <UserPickerModal
         isOpen={addCommenterOpen}
         onClose={() => setAddCommenterOpen(false)}
@@ -359,16 +514,26 @@ export const MajorIncidentWarRoom: React.FC = () => {
       />
       <LinkChangeModal
         isOpen={linkChangeOpen}
-        onClose={() => setLinkChangeOpen(false)}
+        onClose={() => { setLinkChangeOpen(false); setLinkError(null); }}
         currentChangeIds={linkedChangeIds}
-        onLink={newIds => setLinkedChangeIds(prev => [...prev, ...newIds])}
+        onLink={newIds => { void handleLinkChanges(newIds); }}
       />
       <LinkProblemModal
         isOpen={linkProblemOpen}
-        onClose={() => setLinkProblemOpen(false)}
+        onClose={() => { setLinkProblemOpen(false); setLinkError(null); }}
         currentProblemId={linkedProblemId}
-        onLink={(id, _pubId) => setLinkedProblemId(id)}
+        onLink={(id, _pubId) => { void handleLinkProblem(id); }}
       />
+      {linkError && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-md border border-ois-danger/30 bg-red-50 px-3 py-2 text-xs text-ois-danger shadow">
+          {linkError}
+        </div>
+      )}
+      {linkSubmitting && !linkError && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-md border border-ois-border bg-white px-3 py-2 text-xs text-ois-text-muted shadow">
+          Updating links…
+        </div>
+      )}
     </>
   );
 };
