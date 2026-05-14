@@ -69,7 +69,7 @@ export const EventDetail: React.FC = () => {
   const navigate = useNavigate();
 
   // Load data from service layer
-  const { data: allEvents, loading: eventsLoading } = useResource(() => eventsService.list(), []);
+  const { data: allEvents, loading: eventsLoading, refresh: refreshEvents } = useResource(() => eventsService.list(), []);
   const { data: allCIs } = useResource(() => cisService.list(), []);
   const { data: allRules } = useResource(() => monitoringRulesService.list(), []);
   const { data: allUsers } = useResource(() => usersService.list(), []);
@@ -84,11 +84,12 @@ export const EventDetail: React.FC = () => {
   // State for simulated interactions
   const foundEvent = mockEvents.find(e => e.id === id || e.publicId === id);
   const [event, setEvent] = useState(foundEvent);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
-  // Sync event state when data loads
+  // Sync event state when data loads (or refresh returns new data)
   React.useEffect(() => {
-    if (!event && foundEvent) setEvent(foundEvent);
-  }, [foundEvent, event]);
+    if (foundEvent) setEvent(foundEvent);
+  }, [foundEvent]);
   const [showRawPayload, setShowRawPayload] = useState(false);
   const [resolveModalOpen, setResolveModalOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -173,26 +174,40 @@ export const EventDetail: React.FC = () => {
     return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [event, ackUser, comments]);
 
-  // Handlers
-  const handleAcknowledge = () => {
-    setEvent({
-      ...event,
-      status: 'acknowledged',
-      acknowledgedBy: 'u-001', // Sarah Chen
-      acknowledgedAt: new Date().toISOString()
-    });
+  // Handlers — optimistic local update, server PATCH, refresh, revert on failure.
+  // Server stamps acknowledgedBy/resolvedBy from the session; the optimistic
+  // values here are placeholders that get overwritten by `refresh()`.
+  const mutateStatus = async (next: EventStatus) => {
+    if (!event) return;
+    const prev = event;
+    const now = new Date().toISOString();
+    const optimistic = { ...event, status: next } as typeof event;
+    if (next === 'acknowledged') {
+      optimistic.acknowledgedAt = now;
+    } else if (next === 'resolved') {
+      optimistic.resolvedAt = now;
+      if (!optimistic.acknowledgedAt) optimistic.acknowledgedAt = now;
+    }
+    setEvent(optimistic);
+    setMutationError(null);
+    try {
+      await eventsService.setStatus(event.publicId, { status: next });
+      refreshEvents();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to update event status:', err);
+      setEvent(prev); // revert
+      setMutationError(err instanceof Error ? err.message : 'Failed to update event');
+    }
   };
+
+  const handleAcknowledge = () => { void mutateStatus('acknowledged'); };
 
   const handleResolve = () => {
     if (event.linkedIncidentId) {
       setResolveModalOpen(true);
     } else {
-      setEvent({
-        ...event,
-        status: 'resolved',
-        resolvedAt: new Date().toISOString(),
-        resolvedBy: 'Sarah Chen'
-      });
+      void mutateStatus('resolved');
     }
   };
 
@@ -263,12 +278,18 @@ export const EventDetail: React.FC = () => {
             </Button>
           )}
           {event.status === 'resolved' && (
-             <Button variant="outline" size="sm" className="h-9 px-6 font-bold bg-white border-ois-border-strong" onClick={() => setEvent({...event, status: 'open'})}>
+             <Button variant="outline" size="sm" className="h-9 px-6 font-bold bg-white border-ois-border-strong" onClick={() => void mutateStatus('open')}>
                 Reopen
              </Button>
           )}
         </div>
       </div>
+
+      {mutationError && (
+        <div className="rounded-lg border border-ois-danger/30 bg-ois-danger-pale px-4 py-2 text-xs font-medium text-ois-danger">
+          {mutationError}
+        </div>
+      )}
 
       <Card className="overflow-hidden border-ois-border">
          <div className={cn(
@@ -665,11 +686,11 @@ export const EventDetail: React.FC = () => {
         <ResolveEventModal
           linkedIncidentId={event.linkedIncidentId}
           onResolveOnly={() => {
-            setEvent({ ...event, status: 'resolved', resolvedAt: new Date().toISOString(), resolvedBy: 'Sarah Chen' });
+            void mutateStatus('resolved');
             setResolveModalOpen(false);
           }}
           onResolveAndOpen={() => {
-            setEvent({ ...event, status: 'resolved', resolvedAt: new Date().toISOString(), resolvedBy: 'Sarah Chen' });
+            void mutateStatus('resolved');
             setResolveModalOpen(false);
             navigate(`/incidents/${event.linkedIncidentId}`);
           }}

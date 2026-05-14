@@ -49,6 +49,46 @@ export const eventsRepo = {
     const row = await prisma.event.findFirst({ where: { tenantId, publicId } });
     return row ? toEvent(row) : null;
   },
+  // M6.11 (B1.2) — Transitions Event.status. Event has real columns (status,
+  // acknowledgedAt/By, resolvedAt/By) so we update those directly; there's no
+  // separate timeline table for events. Returns `{ before, after, internalId }`
+  // for the route's audit log.
+  async setStatus(
+    tenantId: string,
+    publicId: string,
+    input: { status: EventStatus; actorId: string; note?: string },
+  ): Promise<{ before: Event; after: Event; internalId: string }> {
+    const row = await prisma.event.findFirst({ where: { tenantId, publicId } });
+    if (!row) throw new Error(`Event ${publicId} not found`);
+    const before = toEvent(row);
+    const now = new Date();
+    const updates: Record<string, unknown> = { status: input.status };
+    const after: Event = { ...before, status: input.status };
+    if (input.status === 'acknowledged') {
+      updates.acknowledgedAt = now;
+      updates.acknowledgedBy = input.actorId;
+      after.acknowledgedAt = now.toISOString();
+      after.acknowledgedBy = input.actorId;
+    }
+    if (input.status === 'resolved') {
+      updates.resolvedAt = now;
+      updates.resolvedBy = input.actorId;
+      after.resolvedAt = now.toISOString();
+      after.resolvedBy = input.actorId;
+      // If we never acked, stamp ack too so the timeline isn't out-of-order.
+      if (!before.acknowledgedAt) {
+        updates.acknowledgedAt = now;
+        updates.acknowledgedBy = input.actorId;
+        after.acknowledgedAt = now.toISOString();
+        after.acknowledgedBy = input.actorId;
+      }
+    }
+    await prisma.$transaction([
+      prisma.event.update({ where: { id: row.id }, data: updates }),
+    ]);
+    return { before, after, internalId: row.id };
+  },
+
   async dashboardStats(tenantId: string) {
     const [events, rules, routes, ciCount] = await Promise.all([
       prisma.event.findMany({ where: { tenantId } }),

@@ -7,7 +7,8 @@ import { prisma } from '../db';
 import { audit } from '../audit';
 import { emitEventCreated } from '../realtime';
 import { requirePermission } from '../middleware/auth';
-import { asyncHandler, qStringArray, required } from '../util';
+import { asyncHandler, HttpError, qStringArray, required } from '../util';
+import { setEventStatusSchema } from '../../src/shared/schemas/event';
 
 const SEVERITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
 
@@ -34,6 +35,37 @@ eventsRouter.get('/events/dashboard-stats', requirePermission('event.read'), asy
 eventsRouter.get('/events/:publicId', requirePermission('event.read'), asyncHandler(async (req, res) => {
   res.json(required(await eventsRepo.get(req.tenantId, req.params.publicId), 'Event'));
 }));
+
+// M6.11 (B1.2) — PATCH /events/:publicId/status. Acknowledge / resolve / set
+// any other EventStatus. Mirrors the incidents PATCH /status shape: Zod body,
+// repo writes the snapshot in a transaction, route emits an audit log with
+// before/after.
+eventsRouter.patch(
+  '/events/:publicId/status',
+  requirePermission('event.write'),
+  asyncHandler(async (req, res) => {
+    const body = setEventStatusSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    let result;
+    try {
+      result = await eventsRepo.setStatus(req.tenantId, req.params.publicId, {
+        status: body.status,
+        actorId: req.session.userId,
+        note: body.note,
+      });
+    } catch {
+      throw new HttpError(404, 'Event not found');
+    }
+    await audit(req, {
+      action: 'status_change',
+      resourceKind: 'Event',
+      resourceId: result.internalId,
+      before: result.before,
+      after: result.after,
+    });
+    res.json(result.after);
+  }),
+);
 
 // ── Ingest ───────────────────────────────────────────────────────────────────
 // External producers (Prometheus webhook, OpenTelemetry collector, synthetic

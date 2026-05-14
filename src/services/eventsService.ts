@@ -1,5 +1,9 @@
 import type { Event, EventStatus, Severity } from '../types';
 import { apiFetch } from './core';
+import type { SetEventStatusInput } from '../shared/schemas/event';
+
+export type { SetEventStatusInput } from '../shared/schemas/event';
+export { setEventStatusSchema } from '../shared/schemas/event';
 
 export interface EventListFilters {
   status?: EventStatus[];
@@ -29,4 +33,10 @@ export const eventsService = {
   listActive: () => eventsService.list({ status: ['open', 'acknowledged'] }),
   get: (publicId: string) => apiFetch<Event>(`/events/${publicId}`),
   dashboardStats: () => apiFetch<EventDashboardStats>('/events/dashboard-stats'),
+
+  // M6.11 (B1.2) — PATCH event status (acknowledge / resolve / reopen). The
+  // server stamps acknowledgedBy/resolvedBy from the session, so callers only
+  // pass the target status (and an optional note).
+  setStatus: (publicId: string, input: SetEventStatusInput) =>
+    apiFetch<Event>(`/events/${publicId}/status`, { method: 'PATCH', body: input }),
 };
