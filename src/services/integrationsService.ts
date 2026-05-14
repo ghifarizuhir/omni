@@ -1,5 +1,5 @@
 import type { Integration, IntegrationDomain } from '../types/integration';
-import { integrationWebhookUrl } from '../mocks/integrations';
+import { integrationWebhookUrl } from '../lib/integrations';
 import { apiFetch } from './core';
 
 export interface IntegrationStats {

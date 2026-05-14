@@ -1,7 +1,5 @@
-// Service-layer barrel. Routes/components should import from here, not from
-// '../mocks/...'. Each service exposes async methods that wrap the in-memory
-// mock store today and will call the real HTTP backend once VITE_API_MODE=live
-// — no consumer changes needed at that point.
+// Service-layer barrel. Routes/components should import from here. Every
+// service calls the real HTTP backend via apiFetch; there is no mock fallback.
 
 export * from './apiMode';
 export * from './core';

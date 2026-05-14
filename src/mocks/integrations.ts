@@ -1,9 +1,5 @@
 import type { Integration } from '../types/integration';
 
-const APP_BASE = 'https://ois.acme.io';
-
-export const integrationWebhookUrl = (path: string) => `${APP_BASE}${path}`;
-
 export const mockIntegrations: Integration[] = [
   {
     id: 'intg-001',
