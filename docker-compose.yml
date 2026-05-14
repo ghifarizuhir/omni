@@ -1,0 +1,101 @@
+# OIS local development stack.
+#
+# Compose Spec v2 — no `version:` key, use the `docker compose` CLI (not the
+# legacy `docker-compose` binary).
+#
+# Typical flows:
+#   - Hot-reload dev (recommended):
+#       docker compose up -d postgres redis
+#       npm run dev:all          # tsx watch + vite on host, Postgres on :5432
+#   - Full stack in containers:
+#       docker compose up --build
+#   - Reset DB volume:
+#       docker compose down -v
+#
+# Secrets (GEMINI_API_KEY etc.) go in `compose.override.yml` — see
+# `compose.override.yml.example`. The override file is gitignored.
+#
+# See docs/M7-LOCAL-DEV.md for the full guide.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ois
+      POSTGRES_PASSWORD: ois
+      POSTGRES_DB: ois
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ois -d ois"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Redis is reserved for the BullMQ worker queue (M7.x — not yet wired).
+  # Bringing it up now keeps the dev stack stable as job code lands.
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      # Service-to-service hostnames inside the compose network.
+      DATABASE_URL: postgresql://ois:ois@postgres:5432/ois?schema=public
+      REDIS_URL: redis://redis:6379
+      PORT: "3001"
+      HOST: 0.0.0.0
+      NODE_ENV: development
+      LOG_LEVEL: info
+      # AUTH_REQUIRED defaults to true in server/middleware/auth.ts; set
+      # AUTH_REQUIRED=false in compose.override.yml for unauthenticated probing.
+      AUTH_REQUIRED: "true"
+      # GEMINI_API_KEY is optional at boot — only required when AI features
+      # are exercised. Inject via compose.override.yml when needed.
+      # GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # `migrate deploy` is idempotent — safe to run on every boot. It applies
+    # any pending migrations before the API starts accepting traffic.
+    command: >
+      sh -c "npx prisma migrate deploy && npm run start"
+    restart: unless-stopped
+
+  # Worker service slot — enable when BullMQ jobs land (M7.x).
+  # Build via the dedicated Dockerfile.worker which runs `npm run start:worker`.
+  # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.worker
+  #   environment:
+  #     DATABASE_URL: postgresql://ois:ois@postgres:5432/ois?schema=public
+  #     REDIS_URL: redis://redis:6379
+  #     NODE_ENV: development
+  #     LOG_LEVEL: info
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:

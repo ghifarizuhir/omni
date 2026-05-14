@@ -1,0 +1,26 @@
+# Copy to `compose.override.yml` (gitignored — see .gitignore) to inject
+# local secrets and dev tweaks without committing them. `docker compose`
+# auto-merges `compose.override.yml` on top of `docker-compose.yml`.
+#
+# Usage:
+#   cp compose.override.yml.example compose.override.yml
+#   # edit values
+#   docker compose up -d
+
+services:
+  api:
+    environment:
+      # Required only when exercising the Gemini-backed AI features.
+      GEMINI_API_KEY: "sk-your-key-here"
+      # Flip to false for unauthenticated probing (do NOT do this anywhere
+      # but localhost).
+      # AUTH_REQUIRED: "false"
+      # Pretty-print pino logs in dev.
+      LOG_PRETTY: "true"
+      LOG_LEVEL: debug
+
+  # Uncomment to enable the worker once BullMQ jobs land.
+  # worker:
+  #   environment:
+  #     LOG_PRETTY: "true"
+  #     LOG_LEVEL: debug

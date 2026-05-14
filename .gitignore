@@ -14,3 +14,7 @@ prisma/*.db-journal
 
 # Claude Code local config / worktrees
 .claude/
+
+# Local docker compose override (secrets, dev tweaks). See
+# compose.override.yml.example for the starter template.
+compose.override.yml
