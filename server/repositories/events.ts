@@ -101,4 +101,73 @@ export const monitoringRepo = {
     const row = await prisma.alertRoute.findFirst({ where: { tenantId, publicId } });
     return row ? parseObj<AlertRoute>(row.data, {} as AlertRoute) : null;
   },
+
+  // M6.11 (B1.1) — Alert route writes. Each one snapshots before/after and runs
+  // inside a transaction so the route handler can emit an audit log without
+  // re-reading the row.
+  async createRoute(tenantId: string, input: Partial<AlertRoute> & { name: string }): Promise<AlertRoute> {
+    const now = new Date();
+    const id = `ar-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const publicId = `ROUTE-${now.getTime().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    const route: AlertRoute = {
+      id,
+      publicId,
+      name: input.name,
+      description: input.description ?? '',
+      matchExpression: input.matchExpression ?? {},
+      channels: input.channels ?? [],
+      recipients: input.recipients ?? [],
+      escalationSteps: input.escalationSteps ?? [],
+      quietHours: input.quietHours,
+      enabled: input.enabled ?? false,
+      ruleCount: 0,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+    await prisma.$transaction([
+      prisma.alertRoute.create({
+        data: { id, publicId, tenantId, data: JSON.stringify(route) },
+      }),
+    ]);
+    return route;
+  },
+
+  async updateRoute(
+    tenantId: string,
+    publicId: string,
+    patch: Partial<AlertRoute>,
+  ): Promise<{ before: AlertRoute; after: AlertRoute; internalId: string } | null> {
+    const row = await prisma.alertRoute.findFirst({ where: { tenantId, publicId } });
+    if (!row) return null;
+    const before = parseObj<AlertRoute>(row.data, {} as AlertRoute);
+    const after: AlertRoute = {
+      ...before,
+      ...patch,
+      // Keep identity fields immutable.
+      id: before.id,
+      publicId: before.publicId,
+      createdAt: before.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+    await prisma.$transaction([
+      prisma.alertRoute.update({
+        where: { id: row.id },
+        data: { data: JSON.stringify(after) },
+      }),
+    ]);
+    return { before, after, internalId: row.id };
+  },
+
+  async deleteRoute(
+    tenantId: string,
+    publicId: string,
+  ): Promise<{ before: AlertRoute; internalId: string } | null> {
+    const row = await prisma.alertRoute.findFirst({ where: { tenantId, publicId } });
+    if (!row) return null;
+    const before = parseObj<AlertRoute>(row.data, {} as AlertRoute);
+    await prisma.$transaction([
+      prisma.alertRoute.delete({ where: { id: row.id } }),
+    ]);
+    return { before, internalId: row.id };
+  },
 };

@@ -41,7 +41,7 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
 export const AlertRouting: React.FC = () => {
   const canManage = useCan('monitoring', 'update');
 
-  const { data: routesData } = useResource(() => alertRoutesService.list(), []);
+  const { data: routesData, refresh: refreshRoutes } = useResource(() => alertRoutesService.list(), []);
   const { data: rulesData } = useResource(() => monitoringRulesService.list(), []);
   const mockMonitoringRules = rulesData ?? [];
 
@@ -50,13 +50,17 @@ export const AlertRouting: React.FC = () => {
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const seededRef = useRef(false);
   useEffect(() => {
-    if (!seededRef.current && routesData) {
+    if (routesData) {
       setRoutes(routesData);
-      setSelectedRouteId(routesData[0]?.id ?? '');
-      seededRef.current = true;
+      if (!seededRef.current) {
+        setSelectedRouteId(routesData[0]?.id ?? '');
+        seededRef.current = true;
+      }
     }
   }, [routesData]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // Local state for editing to allow "Save Changes" pattern
   const [editBuffer, setEditBuffer] = useState<AlertRoute | null>(null);
@@ -149,25 +153,50 @@ export const AlertRouting: React.FC = () => {
     setEditBuffer({ ...editBuffer, ...updates });
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (!editBuffer) return;
+    const prevRoutes = routes;
+    const prevSelected = selectedRoute;
+    // Optimistic: write the edit-buffer back to the list immediately.
     setRoutes(prev => prev.map(r => r.id === editBuffer.id ? editBuffer : r));
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const updated = await alertRoutesService.update(editBuffer.publicId, {
+        name: editBuffer.name,
+        description: editBuffer.description,
+        enabled: editBuffer.enabled,
+        matchExpression: editBuffer.matchExpression,
+        channels: editBuffer.channels,
+        recipients: editBuffer.recipients,
+        escalationSteps: editBuffer.escalationSteps,
+        quietHours: editBuffer.quietHours,
+      });
+      // Replace optimistic copy with the authoritative server snapshot.
+      setEditBuffer(JSON.parse(JSON.stringify(updated)));
+      setRoutes(prev => prev.map(r => r.id === updated.id ? updated : r));
+      refreshRoutes();
+      showToast('Route saved');
+    } catch (err) {
+      // Revert.
+      setRoutes(prevRoutes);
+      if (prevSelected) setEditBuffer(JSON.parse(JSON.stringify(prevSelected)));
+      setSaveError(err instanceof Error ? err.message : 'Failed to save route');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // P1 Fix 7 — New route
-  const handleNewRoute = () => {
-    const newId = Math.random().toString(36).slice(2);
+  const handleNewRoute = async () => {
     const now = new Date().toISOString();
-    const newRoute: AlertRoute = {
-      id: newId,
-      publicId: `RT-${Date.now().toString().slice(-5)}`,
-      name: 'New route',
+    const draftName = 'New route';
+    const optimistic: AlertRoute = {
+      id: `tmp-${Math.random().toString(36).slice(2)}`,
+      publicId: `ROUTE-PENDING`,
+      name: draftName,
       description: '',
-      matchExpression: {
-        severities: [],
-        sources: [],
-        tags: [],
-      },
+      matchExpression: { severities: [], sources: [], tags: [] },
       channels: [],
       recipients: [],
       escalationSteps: [],
@@ -176,9 +205,46 @@ export const AlertRouting: React.FC = () => {
       createdAt: now,
       updatedAt: now,
     };
-    setRoutes(prev => [newRoute, ...prev]);
-    setSelectedRouteId(newId);
-    setEditBuffer(JSON.parse(JSON.stringify(newRoute)));
+    setRoutes(prev => [optimistic, ...prev]);
+    setSelectedRouteId(optimistic.id);
+    setEditBuffer(JSON.parse(JSON.stringify(optimistic)));
+    setSaveError(null);
+    try {
+      const created = await alertRoutesService.create({ name: draftName });
+      // Swap the optimistic placeholder for the real route.
+      setRoutes(prev => [created, ...prev.filter(r => r.id !== optimistic.id)]);
+      setSelectedRouteId(created.id);
+      setEditBuffer(JSON.parse(JSON.stringify(created)));
+      refreshRoutes();
+      showToast('Route created');
+    } catch (err) {
+      // Roll back the optimistic insert.
+      setRoutes(prev => prev.filter(r => r.id !== optimistic.id));
+      setSelectedRouteId('');
+      setEditBuffer(null);
+      setSaveError(err instanceof Error ? err.message : 'Failed to create route');
+    }
+  };
+
+  const handleDeleteRoute = async () => {
+    if (!editBuffer) return;
+    const target = editBuffer;
+    const prevRoutes = routes;
+    setRoutes(prev => prev.filter(r => r.id !== target.id));
+    setSelectedRouteId('');
+    setEditBuffer(null);
+    setSaveError(null);
+    try {
+      await alertRoutesService.remove(target.publicId);
+      refreshRoutes();
+      showToast('Route deleted');
+    } catch (err) {
+      // Revert.
+      setRoutes(prevRoutes);
+      setSelectedRouteId(target.id);
+      setEditBuffer(JSON.parse(JSON.stringify(target)));
+      setSaveError(err instanceof Error ? err.message : 'Failed to delete route');
+    }
   };
 
   const getChannelIcon = (channel: AlertChannel) => {
@@ -448,13 +514,23 @@ export const AlertRouting: React.FC = () => {
                   </Button>
                   <Button
                     variant="primary"
-                    disabled={!isDirty || !canManage}
+                    disabled={!isDirty || !canManage || saving}
                     onClick={handleSaveChanges}
                     title={!canManage ? 'You do not have permission to modify routes.' : undefined}
                     className="h-10 px-6 font-bold shadow-sm disabled:opacity-50"
                   >
-                    Save changes
+                    {saving ? 'Saving…' : 'Save changes'}
                   </Button>
+                  <Can module="monitoring" action="update">
+                    <Button
+                      variant="ghost"
+                      onClick={handleDeleteRoute}
+                      title="Delete route"
+                      className="h-10 w-10 p-0 border border-ois-border hover:border-ois-danger hover:text-ois-danger rounded-lg"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </Can>
                   <div className="relative group">
                     <Button variant="ghost" className="h-10 w-10 p-0 border border-ois-border hover:bg-ois-bg rounded-lg">
                       <MoreVertical size={20} className="text-ois-text-muted" />
@@ -462,6 +538,11 @@ export const AlertRouting: React.FC = () => {
                   </div>
                 </div>
               </div>
+              {saveError && (
+                <div className="px-8 pt-3 -mb-3">
+                  <p className="text-xs text-ois-danger font-semibold">{saveError}</p>
+                </div>
+              )}
 
               {/* Editor Body */}
               <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
