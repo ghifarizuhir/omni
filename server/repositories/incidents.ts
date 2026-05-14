@@ -49,6 +49,12 @@ export interface WatcherRepoInput {
   userName?: string;
 }
 
+export interface UpdateRepoInput {
+  actorId: string;
+  priority?: 'P1' | 'P2' | 'P3' | 'P4';
+  tags?: string[];
+}
+
 const diffArr = (a: string[] = [], b: string[] = []) => ({
   added: b.filter(x => !a.includes(x)),
   removed: a.filter(x => !b.includes(x)),
@@ -487,6 +493,66 @@ export const incidentsRepo = {
         },
       }),
     ]);
+    return { before, after, internalId: row.id };
+  },
+
+  // M6.11 B4.1 — generic patch for incident fields that don't have a
+  // dedicated specialized endpoint (priority, tags). Mirrors the
+  // `assign`/`setLinks` shape: throws on missing, single transaction,
+  // optional timeline event. Only `priority` writes a timeline row
+  // (`priority_changed`) and only when the value actually differs — tag
+  // edits are deliberately silent to avoid churn.
+  async update(tenantId: string, publicId: string, input: UpdateRepoInput): Promise<{
+    before: Incident;
+    after: Incident;
+    internalId: string;
+  }> {
+    const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
+    if (!row) throw new Error('INCIDENT_NOT_FOUND');
+    const before = parseObj<Incident>(row.data, {} as Incident);
+    const now = new Date();
+    const after: Incident = {
+      ...before,
+      ...(input.priority !== undefined ? { priority: input.priority } : {}),
+      ...(input.tags !== undefined ? { tags: input.tags } : {}),
+    };
+    const priorityChanged = input.priority !== undefined && before.priority !== input.priority;
+    const timelineId = priorityChanged ? randomUUID() : undefined;
+    const timelineEvent = priorityChanged
+      ? {
+          id: timelineId!,
+          kind: 'priority_changed' as const,
+          timestamp: now.toISOString(),
+          actorId: input.actorId,
+          details: { from: before.priority, to: input.priority },
+        }
+      : undefined;
+
+    const updateOps: import('@prisma/client').Prisma.PrismaPromise<unknown>[] = [
+      prisma.incident.update({
+        where: { id: row.id },
+        data: {
+          data: JSON.stringify(after),
+          updatedAt: now,
+          ...(input.priority !== undefined ? { priority: input.priority } : {}),
+        },
+      }),
+    ];
+    if (priorityChanged) {
+      updateOps.push(
+        prisma.incidentTimelineEvent.create({
+          data: {
+            id: timelineId!,
+            tenantId,
+            incidentId: row.id,
+            kind: 'priority_changed',
+            timestamp: now,
+            data: JSON.stringify(timelineEvent),
+          },
+        }),
+      );
+    }
+    await prisma.$transaction(updateOps);
     return { before, after, internalId: row.id };
   },
 };

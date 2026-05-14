@@ -12,6 +12,7 @@ export type {
   AssignIncidentInput,
   UpdateIncidentLinksInput,
   AddWatcherInput,
+  UpdateIncidentInput,
 } from '../shared/schemas/incident';
 export {
   resolveIncidentSchema,
@@ -21,6 +22,7 @@ export {
   assignIncidentSchema,
   updateIncidentLinksSchema,
   addWatcherSchema,
+  updateIncidentSchema,
 } from '../shared/schemas/incident';
 
 import type {
@@ -30,6 +32,7 @@ import type {
   AssignIncidentInput,
   UpdateIncidentLinksInput,
   AddWatcherInput,
+  UpdateIncidentInput,
 } from '../shared/schemas/incident';
 
 export const incidentsService = {
@@ -75,4 +78,9 @@ export const incidentsService = {
 
   removeWatcher: (incidentId: string, userId: string) =>
     apiFetch<void>(`/incidents/${incidentId}/watchers/${userId}`, { method: 'DELETE' }),
+
+  // M6.11 B4.1 — generic patch for priority / tags. Other fields have their
+  // own endpoints (assign, status, links, …). Will be consumed by B4.2 bulk UI.
+  update: (publicId: string, input: UpdateIncidentInput) =>
+    apiFetch<Incident>(`/incidents/${publicId}`, { method: 'PATCH', body: input }),
 };

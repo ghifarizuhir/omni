@@ -12,6 +12,7 @@ import {
   assignIncidentSchema,
   updateIncidentLinksSchema,
   addWatcherSchema,
+  updateIncidentSchema,
 } from '../../src/shared/schemas/incident';
 
 export const incidentsRouter = Router();
@@ -158,6 +159,36 @@ incidentsRouter.post(
     }
     await audit(req, {
       action: 'promote_major',
+      resourceKind: 'Incident',
+      resourceId: result.internalId,
+      before: result.before,
+      after: result.after,
+    });
+    res.json(result.after);
+  }),
+);
+
+// M6.11 B4.1 — generic incident patch for fields without specialized routes
+// (priority, tags). Used by IncidentQueue bulk-edit (B4.2). Audit `action`
+// stays `'update'` to match the sibling `'assign'` / `'status_change'` keys.
+incidentsRouter.patch(
+  '/incidents/:publicId',
+  requirePermission('incident.write'),
+  asyncHandler(async (req, res) => {
+    const body = updateIncidentSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    let result;
+    try {
+      result = await incidentsRepo.update(req.tenantId, req.params.publicId, {
+        actorId: req.session.userId,
+        priority: body.priority,
+        tags: body.tags,
+      });
+    } catch {
+      throw new HttpError(404, 'Incident not found');
+    }
+    await audit(req, {
+      action: 'update',
       resourceKind: 'Incident',
       resourceId: result.internalId,
       before: result.before,
