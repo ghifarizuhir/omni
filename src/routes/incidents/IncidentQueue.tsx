@@ -84,7 +84,7 @@ export const IncidentQueue: React.FC = () => {
 
   const { user, applications, teams, departments } = useCurrentUser();
 
-  const { data: incidentsData } = useResource(() => incidentsService.list(), []);
+  const { data: incidentsData, refresh: refreshIncidents } = useResource(() => incidentsService.list(), []);
   const { data: usersData } = useResource(() => usersService.list(), []);
   const { data: servicesData } = useResource(() => servicesService.list(), []);
   const mockUsers = usersData ?? [];
@@ -123,6 +123,11 @@ export const IncidentQueue: React.FC = () => {
   const [tagOpen, setTagOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [confirmClose, setConfirmClose] = useState(false);
+
+  // bulk-mutation status
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
 
   // pre-fill search from location state
   useEffect(() => {
@@ -263,25 +268,115 @@ export const IncidentQueue: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleBulkClose = () => {
-    setIncidents(prev => prev.map(i => selectedIds.has(i.id) ? { ...i, status: 'closed' as const } : i));
+  // Resolve a partial-failure result-set into a user-visible banner string and
+  // refresh the canonical list from the server. Called from every bulk handler.
+  const reportBulkResults = (
+    results: PromiseSettledResult<unknown>[],
+    verb: string,
+  ): boolean => {
+    const failures = results.filter(r => r.status === 'rejected') as PromiseRejectedResult[];
+    if (failures.length > 0) {
+      const firstReason = failures[0].reason instanceof Error
+        ? failures[0].reason.message
+        : String(failures[0].reason);
+      setBulkError(
+        `${results.length - failures.length} of ${results.length} ${verb} succeeded — ${failures.length} failed (${firstReason}).`,
+      );
+    }
+    refreshIncidents();
+    return failures.length === 0;
+  };
+
+  const handleBulkClose = async () => {
+    const ids = Array.from(selectedIds);
+    const selected = allIncidents.filter(i => ids.includes(i.id));
+    if (selected.length === 0) { setConfirmClose(false); return; }
+    setBulkError(null);
+    setBulkSubmitting(true);
+    // optimistic
+    setIncidents(prev => prev.map(i => ids.includes(i.id) ? { ...i, status: 'closed' as const } : i));
+    const results = await Promise.allSettled(
+      selected.map(inc => incidentsService.setStatus(inc.publicId, 'closed')),
+    );
+    reportBulkResults(results, 'close');
+    setBulkSubmitting(false);
     setSelectedIds(new Set());
     setConfirmClose(false);
   };
 
-  const handleBulkAssign = (userId: string) => {
-    setIncidents(prev => prev.map(i => selectedIds.has(i.id) ? { ...i, assigneeId: userId } : i));
-    setSelectedIds(new Set());
+  const handleBulkAssign = async (userId: string) => {
+    const ids = Array.from(selectedIds);
+    const selected = allIncidents.filter(i => ids.includes(i.id));
+    if (selected.length === 0) { setAssignOpen(false); return; }
+    const assigneeName = mockUsers.find((u: { id: string; name: string }) => u.id === userId)?.name;
+    setBulkError(null);
+    setBulkSubmitting(true);
     setAssignOpen(false);
+    setIncidents(prev => prev.map(i => ids.includes(i.id) ? { ...i, assigneeId: userId } : i));
+    const results = await Promise.allSettled(
+      selected.map(inc => incidentsService.assign(inc.publicId, { assigneeId: userId, assigneeName })),
+    );
+    reportBulkResults(results, 'assign');
+    setBulkSubmitting(false);
+    setSelectedIds(new Set());
   };
 
-  const handleBulkTag = () => {
+  const handleBulkPriority = async (priority: IncidentPriority) => {
+    const ids = Array.from(selectedIds);
+    const selected = allIncidents.filter(i => ids.includes(i.id));
+    if (selected.length === 0) return;
+    setBulkError(null);
+    setBulkSubmitting(true);
+    setIncidents(prev => prev.map(i => ids.includes(i.id) ? { ...i, priority } : i));
+    const results = await Promise.allSettled(
+      selected.map(inc => incidentsService.update(inc.publicId, { priority })),
+    );
+    reportBulkResults(results, 'priority update');
+    setBulkSubmitting(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkTag = async () => {
     const tag = tagInput.trim();
     if (!tag) return;
-    setIncidents(prev => prev.map(i => selectedIds.has(i.id) ? { ...i, tags: [...new Set([...i.tags, tag])] } : i));
+    const ids = Array.from(selectedIds);
+    const selected = allIncidents.filter(i => ids.includes(i.id));
+    if (selected.length === 0) { setTagOpen(false); setTagInput(''); return; }
+    setBulkError(null);
+    setBulkSubmitting(true);
+    setTagOpen(false);
+    // Compute new merged tags per incident — the PATCH replaces tags wholesale.
+    const payloads = selected.map(inc => ({
+      inc,
+      tags: Array.from(new Set([...inc.tags, tag])),
+    }));
+    setIncidents(prev => prev.map(i => {
+      const p = payloads.find(x => x.inc.id === i.id);
+      return p ? { ...i, tags: p.tags } : i;
+    }));
+    const results = await Promise.allSettled(
+      payloads.map(({ inc, tags }) => incidentsService.update(inc.publicId, { tags })),
+    );
+    reportBulkResults(results, 'tag');
+    setBulkSubmitting(false);
     setSelectedIds(new Set());
     setTagInput('');
-    setTagOpen(false);
+  };
+
+  const handleRowAssignToMe = async (incident: Incident) => {
+    if (!user) return;
+    setBulkError(null);
+    setAssigningId(incident.id);
+    setIncidents(prev => prev.map(i => i.id === incident.id ? { ...i, assigneeId: user.id } : i));
+    try {
+      await incidentsService.assign(incident.publicId, { assigneeId: user.id, assigneeName: user.name });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setBulkError(`Failed to assign ${incident.publicId}: ${msg}`);
+    } finally {
+      setAssigningId(null);
+      refreshIncidents();
+    }
   };
 
   return (
@@ -386,6 +481,21 @@ export const IncidentQueue: React.FC = () => {
         </div>
       </div>
 
+      {/* Bulk error banner — sits above the action bar so failures stay visible
+          even after the selection has been cleared by the bulk handler. */}
+      {bulkError && (
+        <div className="px-6 py-2 bg-ois-danger/5 border-b border-ois-danger/20 flex items-center gap-2 shrink-0">
+          <span className="text-xs text-ois-danger flex-1">{bulkError}</span>
+          <button
+            onClick={() => setBulkError(null)}
+            className="text-xs text-ois-danger/70 hover:text-ois-danger"
+            aria-label="Dismiss error"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
         <div className="px-6 py-2 bg-ois-primary/5 border-b border-ois-primary/20 flex items-center gap-3 shrink-0">
@@ -395,43 +505,46 @@ export const IncidentQueue: React.FC = () => {
               <span className="text-sm text-ois-danger font-medium">
                 Close {selectedIds.size} incident{selectedIds.size > 1 ? 's' : ''}?
               </span>
-              <Button variant="destructive" size="sm" onClick={handleBulkClose}>Confirm</Button>
-              <Button variant="ghost" size="sm" onClick={() => setConfirmClose(false)}>Cancel</Button>
+              <Button variant="destructive" size="sm" onClick={handleBulkClose} disabled={bulkSubmitting}>
+                {bulkSubmitting ? 'Updating…' : 'Confirm'}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmClose(false)} disabled={bulkSubmitting}>Cancel</Button>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={() => setAssignOpen(true)}
-                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors"
+                disabled={bulkSubmitting}
+                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Assign
               </button>
-              <div className="h-7">
+              <div className={cn('h-7', bulkSubmitting && 'opacity-50 pointer-events-none')}>
                 <FilterDropdown
                   value=""
-                  onChange={val => {
-                    setIncidents(prev => prev.map(i => selectedIds.has(i.id) ? { ...i, priority: val as IncidentPriority } : i));
-                    setSelectedIds(new Set());
-                  }}
+                  onChange={val => { void handleBulkPriority(val as IncidentPriority); }}
                   options={bulkPriorityOptions}
                   placeholder="Change priority"
                 />
               </div>
               <button
                 onClick={() => setTagOpen(true)}
-                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors"
+                disabled={bulkSubmitting}
+                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Tag
               </button>
               <button
                 onClick={() => setConfirmClose(true)}
-                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors"
+                disabled={bulkSubmitting}
+                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Close
               </button>
               <button
                 onClick={handleBulkExport}
-                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors"
+                disabled={bulkSubmitting}
+                className="px-2.5 py-1 text-xs font-medium text-ois-primary border border-ois-primary/30 rounded-md hover:bg-ois-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Export
               </button>
@@ -487,7 +600,8 @@ export const IncidentQueue: React.FC = () => {
                   menuOpen={rowMenuId === incident.id}
                   onMenuOpen={() => setRowMenuId(incident.id)}
                   onMenuClose={() => setRowMenuId(null)}
-                  onAssignToMe={() => setIncidents(prev => prev.map(i => i.id === incident.id ? { ...i, assigneeId: 'u-001' } : i))}
+                  onAssignToMe={() => handleRowAssignToMe(incident)}
+                  assigningToMe={assigningId === incident.id}
                 />
               ))}
             </tbody>
@@ -556,10 +670,11 @@ interface IncidentRowProps {
   onMenuOpen: () => void;
   onMenuClose: () => void;
   onAssignToMe: () => void;
+  assigningToMe?: boolean;
 }
 
 const IncidentRow: React.FC<IncidentRowProps> = ({
-  incident, users, services, selected, onSelect, onClick, menuOpen, onMenuOpen, onMenuClose, onAssignToMe
+  incident, users, services, selected, onSelect, onClick, menuOpen, onMenuOpen, onMenuClose, onAssignToMe, assigningToMe
 }) => {
   const assigneeName = getAssigneeName(users, incident.assigneeId);
   const serviceName = getServiceName(services, incident.affectedServiceIds);
@@ -684,9 +799,10 @@ const IncidentRow: React.FC<IncidentRowProps> = ({
               </button>
               <button
                 onClick={e => { e.stopPropagation(); onAssignToMe(); onMenuClose(); }}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-ois-surface-muted text-ois-text"
+                disabled={assigningToMe}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-ois-surface-muted text-ois-text disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Assign to me
+                {assigningToMe ? 'Assigning…' : 'Assign to me'}
               </button>
             </div>
           </>
