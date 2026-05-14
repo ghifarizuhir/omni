@@ -3,6 +3,9 @@ import http from 'node:http';
 import { createApp } from './app';
 import { initRealtime } from './realtime';
 import { startScheduler } from './jobs';
+import { initTelemetry } from './telemetry';
+
+initTelemetry();
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '0.0.0.0';

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { API_BASE_URL, API_MODE, MOCK_LATENCY_MS } from './apiMode';
+import { API_BASE_URL } from './apiMode';
 
 // ── Errors ────────────────────────────────────────────────────────────────────
 
@@ -17,21 +17,7 @@ export class NotFoundError extends ApiError {
   }
 }
 
-// ── Mock helpers ──────────────────────────────────────────────────────────────
-// `mockResult` simulates an async API response. Use this in every service
-// method so the call signature is identical in mock and live mode.
-
-export const mockResult = <T>(value: T): Promise<T> =>
-  MOCK_LATENCY_MS > 0
-    ? new Promise(resolve => setTimeout(() => resolve(value), MOCK_LATENCY_MS))
-    : Promise.resolve(value);
-
-export const mockRequired = <T>(value: T | null | undefined, resource: string): Promise<T> => {
-  if (value == null) return Promise.reject(new NotFoundError(resource));
-  return mockResult(value);
-};
-
-// ── HTTP client (live mode) ───────────────────────────────────────────────────
+// ── HTTP client ───────────────────────────────────────────────────────────────
 
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -61,8 +47,6 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   }
   return json as T;
 }
-
-export const isLive = (): boolean => API_MODE === 'live';
 
 // ── React hooks ───────────────────────────────────────────────────────────────
 

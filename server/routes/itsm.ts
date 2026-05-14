@@ -3,15 +3,9 @@ import {
   problemsRepo, changesRepo, releasesRepo, deploymentsRepo,
   requestsRepo, catalogRepo, kbRepo,
 } from '../repositories/docs';
+import { listByKind, findByPublicId, findByKey } from '../repositories/documents';
 import { asyncHandler, qBool, required } from '../util';
-// Improvements stays mock-backed for now — its computed totals/ROI helpers
-// don't cleanly map to the document pattern. Migrate in a follow-up.
-import {
-  mockImprovements, getImprovementById,
-  getTotalEstimatedBenefitUSD, getTotalActualBenefitUSD,
-} from '../../src/mocks/improvements';
-import { mockBenefitMeasurements } from '../../src/mocks/benefitMeasurements';
-import { mockROICalculations, getROICalculation } from '../../src/mocks/roiCalculations';
+import type { ImprovementInitiative } from '../../src/types';
 
 export const itsmRouter = Router();
 
@@ -41,10 +35,8 @@ itsmRouter.get('/deployments/:publicId', asyncHandler(async (req, res) => {
 itsmRouter.get('/deployments/:deploymentId/logs', asyncHandler(async (req, res) => {
   res.json(await deploymentsRepo.logs(req.tenantId, req.params.deploymentId));
 }));
-itsmRouter.get('/environments', asyncHandler(async (_req, res) => {
-  // Tiny lookup table — staying mock for now.
-  const { mockEnvironments } = await import('../../src/mocks/environments');
-  res.json(mockEnvironments);
+itsmRouter.get('/environments', asyncHandler(async (req, res) => {
+  res.json(await listByKind(req.tenantId, 'environment'));
 }));
 
 itsmRouter.get('/requests', asyncHandler(async (req, res) => res.json(await requestsRepo.list(req.tenantId))));
@@ -53,21 +45,37 @@ itsmRouter.get('/requests/:publicId', asyncHandler(async (req, res) => {
 }));
 itsmRouter.get('/catalog', asyncHandler(async (req, res) => res.json(await catalogRepo.list(req.tenantId))));
 
-// Improvements — mock-backed for now (financial calculation helpers).
-itsmRouter.get('/improvements', asyncHandler(async (_req, res) => res.json(mockImprovements)));
-itsmRouter.get('/improvements/totals/estimated', asyncHandler(async (_req, res) => res.json(getTotalEstimatedBenefitUSD())));
-itsmRouter.get('/improvements/totals/actual', asyncHandler(async (_req, res) => res.json(getTotalActualBenefitUSD())));
-itsmRouter.get('/improvements/benefit-measurements', asyncHandler(async (_req, res) => res.json(mockBenefitMeasurements)));
-itsmRouter.get('/improvements/roi', asyncHandler(async (_req, res) => res.json(mockROICalculations)));
+// Improvements — DB-backed via documents. Totals/ROI computed inline.
+itsmRouter.get('/improvements', asyncHandler(async (req, res) => {
+  res.json(await listByKind<ImprovementInitiative>(req.tenantId, 'improvement'));
+}));
+itsmRouter.get('/improvements/totals/estimated', asyncHandler(async (req, res) => {
+  const items = await listByKind<ImprovementInitiative>(req.tenantId, 'improvement');
+  res.json(items.reduce((sum, i) => sum + (i.estimatedBenefit?.annualValueUSD ?? 0), 0));
+}));
+itsmRouter.get('/improvements/totals/actual', asyncHandler(async (req, res) => {
+  const items = await listByKind<ImprovementInitiative>(req.tenantId, 'improvement');
+  res.json(items.reduce((sum, i) => sum + ((i as { actualBenefit?: { annualValueUSD?: number } }).actualBenefit?.annualValueUSD ?? 0), 0));
+}));
+itsmRouter.get('/improvements/benefit-measurements', asyncHandler(async (req, res) => {
+  res.json(await listByKind(req.tenantId, 'benefit-measurement'));
+}));
+itsmRouter.get('/improvements/roi', asyncHandler(async (req, res) => {
+  res.json(await listByKind(req.tenantId, 'roi-calc'));
+}));
 itsmRouter.get('/improvements/:initiativeId/roi', asyncHandler(async (req, res) => {
-  res.json(getROICalculation(req.params.initiativeId));
+  const all = await listByKind<{ initiativeId: string }>(req.tenantId, 'roi-calc');
+  res.json(all.find(r => r.initiativeId === req.params.initiativeId) ?? null);
 }));
 itsmRouter.get('/improvements/:publicId', asyncHandler(async (req, res) => {
-  const found = mockImprovements.find(i => i.publicId === req.params.publicId) ?? getImprovementById(req.params.publicId);
-  res.json(required(found, 'Improvement'));
+  // Accept both publicId and internal id, mirroring the legacy `getByAnyId` helper.
+  const byPublic = await findByPublicId<ImprovementInitiative>(req.tenantId, 'improvement', req.params.publicId);
+  if (byPublic) return res.json(byPublic);
+  const byKey = await findByKey<ImprovementInitiative>(req.tenantId, 'improvement', req.params.publicId);
+  res.json(required(byKey, 'Improvement'));
 }));
 
-// KB lives here for now; could split into a separate router.
+// KB articles
 itsmRouter.get('/kb/articles', asyncHandler(async (req, res) => res.json(await kbRepo.list(req.tenantId))));
 itsmRouter.get('/kb/articles/:publicId', asyncHandler(async (req, res) => {
   res.json(required(await kbRepo.get(req.tenantId, req.params.publicId), 'KBArticle'));
