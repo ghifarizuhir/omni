@@ -33,7 +33,7 @@ function pseudoRand(seed: number): number {
 }
 
 function generateData() {
-  const now = new Date('2026-05-10');
+  const now = new Date();
   return Array.from({ length: 30 }, (_, i) => {
     const d = new Date(now);
     d.setDate(d.getDate() - (29 - i));

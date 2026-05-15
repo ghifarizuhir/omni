@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ArrowRight, Calendar } from 'lucide-react';
 import { Card } from '@/src/components/ui/Card';
 import { OnCallSchedule, OnCallOverride } from '@/src/types/platform';
@@ -17,9 +17,7 @@ interface UpcomingHandoversListProps {
   overrides: OnCallOverride[];
 }
 
-const TODAY = new Date('2026-05-10T00:00:00Z');
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-const WINDOW_END = new Date(TODAY.getTime() + SEVEN_DAYS);
 
 function formatHandoverDate(date: Date): string {
   return date.toLocaleDateString('en-US', {
@@ -37,6 +35,9 @@ export const UpcomingHandoversList: React.FC<UpcomingHandoversListProps> = ({
   schedules,
   overrides,
 }) => {
+  const TODAY = useMemo(() => new Date(), []);
+  const WINDOW_END = useMemo(() => new Date(TODAY.getTime() + SEVEN_DAYS), [TODAY]);
+
   const handovers: HandoverEvent[] = [];
 
   // Collect shift handovers

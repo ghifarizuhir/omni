@@ -7,6 +7,7 @@ import { Step1Content, ContentData } from '@/src/components/measurement/ReportBu
 import { Step2Schedule, ScheduleData } from '@/src/components/measurement/ReportBuilderWizard/Step2Schedule';
 import { Step3Delivery } from '@/src/components/measurement/ReportBuilderWizard/Step3Delivery';
 import { useCan } from '@/src/lib/rbac';
+import { measurementService } from '@/src/services';
 import { ShieldAlert } from 'lucide-react';
 
 type StepNumber = 1 | 2 | 3;
@@ -121,7 +122,14 @@ const ReportBuilderForm: React.FC = () => {
         {step === 3 && (
           <Step3Delivery
             onBack={() => setStep(2)}
-            onSubmit={() => navigate('/reports')}
+            onSubmit={async () => {
+              await measurementService.createReport({
+                name: content?.name ?? '',
+                definition: content,
+                schedule: schedule,
+              });
+              navigate('/reports');
+            }}
           />
         )}
       </div>

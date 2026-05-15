@@ -31,6 +31,8 @@ export { capacityService } from './capacityService';
 
 export {
   usersService,
+  apiTokensService,
+  userChannelsService,
   teamsService,
   notificationsService,
   inboxService,
@@ -42,4 +44,9 @@ export {
   rbacService,
   continuityService,
   measurementService,
+} from './platformServices';
+export type {
+  ApiTokenSummary,
+  ApiTokenCreated,
+  NotificationChannelRow,
 } from './platformServices';

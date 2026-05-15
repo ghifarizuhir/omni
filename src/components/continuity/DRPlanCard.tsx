@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AlertTriangle, ChevronDown, ChevronUp, Play, List, ExternalLink } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
 import { DRPlanStatusPill } from './DRPlanStatusPill';
@@ -12,8 +12,6 @@ interface Props {
   onOpenDetail: (plan: DRPlan) => void;
 }
 
-const TODAY = new Date('2026-05-10');
-
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -22,16 +20,17 @@ function formatDate(isoString: string): string {
   });
 }
 
-function isOverdue(isoString: string): boolean {
-  return new Date(isoString) < TODAY;
+function isOverdue(isoString: string, today: Date): boolean {
+  return new Date(isoString) < today;
 }
 
 export const DRPlanCard: React.FC<Props> = ({ plan, onTestNow, onOpenDetail }) => {
+  const today = useMemo(() => new Date(), []);
   const [showAllTriggers, setShowAllTriggers] = useState(false);
   const [showSteps, setShowSteps] = useState(false);
 
   const totalEstMinutes = plan.recoverySteps.reduce((acc, s) => acc + s.estimatedMinutes, 0);
-  const reviewOverdue = isOverdue(plan.reviewDueAt);
+  const reviewOverdue = isOverdue(plan.reviewDueAt, today);
   const TRIGGER_PREVIEW = 2;
   const extraTriggers = plan.triggerConditions.length - TRIGGER_PREVIEW;
 

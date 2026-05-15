@@ -35,7 +35,7 @@ export const UserSwitcher: React.FC = () => {
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div className="absolute right-0 mt-1 w-80 max-h-[420px] overflow-y-auto bg-white border border-ois-border rounded-xl shadow-xl z-40">
             <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-ois-text-subtle font-bold border-b border-ois-border">
-              Switch user (mock)
+              Switch user
             </div>
             {users.map(u => (
               <button

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { OnCallSchedule, OnCallOverride } from '@/src/types/platform';
 import { ShiftCell } from './ShiftCell';
 
@@ -7,9 +7,6 @@ interface ShiftCalendarGridProps {
   overrides: OnCallOverride[];
 }
 
-// 4 weeks: May 4 (Mon) to May 31 (Sun), 2026
-const CALENDAR_START = new Date('2026-05-04T00:00:00Z');
-const TODAY_STR = '2026-05-10';
 const DAY_HEADERS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 function isoDateStr(date: Date): string {
@@ -35,13 +32,23 @@ interface DayCellInfo {
 }
 
 export const ShiftCalendarGrid: React.FC<ShiftCalendarGridProps> = ({ schedule, overrides }) => {
+  const calendarStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    const dow = (d.getDay() + 6) % 7; // 0 = Monday
+    d.setDate(d.getDate() - dow);
+    return d;
+  }, []);
+
+  const todayStr = useMemo(() => isoDateStr(new Date()), []);
+
   // Build 4 weeks
   const weeks: DayCellInfo[][] = [];
 
   for (let w = 0; w < 4; w++) {
     const weekDays: DayCellInfo[] = [];
     for (let d = 0; d < 7; d++) {
-      const date = addDays(CALENDAR_START, w * 7 + d);
+      const date = addDays(calendarStart, w * 7 + d);
       const dayStart = date; // midnight UTC
       const dayEnd = addDays(date, 1);
 
@@ -109,7 +116,7 @@ export const ShiftCalendarGrid: React.FC<ShiftCalendarGridProps> = ({ schedule, 
                 personName={cell.personName}
                 isCurrentShift={cell.isCurrentShift}
                 isOverridden={cell.isOverridden}
-                isToday={isoDateStr(cell.date) === TODAY_STR}
+                isToday={isoDateStr(cell.date) === todayStr}
               />
             ))}
           </div>

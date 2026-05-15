@@ -142,6 +142,13 @@ itsmRouter.get('/requests', requirePermission('request.read'), asyncHandler(asyn
 itsmRouter.get('/requests/:publicId', requirePermission('request.read'), asyncHandler(async (req, res) => {
   res.json(required(await requestsRepo.get(req.tenantId, req.params.publicId), 'ServiceRequest'));
 }));
+itsmRouter.get('/requests/:publicId/comments', requirePermission('request.read'), asyncHandler(async (req, res) => {
+  const r = required(await requestsRepo.get(req.tenantId, req.params.publicId), 'ServiceRequest');
+  res.json(await prisma.requestComment.findMany({
+    where: { tenantId: req.tenantId, requestId: r.id },
+    orderBy: { createdAt: 'asc' },
+  }));
+}));
 itsmRouter.get('/catalog', requirePermission('request.read'), asyncHandler(async (req, res) => res.json(await catalogRepo.list(req.tenantId))));
 
 // ── Request workflow writes (M6.11) ──────────────────────────────────────────
@@ -198,13 +205,22 @@ itsmRouter.post(
     });
     const result = await requestsRepo.addComment(req.tenantId, req.params.publicId, author, body.body);
     if (!result) throw new HttpError(404, 'Request not found');
+    // Also persist to the RequestComment table for structured querying.
+    const dbComment = await prisma.requestComment.create({
+      data: {
+        tenantId: req.tenantId,
+        requestId: result.internalId,
+        authorId: author.id,
+        body: body.body,
+      },
+    });
     await audit(req, {
       action: 'comment',
       resourceKind: 'ServiceRequest',
       resourceId: result.internalId,
       after: result.comment,
     });
-    res.status(201).json(result.comment);
+    res.status(201).json({ ...result.comment, dbId: dbComment.id });
   }),
 );
 

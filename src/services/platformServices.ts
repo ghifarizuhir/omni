@@ -25,6 +25,39 @@ export const usersService = {
   current: () => apiFetch<User>('/users/me'),
 };
 
+export interface ApiTokenSummary {
+  id: string;
+  name: string;
+  prefix: string;
+  createdAt: string;
+  lastUsedAt?: string | null;
+}
+
+export interface ApiTokenCreated extends ApiTokenSummary {
+  token: string;
+}
+
+export const apiTokensService = {
+  list: () => apiFetch<ApiTokenSummary[]>('/users/me/tokens'),
+  create: (name: string) =>
+    apiFetch<ApiTokenCreated>('/users/me/tokens', { method: 'POST', body: { name } }),
+  revoke: (id: string) =>
+    apiFetch<void>(`/users/me/tokens/${id}`, { method: 'DELETE' }),
+};
+
+export interface NotificationChannelRow {
+  id: string;
+  kind: 'email' | 'sms' | 'slack';
+  address: string;
+  verified: boolean;
+}
+
+export const userChannelsService = {
+  list: () => apiFetch<NotificationChannelRow[]>('/users/me/channels'),
+  upsert: (kind: 'email' | 'sms' | 'slack', address: string) =>
+    apiFetch<NotificationChannelRow>(`/users/me/channels/${kind}`, { method: 'PUT', body: { address } }),
+};
+
 export const teamsService = {
   list: () => apiFetch<Team[]>('/teams'),
   get: (id: string) => apiFetch<Team>(`/teams/${id}`),
@@ -81,6 +114,15 @@ export const aiService = {
   sessions: () => apiFetch<AiSession[]>('/ai/sessions'),
   session: (id: string) => apiFetch<AiSession>(`/ai/sessions/${id}`),
   activeSession: () => apiFetch<AiSession | null>('/ai/sessions/active'),
+  messages: (sessionId: string) =>
+    apiFetch<Array<{ id: string; role: 'user' | 'assistant'; body: string; createdAt: string }>>(
+      `/ai/sessions/${sessionId}/messages`
+    ),
+  sendMessage: (sessionId: string, body: string) =>
+    apiFetch<{
+      user: { id: string; role: 'user'; body: string; createdAt: string };
+      assistant: { id: string; role: 'assistant'; body: string; createdAt: string };
+    }>(`/ai/sessions/${sessionId}/messages`, { method: 'POST', body: { body } }),
 };
 
 export const rbacService = {
@@ -134,4 +176,12 @@ export const measurementService = {
   benefits: () => apiFetch<BenefitMeasurement[]>('/measurement/benefits'),
   dashboards: () => apiFetch<MeasurementDashboard[]>('/measurement/dashboards'),
   metrics: () => apiFetch<MetricDefinition[]>('/measurement/metrics'),
+  execSummary: () => apiFetch<{
+    slaCompliancePct: number;
+    mttrMinutes: number;
+    changeSuccessPct: number;
+    openMajorIncidents: number;
+  }>('/measurement/exec-summary'),
+  createReport: (input: { name: string; definition?: unknown; schedule?: unknown }) =>
+    apiFetch<Report>('/measurement/reports', { method: 'POST', body: input }),
 };

@@ -21,7 +21,7 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const NOW = new Date('2026-05-09T10:00:00Z').getTime();
+const NOW = Date.now();
 
 const CATEGORY_COLOR: Record<CatalogCategory, string> = {
   access:        '#1F4FD4',
@@ -562,7 +562,6 @@ export const RequestDetail: React.FC = () => {
   const [showReassign,     setShowReassign]     = useState(false);
   const [showCancel,       setShowCancel]       = useState(false);
   const [showAddWatcher,   setShowAddWatcher]   = useState(false);
-  const [postedComments,   setPostedComments]   = useState<{ id: string; author: string; text: string; ts: string }[]>([]);
   const [cancelSubmitting,   setCancelSubmitting]   = useState(false);
   const [cancelError,        setCancelError]        = useState<string | null>(null);
   const [reassignSubmitting, setReassignSubmitting] = useState(false);
@@ -582,6 +581,15 @@ export const RequestDetail: React.FC = () => {
   const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
   const { data: usersData } = useResource(() => usersService.list(), []);
   const mockUsers = usersData ?? [];
+
+  const reqPublicId = useMemo(
+    () => (requestsData ?? []).find(r => r.id === (requestId ?? ''))?.publicId ?? '',
+    [requestsData, requestId],
+  );
+  const { data: commentsData, refresh: refetchComments } = useResource(
+    () => reqPublicId ? requestsService.comments(reqPublicId) : Promise.resolve([]),
+    [reqPublicId],
+  );
 
   const req = useMemo(
     () => (requestsData ?? []).find(r => r.id === (requestId ?? '')),
@@ -764,27 +772,39 @@ export const RequestDetail: React.FC = () => {
   );
 
   // ── Comments tab ─────────────────────────────────────────────────────────────
+  async function handlePostComment() {
+    const text = comment.trim();
+    if (!text) return;
+    await requestsService.addComment(req.publicId, text);
+    setComment('');
+    refetchComments();
+  }
+
+  const resolvedComments = commentsData ?? [];
   const CommentsTab = (
     <div className="space-y-4">
       {/* Posted comments */}
-      {postedComments.length === 0 && (
+      {resolvedComments.length === 0 && (
         <div className="flex flex-col items-center py-8 text-center">
           <MessageCircle size={28} className="text-ois-text-subtle mb-2" />
           <p className="text-sm text-ois-text-subtle">No comments yet.</p>
         </div>
       )}
-      {postedComments.map(c => (
-        <div key={c.id} className="flex gap-3">
-          <Avatar name={c.author} size="sm" className="shrink-0" />
-          <div className="flex-1 bg-ois-surface-muted border border-ois-border rounded-lg px-3 py-2.5">
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-xs font-semibold text-ois-text">{c.author}</span>
-              <span className="text-[10px] text-ois-text-subtle">{formatRelative(c.ts)}</span>
+      {resolvedComments.map(c => {
+        const author = mockUsers.find(u => u.id === c.authorId)?.name ?? c.authorId.slice(0, 8);
+        return (
+          <div key={c.id} className="flex gap-3">
+            <Avatar name={author} size="sm" className="shrink-0" />
+            <div className="flex-1 bg-ois-surface-muted border border-ois-border rounded-lg px-3 py-2.5">
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-xs font-semibold text-ois-text">{author}</span>
+                <span className="text-[10px] text-ois-text-subtle">{formatRelative(c.createdAt)}</span>
+              </div>
+              <p className="text-sm text-ois-text whitespace-pre-wrap">{c.body}</p>
             </div>
-            <p className="text-sm text-ois-text whitespace-pre-wrap">{c.text}</p>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* New comment box */}
       <div className="flex gap-3 pt-2 border-t border-ois-border">
@@ -801,16 +821,7 @@ export const RequestDetail: React.FC = () => {
           <div className="flex justify-end mt-2">
             <button
               disabled={!comment.trim()}
-              onClick={() => {
-                if (!comment.trim()) return;
-                setPostedComments(prev => [...prev, {
-                  id: `c-${Date.now()}`,
-                  author: userName,
-                  text: comment.trim(),
-                  ts: new Date().toISOString(),
-                }]);
-                setComment('');
-              }}
+              onClick={handlePostComment}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-ois-primary text-white text-xs font-semibold hover:bg-ois-primary-hover disabled:opacity-40 disabled:pointer-events-none transition-colors"
             >
               <Send size={12} /> Post comment
@@ -1011,7 +1022,7 @@ export const RequestDetail: React.FC = () => {
                     activeTab === tab.id
                       ? 'border-ois-primary text-ois-primary font-bold'
                       : 'border-transparent text-ois-text-muted hover:text-ois-text hover:border-ois-border-strong')}>
-                  {tab.label}{tab.id === 'comments' ? ` (${req.commentCount + postedComments.length})` : ''}
+                  {tab.label}{tab.id === 'comments' ? ` (${resolvedComments.length})` : ''}
                 </button>
               ))}
             </nav>

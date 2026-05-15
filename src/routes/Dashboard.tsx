@@ -20,6 +20,7 @@ import {
   inboxService,
   changesService,
   improvementsService,
+  onCallService,
   useResource,
 } from '../services';
 import { formatRelative, formatDate } from '@/src/lib/format';
@@ -47,6 +48,7 @@ export const Dashboard: React.FC = () => {
   const { data: inboxData } = useResource(() => inboxService.items(), []);
   const { data: changesData } = useResource(() => changesService.list(), []);
   const { data: improvementsData } = useResource(() => improvementsService.list(), []);
+  const { data: schedules } = useResource(() => onCallService.schedules(), []);
 
   const services = servicesData ?? [];
   const activeIncidents = activeIncidentsData ?? [];
@@ -455,25 +457,28 @@ export const Dashboard: React.FC = () => {
               </Link>
             </CardHeader>
             <div className="p-4 space-y-4">
-              {[
-                { svc: 'Payment Service', user: 'David Okafor' },
-                { svc: 'Auth Service', user: 'Yuki Tanaka' },
-                { svc: 'Search Service', user: 'Aisha Khan' }
-              ].map(row => (
-                <div key={row.svc} className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-ois-text-muted">{row.svc}</span>
+              {(schedules ?? []).slice(0, 3).map(s => (
+                <div key={s.id} className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-ois-text-muted">{s.name}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-ois-text">{row.user}</span>
+                    <span className="text-sm font-semibold text-ois-text">{s.currentPrimaryName ?? '—'}</span>
                     <span className="text-[10px] font-bold text-ois-text-subtle uppercase opacity-60">(primary)</span>
                   </div>
                 </div>
               ))}
-              <div className="pt-4 border-t border-ois-border flex items-center justify-between text-xs font-semibold">
-                <span className="text-ois-text-muted">Next handover: 18:00 UTC</span>
-                <span className="text-ois-primary flex items-center gap-1">
-                  <ArrowRight size={10} /> Sarah Chen
-                </span>
-              </div>
+              {schedules && schedules.length === 0 && (
+                <div className="text-xs text-gray-500">No on-call schedules configured.</div>
+              )}
+              {schedules && schedules.length > 0 && schedules[0].upcomingShifts && schedules[0].upcomingShifts.length > 0 && (
+                <div className="pt-4 border-t border-ois-border flex items-center justify-between text-xs font-semibold">
+                  <span className="text-ois-text-muted">
+                    Next handover: {new Date(schedules[0].upcomingShifts[0].startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}
+                  </span>
+                  <span className="text-ois-primary flex items-center gap-1">
+                    <ArrowRight size={10} /> {schedules[0].upcomingShifts[0].userName}
+                  </span>
+                </div>
+              )}
             </div>
           </Card>
 

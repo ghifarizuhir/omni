@@ -35,7 +35,7 @@ const CATEGORY_LABELS: Record<CatalogCategory, string> = {
   communication: 'Communication', personnel: 'Personnel', general: 'General',
 };
 
-const NOW = new Date('2026-05-09T10:00:00Z').getTime();
+const NOW = Date.now();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

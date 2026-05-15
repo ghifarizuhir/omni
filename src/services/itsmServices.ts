@@ -81,6 +81,9 @@ export const requestsService = {
       method: 'POST', body: { note },
     }),
 
+  comments: (publicId: string) =>
+    apiFetch<Array<{ id: string; authorId: string; body: string; createdAt: string }>>(`/requests/${publicId}/comments`),
+
   addComment: (publicId: string, body: string) =>
     apiFetch<RequestComment>(`/requests/${publicId}/comments`, {
       method: 'POST', body: { body },

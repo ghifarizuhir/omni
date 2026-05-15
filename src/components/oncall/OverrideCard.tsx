@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ArrowRight, CheckCircle2, XCircle, Clock, CalendarDays, MessageSquare, User } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { Card } from '@/src/components/ui/Card';
@@ -13,14 +13,12 @@ interface OverrideCardProps {
   onReject?: (id: string) => void;
 }
 
-const TODAY = new Date('2026-05-10T00:00:00Z');
-
-function getOverrideStatus(override: OnCallOverride): 'PENDING APPROVAL' | 'APPROVED' | 'PAST' | 'REJECTED' | 'CANCELLED' {
+function getOverrideStatus(override: OnCallOverride, today: Date): 'PENDING APPROVAL' | 'APPROVED' | 'PAST' | 'REJECTED' | 'CANCELLED' {
   if (override.status === 'pending') return 'PENDING APPROVAL';
   if (override.status === 'rejected') return 'REJECTED';
   if (override.status === 'cancelled') return 'CANCELLED';
   // approved — check if past
-  if (new Date(override.endAt) < TODAY) return 'PAST';
+  if (new Date(override.endAt) < today) return 'PAST';
   return 'APPROVED';
 }
 
@@ -32,7 +30,8 @@ function statusBadgeVariant(status: string): 'warning' | 'success' | 'neutral' |
 }
 
 export const OverrideCard: React.FC<OverrideCardProps> = ({ override, onApprove, onReject }) => {
-  const displayStatus = getOverrideStatus(override);
+  const today = useMemo(() => new Date(), []);
+  const displayStatus = getOverrideStatus(override, today);
 
   return (
     <Card className="flex flex-col">

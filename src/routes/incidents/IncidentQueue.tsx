@@ -56,7 +56,7 @@ function getServiceName(services: { id: string; name: string }[], ids: string[])
 type QuickFilter = 'my_open' | 'sla_risk' | 'p1p2' | 'last_24h' | 'customer_facing' | null;
 
 function applyQuickFilter(incidents: Incident[], qf: QuickFilter): Incident[] {
-  const now = new Date('2026-05-09T00:00:00Z').getTime();
+  const now = Date.now();
   switch (qf) {
     case 'my_open':
       return incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === 'u-001');
@@ -236,7 +236,7 @@ export const IncidentQueue: React.FC = () => {
   const hasFilters = search || statusFilter !== 'all' || priorityFilter !== 'all' || quickFilter;
 
   // quick filter counts
-  const now = new Date('2026-05-09T00:00:00Z').getTime();
+  const now = Date.now();
   const myOpenCount = incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === 'u-001').length;
   const slaRiskCount = incidents.filter(i =>
     i.slaResponseStatus === 'warning' || i.slaResponseStatus === 'breached' ||

@@ -17,6 +17,6 @@ export const login = async (app: Express, email: string, password: string): Prom
   return sid.split(';')[0];
 };
 
-// First user in the seed is admin; subsequent ones are operators.
-export const ADMIN_EMAIL = 'sarah.chen@acme.io';
+// Credentials match the dev seed (prisma/seed.ts): admin@omni.local / demo.
+export const ADMIN_EMAIL = 'admin@omni.local';
 export const ADMIN_PASSWORD = 'demo';
