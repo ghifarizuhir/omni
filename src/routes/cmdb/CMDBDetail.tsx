@@ -82,6 +82,9 @@ export const CMDBDetail: React.FC = () => {
   const { data: incidentsData } = useResource(() => incidentsService.list(), []);
   const { data: changesData } = useResource(() => changesService.list(), []);
   const { data: problemsData } = useResource(() => problemsService.list(), []);
+  const { data: allRulesData } = useResource(() => monitoringRulesService.list(), []);
+  const { data: kbArticlesData } = useResource(() => knowledgeService.articles(), []);
+  const { data: allMetricsData } = useResource(() => capacityService.metrics(), []);
 
   const rawCI = useMemo(() => mockCIs.find(c => c.id === ciId || c.publicId === ciId), [mockCIs, ciId]);
   const [ci, setCi] = useState<ConfigurationItem | null>(null);
@@ -89,6 +92,14 @@ export const CMDBDetail: React.FC = () => {
     setCi(rawCI ?? null);
   }, [rawCI?.id]);
   const service = useMemo(() => mockServices.find(s => s.id === ci?.serviceId), [mockServices, ci]);
+
+  const allMonitoringRules = allRulesData ?? [];
+  const allKBArticles = kbArticlesData ?? [];
+  const allCapacityMetrics = allMetricsData ?? [];
+  const ciRules = useMemo(
+    () => allMonitoringRules.filter(r => r.targetCIIds.includes(ci?.id ?? '')),
+    [ci?.id, allMonitoringRules],
+  );
 
   const [editMode, setEditMode] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -139,17 +150,6 @@ export const CMDBDetail: React.FC = () => {
 
   const outgoing = mockCIRelationships.filter(r => r.fromCiId === ci.id);
   const incoming = mockCIRelationships.filter(r => r.toCiId === ci.id);
-
-  const { data: allRulesData } = useResource(() => monitoringRulesService.list(), []);
-  const { data: kbArticlesData } = useResource(() => knowledgeService.articles(), []);
-  const { data: allMetricsData } = useResource(() => capacityService.metrics(), []);
-  const allMonitoringRules = allRulesData ?? [];
-  const allKBArticles = kbArticlesData ?? [];
-  const allCapacityMetrics = allMetricsData ?? [];
-  const ciRules = useMemo(
-    () => allMonitoringRules.filter(r => r.targetCIIds.includes(ci.id)),
-    [ci.id, allMonitoringRules],
-  );
 
   const stripeColor = CI_TYPE_COLOR[ci.type] ?? '#475467';
 
