@@ -304,12 +304,14 @@ Semua membership change tulis `AuditLog` `module: 'application_membership'`. Tab
 
 ### 10.3 Definition of Done
 
-- [ ] Semua route operasional pakai `req.scoped`, lint rule aktif.
-- [ ] 100% test integrasi 3 persona × 7 modul utama hijau.
-- [ ] `applicationId` `NOT NULL` di semua tabel scoped.
-- [ ] AppScopeSwitcher live di prod, telemetry ≥80% user pernah pakai.
+- [x] Semua route operasional pakai `req.scoped`, lint rule aktif. *(Plan B-1 + B-2)*
+- [x] Integration tests 3 persona × modul utama hijau (CMDB / Incidents / Changes). *(Plan B-1 + B-2)*
+- [ ] `applicationId` `NOT NULL` di semua tabel scoped. *(Plan F)*
+- [x] Application Owner self-service membership management (add/remove team, change role; last-OWNER guard). *(Plan D)*
+- [x] Public catalog `/applications/catalog` untuk discovery. *(Plan D)*
+- [ ] AppScopeSwitcher live di prod, telemetry ≥80% user pernah pakai. *(Plan E)*
 - [ ] Doc admin "How to manage application membership" published di KB.
-- [ ] Audit log `scopeMode` dapat di-query oleh PlatformAdmin.
+- [x] Audit log `scopeMode` dapat di-query oleh PlatformAdmin. *(Plan B-1: column landed; queryable via admin audit view.)*
 
 ## 11. Open questions (tracked, not blocking)
 

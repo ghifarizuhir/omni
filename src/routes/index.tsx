@@ -95,9 +95,11 @@ import { Departments } from './admin/Departments';
 import { Teams as AdminTeams } from './admin/Teams';
 import { Users as AdminUsers } from './admin/Users';
 import { Applications as AdminApplications } from './admin/Applications';
+import { ApplicationDetail } from './admin/ApplicationDetail';
 import { Roles as AdminRoles } from './admin/Roles';
 import { Permissions as AdminPermissions } from './admin/Permissions';
 import { DataQuality } from './admin/DataQuality';
+import { ApplicationCatalog } from './admin/ApplicationCatalog';
 import { RequireAuth } from '../components/auth/RequireAuth';
 import { ChangePassword } from './ChangePassword';
 import { RequirePasswordChange } from '../components/auth/RequirePasswordChange';
@@ -226,6 +228,8 @@ export const routes: RouteObject[] = [
       { path: 'profile',                        element: <Profile /> },
       // Settings
       { path: 'settings',                       element: <Settings /> },
+      // Application Catalog (all authenticated users)
+      { path: 'applications/catalog', element: <ApplicationCatalog /> },
       // RBAC Admin (superadmin only)
       { path: 'admin', element: <AdminLayout />, children: [
         { index: true,             element: <AdminOverview /> },
@@ -234,6 +238,7 @@ export const routes: RouteObject[] = [
         { path: 'teams',           element: <AdminTeams /> },
         { path: 'users',           element: <AdminUsers /> },
         { path: 'applications',    element: <AdminApplications /> },
+        { path: 'applications/:appId', element: <ApplicationDetail /> },
         { path: 'roles',           element: <AdminRoles /> },
         { path: 'permissions',     element: <AdminPermissions /> },
         { path: 'data-quality',    element: <DataQuality /> },

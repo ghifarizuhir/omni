@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Settings, LogOut, Moon, UserCircle } from 'lucide-react';
+import { Settings, LogOut, Moon, UserCircle, LayoutGrid } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { usersService, teamsService, useResource } from '@/src/services';
@@ -42,6 +42,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onClose }) => {
       </div>
 
       <MenuItem icon={<UserCircle size={16} />} label="Profile" onClick={() => { navigate('/profile'); onClose(); }} />
+      <MenuItem icon={<LayoutGrid size={16} />} label="App Catalog" onClick={() => { navigate('/applications/catalog'); onClose(); }} />
       <MenuItem icon={<Settings size={16} />} label="Preferences" onClick={() => { navigate('/notifications/preferences'); onClose(); }} />
       <MenuItem icon={<Settings size={16} />} label="Settings" onClick={() => { navigate('/settings'); onClose(); }} />
       <MenuItem icon={<Moon size={16} />} label="Toggle theme" trailing={<span className="text-[10px] font-bold text-ois-text-subtle">MOCK</span>} />
