@@ -20,6 +20,7 @@ import { integrationsRouter } from './routes/integrations';
 import { platformRouter } from './routes/platform';
 import { authRouter } from './routes/auth';
 import { adminRouter } from './routes/admin';
+import { applicationsRouter } from './routes/applications';
 import { HttpError } from './util';
 import { requireAuth, sessionMiddleware } from './middleware/auth';
 import { withScopedDb } from './middleware/scopedDb';
@@ -123,6 +124,7 @@ export const createApp = () => {
   // undefined`, which Prisma silently treats as "no filter" — a cross-tenant
   // read. Per-route `requirePermission(...)` guards layer on top of this.
   api.use(requireAuth);
+  api.use('/applications', applicationsRouter);
   api.use(adminRouter);
   api.use(cmdbRouter);
   api.use(eventsRouter);

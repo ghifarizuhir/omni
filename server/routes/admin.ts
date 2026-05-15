@@ -21,7 +21,6 @@ import {
   applicationSchema, functionalRoleSchema, rbacUserSchema,
 } from '../lib/validation/rbac';
 import { dataQualityRouter } from './admin/dataQuality';
-import { applicationMembershipRouter } from './admin/applicationMembership';
 
 export const adminRouter = Router();
 
@@ -32,7 +31,6 @@ export const adminRouter = Router();
 // at it). Path-prefix the guard so it only fires on actual admin routes.
 adminRouter.use('/admin', requirePermission('system.admin'));
 adminRouter.use('/admin/data-quality', dataQualityRouter);
-adminRouter.use('/admin/applications', applicationMembershipRouter);
 
 adminRouter.get('/admin/tenants', asyncHandler(async (_req, res) => {
   res.json(await prisma.tenant.findMany({ orderBy: { createdAt: 'desc' } }));

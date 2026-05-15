@@ -99,11 +99,11 @@ describe('requireAppManager', () => {
 
 const app = createApp();
 
-describe('POST /api/v1/admin/applications/:appId/teams', () => {
+describe('POST /api/v1/applications/:appId/teams', () => {
   it('PlatformAdmin can add a team as VIEWER', async () => {
     const cookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
     const res = await request(app)
-      .post(`/api/v1/admin/applications/${fx.appId}/teams`)
+      .post(`/api/v1/applications/${fx.appId}/teams`)
       .set('Cookie', cookie)
       .send({ teamId: fx.teamBId, role: 'VIEWER' });
     expect(res.status).toBe(201);
@@ -116,7 +116,7 @@ describe('POST /api/v1/admin/applications/:appId/teams', () => {
   it('Returns 409 with error=already_member when team already a member', async () => {
     const cookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
     const res = await request(app)
-      .post(`/api/v1/admin/applications/${fx.appId}/teams`)
+      .post(`/api/v1/applications/${fx.appId}/teams`)
       .set('Cookie', cookie)
       .send({ teamId: fx.teamAId, role: 'CONTRIBUTOR' });
     expect(res.status).toBe(409);
@@ -126,14 +126,14 @@ describe('POST /api/v1/admin/applications/:appId/teams', () => {
   it('Returns 403 for a non-admin non-owner user', async () => {
     const cookie = await login(app, fx.emailOf('member-b'), fx.password);
     const res = await request(app)
-      .post(`/api/v1/admin/applications/${fx.appId}/teams`)
+      .post(`/api/v1/applications/${fx.appId}/teams`)
       .set('Cookie', cookie)
       .send({ teamId: fx.teamBId, role: 'CONTRIBUTOR' });
     expect(res.status).toBe(403);
   });
 });
 
-describe('PATCH /api/v1/admin/applications/:appId/teams/:teamId', () => {
+describe('PATCH /api/v1/applications/:appId/teams/:teamId', () => {
   it('Refuses to demote the last OWNER (409 last_owner)', async () => {
     await prisma.applicationTeam.update({
       where: { applicationId_teamId: { applicationId: fx.appId, teamId: fx.teamAId } },
@@ -141,7 +141,7 @@ describe('PATCH /api/v1/admin/applications/:appId/teams/:teamId', () => {
     });
     const cookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
     const res = await request(app)
-      .patch(`/api/v1/admin/applications/${fx.appId}/teams/${fx.teamAId}`)
+      .patch(`/api/v1/applications/${fx.appId}/teams/${fx.teamAId}`)
       .set('Cookie', cookie)
       .send({ role: 'VIEWER' });
     expect(res.status).toBe(409);
@@ -153,7 +153,7 @@ describe('PATCH /api/v1/admin/applications/:appId/teams/:teamId', () => {
   });
 });
 
-describe('DELETE /api/v1/admin/applications/:appId/teams/:teamId', () => {
+describe('DELETE /api/v1/applications/:appId/teams/:teamId', () => {
   it('Refuses to remove the last OWNER (409 last_owner)', async () => {
     await prisma.applicationTeam.update({
       where: { applicationId_teamId: { applicationId: fx.appId, teamId: fx.teamAId } },
@@ -161,7 +161,7 @@ describe('DELETE /api/v1/admin/applications/:appId/teams/:teamId', () => {
     });
     const cookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
     const res = await request(app)
-      .delete(`/api/v1/admin/applications/${fx.appId}/teams/${fx.teamAId}`)
+      .delete(`/api/v1/applications/${fx.appId}/teams/${fx.teamAId}`)
       .set('Cookie', cookie);
     expect(res.status).toBe(409);
     expect(res.body.error).toBe('last_owner');
@@ -172,20 +172,20 @@ describe('DELETE /api/v1/admin/applications/:appId/teams/:teamId', () => {
   });
 });
 
-describe('GET /api/v1/admin/applications/:appId/teams', () => {
+describe('GET /api/v1/applications/:appId/teams', () => {
   it('Returns the current memberships', async () => {
     const cookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
-    const res = await request(app).get(`/api/v1/admin/applications/${fx.appId}/teams`).set('Cookie', cookie);
+    const res = await request(app).get(`/api/v1/applications/${fx.appId}/teams`).set('Cookie', cookie);
     expect(res.status).toBe(200);
     const teamIds = (res.body as Array<{ teamId: string }>).map((r) => r.teamId);
     expect(teamIds).toContain(fx.teamAId);
   });
 });
 
-describe('GET /api/v1/admin/applications/manageable', () => {
+describe('GET /api/v1/applications/manageable', () => {
   it('PlatformAdmin sees all apps including the fixture', async () => {
     const cookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
-    const res = await request(app).get('/api/v1/admin/applications/manageable').set('Cookie', cookie);
+    const res = await request(app).get('/api/v1/applications/manageable').set('Cookie', cookie);
     expect(res.status).toBe(200);
     expect((res.body as Array<{ id: string }>).some((a) => a.id === fx.appId)).toBe(true);
   });
