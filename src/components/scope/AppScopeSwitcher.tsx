@@ -59,7 +59,16 @@ export const AppScopeSwitcher: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Feature flag guard — must be AFTER all hooks
+  // All hooks above this line so the call order is stable regardless of `enabled`.
+  const filtered = useMemo(() => {
+    if (!query) return myApps;
+    const q = query.toLowerCase();
+    return myApps.filter(
+      (a) => a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q),
+    );
+  }, [query, myApps]);
+
+  // Feature flag guard — early return AFTER all hooks (Rules of Hooks).
   if (!enabled) return null;
 
   const active =
@@ -69,14 +78,6 @@ export const AppScopeSwitcher: React.FC = () => {
           const a = myApps.find((x) => x.id === (scope as { kind: 'app'; appId: string }).appId);
           return a ? { label: a.name, criticality: a.criticality } : { label: '…', criticality: null };
         })();
-
-  const filtered = useMemo(() => {
-    if (!query) return myApps;
-    const q = query.toLowerCase();
-    return myApps.filter(
-      (a) => a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q),
-    );
-  }, [query, myApps]);
 
   const pinnedApps = filtered.filter((a) => pinned.includes(a.id));
   const otherApps = filtered.filter((a) => !pinned.includes(a.id));

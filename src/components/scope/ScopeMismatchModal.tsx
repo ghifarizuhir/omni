@@ -44,9 +44,8 @@ export const ScopeMismatchModal: React.FC<ScopeMismatchModalProps> = ({
             variant="primary"
             onClick={handleConfirm}
             disabled={busy}
-            className="bg-ois-danger hover:bg-ois-danger/90 text-white border-ois-danger"
           >
-            {busy ? 'Submitting…' : 'Continue'}
+            {busy ? 'Submitting…' : 'Confirm submit'}
           </Button>
         </div>
       </div>
