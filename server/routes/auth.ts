@@ -48,7 +48,7 @@ authRouter.get('/auth/me', asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
   if (!user) throw new HttpError(401, 'Authentication required');
   res.json({
-    user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl },
+    user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, mustChangePassword: user.mustChangePassword },
     tenantId: req.session.tenantId,
     roles: req.session.roles,         // [{ id, name }, …]
     roleNames: req.session.roles.map(r => r.name),
