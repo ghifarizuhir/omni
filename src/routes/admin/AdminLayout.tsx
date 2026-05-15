@@ -4,7 +4,7 @@ import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
 import { useAuthSession } from '@/src/lib/auth/session';
 import { cn } from '@/src/lib/utils';
 import {
-  Shield, Building2, FolderTree, Users, AppWindow, Key, Eye, LayoutGrid,
+  Shield, Building2, FolderTree, Users, AppWindow, Key, Eye, LayoutGrid, AlertTriangle,
 } from 'lucide-react';
 
 const tabs = [
@@ -16,6 +16,7 @@ const tabs = [
   { to: '/admin/applications',              icon: AppWindow,   label: 'Applications' },
   { to: '/admin/roles',                     icon: Key,         label: 'Functional Roles' },
   { to: '/admin/permissions',               icon: Eye,         label: 'Permissions' },
+  { to: '/admin/data-quality',              icon: AlertTriangle, label: 'Data Quality' },
 ];
 
 export const AdminLayout: React.FC = () => {

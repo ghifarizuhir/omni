@@ -21,6 +21,7 @@ export default [
     files: ['server/routes/**/*.ts'],
     ignores: [
       'server/routes/admin.ts',
+      'server/routes/admin/dataQuality.ts',
       'server/routes/platform.ts',
       'server/routes/auth.ts',
       'server/routes/integrations.ts',

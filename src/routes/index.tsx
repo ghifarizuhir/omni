@@ -97,6 +97,7 @@ import { Users as AdminUsers } from './admin/Users';
 import { Applications as AdminApplications } from './admin/Applications';
 import { Roles as AdminRoles } from './admin/Roles';
 import { Permissions as AdminPermissions } from './admin/Permissions';
+import { DataQuality } from './admin/DataQuality';
 import { RequireAuth } from '../components/auth/RequireAuth';
 import { ChangePassword } from './ChangePassword';
 import { RequirePasswordChange } from '../components/auth/RequirePasswordChange';
@@ -235,6 +236,7 @@ export const routes: RouteObject[] = [
         { path: 'applications',    element: <AdminApplications /> },
         { path: 'roles',           element: <AdminRoles /> },
         { path: 'permissions',     element: <AdminPermissions /> },
+        { path: 'data-quality',    element: <DataQuality /> },
       ]},
       // 404
       { path: '*',                              element: <NotFound /> },

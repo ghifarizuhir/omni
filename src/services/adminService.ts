@@ -59,3 +59,21 @@ export const adminApi = {
       { method: 'POST' },
     ),
 };
+
+export interface DataQualitySummary {
+  cmdb: { total: number; orphan: number };
+  event: { total: number; orphan: number };
+  incident: { total: number; orphan: number };
+  change: { total: number; orphan: number };
+  problem: { total: number; orphan: number };
+  service_request: { total: number; orphan: number };
+}
+
+export const dataQualityApi = {
+  summary: () => apiFetch<DataQualitySummary>('/admin/data-quality/summary'),
+  list:    (module: string) => apiFetch<unknown[]>(`/admin/data-quality/${module}`),
+  assign:  (module: string, publicId: string, applicationId: string) =>
+    apiFetch<{ ok: true }>(`/admin/data-quality/${module}/${publicId}`, { method: 'PATCH', body: { applicationId } }),
+  bulkAssign: (module: string, publicIds: string[], applicationId: string) =>
+    apiFetch<{ updated: number }>(`/admin/data-quality/${module}/bulk`, { method: 'POST', body: { ids: publicIds, applicationId } }),
+};
