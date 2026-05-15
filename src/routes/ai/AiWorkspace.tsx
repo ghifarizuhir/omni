@@ -20,7 +20,7 @@ import { AiQueryResultText } from '@/src/components/ai/AiQueryResultText';
 import { AiPendingDraftItem } from '@/src/components/ai/AiPendingDraftItem';
 import { AiSidebarPanel } from '@/src/components/ai/AiSidebarPanel';
 import { AiCompletenessPanel } from '@/src/components/ai/AiCompletenessPanel';
-import { formatAiTime, getDomainLabel, getMockAiResponse } from '@/src/components/ai/utils';
+import { formatAiTime, getDomainLabel } from '@/src/components/ai/utils';
 import { aiService, useResource } from '@/src/services';
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ export const AiWorkspace: React.FC = () => {
   }, [sessionId, activeSession0]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   // Sync with URL param :sessionId
   useEffect(() => {
@@ -88,12 +88,6 @@ export const AiWorkspace: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally runs once on mount
 
-  // Clear timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
 
   // Inject AI session panel into AppShell's sidebar slot
   useEffect(() => {
@@ -113,6 +107,28 @@ export const AiWorkspace: React.FC = () => {
   useEffect(() => {
     return () => setAiSidebarContent(null);
   }, []);
+
+  // Hydrate messages from API when the active session changes
+  useEffect(() => {
+    let cancelled = false;
+    aiService.messages(activeSessionId).then((rows) => {
+      if (cancelled) return;
+      const mapped: AiMessage[] = rows.map((r) => ({
+        id: r.id,
+        sessionId: activeSessionId,
+        role: r.role === 'assistant' ? 'ai' : 'user',
+        text: r.body,
+        contentType: 'text',
+        createdAt: r.createdAt,
+      }));
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeSessionId ? { ...s, messages: mapped } : s
+        )
+      );
+    }).catch(() => {/* ignore – session may not exist on backend yet */});
+    return () => { cancelled = true; };
+  }, [activeSessionId]);
 
   // Auto-scroll to bottom when messages change
   const activeSession = sessions.find((s) => s.id === activeSessionId);
@@ -184,47 +200,35 @@ export const AiWorkspace: React.FC = () => {
 
   const handleSend = (text: string) => {
     if (!text.trim()) return;
-    const userMsg: AiMessage = {
-      id: `user-${Date.now()}`,
-      sessionId: activeSessionId,
-      role: 'user',
-      text,
-      contentType: 'text',
-      createdAt: new Date().toISOString(),
-    };
-    setSessions((prev) =>
-      prev.map((s) => {
-        if (s.id !== activeSessionId) return s;
-        return {
-          ...s,
-          messages: [...s.messages, userMsg],
-          updatedAt: new Date().toISOString(),
-        };
-      })
-    );
-
-    const capturedDomain = activeDomain;
     const capturedSessionId = activeSessionId;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      const aiMsg = getMockAiResponse(text, capturedDomain, capturedSessionId);
-      const hasDraftPending =
-        aiMsg.contentPayload &&
-        (aiMsg.contentPayload.kind === 'draft_ci' || aiMsg.contentPayload.kind === 'draft_kb') &&
-        (aiMsg.contentPayload as AiDraftCIPayload | AiDraftKBPayload).draftStatus === 'pending';
-
+    aiService.sendMessage(capturedSessionId, text.trim()).then(({ user, assistant }) => {
+      const userMsg: AiMessage = {
+        id: user.id,
+        sessionId: capturedSessionId,
+        role: 'user',
+        text: user.body,
+        contentType: 'text',
+        createdAt: user.createdAt,
+      };
+      const aiMsg: AiMessage = {
+        id: assistant.id,
+        sessionId: capturedSessionId,
+        role: 'ai',
+        text: assistant.body,
+        contentType: 'text',
+        createdAt: assistant.createdAt,
+      };
       setSessions((prev) =>
         prev.map((s) => {
           if (s.id !== capturedSessionId) return s;
           return {
             ...s,
-            messages: [...s.messages, aiMsg],
+            messages: [...s.messages, userMsg, aiMsg],
             updatedAt: new Date().toISOString(),
-            draftsPending: hasDraftPending ? s.draftsPending + 1 : s.draftsPending,
           };
         })
       );
-    }, 800);
+    }).catch(() => {/* handle silently */});
   };
 
   const updateMessageDraftStatus = (msgId: string, newStatus: AiDraftStatus) => {

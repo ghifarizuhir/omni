@@ -114,6 +114,15 @@ export const aiService = {
   sessions: () => apiFetch<AiSession[]>('/ai/sessions'),
   session: (id: string) => apiFetch<AiSession>(`/ai/sessions/${id}`),
   activeSession: () => apiFetch<AiSession | null>('/ai/sessions/active'),
+  messages: (sessionId: string) =>
+    apiFetch<Array<{ id: string; role: 'user' | 'assistant'; body: string; createdAt: string }>>(
+      `/ai/sessions/${sessionId}/messages`
+    ),
+  sendMessage: (sessionId: string, body: string) =>
+    apiFetch<{
+      user: { id: string; role: 'user'; body: string; createdAt: string };
+      assistant: { id: string; role: 'assistant'; body: string; createdAt: string };
+    }>(`/ai/sessions/${sessionId}/messages`, { method: 'POST', body: { body } }),
 };
 
 export const rbacService = {
