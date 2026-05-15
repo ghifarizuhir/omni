@@ -459,14 +459,16 @@ model Service {
 }
 
 model Problem {
-  id        String   @id
-  publicId  String   @unique
-  tenantId  String
-  status    String
-  data      String
-  createdAt DateTime @default(now())
+  id            String   @id
+  publicId      String   @unique
+  tenantId      String
+  status        String
+  data          String
+  applicationId String?
+  createdAt     DateTime @default(now())
 
   @@index([tenantId, status])
+  @@index([tenantId, applicationId])
 }
 
 model Change {
@@ -477,19 +479,23 @@ model Change {
   riskLevel      String?
   data           String
   scheduledStart DateTime?
+  applicationId  String?
 
   @@index([tenantId, status])
   @@index([tenantId, scheduledStart])
+  @@index([tenantId, applicationId])
 }
 
 model Release {
-  id       String @id
-  publicId String @unique
-  tenantId String
-  status   String
-  data     String
+  id            String  @id
+  publicId      String  @unique
+  tenantId      String
+  status        String
+  data          String
+  applicationId String?
 
   @@index([tenantId, status])
+  @@index([tenantId, applicationId])
 }
 
 model Deployment {
@@ -516,13 +522,15 @@ model DeploymentLog {
 }
 
 model ServiceRequest {
-  id       String @id
-  publicId String @unique
-  tenantId String
-  status   String
-  data     String
+  id            String  @id
+  publicId      String  @unique
+  tenantId      String
+  status        String
+  data          String
+  applicationId String?
 
   @@index([tenantId, status])
+  @@index([tenantId, applicationId])
 }
 
 model RequestComment {
