@@ -165,3 +165,139 @@ ALTER TABLE "UserFunctionalRole" ADD CONSTRAINT "UserFunctionalRole_userId_fkey"
 
 -- AddForeignKey
 ALTER TABLE "UserFunctionalRole" ADD CONSTRAINT "UserFunctionalRole_functionalRoleId_fkey" FOREIGN KEY ("functionalRoleId") REFERENCES "FunctionalRole"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- ── Backfill from Document JSON blobs ────────────────────────────────────────
+
+-- Divisions
+INSERT INTO "Division" (id, "tenantId", code, name, "createdAt", "updatedAt")
+SELECT
+  (d.data::jsonb ->> 'id'),
+  d."tenantId",
+  (d.data::jsonb ->> 'code'),
+  (d.data::jsonb ->> 'name'),
+  d."createdAt",
+  d."createdAt"
+FROM "Document" d
+WHERE d.kind = 'rbac-division'
+ON CONFLICT (id) DO NOTHING;
+
+-- Departments (only those whose division resolved)
+INSERT INTO "Department" (id, "tenantId", "divisionId", code, name, "createdAt", "updatedAt")
+SELECT
+  (d.data::jsonb ->> 'id'),
+  d."tenantId",
+  (d.data::jsonb ->> 'divisionId'),
+  (d.data::jsonb ->> 'code'),
+  (d.data::jsonb ->> 'name'),
+  d."createdAt",
+  d."createdAt"
+FROM "Document" d
+WHERE d.kind = 'rbac-department'
+  AND EXISTS (SELECT 1 FROM "Division" v WHERE v.id = (d.data::jsonb ->> 'divisionId'))
+ON CONFLICT (id) DO NOTHING;
+
+-- Teams
+INSERT INTO "Team" (id, "tenantId", "departmentId", code, name, "createdAt", "updatedAt")
+SELECT
+  (d.data::jsonb ->> 'id'),
+  d."tenantId",
+  (d.data::jsonb ->> 'departmentId'),
+  (d.data::jsonb ->> 'code'),
+  (d.data::jsonb ->> 'name'),
+  d."createdAt",
+  d."createdAt"
+FROM "Document" d
+WHERE d.kind = 'rbac-team'
+  AND EXISTS (SELECT 1 FROM "Department" p WHERE p.id = (d.data::jsonb ->> 'departmentId'))
+ON CONFLICT (id) DO NOTHING;
+
+-- Applications
+INSERT INTO "Application" (id, "tenantId", code, name, criticality, "createdAt", "updatedAt")
+SELECT
+  (d.data::jsonb ->> 'id'),
+  d."tenantId",
+  (d.data::jsonb ->> 'code'),
+  (d.data::jsonb ->> 'name'),
+  (d.data::jsonb ->> 'criticality'),
+  d."createdAt",
+  d."createdAt"
+FROM "Document" d
+WHERE d.kind = 'rbac-application'
+ON CONFLICT (id) DO NOTHING;
+
+-- ApplicationTeam: include ownerTeamId, and any teams array if present
+INSERT INTO "ApplicationTeam" ("applicationId", "teamId")
+SELECT DISTINCT
+  (d.data::jsonb ->> 'id') AS app_id,
+  team_id
+FROM "Document" d,
+     LATERAL (
+       SELECT (d.data::jsonb ->> 'ownerTeamId') AS team_id
+       UNION ALL
+       SELECT jsonb_array_elements_text(COALESCE(d.data::jsonb -> 'teams', '[]'::jsonb))
+     ) t
+WHERE d.kind = 'rbac-application'
+  AND t.team_id IS NOT NULL
+  AND EXISTS (SELECT 1 FROM "Team" tm WHERE tm.id = t.team_id)
+  AND EXISTS (SELECT 1 FROM "Application" a WHERE a.id = (d.data::jsonb ->> 'id'))
+ON CONFLICT DO NOTHING;
+
+-- FunctionalRole
+INSERT INTO "FunctionalRole" (id, "tenantId", code, name, description, "createdAt", "updatedAt")
+SELECT
+  (d.data::jsonb ->> 'id'),
+  d."tenantId",
+  (d.data::jsonb ->> 'code'),
+  (d.data::jsonb ->> 'name'),
+  (d.data::jsonb ->> 'description'),
+  d."createdAt",
+  d."createdAt"
+FROM "Document" d
+WHERE d.kind = 'rbac-role'
+ON CONFLICT (id) DO NOTHING;
+
+-- ── Merge rbac-user docs into User by email ──────────────────────────────────
+
+-- Update existing real users with org fields and superadmin flag
+UPDATE "User" u
+SET
+  "isSuperadmin" = COALESCE((d.data::jsonb ->> 'isSuperadmin')::boolean, FALSE),
+  "level"        = NULLIF(d.data::jsonb ->> 'level', ''),
+  "divisionId"   = NULLIF(d.data::jsonb ->> 'divisionId', ''),
+  "departmentId" = NULLIF(d.data::jsonb ->> 'departmentId', ''),
+  "teamId"       = NULLIF(d.data::jsonb ->> 'teamId', '')
+FROM "Document" d
+WHERE d.kind = 'rbac-user'
+  AND (d.data::jsonb ->> 'email') = u.email;
+
+-- Insert synthetic-only users (org-only, no passwordHash → cannot log in)
+INSERT INTO "User" (id, email, name, "isSuperadmin", "level", "divisionId", "departmentId", "teamId", "createdAt")
+SELECT
+  (d.data::jsonb ->> 'id'),
+  (d.data::jsonb ->> 'email'),
+  (d.data::jsonb ->> 'name'),
+  COALESCE((d.data::jsonb ->> 'isSuperadmin')::boolean, FALSE),
+  NULLIF(d.data::jsonb ->> 'level', ''),
+  NULLIF(d.data::jsonb ->> 'divisionId', ''),
+  NULLIF(d.data::jsonb ->> 'departmentId', ''),
+  NULLIF(d.data::jsonb ->> 'teamId', ''),
+  d."createdAt"
+FROM "Document" d
+WHERE d.kind = 'rbac-user'
+  AND NOT EXISTS (SELECT 1 FROM "User" u WHERE u.email = (d.data::jsonb ->> 'email'))
+ON CONFLICT (id) DO NOTHING;
+
+-- Functional role assignments
+INSERT INTO "UserFunctionalRole" ("userId", "functionalRoleId")
+SELECT
+  u.id,
+  fr.id
+FROM "Document" d
+JOIN "User" u            ON u.email = (d.data::jsonb ->> 'email')
+JOIN LATERAL jsonb_array_elements_text(COALESCE(d.data::jsonb -> 'functionalRoles', '[]'::jsonb)) AS code(value) ON TRUE
+JOIN "FunctionalRole" fr ON fr.code = code.value AND fr."tenantId" = d."tenantId"
+WHERE d.kind = 'rbac-user'
+ON CONFLICT DO NOTHING;
+
+-- ── Drop old document rows ──────────────────────────────────────────────────
+DELETE FROM "Document" WHERE kind IN ('rbac-division', 'rbac-department', 'rbac-team', 'rbac-application', 'rbac-role', 'rbac-user');
