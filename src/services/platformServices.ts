@@ -6,22 +6,18 @@ import type {
 import type {
   CreateKBArticleInput, UpdateKBArticleInput,
 } from '../shared/schemas/kbArticle';
-// Pull shape information from the mock modules so route components keep their
-// strong typing for the catch-all endpoints (notifications, on-call, etc).
-import type { mockNotifications } from '../mocks/notifications';
-import type { mockNotificationPreferences, mockQuietHours } from '../mocks/notificationPreferences';
-import type { legacyMockInboxItems } from '../mocks/inbox';
-import type { mockInboxItems } from '../mocks/inboxItems';
-import type { mockOnCallSchedules } from '../mocks/onCallSchedules';
-import type { mockOnCallOverrides } from '../mocks/onCallOverrides';
-import type { mockKBFeedback } from '../mocks/kbFeedback';
-import type { kbAnalytics } from '../mocks/kbAnalytics';
-import type { mockStatusPageEntries, mockStatusPageIncidents } from '../mocks/statusPageEntries';
-import type { mockRbacUsers, mockRbacTeams, mockApplications, mockDepartments, mockDivisions, mockFunctionalRoles } from '../mocks/rbac';
-import type { mockReports } from '../mocks/reports';
+import type {
+  NotificationItem, NotificationPreference, QuietHoursConfig,
+  LegacyInboxItem, InboxItem,
+  OnCallSchedule, OnCallOverride,
+  StatusPageEntry, StatusPageIncident,
+} from '../types/platform';
+import type { KBFeedback, KBAnalytics } from '../types/knowledge';
+import type {
+  Division, Department, RbacTeam, Application, FunctionalRole, RbacUser,
+} from '../types/rbac';
+import type { Report, MeasurementDashboard, MetricDefinition } from '../types/measurement';
 import type { BenefitMeasurement, ROICalculation } from '../types/improvement';
-import type { MeasurementDashboard } from '../types/measurement';
-import type { mockMetricDefinitions } from '../mocks/metricDefinitions';
 
 export const usersService = {
   list: () => apiFetch<User[]>('/users'),
@@ -35,27 +31,27 @@ export const teamsService = {
 };
 
 export const notificationsService = {
-  list: () => apiFetch<typeof mockNotifications>('/notifications'),
-  preferences: () => apiFetch<typeof mockNotificationPreferences>('/notifications/preferences'),
-  quietHours: () => apiFetch<typeof mockQuietHours>('/notifications/quiet-hours'),
+  list: () => apiFetch<NotificationItem[]>('/notifications'),
+  preferences: () => apiFetch<NotificationPreference[]>('/notifications/preferences'),
+  quietHours: () => apiFetch<QuietHoursConfig>('/notifications/quiet-hours'),
 };
 
 export const inboxService = {
-  feed: () => apiFetch<typeof legacyMockInboxItems>('/inbox'),
-  items: () => apiFetch<typeof mockInboxItems>('/inbox/items'),
+  feed: () => apiFetch<LegacyInboxItem[]>('/inbox'),
+  items: () => apiFetch<InboxItem[]>('/inbox/items'),
 };
 
 export const onCallService = {
-  schedules: () => apiFetch<typeof mockOnCallSchedules>('/on-call/schedules'),
-  overrides: () => apiFetch<typeof mockOnCallOverrides>('/on-call/overrides'),
+  schedules: () => apiFetch<OnCallSchedule[]>('/on-call/schedules'),
+  overrides: () => apiFetch<OnCallOverride[]>('/on-call/overrides'),
 };
 
 export const knowledgeService = {
   articles: () => apiFetch<KBArticle[]>('/kb/articles'),
   article: (publicId: string) => apiFetch<KBArticle>(`/kb/articles/${publicId}`),
   categories: () => apiFetch<KBCategory[]>('/kb/categories'),
-  feedback: (articleId?: string) => apiFetch<typeof mockKBFeedback>('/kb/feedback', { query: { articleId } }),
-  analytics: () => apiFetch<typeof kbAnalytics>('/kb/analytics'),
+  feedback: (articleId?: string) => apiFetch<KBFeedback[]>('/kb/feedback', { query: { articleId } }),
+  analytics: () => apiFetch<KBAnalytics>('/kb/analytics'),
 
   // M6.11 (B1.5) — KB article writes. Create starts in draft; status changes
   // go through the dedicated setStatus endpoint so the server can stamp
@@ -77,8 +73,8 @@ export const testingService = {
 };
 
 export const statusPageService = {
-  entries: () => apiFetch<typeof mockStatusPageEntries>('/status-page/entries'),
-  incidents: () => apiFetch<typeof mockStatusPageIncidents>('/status-page/incidents'),
+  entries: () => apiFetch<StatusPageEntry[]>('/status-page/entries'),
+  incidents: () => apiFetch<StatusPageIncident[]>('/status-page/incidents'),
 };
 
 export const aiService = {
@@ -88,12 +84,12 @@ export const aiService = {
 };
 
 export const rbacService = {
-  users: () => apiFetch<typeof mockRbacUsers>('/rbac/users'),
-  teams: () => apiFetch<typeof mockRbacTeams>('/rbac/teams'),
-  applications: () => apiFetch<typeof mockApplications>('/rbac/applications'),
-  departments: () => apiFetch<typeof mockDepartments>('/rbac/departments'),
-  divisions: () => apiFetch<typeof mockDivisions>('/rbac/divisions'),
-  roles: () => apiFetch<typeof mockFunctionalRoles>('/rbac/roles'),
+  users: () => apiFetch<RbacUser[]>('/rbac/users'),
+  teams: () => apiFetch<RbacTeam[]>('/rbac/teams'),
+  applications: () => apiFetch<Application[]>('/rbac/applications'),
+  departments: () => apiFetch<Department[]>('/rbac/departments'),
+  divisions: () => apiFetch<Division[]>('/rbac/divisions'),
+  roles: () => apiFetch<FunctionalRole[]>('/rbac/roles'),
 };
 
 export const continuityService = {
@@ -103,9 +99,9 @@ export const continuityService = {
 };
 
 export const measurementService = {
-  reports: () => apiFetch<typeof mockReports>('/measurement/reports'),
+  reports: () => apiFetch<Report[]>('/measurement/reports'),
   roi: () => apiFetch<ROICalculation[]>('/measurement/roi'),
   benefits: () => apiFetch<BenefitMeasurement[]>('/measurement/benefits'),
   dashboards: () => apiFetch<MeasurementDashboard[]>('/measurement/dashboards'),
-  metrics: () => apiFetch<typeof mockMetricDefinitions>('/measurement/metrics'),
+  metrics: () => apiFetch<MetricDefinition[]>('/measurement/metrics'),
 };

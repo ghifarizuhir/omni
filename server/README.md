@@ -1,9 +1,6 @@
 # OIS API Server
 
 Express server that backs the `/api/v1/*` endpoints expected by `src/services/`.
-Today it reads from the same `src/mocks/*.ts` files the frontend uses, so the
-frontend produces identical responses whether `VITE_API_MODE` is `mock` (in-process)
-or `live` (hits this server).
 
 ## Run
 

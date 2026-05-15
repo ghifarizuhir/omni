@@ -3,7 +3,7 @@ import { Bell, Check, MessageSquare, Settings, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/src/lib/utils';
 import { notificationsService, useResource } from '@/src/services';
-import type { MockNotificationItem } from '@/src/mocks/notifications';
+import type { NotificationItem } from '@/src/types/platform';
 import { formatRelative } from '@/src/lib/format';
 
 type FilterId = 'all' | 'unread' | 'mentions';
@@ -14,7 +14,7 @@ const FILTERS: { id: FilterId; label: string }[] = [
   { id: 'mentions', label: 'Mentions' },
 ];
 
-function NotificationIcon({ type }: { type: MockNotificationItem['type'] }) {
+function NotificationIcon({ type }: { type: NotificationItem['type'] }) {
   const styles = {
     mention: 'bg-ois-info-pale text-ois-info',
     update:  'bg-ois-success-pale text-ois-success',

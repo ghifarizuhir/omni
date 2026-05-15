@@ -9,8 +9,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Frontend** — React 19 SPA (Vite) under `src/`. Originally built on Google AI Studio against the Gemini API.
 - **Backend** — Express + Prisma + Postgres API under `server/`, with Socket.io for realtime and an in-process job scheduler. Local dev stack (Postgres 16, Redis) runs via `docker-compose.yml`. See `docs/PRODUCTION-READINESS-STRATEGY.md` for M7 (production-readiness) milestones.
 
-Some frontend routes still read from `src/mocks/` while migration to the real API is in progress.
-
 ## Commands
 
 ```bash
@@ -72,7 +70,6 @@ Backend: `server/index.ts` boots telemetry, creates the Express app via `server/
 | `src/components/cmdb/` | CMDB-specific composed components |
 | `src/components/charts/` | D3-based SparkLine and DonutChart |
 | `src/types/` | TypeScript interfaces for domain models (shared shape with API) |
-| `src/mocks/` | Legacy static mock data — being replaced by API calls |
 | `src/lib/` | Utilities: `cn()`, `format.ts`, `constants.ts` |
 | `server/` | Express API entry, app wiring, auth, realtime, jobs, audit, logger |
 | `server/routes/` | API routers: auth, admin, cmdb, events, monitoring, incidents, itsm, availability, capacity, integrations, platform |
@@ -108,9 +105,7 @@ Key interfaces to know before adding features:
 
 ### Data Layer
 
-The real API lives under `server/routes/` and is served at `/api/v1/...`, backed by Prisma against Postgres. The Prisma schema (`prisma/schema.prisma`) is the source of truth for persisted models; many columns currently store serialized JSON in `String` fields and are tracked for conversion to `jsonb` as part of M7 hardening.
-
-Some frontend routes still import from `src/mocks/` as a transitional shim. When wiring a new feature, prefer fetching from the API; only fall back to mocks if the corresponding endpoint doesn't exist yet, and add a TODO to remove the mock once it does.
+The real API lives under `server/routes/` and is served at `/api/v1/...`, backed by Prisma against Postgres. The Prisma schema (`prisma/schema.prisma`) is the source of truth for persisted models; many columns currently store serialized JSON in `String` fields and are tracked for conversion to `jsonb` as part of M7 hardening. When wiring a new feature, always fetch from the API.
 
 ### Styling
 

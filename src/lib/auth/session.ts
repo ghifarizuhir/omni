@@ -1,9 +1,4 @@
 // Small session-cache hook backed by /api/v1/auth/me.
-//
-// Replaces the legacy `import { currentUser } from '@/src/mocks/users'` pattern
-// the portal/requests routes used. The mock import always pointed at the seed
-// admin; this returns whoever is actually logged in.
-//
 // The session is fetched once per page-load and shared across consumers via a
 // tiny pub-sub. `RequireAuth` already calls `/auth/me` for its gate, so this
 // adds at most one extra request for the same data; React-Query is overkill

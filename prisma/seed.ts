@@ -1,5 +1,4 @@
-// Seed the dev DB from existing src/mocks/*.ts files.
-// Idempotent: clears the pilot domains first so re-running gives a clean state.
+// Seeds the dev DB. Idempotent: clears the pilot domains first so re-running gives a clean state.
 
 import { PrismaClient } from '@prisma/client';
 import { hash } from '@node-rs/argon2';

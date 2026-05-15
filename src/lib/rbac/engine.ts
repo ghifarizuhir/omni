@@ -15,11 +15,9 @@ import { LEVEL_RANK } from '@/src/types/rbac';
 import { permissionRules } from './permissions';
 
 // ── Org-tree registry ────────────────────────────────────────────────────────
-// engine.ts used to import org tree from src/mocks/rbac directly. That coupled
-// authorization to mock data and blocked M6.1's "no value imports from mocks"
-// goal. Now the tree is registered at app boot by CurrentUserProvider, which
-// loads it from /api/v1/rbac/*. Callers that override via CanOptions
-// (`Can` / `useCan` already do) continue to work unchanged.
+// The tree is registered at app boot by CurrentUserProvider, which loads it
+// from /api/v1/rbac/*. Callers that override via CanOptions (`Can` / `useCan`
+// already do) continue to work unchanged.
 
 let registry: {
   applications: Application[];

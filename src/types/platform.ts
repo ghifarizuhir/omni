@@ -47,6 +47,34 @@ export interface InboxItem {
   archivedAt?: string;
 }
 
+export interface LegacyInboxItem {
+  id: string;
+  type: 'approval' | 'escalation' | 'sign_off' | 'acknowledgment';
+  sourceModule: 'incident' | 'change' | 'request' | 'release';
+  sourceRef: string;
+  title: string;
+  body: string;
+  priority: 'urgent' | 'normal';
+  dueAt: string;
+  createdAt: string;
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+export interface NotificationItem {
+  id: string;
+  type: 'info' | 'update' | 'mention' | 'system';
+  title: string;
+  body: string;
+  sourceModule?: string;
+  sourceRef?: string;
+  url: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
 // ============================================================
 // NOTIFICATION PREFERENCES
 // ============================================================
