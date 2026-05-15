@@ -167,4 +167,12 @@ export const measurementService = {
   benefits: () => apiFetch<BenefitMeasurement[]>('/measurement/benefits'),
   dashboards: () => apiFetch<MeasurementDashboard[]>('/measurement/dashboards'),
   metrics: () => apiFetch<MetricDefinition[]>('/measurement/metrics'),
+  execSummary: () => apiFetch<{
+    slaCompliancePct: number;
+    mttrMinutes: number;
+    changeSuccessPct: number;
+    openMajorIncidents: number;
+  }>('/measurement/exec-summary'),
+  createReport: (input: { name: string; definition?: unknown; schedule?: unknown }) =>
+    apiFetch<Report>('/measurement/reports', { method: 'POST', body: input }),
 };

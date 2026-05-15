@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Download, ChevronDown } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
+import { measurementService, useResource } from '@/src/services';
 import { KPICardLarge } from '@/src/components/measurement/KPICardLarge';
 import { AvailabilityTrendChart } from '@/src/components/measurement/AvailabilityTrendChart';
 import { IncidentVolumeChart } from '@/src/components/measurement/IncidentVolumeChart';
@@ -8,6 +9,12 @@ import { ChangeOutcomesChart } from '@/src/components/measurement/ChangeOutcomes
 import { SLAComplianceTable } from '@/src/components/measurement/SLAComplianceTable';
 import { SummaryStatBlock } from '@/src/components/measurement/SummaryStatBlock';
 import { Button } from '@/src/components/ui/Button';
+
+function formatMinutes(m: number): string {
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return h ? `${h}h ${r}m` : `${r}m`;
+}
 
 type TimeRange = '7d' | '30d' | '90d';
 
@@ -18,6 +25,7 @@ const TIME_RANGE_LABELS: Record<TimeRange, string> = {
 };
 
 export const ExecutiveDashboard: React.FC = () => {
+  const { data: summary } = useResource(() => measurementService.execSummary(), []);
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [timeRangeOpen, setTimeRangeOpen] = useState(false);
   const [serviceFilterOpen, setServiceFilterOpen] = useState(false);
@@ -89,7 +97,7 @@ export const ExecutiveDashboard: React.FC = () => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICardLarge
           title="SLA Compliance"
-          value="75%"
+          value={summary ? `${summary.slaCompliancePct}%` : '—'}
           trend="down"
           trendLabel="-12pp vs Q1"
           target="100%"
@@ -97,7 +105,7 @@ export const ExecutiveDashboard: React.FC = () => {
         />
         <KPICardLarge
           title="MTTR"
-          value="2h 14m"
+          value={summary ? formatMinutes(summary.mttrMinutes) : '—'}
           trend="down"
           trendLabel="+14m vs prev"
           target="30 min"
@@ -105,7 +113,7 @@ export const ExecutiveDashboard: React.FC = () => {
         />
         <KPICardLarge
           title="Change Success"
-          value="87%"
+          value={summary ? `${summary.changeSuccessPct}%` : '—'}
           trend="up"
           trendLabel="+2% vs prev"
           target="95%"
@@ -113,7 +121,7 @@ export const ExecutiveDashboard: React.FC = () => {
         />
         <KPICardLarge
           title="Active Incidents"
-          value="9"
+          value={summary ? String(summary.openMajorIncidents) : '—'}
           subtext="1 P1 · 3 P2"
           status="warning"
         />
