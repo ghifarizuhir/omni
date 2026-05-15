@@ -359,14 +359,14 @@ const kbAnalytics: KBAnalytics = {
 
 // ─── RBAC ────────────────────────────────────────────────────────────────────
 
-const divisions: Division[] = [
+export const divisions: Division[] = [
   { id: 'div-sta', code: 'STA',           name: 'IT Strategy & Architecture' },
   { id: 'div-ifm', code: 'IFM',           name: 'IT Infrastructure Management' },
   { id: 'div-aps', code: 'APS',           name: 'IT Application Services' },
   { id: 'div-ub',  code: 'USER_BUSINESS', name: 'User Business' },
 ];
 
-const departments: Department[] = [
+export const departments: Department[] = [
   { id: 'dept-aps-1',   divisionId: 'div-aps', code: 'APS-CORE',    name: 'APS Core Banking Apps' },
   { id: 'dept-aps-2',   divisionId: 'div-aps', code: 'APS-CHANNEL', name: 'APS Channel Apps' },
   { id: 'dept-aps-3',   divisionId: 'div-aps', code: 'APS-SUPPORT', name: 'APS Support Apps' },
@@ -377,7 +377,7 @@ const departments: Department[] = [
   { id: 'dept-ub-retail',divisionId: 'div-ub', code: 'UB-RETAIL',   name: 'Retail Business' },
 ];
 
-const rbacTeams: RbacTeam[] = [
+export const rbacTeams: RbacTeam[] = [
   { id: 'team-core-loan',    departmentId: 'dept-aps-1',   code: 'CORE-LOAN',    name: 'Loan Origination Team' },
   { id: 'team-core-deposit', departmentId: 'dept-aps-1',   code: 'CORE-DEPOSIT', name: 'Deposit Team' },
   { id: 'team-ch-mobile',    departmentId: 'dept-aps-2',   code: 'CH-MOBILE',    name: 'Mobile Banking Team' },
@@ -393,7 +393,7 @@ const rbacTeams: RbacTeam[] = [
   { id: 'team-ub-branch',    departmentId: 'dept-ub-retail',code: 'UB-BRANCH',   name: 'Branch Operations' },
 ];
 
-const applications: Application[] = [
+export const applications: Application[] = [
   { id: 'app-loan',    code: 'LOAN',    name: 'Loan Origination System', ownerTeamId: 'team-core-loan' },
   { id: 'app-deposit', code: 'DEPOSIT', name: 'Deposit Management',      ownerTeamId: 'team-core-deposit' },
   { id: 'app-mbank',   code: 'MBANK',   name: 'Mobile Banking',          ownerTeamId: 'team-ch-mobile' },
@@ -402,7 +402,7 @@ const applications: Application[] = [
   { id: 'app-dwh',     code: 'DWH',     name: 'Data Warehouse',          ownerTeamId: 'team-data-dwh' },
 ];
 
-const functionalRoles: FunctionalRole[] = [
+export const functionalRoles: FunctionalRole[] = [
   { id: 'role-cm',  code: 'change_manager',     name: 'Change Manager',     description: 'Member of APS Change & Release team. Can create changes.',                            builtIn: true },
   { id: 'role-cab', code: 'cab_member',         name: 'CAB Member',         description: 'Sits on Change Advisory Board. Approves normal changes.',                             builtIn: true },
   { id: 'role-ea',  code: 'emergency_approver', name: 'Emergency Approver', description: 'Authorized to approve emergency changes (typically Dept Head+ CAB).',                builtIn: true },
@@ -412,7 +412,7 @@ const functionalRoles: FunctionalRole[] = [
   { id: 'role-req', code: 'requester',          name: 'Requester',          description: 'End user. Can submit own requests/incidents.',                                         builtIn: true },
 ];
 
-const rbacUsers: RbacUser[] = [
+export const rbacUsers: RbacUser[] = [
   { id: 'u-super',       name: 'Super Admin',      email: 'admin@omni.local',              divisionId: null,      departmentId: null,           teamId: null,              level: null,          functionalRoles: [],                              isSuperadmin: true,  active: true },
   { id: 'u-aps-gh',      name: 'Andi Wibowo',      email: 'andi.wibowo@omni.local',        divisionId: 'div-aps', departmentId: null,           teamId: null,              level: 'group_head',  functionalRoles: [],                              isSuperadmin: false, active: true },
   { id: 'u-aps-channel-dh', name: 'Budi Santoso',  email: 'budi.santoso@omni.local',      divisionId: 'div-aps', departmentId: 'dept-aps-2',   teamId: null,              level: 'dept_head',   functionalRoles: ['cab_member'],                  isSuperadmin: false, active: true },
@@ -641,12 +641,6 @@ export const seedDocuments = async (prisma: PrismaClient, tenantId: string) => {
     { kind: 'on-call-override',     items: onCallOverrides },
     { kind: 'status-page-entry',    items: statusPageEntries },
     { kind: 'status-page-incident', items: statusPageIncidents },
-    { kind: 'rbac-user',            items: rbacUsers },
-    { kind: 'rbac-team',            items: rbacTeams },
-    { kind: 'rbac-application',     items: applications },
-    { kind: 'rbac-department',      items: departments },
-    { kind: 'rbac-division',        items: divisions },
-    { kind: 'rbac-role',            items: functionalRoles },
     { kind: 'report',               items: reports },
     { kind: 'roi-calc',             items: roiCalculations },
     { kind: 'benefit-measurement',  items: benefitMeasurements },

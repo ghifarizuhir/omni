@@ -6,6 +6,18 @@ import { audit } from '../audit';
 import { invalidatePermissionCache, permissionCatalog } from '../auth/permissions';
 import { upsertDocument, deleteDocument } from '../repositories/documents';
 import { asyncHandler, HttpError, qString } from '../util';
+import {
+  upsertDivision, deleteDivision,
+  upsertDepartment, deleteDepartment,
+  upsertTeam, deleteTeam,
+  upsertApplication, deleteApplication,
+  upsertFunctionalRole, deleteFunctionalRole,
+  upsertRbacUser, deleteRbacUser,
+} from '../repositories/rbacOrg';
+import {
+  divisionSchema, departmentSchema, teamSchema,
+  applicationSchema, functionalRoleSchema, rbacUserSchema,
+} from '../lib/validation/rbac';
 
 export const adminRouter = Router();
 
@@ -241,31 +253,77 @@ adminRouter.put('/admin/memberships/:id/roles', asyncHandler(async (req, res) =>
   res.json({ membershipId: membership.id, roleIds: body.roleIds });
 }));
 
-// ── RBAC: document-backed org tree (divisions, departments, teams, apps, functional roles, users) ──
+// ── RBAC org tree: typed CRUD per entity ─────────────────────────────────────
 
-const RBAC_ENTITY_MAP: Record<string, string> = {
-  divisions: 'rbac-division',
-  departments: 'rbac-department',
-  teams: 'rbac-team',
-  applications: 'rbac-application',
-  roles: 'rbac-role',
-  users: 'rbac-user',
-};
-
-adminRouter.put('/admin/rbac/:entity/:id', asyncHandler(async (req, res) => {
-  const kind = RBAC_ENTITY_MAP[req.params.entity];
-  if (!kind) throw new HttpError(404, 'Unknown RBAC entity type');
-  const payload = { ...req.body, id: req.params.id };
-  await upsertDocument(req.tenantId, kind, req.params.id, payload);
-  await audit(req, { action: 'upsert', resourceKind: kind, resourceId: req.params.id, after: payload });
-  res.json(payload);
+adminRouter.put('/admin/rbac/divisions/:id', asyncHandler(async (req, res) => {
+  const input = divisionSchema.parse(req.body);
+  const row = await upsertDivision(req.tenantId, req.params.id, input);
+  await audit(req, { action: 'upsert', resourceKind: 'division', resourceId: row.id, after: row });
+  res.json(row);
+}));
+adminRouter.delete('/admin/rbac/divisions/:id', asyncHandler(async (req, res) => {
+  await deleteDivision(req.params.id);
+  await audit(req, { action: 'delete', resourceKind: 'division', resourceId: req.params.id });
+  res.status(204).end();
 }));
 
-adminRouter.delete('/admin/rbac/:entity/:id', asyncHandler(async (req, res) => {
-  const kind = RBAC_ENTITY_MAP[req.params.entity];
-  if (!kind) throw new HttpError(404, 'Unknown RBAC entity type');
-  await deleteDocument(req.tenantId, kind, req.params.id);
-  await audit(req, { action: 'delete', resourceKind: kind, resourceId: req.params.id });
+adminRouter.put('/admin/rbac/departments/:id', asyncHandler(async (req, res) => {
+  const input = departmentSchema.parse(req.body);
+  const row = await upsertDepartment(req.tenantId, req.params.id, input);
+  await audit(req, { action: 'upsert', resourceKind: 'department', resourceId: row.id, after: row });
+  res.json(row);
+}));
+adminRouter.delete('/admin/rbac/departments/:id', asyncHandler(async (req, res) => {
+  await deleteDepartment(req.params.id);
+  await audit(req, { action: 'delete', resourceKind: 'department', resourceId: req.params.id });
+  res.status(204).end();
+}));
+
+adminRouter.put('/admin/rbac/teams/:id', asyncHandler(async (req, res) => {
+  const input = teamSchema.parse(req.body);
+  const row = await upsertTeam(req.tenantId, req.params.id, input);
+  await audit(req, { action: 'upsert', resourceKind: 'team', resourceId: row.id, after: row });
+  res.json(row);
+}));
+adminRouter.delete('/admin/rbac/teams/:id', asyncHandler(async (req, res) => {
+  await deleteTeam(req.params.id);
+  await audit(req, { action: 'delete', resourceKind: 'team', resourceId: req.params.id });
+  res.status(204).end();
+}));
+
+adminRouter.put('/admin/rbac/applications/:id', asyncHandler(async (req, res) => {
+  const input = applicationSchema.parse(req.body);
+  await upsertApplication(req.tenantId, req.params.id, input);
+  await audit(req, { action: 'upsert', resourceKind: 'application', resourceId: req.params.id, after: input });
+  res.json({ id: req.params.id, ...input });
+}));
+adminRouter.delete('/admin/rbac/applications/:id', asyncHandler(async (req, res) => {
+  await deleteApplication(req.params.id);
+  await audit(req, { action: 'delete', resourceKind: 'application', resourceId: req.params.id });
+  res.status(204).end();
+}));
+
+adminRouter.put('/admin/rbac/roles/:id', asyncHandler(async (req, res) => {
+  const input = functionalRoleSchema.parse(req.body);
+  const row = await upsertFunctionalRole(req.tenantId, req.params.id, input);
+  await audit(req, { action: 'upsert', resourceKind: 'functional-role', resourceId: row.id, after: row });
+  res.json(row);
+}));
+adminRouter.delete('/admin/rbac/roles/:id', asyncHandler(async (req, res) => {
+  await deleteFunctionalRole(req.params.id);
+  await audit(req, { action: 'delete', resourceKind: 'functional-role', resourceId: req.params.id });
+  res.status(204).end();
+}));
+
+adminRouter.put('/admin/rbac/users/:id', asyncHandler(async (req, res) => {
+  const input = rbacUserSchema.parse(req.body);
+  const row = await upsertRbacUser(req.tenantId, req.params.id, input);
+  await audit(req, { action: 'upsert', resourceKind: 'user', resourceId: row.id, after: { ...row, passwordHash: undefined } });
+  res.json(row);
+}));
+adminRouter.delete('/admin/rbac/users/:id', asyncHandler(async (req, res) => {
+  await deleteRbacUser(req.params.id);
+  await audit(req, { action: 'delete', resourceKind: 'user', resourceId: req.params.id });
   res.status(204).end();
 }));
 
