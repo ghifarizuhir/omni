@@ -95,6 +95,7 @@ import { Departments } from './admin/Departments';
 import { Teams as AdminTeams } from './admin/Teams';
 import { Users as AdminUsers } from './admin/Users';
 import { Applications as AdminApplications } from './admin/Applications';
+import { ApplicationDetail } from './admin/ApplicationDetail';
 import { Roles as AdminRoles } from './admin/Roles';
 import { Permissions as AdminPermissions } from './admin/Permissions';
 import { DataQuality } from './admin/DataQuality';
@@ -234,6 +235,7 @@ export const routes: RouteObject[] = [
         { path: 'teams',           element: <AdminTeams /> },
         { path: 'users',           element: <AdminUsers /> },
         { path: 'applications',    element: <AdminApplications /> },
+        { path: 'applications/:appId', element: <ApplicationDetail /> },
         { path: 'roles',           element: <AdminRoles /> },
         { path: 'permissions',     element: <AdminPermissions /> },
         { path: 'data-quality',    element: <DataQuality /> },

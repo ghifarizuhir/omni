@@ -60,6 +60,27 @@ export const adminApi = {
     ),
 };
 
+export type MembershipRole = 'OWNER' | 'CONTRIBUTOR' | 'VIEWER';
+
+export interface MembershipDto {
+  appId: string;
+  teamId: string;
+  role: MembershipRole;
+  addedById: string | null;
+  addedAt: string;
+}
+
+export const applicationMembershipApi = {
+  list: (appId: string) => apiFetch<MembershipDto[]>(`/applications/${appId}/teams`),
+  add: (appId: string, body: { teamId: string; role: MembershipRole }) =>
+    apiFetch<MembershipDto>(`/applications/${appId}/teams`, { method: 'POST', body }),
+  changeRole: (appId: string, teamId: string, role: MembershipRole) =>
+    apiFetch<MembershipDto>(`/applications/${appId}/teams/${teamId}`, { method: 'PATCH', body: { role } }),
+  remove: (appId: string, teamId: string) =>
+    apiFetch<void>(`/applications/${appId}/teams/${teamId}`, { method: 'DELETE' }),
+  manageable: () => apiFetch<Array<{ id: string; code: string; name: string; criticality: string | null }>>('/applications/manageable'),
+};
+
 export interface DataQualitySummary {
   cmdb: { total: number; orphan: number };
   event: { total: number; orphan: number };

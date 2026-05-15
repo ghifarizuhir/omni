@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Modal } from '@/src/components/ui/Modal';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
@@ -72,6 +73,9 @@ export const Applications: React.FC = () => {
               <TD>{deptOfTeam(a.ownerTeamId)}</TD>
               <TD>
                 <div className="flex gap-1 justify-end">
+                  <Link to={`/admin/applications/${a.id}`}>
+                    <Button size="sm" variant="ghost">Manage</Button>
+                  </Link>
                   <Button size="icon" variant="ghost" onClick={() => { setEditing(a); setOpen(true); }}>
                     <Pencil size={14} />
                   </Button>
