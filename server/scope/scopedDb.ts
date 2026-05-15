@@ -4,7 +4,7 @@ import { ScopeViolationError } from './errors';
 import { POLICY } from './policy';
 import { cmdbRepo } from '../repositories/cmdb';
 
-type ScopeMode = 'member' | 'noc' | 'owner' | 'admin';
+export type ScopeMode = 'member' | 'noc' | 'owner' | 'admin' | 'legacy' | 'bypass';
 
 export interface CmdbScope {
   listCIs(): Promise<Awaited<ReturnType<typeof cmdbRepo.listCIs>>>;
@@ -71,7 +71,8 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
       if (appId !== null && !canWriteApp(appId)) {
         throw new ScopeViolationError({ module: 'cmdb', action: 'update', applicationId: appId });
       }
-      const mode = resolveScopeMode(appId) ?? 'admin';
+      // appId === null → legacy/unbackfilled row, no scope to assign.
+      const mode: ScopeMode = appId === null ? 'legacy' : (resolveScopeMode(appId) ?? 'admin');
       const result = await cmdbRepo.updateCI(ctx.tenantId, publicId, patch);
       return { result, scopeMode: mode };
     },

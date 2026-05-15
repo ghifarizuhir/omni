@@ -64,7 +64,7 @@ cmdbRouter.patch('/cis/:publicId', requirePermission('cmdb.write'), asyncHandler
         resourceId: result.internalId,
         before: result.before,
         after: result.after,
-        scopeMode: 'admin',
+        scopeMode: 'bypass',
       });
       return res.json(result.after);
     }

@@ -4,6 +4,7 @@
 
 import type { Request } from 'express';
 import { prisma } from './db';
+import type { ScopeMode } from './scope/scopedDb';
 
 export interface AuditEvent {
   action: string;
@@ -11,7 +12,7 @@ export interface AuditEvent {
   resourceId: string;
   before?: unknown;
   after?: unknown;
-  scopeMode?: 'member' | 'noc' | 'owner' | 'admin';
+  scopeMode?: ScopeMode;
 }
 
 export const audit = async (req: Request, ev: AuditEvent) => {
