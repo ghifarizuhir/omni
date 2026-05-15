@@ -1,10 +1,20 @@
-import type { ConfigurationItem, CIRelationship, CIAuditEntry } from '../types';
-import type { MockService } from '../mocks/services';
+import type { ConfigurationItem, CIRelationship, CIAuditEntry, ServiceHealthStatus } from '../types';
 import { apiFetch } from './core';
 import type { UpdateCIInput } from '../shared/schemas/ci';
 
 export type { UpdateCIInput } from '../shared/schemas/ci';
 export { updateCISchema } from '../shared/schemas/ci';
+
+export interface Service {
+  id: string;
+  name: string;
+  tier: 'critical' | 'important' | 'standard';
+  ownerId: string;
+  ownerTeamId: string;
+  slaTarget: number;
+  currentHealth: ServiceHealthStatus;
+  uptime30d: number;
+}
 
 export const cisService = {
   list: () => apiFetch<ConfigurationItem[]>('/cis'),
@@ -20,6 +30,6 @@ export const cisService = {
 };
 
 export const servicesService = {
-  list: () => apiFetch<MockService[]>('/services'),
-  get: (id: string) => apiFetch<MockService>(`/services/${id}`),
+  list: () => apiFetch<Service[]>('/services'),
+  get: (id: string) => apiFetch<Service>(`/services/${id}`),
 };

@@ -12,5 +12,4 @@ export * from './onCallSchedules';
 export * from './rbac';
 export * from './reports';
 export * from './roiCalculations';
-export * from './services';
 export * from './statusPageEntries';

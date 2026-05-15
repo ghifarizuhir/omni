@@ -37,12 +37,12 @@ import type {
   Problem, Change, Release, Deployment, DeploymentLogEntry, ServiceRequest,
   RequestComment, CatalogItem, Integration, KBArticle,
 } from '../../src/types';
+import type { Service } from '../../src/services/cmdbService';
 import { randomUUID } from 'node:crypto';
-import type { MockService } from '../../src/mocks/services';
 
 export const servicesRepo = {
-  list: (tenantId: string) => listDocs<MockService>(prisma.service, tenantId),
-  get: (tenantId: string, id: string) => getDocById<MockService>(prisma.service, tenantId, id),
+  list: (tenantId: string) => listDocs<Service>(prisma.service, tenantId),
+  get: (tenantId: string, id: string) => getDocById<Service>(prisma.service, tenantId, id),
 };
 
 export const problemsRepo = {
