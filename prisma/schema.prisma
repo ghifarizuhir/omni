@@ -586,3 +586,16 @@ model AuditLog {
   @@index([tenantId, resourceKind, resourceId])
   @@index([tenantId, createdAt])
 }
+
+// ── AI session messages ───────────────────────────────────────────────────────
+
+model AiMessage {
+  id        String   @id @default(cuid())
+  tenantId  String
+  sessionId String
+  role      String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, sessionId])
+}

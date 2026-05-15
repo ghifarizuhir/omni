@@ -224,6 +224,26 @@ platformRouter.get('/ai/sessions/:id', asyncHandler(async (req, res) => {
   res.json(required(await findByKey<AiSession>(req.tenantId, 'ai-session', req.params.id), 'AiSession'));
 }));
 
+platformRouter.get('/ai/sessions/:id/messages', asyncHandler(async (req, res) => {
+  res.json(await prisma.aiMessage.findMany({
+    where: { tenantId: req.tenantId, sessionId: req.params.id },
+    orderBy: { createdAt: 'asc' },
+  }));
+}));
+
+platformRouter.post('/ai/sessions/:id/messages', asyncHandler(async (req, res) => {
+  const body = String(req.body?.body ?? '').trim();
+  if (!body) return res.status(400).json({ error: 'body required' });
+  const userMsg = await prisma.aiMessage.create({
+    data: { tenantId: req.tenantId, sessionId: req.params.id, role: 'user', body },
+  });
+  const replyText = `Acknowledged: "${body.slice(0, 200)}". (LLM integration pending.)`;
+  const assistantMsg = await prisma.aiMessage.create({
+    data: { tenantId: req.tenantId, sessionId: req.params.id, role: 'assistant', body: replyText },
+  });
+  res.status(201).json({ user: userMsg, assistant: assistantMsg });
+}));
+
 // RBAC catalog
 platformRouter.get('/rbac/users',        asyncHandler(async (req, res) => res.json(await listRbacUsers(req.tenantId))));
 platformRouter.get('/rbac/teams',        asyncHandler(async (req, res) => res.json(await listTeams(req.tenantId))));
