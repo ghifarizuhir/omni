@@ -7,14 +7,14 @@ interface OnCallHeroSectionProps {
 }
 
 export const OnCallHeroSection: React.FC<OnCallHeroSectionProps> = ({ schedules }) => {
-  const now = new Date('2026-05-10T12:00:00Z');
+  const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
-  const timeStr = '12:00 UTC';
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
 
   return (
     <section>

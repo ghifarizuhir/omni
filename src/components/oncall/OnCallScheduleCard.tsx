@@ -19,7 +19,7 @@ function getInitials(name: string): string {
 }
 
 function getShiftRemaining(endAt: string): string {
-  const now = new Date('2026-05-10T12:00:00Z');
+  const now = new Date();
   const end = new Date(endAt);
   const diffMs = end.getTime() - now.getTime();
   if (diffMs <= 0) return 'Ended';
