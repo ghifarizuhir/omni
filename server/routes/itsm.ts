@@ -1,6 +1,5 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
-// eslint-disable-next-line no-restricted-imports
 import {
   changesRepo, deploymentsRepo, requestsRepo, catalogRepo, kbRepo,
 } from '../repositories/docs'; // bypass paths only (repo imports kept for bypass pattern)

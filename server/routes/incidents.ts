@@ -1,5 +1,4 @@
 import { Router, type Request } from 'express';
-// eslint-disable-next-line no-restricted-imports
 import { incidentsRepo } from '../repositories/incidents'; // bypass path only
 import { audit } from '../audit';
 import { requirePermission } from '../middleware/auth';
