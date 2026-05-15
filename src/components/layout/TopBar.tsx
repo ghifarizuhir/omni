@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, Search as SearchIcon, Bell, Inbox } from 'lucide-react';
+import { Menu, Search as SearchIcon, Bell, Inbox, Sparkles } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
 import { cn } from '@/src/lib/utils';
@@ -12,9 +12,12 @@ import { inboxService, notificationsService, usersService, useResource } from '@
 interface TopBarProps {
   onToggleSidebar: () => void;
   onOpenInbox: () => void;
+  onToggleAi?: () => void;
+  aiOpen?: boolean;
+  showAi?: boolean;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) => {
+export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox, onToggleAi, aiOpen, showAi }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const breadcrumbs = useBreadcrumbs();
@@ -96,6 +99,24 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) 
             <NotificationDropdown onClose={() => setShowNotifications(false)} />
           )}
         </div>
+
+        {showAi && onToggleAi && (
+          <div className="relative group">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleAi}
+              aria-label="AI Quick Assist"
+              aria-expanded={aiOpen}
+              className={cn("text-ois-text-muted relative", aiOpen && "bg-ois-surface-muted text-ois-primary")}
+            >
+              <Sparkles size={20} />
+            </Button>
+            <div className="absolute top-full right-0 mt-1.5 px-2.5 py-1.5 bg-ois-text text-white rounded-md text-[11px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none shadow-lg">
+              AI Quick Assist <span className="opacity-60 ml-1">⌘K</span>
+            </div>
+          </div>
+        )}
 
         <div className="relative ml-2">
           <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 focus:outline-none">
