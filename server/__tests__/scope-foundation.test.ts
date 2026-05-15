@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, afterAll } from 'vitest';
+import { prisma } from '../db';
 import {
   FUNCTIONAL_ROLE_CODES,
   PLATFORM_ADMIN,
@@ -23,5 +24,20 @@ describe('functional role codes', () => {
   it('the union type accepts only known codes', () => {
     const ok: FunctionalRoleCode = 'PLATFORM_ADMIN';
     expect(ok).toBeDefined();
+  });
+});
+
+afterAll(async () => {
+  await prisma.$disconnect();
+});
+
+describe('functional roles seeded', () => {
+  it('every bypass role exists for the root tenant', async () => {
+    const tenant = await prisma.tenant.findFirstOrThrow();
+    const rows = await prisma.functionalRole.findMany({
+      where: { tenantId: tenant.id, code: { in: [...FUNCTIONAL_ROLE_CODES] } },
+    });
+    const codes = rows.map((r) => r.code).sort();
+    expect(codes).toEqual(['AUDITOR', 'NOC_OPERATOR', 'PLATFORM_ADMIN']);
   });
 });
