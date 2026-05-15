@@ -190,3 +190,34 @@ describe('GET /api/v1/applications/manageable', () => {
     expect((res.body as Array<{ id: string }>).some((a) => a.id === fx.appId)).toBe(true);
   });
 });
+
+import { upsertApplication } from '../repositories/rbacOrg';
+
+describe('upsertApplication (legacy) preserves ApplicationTeam memberships', () => {
+  it('does NOT touch ApplicationTeam rows', async () => {
+    const before = await prisma.applicationTeam.findMany({
+      where: { applicationId: fx.appId },
+      orderBy: { teamId: 'asc' },
+    });
+    expect(before.length).toBeGreaterThan(0); // fixture has at least teamA
+
+    // Read the existing app so we can call upsertApplication with the current code.
+    const existing = await prisma.application.findUniqueOrThrow({ where: { id: fx.appId } });
+    await upsertApplication(tenantId, fx.appId, {
+      code: existing.code,
+      name: 'Renamed via legacy upsert',
+      // Pass teams array — should be IGNORED by the new implementation.
+      teams: [],
+    });
+
+    const after = await prisma.applicationTeam.findMany({
+      where: { applicationId: fx.appId },
+      orderBy: { teamId: 'asc' },
+    });
+    expect(after.length).toBe(before.length);
+    expect(after.map((r) => r.teamId).sort()).toEqual(before.map((r) => r.teamId).sort());
+
+    // Restore the original name.
+    await upsertApplication(tenantId, fx.appId, { code: existing.code, name: existing.name, teams: [] });
+  });
+});

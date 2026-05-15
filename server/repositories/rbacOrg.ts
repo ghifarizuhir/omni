@@ -131,26 +131,16 @@ export async function deleteTeam(id: string) {
 }
 
 export async function upsertApplication(tenantId: string, id: string, input: ApplicationInput) {
-  return prisma.$transaction(async (tx) => {
-    await tx.application.upsert({
-      where: { id },
-      create: { id, tenantId, code: input.code, name: input.name, criticality: input.criticality ?? null },
-      update: { code: input.code, name: input.name, criticality: input.criticality ?? null },
-    });
-    const desiredTeams = new Set<string>([
-      ...(input.ownerTeamId ? [input.ownerTeamId] : []),
-      ...(input.teams ?? []),
-    ]);
-    for (const teamId of desiredTeams) {
-      const team = await tx.team.findFirst({ where: { id: teamId, tenantId } });
-      if (!team) throw new Error(`Unknown teamId: ${teamId}`);
-    }
-    await tx.applicationTeam.deleteMany({ where: { applicationId: id } });
-    for (const teamId of desiredTeams) {
-      await tx.applicationTeam.create({ data: { applicationId: id, teamId } });
-    }
-    return id;
+  // Plan D: memberships are managed exclusively via /api/v1/applications/:appId/teams.
+  // This function only handles application metadata (code, name, criticality).
+  // The `teams` and `ownerTeamId` fields on ApplicationInput are accepted for
+  // backwards compatibility with existing callers but intentionally ignored.
+  await prisma.application.upsert({
+    where: { id },
+    create: { id, tenantId, code: input.code, name: input.name, criticality: input.criticality ?? null },
+    update: { code: input.code, name: input.name, criticality: input.criticality ?? null },
   });
+  return id;
 }
 
 export async function deleteApplication(id: string) {
