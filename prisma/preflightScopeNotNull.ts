@@ -53,30 +53,26 @@ const MODULES: Array<{
 
 // ── Count helpers ─────────────────────────────────────────────────────────────
 
+/**
+ * Count NULL rows via raw SQL. We can't use Prisma's typed query because the
+ * generated client now rejects `where: { applicationId: null }` (the column is
+ * NOT NULL post-migration). Raw SQL bypasses that validator — the count will
+ * always be 0 after the migration, but the script remains useful for the
+ * pre-migration safety pass when run against an older schema.
+ */
 async function countOrphans(
-  module: ModuleKey,
+  _module: ModuleKey,
+  table: string,
   column: string,
   tenantId?: string,
 ): Promise<number> {
-  const where = (col: string) =>
-    tenantId ? { tenantId, [col]: null } : { [col]: null };
-
-  switch (module) {
-    case 'cmdb':
-      return prisma.configurationItem.count({ where: where(column) });
-    case 'event':
-      return prisma.event.count({ where: where(column) });
-    case 'incident':
-      return prisma.incident.count({ where: where(column) });
-    case 'change':
-      return prisma.change.count({ where: where(column) });
-    case 'problem':
-      return prisma.problem.count({ where: where(column) });
-    case 'release':
-      return prisma.release.count({ where: where(column) });
-    case 'service_request':
-      return prisma.serviceRequest.count({ where: where(column) });
-  }
+  const sql = tenantId
+    ? `SELECT COUNT(*)::int AS n FROM "${table}" WHERE "${column}" IS NULL AND "tenantId" = $1`
+    : `SELECT COUNT(*)::int AS n FROM "${table}" WHERE "${column}" IS NULL`;
+  const rows = tenantId
+    ? await prisma.$queryRawUnsafe<Array<{ n: number }>>(sql, tenantId)
+    : await prisma.$queryRawUnsafe<Array<{ n: number }>>(sql);
+  return rows[0]?.n ?? 0;
 }
 
 // ── Remediation helpers ───────────────────────────────────────────────────────
@@ -136,7 +132,7 @@ export async function runPreflight(
       module: m.key,
       table: m.table,
       column: m.column,
-      orphan: await countOrphans(m.key, m.column, opts.tenantId),
+      orphan: await countOrphans(m.key, m.table, m.column, opts.tenantId),
     })),
   );
 
@@ -154,7 +150,7 @@ export async function runPreflight(
         module: m.key,
         table: m.table,
         column: m.column,
-        orphan: await countOrphans(m.key, m.column, opts.tenantId),
+        orphan: await countOrphans(m.key, m.table, m.column, opts.tenantId),
       })),
     );
   }
