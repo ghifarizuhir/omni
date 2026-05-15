@@ -1,21 +1,27 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { z } from 'zod';
-import { randomUUID } from 'node:crypto';
 import type { EventStatus, Severity, Event } from '../../src/types';
 import { eventsRepo } from '../repositories/events';
-import { prisma } from '../db';
 import { audit } from '../audit';
 import { emitEventCreated } from '../realtime';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qStringArray, required } from '../util';
 import { setEventStatusSchema } from '../../src/shared/schemas/event';
+import { ScopeViolationError } from '../scope/errors';
+import { applyEnforcement } from '../scope/enforcement';
 
 const SEVERITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
 
 export const eventsRouter = Router();
 
+/** Convenience accessor — `req.scoped` is attached by withScopedDb middleware. */
+function scoped(req: Request) {
+  if (!req.scoped) throw new HttpError(500, 'scope not initialized');
+  return req.scoped;
+}
+
 eventsRouter.get('/events', requirePermission('event.read'), asyncHandler(async (req, res) => {
-  const events = await eventsRepo.list(req.tenantId, {
+  const events = await scoped(req).events.list({
     status: qStringArray(req.query.status) as EventStatus[] | undefined,
     severities: qStringArray(req.query.severities) as Severity[] | undefined,
     ruleId: typeof req.query.ruleId === 'string' ? req.query.ruleId : undefined,
@@ -29,11 +35,11 @@ eventsRouter.get('/events', requirePermission('event.read'), asyncHandler(async 
 }));
 
 eventsRouter.get('/events/dashboard-stats', requirePermission('event.read'), asyncHandler(async (req, res) => {
-  res.json(await eventsRepo.dashboardStats(req.tenantId));
+  res.json(await scoped(req).events.dashboardStats());
 }));
 
 eventsRouter.get('/events/:publicId', requirePermission('event.read'), asyncHandler(async (req, res) => {
-  res.json(required(await eventsRepo.get(req.tenantId, req.params.publicId), 'Event'));
+  res.json(required(await scoped(req).events.get(req.params.publicId), 'Event'));
 }));
 
 // M6.11 (B1.2) — PATCH /events/:publicId/status. Acknowledge / resolve / set
@@ -46,24 +52,48 @@ eventsRouter.patch(
   asyncHandler(async (req, res) => {
     const body = setEventStatusSchema.parse(req.body);
     if (!req.session) throw new HttpError(401, 'Authentication required');
-    let result;
     try {
-      result = await eventsRepo.setStatus(req.tenantId, req.params.publicId, {
+      const wrapped = await scoped(req).events.setStatus(req.params.publicId, {
         status: body.status,
         actorId: req.session.userId,
         note: body.note,
       });
-    } catch {
-      throw new HttpError(404, 'Event not found');
+      if (!wrapped) throw new HttpError(404, 'Event not found');
+      await audit(req, {
+        action: 'status_change',
+        resourceKind: 'Event',
+        resourceId: wrapped.result.internalId,
+        before: wrapped.result.before,
+        after: wrapped.result.after,
+        scopeMode: wrapped.scopeMode,
+      });
+      res.json(wrapped.result.after);
+    } catch (e) {
+      if (e instanceof ScopeViolationError) {
+        applyEnforcement(e, res);
+        // Bypass: perform the update via the raw repo (scope already checked intent).
+        let result;
+        try {
+          result = await eventsRepo.setStatus(req.tenantId, req.params.publicId, {
+            status: body.status,
+            actorId: req.session!.userId,
+            note: body.note,
+          });
+        } catch {
+          throw new HttpError(404, 'Event not found');
+        }
+        await audit(req, {
+          action: 'status_change',
+          resourceKind: 'Event',
+          resourceId: result.internalId,
+          before: result.before,
+          after: result.after,
+          scopeMode: 'bypass',
+        });
+        return res.json(result.after);
+      }
+      throw e;
     }
-    await audit(req, {
-      action: 'status_change',
-      resourceKind: 'Event',
-      resourceId: result.internalId,
-      before: result.before,
-      after: result.after,
-    });
-    res.json(result.after);
   }),
 );
 
@@ -95,35 +125,23 @@ eventsRouter.post('/events/ingest',
   requirePermission('event.write'),
   asyncHandler(async (req, res) => {
     const body = ingestSchema.parse(req.body);
-    const now = new Date();
-    const id = randomUUID();
-    const publicId = `EVT-${now.getFullYear()}-${id.slice(0, 6).toUpperCase()}`;
-    await prisma.event.create({
-      data: {
-        id,
-        publicId,
-        tenantId: req.tenantId,
-        type: body.type,
-        status: 'open',
-        severity: body.severity,
-        title: body.title,
-        message: body.message,
-        source: body.source,
-        ruleId: body.ruleId ?? null,
-        rulePublicId: body.rulePublicId ?? null,
-        ruleName: body.ruleName ?? null,
-        affectedCIIds: JSON.stringify(body.affectedCIIds),
-        affectedCIPublicIds: JSON.stringify(body.affectedCIPublicIds),
-        correlationKey: body.correlationKey ?? id,
-        groupCount: 1,
-        firedAt: now,
-        lastSeenAt: now,
-        payload: JSON.stringify(body.payload),
-        tags: JSON.stringify(body.tags),
-      },
+    const { id, publicId, scopeMode } = await scoped(req).events.ingest({
+      type: body.type,
+      severity: body.severity,
+      title: body.title,
+      message: body.message,
+      source: body.source,
+      ruleId: body.ruleId ?? null,
+      rulePublicId: body.rulePublicId ?? null,
+      ruleName: body.ruleName ?? null,
+      affectedCIIds: body.affectedCIIds,
+      affectedCIPublicIds: body.affectedCIPublicIds,
+      correlationKey: body.correlationKey,
+      payload: body.payload,
+      tags: body.tags,
     });
-    const created = required(await eventsRepo.get(req.tenantId, publicId), 'Event');
-    await audit(req, { action: 'event.ingest', resourceKind: 'Event', resourceId: id, after: created });
+    const created = required(await scoped(req).events.get(publicId), 'Event');
+    await audit(req, { action: 'event.ingest', resourceKind: 'Event', resourceId: id, after: created, scopeMode });
     emitEventCreated(req.tenantId, created as Event);
     res.status(201).json(created);
   }),

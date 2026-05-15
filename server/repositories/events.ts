@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Event, EventStatus, MonitoringRule, AlertRoute, Severity } from '../../src/types';
 import { prisma } from '../db';
 
@@ -87,6 +88,47 @@ export const eventsRepo = {
       prisma.event.update({ where: { id: row.id }, data: updates }),
     ]);
     return { before, after, internalId: row.id };
+  },
+
+  async ingest(
+    tenantId: string,
+    input: {
+      type: string; severity: string; title: string; message: string; source: string;
+      ruleId?: string | null; rulePublicId?: string | null; ruleName?: string | null;
+      affectedCIIds: string[]; affectedCIPublicIds: string[];
+      correlationKey?: string;
+      payload: Record<string, unknown>; tags: string[];
+    },
+  ): Promise<{ id: string; publicId: string }> {
+    const now = new Date();
+    const id = randomUUID();
+    const publicId = `EVT-${now.getFullYear()}-${id.slice(0, 6).toUpperCase()}`;
+    await prisma.event.create({
+      data: {
+        id,
+        publicId,
+        tenantId,
+        type: input.type,
+        status: 'open',
+        severity: input.severity,
+        title: input.title,
+        message: input.message,
+        source: input.source,
+        ruleId: input.ruleId ?? null,
+        rulePublicId: input.rulePublicId ?? null,
+        ruleName: input.ruleName ?? null,
+        affectedCIIds: JSON.stringify(input.affectedCIIds),
+        affectedCIPublicIds: JSON.stringify(input.affectedCIPublicIds),
+        correlationKey: input.correlationKey ?? id,
+        groupCount: 1,
+        firedAt: now,
+        lastSeenAt: now,
+        payload: JSON.stringify(input.payload),
+        tags: JSON.stringify(input.tags),
+        applicationId: null,
+      },
+    });
+    return { id, publicId };
   },
 
   async dashboardStats(tenantId: string) {
