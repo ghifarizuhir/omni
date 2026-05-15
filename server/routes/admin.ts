@@ -20,6 +20,7 @@ import {
   divisionSchema, departmentSchema, teamSchema,
   applicationSchema, functionalRoleSchema, rbacUserSchema,
 } from '../lib/validation/rbac';
+import { dataQualityRouter } from './admin/dataQuality';
 
 export const adminRouter = Router();
 
@@ -29,6 +30,7 @@ export const adminRouter = Router();
 // etc., since Express middleware on a router runs for all paths that arrive
 // at it). Path-prefix the guard so it only fires on actual admin routes.
 adminRouter.use('/admin', requirePermission('system.admin'));
+adminRouter.use('/admin/data-quality', dataQualityRouter);
 
 adminRouter.get('/admin/tenants', asyncHandler(async (_req, res) => {
   res.json(await prisma.tenant.findMany({ orderBy: { createdAt: 'desc' } }));
