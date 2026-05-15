@@ -172,13 +172,11 @@ export async function deleteFunctionalRole(id: string) {
 export async function upsertRbacUser(tenantId: string, id: string, input: RbacUserInput) {
   return prisma.$transaction(async (tx) => {
     const existingByEmail = await tx.user.findUnique({ where: { email: input.email } });
-    if (existingByEmail && existingByEmail.id !== id) {
-      throw new Error('Email already in use by another user');
-    }
+    const targetId = existingByEmail?.id ?? id;
     const user = await tx.user.upsert({
-      where: { id },
+      where: { id: targetId },
       create: {
-        id, email: input.email, name: input.name,
+        id: targetId, email: input.email, name: input.name,
         isSuperadmin: input.isSuperadmin,
         level: input.level ?? null,
         divisionId: input.divisionId ?? null,
