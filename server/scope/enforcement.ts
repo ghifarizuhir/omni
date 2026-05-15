@@ -1,29 +1,26 @@
-import type { Response } from 'express';
 import { logger } from '../logger';
 import { ScopeViolationError } from './errors';
 
-export type EnforcementMode = 'off' | 'warn' | 'enforce';
-
-const VALID: readonly EnforcementMode[] = ['off', 'warn', 'enforce'];
-
-export function readEnforcementMode(): EnforcementMode {
-  const raw = (process.env.SCOPE_ENFORCEMENT_MODE ?? 'off').trim().toLowerCase();
-  return (VALID as readonly string[]).includes(raw) ? (raw as EnforcementMode) : 'off';
+/**
+ * After Plan F the scope layer is always-on. The SCOPE_ENFORCEMENT_MODE env
+ * var is no longer a knob — anything other than the empty string or "enforce"
+ * is logged as a deprecation warning and treated as enforce.
+ */
+export function readEnforcementMode(): 'enforce' {
+  const raw = (process.env.SCOPE_ENFORCEMENT_MODE ?? 'enforce').trim().toLowerCase();
+  if (raw && raw !== 'enforce') {
+    logger.warn({ requestedMode: raw }, 'SCOPE_ENFORCEMENT_MODE is deprecated; only "enforce" is honored');
+  }
+  return 'enforce';
 }
 
 /**
- * Apply the configured enforcement mode to a scope violation.
- * - off: log at debug, do nothing.
- * - warn: log at warn, set X-Scope-Warning header.
- * - enforce: throw.
+ * Always throws the violation. Replaces the legacy applyEnforcement which
+ * swallowed errors in off/warn modes; routes no longer catch these.
  */
-export function applyEnforcement(err: ScopeViolationError, res: Response): void {
-  const mode = readEnforcementMode();
-  if (mode === 'enforce') throw err;
-  if (mode === 'warn') {
-    logger.warn({ violation: err.toJSON() }, 'scope warn');
-    res.setHeader('X-Scope-Warning', `${err.module}.${err.action}${err.applicationId ? `:${err.applicationId}` : ''}`);
-    return;
-  }
-  logger.debug({ violation: err.toJSON() }, 'scope off');
+export function assertEnforcement(err: ScopeViolationError): never {
+  throw err;
 }
+
+/** @deprecated kept for one release for compat — equivalent to assertEnforcement. */
+export const applyEnforcement = (err: ScopeViolationError, _res?: unknown): never => assertEnforcement(err);

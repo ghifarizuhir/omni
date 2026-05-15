@@ -1,14 +1,11 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import type { EventStatus, Severity, Event } from '../../src/types';
-import { eventsRepo } from '../repositories/events';
 import { audit } from '../audit';
 import { emitEventCreated } from '../realtime';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qStringArray, required } from '../util';
 import { setEventStatusSchema } from '../../src/shared/schemas/event';
-import { ScopeViolationError } from '../scope/errors';
-import { applyEnforcement } from '../scope/enforcement';
 
 const SEVERITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
 
@@ -43,57 +40,28 @@ eventsRouter.get('/events/:publicId', requirePermission('event.read'), asyncHand
 }));
 
 // M6.11 (B1.2) — PATCH /events/:publicId/status. Acknowledge / resolve / set
-// any other EventStatus. Mirrors the incidents PATCH /status shape: Zod body,
-// repo writes the snapshot in a transaction, route emits an audit log with
-// before/after.
+// any other EventStatus. ScopeViolationError propagates to global handler → 403.
 eventsRouter.patch(
   '/events/:publicId/status',
   requirePermission('event.write'),
   asyncHandler(async (req, res) => {
     const body = setEventStatusSchema.parse(req.body);
     if (!req.session) throw new HttpError(401, 'Authentication required');
-    try {
-      const wrapped = await scoped(req).events.setStatus(req.params.publicId, {
-        status: body.status,
-        actorId: req.session.userId,
-        note: body.note,
-      });
-      if (!wrapped) throw new HttpError(404, 'Event not found');
-      await audit(req, {
-        action: 'status_change',
-        resourceKind: 'Event',
-        resourceId: wrapped.result.internalId,
-        before: wrapped.result.before,
-        after: wrapped.result.after,
-        scopeMode: wrapped.scopeMode,
-      });
-      res.json(wrapped.result.after);
-    } catch (e) {
-      if (e instanceof ScopeViolationError) {
-        applyEnforcement(e, res);
-        // Bypass: perform the update via the raw repo (scope already checked intent).
-        let result;
-        try {
-          result = await eventsRepo.setStatus(req.tenantId, req.params.publicId, {
-            status: body.status,
-            actorId: req.session!.userId,
-            note: body.note,
-          });
-        } catch {
-          throw new HttpError(404, 'Event not found');
-        }
-        await audit(req, {
-          action: 'status_change',
-          resourceKind: 'Event',
-          resourceId: result.internalId,
-          before: result.before,
-          after: result.after,
-          scopeMode: 'bypass',
-        });
-        return res.json(result.after);
-      }
-      throw e;
-    }
+    const wrapped = await scoped(req).events.setStatus(req.params.publicId, {
+      status: body.status,
+      actorId: req.session.userId,
+      note: body.note,
+    });
+    if (!wrapped) throw new HttpError(404, 'Event not found');
+    await audit(req, {
+      action: 'status_change',
+      resourceKind: 'Event',
+      resourceId: wrapped.result.internalId,
+      before: wrapped.result.before,
+      after: wrapped.result.after,
+      scopeMode: wrapped.scopeMode,
+    });
+    res.json(wrapped.result.after);
   }),
 );
 

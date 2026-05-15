@@ -153,7 +153,9 @@ describe('buildScopedDb resolvers', () => {
       appMemberships: [],
       functionalRoles: ['PLATFORM_ADMIN'],
     });
-    expect(member.cmdb.canWriteApp(null)).toBe(false);
-    expect(admin.cmdb.canWriteApp(null)).toBe(true);
+    // null appId no longer valid (NOT NULL columns); member can't write an unknown app.
+    expect(member.cmdb.canWriteApp('app-unknown')).toBe(false);
+    // PLATFORM_ADMIN can write any app regardless of membership.
+    expect(admin.cmdb.canWriteApp('app-unknown')).toBe(true);
   });
 });

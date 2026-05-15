@@ -1,15 +1,13 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import {
-  changesRepo, deploymentsRepo, requestsRepo, catalogRepo, kbRepo,
-} from '../repositories/docs'; // bypass paths only (repo imports kept for bypass pattern)
+  deploymentsRepo, catalogRepo, kbRepo,
+} from '../repositories/docs';
 import { listByKind, findByPublicId, findByKey } from '../repositories/documents';
 import { audit } from '../audit';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qBool, required } from '../util';
 import { getActor } from '../auth/session';
-import { ScopeViolationError } from '../scope/errors';
-import { applyEnforcement } from '../scope/enforcement';
 import type { ImprovementInitiative } from '../../src/types';
 import {
   createKBArticleSchema, updateKBArticleSchema, setKBArticleStatusSchema,
@@ -57,84 +55,42 @@ const createChangeSchema = z.object({
 itsmRouter.post('/changes', requirePermission('change.write'), asyncHandler(async (req, res) => {
   const body = createChangeSchema.parse(req.body);
   const requester = await getActor(req);
-  try {
-    const wrapped = await scoped(req).changes.create(requester, body);
-    await audit(req, { action: 'create', resourceKind: 'Change', resourceId: wrapped.result.id, after: wrapped.result, scopeMode: wrapped.scopeMode });
-    res.status(201).json(wrapped.result);
-  } catch (e) {
-    if (e instanceof ScopeViolationError) {
-      applyEnforcement(e, res);
-      const { applicationId: bodyAppId, ...repoInput } = body;
-      const { ensureUnassignedApp } = await import('../../prisma/preflightScopeNotNull');
-      const applicationId = bodyAppId ?? await ensureUnassignedApp(req.tenantId);
-      const change = await changesRepo.create(req.tenantId, requester, { ...repoInput, applicationId });
-      await audit(req, { action: 'create', resourceKind: 'Change', resourceId: change.id, after: change, scopeMode: 'bypass' });
-      return res.status(201).json(change);
-    }
-    throw e;
-  }
+  const wrapped = await scoped(req).changes.create(requester, body);
+  await audit(req, { action: 'create', resourceKind: 'Change', resourceId: wrapped.result.id, after: wrapped.result, scopeMode: wrapped.scopeMode });
+  res.status(201).json(wrapped.result);
 }));
 
 const cancelChangeSchema = z.object({ reason: z.string().min(1).max(2000) });
 
 itsmRouter.patch('/changes/:publicId/cancel', requirePermission('change.write'), asyncHandler(async (req, res) => {
   const body = cancelChangeSchema.parse(req.body);
-  try {
-    const wrapped = await scoped(req).changes.cancel(req.params.publicId, body.reason);
-    if (!wrapped) throw new HttpError(404, 'Change not found');
-    const result = wrapped.result;
-    if (result === null) throw new HttpError(404, 'Change not found');
-    if (result === 'closed') throw new HttpError(409, 'Change is already in a closed state');
-    await audit(req, {
-      action: 'cancel', resourceKind: 'Change', resourceId: result.after.id,
-      before: result.before, after: result.after, scopeMode: wrapped.scopeMode,
-    });
-    res.json(result.after);
-  } catch (e) {
-    if (e instanceof ScopeViolationError) {
-      applyEnforcement(e, res);
-      const result = await changesRepo.cancel(req.tenantId, req.params.publicId, body.reason);
-      if (result === null) throw new HttpError(404, 'Change not found');
-      if (result === 'closed') throw new HttpError(409, 'Change is already in a closed state');
-      await audit(req, { action: 'cancel', resourceKind: 'Change', resourceId: result.after.id, before: result.before, after: result.after, scopeMode: 'bypass' });
-      return res.json(result.after);
-    }
-    throw e;
-  }
+  const wrapped = await scoped(req).changes.cancel(req.params.publicId, body.reason);
+  if (!wrapped) throw new HttpError(404, 'Change not found');
+  const result = wrapped.result;
+  if (result === null) throw new HttpError(404, 'Change not found');
+  if (result === 'closed') throw new HttpError(409, 'Change is already in a closed state');
+  await audit(req, {
+    action: 'cancel', resourceKind: 'Change', resourceId: result.after.id,
+    before: result.before, after: result.after, scopeMode: wrapped.scopeMode,
+  });
+  res.json(result.after);
 }));
 
 itsmRouter.patch('/changes/:publicId/reschedule', requirePermission('change.write'), asyncHandler(async (req, res) => {
   const body = rescheduleChangeSchema.parse(req.body);
   const actor = await getActor(req);
-  try {
-    const wrapped = await scoped(req).changes.reschedule(req.params.publicId, body, actor);
-    if (!wrapped) throw new HttpError(404, 'Change not found');
-    const result = wrapped.result;
-    if (result.kind === 'not-found') throw new HttpError(404, 'Change not found');
-    if (result.kind === 'closed') throw new HttpError(409, 'Change is in a closed state');
-    await audit(req, {
-      action: 'reschedule', resourceKind: 'Change', resourceId: result.after.id,
-      before: { plannedStart: result.before.plannedStart, plannedEnd: result.before.plannedEnd },
-      after:  { plannedStart: result.after.plannedStart,  plannedEnd: result.after.plannedEnd, reason: body.reason },
-      scopeMode: wrapped.scopeMode,
-    });
-    res.json(result.after);
-  } catch (e) {
-    if (e instanceof ScopeViolationError) {
-      applyEnforcement(e, res);
-      const result = await changesRepo.reschedule(req.tenantId, req.params.publicId, body, actor);
-      if (result.kind === 'not-found') throw new HttpError(404, 'Change not found');
-      if (result.kind === 'closed') throw new HttpError(409, 'Change is in a closed state');
-      await audit(req, {
-        action: 'reschedule', resourceKind: 'Change', resourceId: result.after.id,
-        before: { plannedStart: result.before.plannedStart, plannedEnd: result.before.plannedEnd },
-        after:  { plannedStart: result.after.plannedStart,  plannedEnd: result.after.plannedEnd, reason: body.reason },
-        scopeMode: 'bypass',
-      });
-      return res.json(result.after);
-    }
-    throw e;
-  }
+  const wrapped = await scoped(req).changes.reschedule(req.params.publicId, body, actor);
+  if (!wrapped) throw new HttpError(404, 'Change not found');
+  const result = wrapped.result;
+  if (result.kind === 'not-found') throw new HttpError(404, 'Change not found');
+  if (result.kind === 'closed') throw new HttpError(409, 'Change is in a closed state');
+  await audit(req, {
+    action: 'reschedule', resourceKind: 'Change', resourceId: result.after.id,
+    before: { plannedStart: result.before.plannedStart, plannedEnd: result.before.plannedEnd },
+    after:  { plannedStart: result.after.plannedStart,  plannedEnd: result.after.plannedEnd, reason: body.reason },
+    scopeMode: wrapped.scopeMode,
+  });
+  res.json(result.after);
 }));
 
 // Open-ended schema — the modal collects the full TechnicalAssessment block.
@@ -154,32 +110,16 @@ const techAssessmentSchema = z.object({
 itsmRouter.patch('/changes/:publicId/tech-assessment', requirePermission('change.write'), asyncHandler(async (req, res) => {
   const body = techAssessmentSchema.parse(req.body);
   const reviewer = await getActor(req);
-  try {
-    const wrapped = await scoped(req).changes.setTechnicalAssessment(req.params.publicId, reviewer, body);
-    if (!wrapped) throw new HttpError(404, 'Change not found');
-    if (!wrapped.result) throw new HttpError(404, 'Change not found');
-    await audit(req, {
-      action: 'update', resourceKind: 'Change', resourceId: wrapped.result.after.id,
-      before: { technicalAssessment: wrapped.result.before.technicalAssessment },
-      after:  { technicalAssessment: wrapped.result.after.technicalAssessment },
-      scopeMode: wrapped.scopeMode,
-    });
-    res.json(wrapped.result.after);
-  } catch (e) {
-    if (e instanceof ScopeViolationError) {
-      applyEnforcement(e, res);
-      const result = await changesRepo.setTechnicalAssessment(req.tenantId, req.params.publicId, body, reviewer);
-      if (!result) throw new HttpError(404, 'Change not found');
-      await audit(req, {
-        action: 'update', resourceKind: 'Change', resourceId: result.after.id,
-        before: { technicalAssessment: result.before.technicalAssessment },
-        after:  { technicalAssessment: result.after.technicalAssessment },
-        scopeMode: 'bypass',
-      });
-      return res.json(result.after);
-    }
-    throw e;
-  }
+  const wrapped = await scoped(req).changes.setTechnicalAssessment(req.params.publicId, reviewer, body);
+  if (!wrapped) throw new HttpError(404, 'Change not found');
+  if (!wrapped.result) throw new HttpError(404, 'Change not found');
+  await audit(req, {
+    action: 'update', resourceKind: 'Change', resourceId: wrapped.result.after.id,
+    before: { technicalAssessment: wrapped.result.before.technicalAssessment },
+    after:  { technicalAssessment: wrapped.result.after.technicalAssessment },
+    scopeMode: wrapped.scopeMode,
+  });
+  res.json(wrapped.result.after);
 }));
 
 itsmRouter.get('/releases', requirePermission('release.read'), asyncHandler(async (req, res) => res.json(await scoped(req).releases.list())));
@@ -222,45 +162,23 @@ const decideStep = (decision: 'approved' | 'rejected') => asyncHandler(async (re
   const schema = decision === 'approved' ? approveSchema : rejectSchema;
   const body = schema.parse(req.body);
   const actor = await getActor(req);
-  try {
-    const wrapped = await scoped(req).serviceRequests.decideStep(
-      req.params.publicId, req.params.stepId, actor, decision, body.note,
-    );
-    if (!wrapped) throw new HttpError(404, 'Request not found');
-    const result = wrapped.result;
-    if (result.kind === 'not-found-request') throw new HttpError(404, 'Request not found');
-    if (result.kind === 'not-found-step')    throw new HttpError(404, 'Step not found');
-    if (result.kind === 'already-decided')   throw new HttpError(409, 'Step is not awaiting a decision');
-    await audit(req, {
-      action: decision === 'approved' ? 'step_approve' : 'step_reject',
-      resourceKind: 'ServiceRequest',
-      resourceId: result.internalId,
-      before: { status: result.before.status, step: result.before.workflow.steps.find(s => s.id === req.params.stepId) },
-      after:  { status: result.after.status,  step: result.after.workflow.steps.find(s => s.id === req.params.stepId) },
-      scopeMode: wrapped.scopeMode,
-    });
-    res.json(result.after);
-  } catch (e) {
-    if (e instanceof ScopeViolationError) {
-      applyEnforcement(e, res);
-      const result = await requestsRepo.decideStep(
-        req.tenantId, req.params.publicId, req.params.stepId, decision, actor, body.note,
-      );
-      if (result.kind === 'not-found-request') throw new HttpError(404, 'Request not found');
-      if (result.kind === 'not-found-step')    throw new HttpError(404, 'Step not found');
-      if (result.kind === 'already-decided')   throw new HttpError(409, 'Step is not awaiting a decision');
-      await audit(req, {
-        action: decision === 'approved' ? 'step_approve' : 'step_reject',
-        resourceKind: 'ServiceRequest',
-        resourceId: result.internalId,
-        before: { status: result.before.status, step: result.before.workflow.steps.find(s => s.id === req.params.stepId) },
-        after:  { status: result.after.status,  step: result.after.workflow.steps.find(s => s.id === req.params.stepId) },
-        scopeMode: 'bypass',
-      });
-      return res.json(result.after);
-    }
-    throw e;
-  }
+  const wrapped = await scoped(req).serviceRequests.decideStep(
+    req.params.publicId, req.params.stepId, actor, decision, body.note,
+  );
+  if (!wrapped) throw new HttpError(404, 'Request not found');
+  const result = wrapped.result;
+  if (result.kind === 'not-found-request') throw new HttpError(404, 'Request not found');
+  if (result.kind === 'not-found-step')    throw new HttpError(404, 'Step not found');
+  if (result.kind === 'already-decided')   throw new HttpError(409, 'Step is not awaiting a decision');
+  await audit(req, {
+    action: decision === 'approved' ? 'step_approve' : 'step_reject',
+    resourceKind: 'ServiceRequest',
+    resourceId: result.internalId,
+    before: { status: result.before.status, step: result.before.workflow.steps.find(s => s.id === req.params.stepId) },
+    after:  { status: result.after.status,  step: result.after.workflow.steps.find(s => s.id === req.params.stepId) },
+    scopeMode: wrapped.scopeMode,
+  });
+  res.json(result.after);
 });
 
 itsmRouter.post(
@@ -283,27 +201,16 @@ itsmRouter.post(
   asyncHandler(async (req, res) => {
     const body = requestCommentSchema.parse(req.body);
     const author = await getActor(req);
-    try {
-      const wrapped = await scoped(req).serviceRequests.appendComment(req.params.publicId, author, body.body);
-      if (!wrapped || !wrapped.result) throw new HttpError(404, 'Request not found');
-      await audit(req, {
-        action: 'comment',
-        resourceKind: 'ServiceRequest',
-        resourceId: wrapped.result.internalId,
-        after: wrapped.result.comment,
-        scopeMode: wrapped.scopeMode,
-      });
-      res.status(201).json({ ...wrapped.result.comment, dbId: wrapped.result.dbCommentId });
-    } catch (e) {
-      if (e instanceof ScopeViolationError) {
-        applyEnforcement(e, res);
-        const result = await requestsRepo.appendComment(req.tenantId, req.params.publicId, author, body.body);
-        if (!result) throw new HttpError(404, 'Request not found');
-        await audit(req, { action: 'comment', resourceKind: 'ServiceRequest', resourceId: result.internalId, after: result.comment, scopeMode: 'bypass' });
-        return res.status(201).json({ ...result.comment, dbId: result.dbCommentId });
-      }
-      throw e;
-    }
+    const wrapped = await scoped(req).serviceRequests.appendComment(req.params.publicId, author, body.body);
+    if (!wrapped || !wrapped.result) throw new HttpError(404, 'Request not found');
+    await audit(req, {
+      action: 'comment',
+      resourceKind: 'ServiceRequest',
+      resourceId: wrapped.result.internalId,
+      after: wrapped.result.comment,
+      scopeMode: wrapped.scopeMode,
+    });
+    res.status(201).json({ ...wrapped.result.comment, dbId: wrapped.result.dbCommentId });
   }),
 );
 
@@ -317,35 +224,20 @@ itsmRouter.patch(
   asyncHandler(async (req, res) => {
     const body = cancelRequestSchema.parse(req.body);
     const actor = await getActor(req);
-    try {
-      const wrapped = await scoped(req).serviceRequests.cancel(req.params.publicId, body.reason, actor);
-      if (!wrapped) throw new HttpError(404, 'Request not found');
-      const result = wrapped.result;
-      if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
-      if (result.kind === 'closed')    throw new HttpError(409, 'Request is already in a closed state');
-      await audit(req, {
-        action: 'request.cancel',
-        resourceKind: 'ServiceRequest',
-        resourceId: result.internalId,
-        before: { status: result.before.status },
-        after:  { status: result.after.status, cancellationReason: result.after.cancellationReason, closedAt: result.after.closedAt },
-        scopeMode: wrapped.scopeMode,
-      });
-      res.json(result.after);
-    } catch (e) {
-      if (e instanceof ScopeViolationError) {
-        applyEnforcement(e, res);
-        const result = await requestsRepo.cancel(req.tenantId, req.params.publicId, body.reason, actor);
-        if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
-        if (result.kind === 'closed')    throw new HttpError(409, 'Request is already in a closed state');
-        await audit(req, {
-          action: 'request.cancel', resourceKind: 'ServiceRequest', resourceId: result.internalId,
-          before: { status: result.before.status }, after: { status: result.after.status }, scopeMode: 'bypass',
-        });
-        return res.json(result.after);
-      }
-      throw e;
-    }
+    const wrapped = await scoped(req).serviceRequests.cancel(req.params.publicId, body.reason, actor);
+    if (!wrapped) throw new HttpError(404, 'Request not found');
+    const result = wrapped.result;
+    if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
+    if (result.kind === 'closed')    throw new HttpError(409, 'Request is already in a closed state');
+    await audit(req, {
+      action: 'request.cancel',
+      resourceKind: 'ServiceRequest',
+      resourceId: result.internalId,
+      before: { status: result.before.status },
+      after:  { status: result.after.status, cancellationReason: result.after.cancellationReason, closedAt: result.after.closedAt },
+      scopeMode: wrapped.scopeMode,
+    });
+    res.json(result.after);
   }),
 );
 
@@ -355,47 +247,25 @@ itsmRouter.patch(
   asyncHandler(async (req, res) => {
     const body = reassignRequestStepSchema.parse({ ...req.body, stepId: req.params.stepId });
     const actor = await getActor(req);
-    try {
-      const wrapped = await scoped(req).serviceRequests.reassignStep(
-        req.params.publicId, body.stepId,
-        { id: body.assigneeId, name: body.assigneeName },
-        actor,
-      );
-      if (!wrapped) throw new HttpError(404, 'Request not found');
-      const result = wrapped.result;
-      if (result.kind === 'not-found-request') throw new HttpError(404, 'Request not found');
-      if (result.kind === 'not-found-step')    throw new HttpError(404, 'Step not found');
-      if (result.kind === 'not-active')        throw new HttpError(409, 'Only the active step can be reassigned');
-      await audit(req, {
-        action: 'request.reassign',
-        resourceKind: 'ServiceRequest',
-        resourceId: result.internalId,
-        before: { step: result.before.workflow.steps.find(s => s.id === body.stepId) },
-        after:  { step: result.after.workflow.steps.find(s => s.id === body.stepId) },
-        scopeMode: wrapped.scopeMode,
-      });
-      res.json(result.after);
-    } catch (e) {
-      if (e instanceof ScopeViolationError) {
-        applyEnforcement(e, res);
-        const result = await requestsRepo.reassignStep(
-          req.tenantId, req.params.publicId, body.stepId,
-          { id: body.assigneeId, name: body.assigneeName },
-          actor,
-        );
-        if (result.kind === 'not-found-request') throw new HttpError(404, 'Request not found');
-        if (result.kind === 'not-found-step')    throw new HttpError(404, 'Step not found');
-        if (result.kind === 'not-active')        throw new HttpError(409, 'Only the active step can be reassigned');
-        await audit(req, {
-          action: 'request.reassign', resourceKind: 'ServiceRequest', resourceId: result.internalId,
-          before: { step: result.before.workflow.steps.find(s => s.id === body.stepId) },
-          after:  { step: result.after.workflow.steps.find(s => s.id === body.stepId) },
-          scopeMode: 'bypass',
-        });
-        return res.json(result.after);
-      }
-      throw e;
-    }
+    const wrapped = await scoped(req).serviceRequests.reassignStep(
+      req.params.publicId, body.stepId,
+      { id: body.assigneeId, name: body.assigneeName },
+      actor,
+    );
+    if (!wrapped) throw new HttpError(404, 'Request not found');
+    const result = wrapped.result;
+    if (result.kind === 'not-found-request') throw new HttpError(404, 'Request not found');
+    if (result.kind === 'not-found-step')    throw new HttpError(404, 'Step not found');
+    if (result.kind === 'not-active')        throw new HttpError(409, 'Only the active step can be reassigned');
+    await audit(req, {
+      action: 'request.reassign',
+      resourceKind: 'ServiceRequest',
+      resourceId: result.internalId,
+      before: { step: result.before.workflow.steps.find(s => s.id === body.stepId) },
+      after:  { step: result.after.workflow.steps.find(s => s.id === body.stepId) },
+      scopeMode: wrapped.scopeMode,
+    });
+    res.json(result.after);
   }),
 );
 
@@ -405,40 +275,24 @@ itsmRouter.post(
   asyncHandler(async (req, res) => {
     const body = addRequestWatcherSchema.parse(req.body);
     const actor = await getActor(req);
-    try {
-      const wrapped = await scoped(req).serviceRequests.addWatcher(req.params.publicId, body, actor);
-      if (!wrapped) throw new HttpError(404, 'Request not found');
-      const result = wrapped.result;
-      if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
-      if (result.wasNew) {
-        await audit(req, {
-          action: 'request.watcher.add',
-          resourceKind: 'ServiceRequest',
-          resourceId: result.internalId,
-          before: { watchers: result.before.watchers ?? [] },
-          after:  { watchers: result.after.watchers ?? [] },
-          scopeMode: wrapped.scopeMode,
-        });
-      }
-      res.status(result.wasNew ? 201 : 200).json({
-        watchers: result.after.watchers ?? [],
-        wasNew: result.wasNew,
+    const wrapped = await scoped(req).serviceRequests.addWatcher(req.params.publicId, body, actor);
+    if (!wrapped) throw new HttpError(404, 'Request not found');
+    const result = wrapped.result;
+    if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
+    if (result.wasNew) {
+      await audit(req, {
+        action: 'request.watcher.add',
+        resourceKind: 'ServiceRequest',
+        resourceId: result.internalId,
+        before: { watchers: result.before.watchers ?? [] },
+        after:  { watchers: result.after.watchers ?? [] },
+        scopeMode: wrapped.scopeMode,
       });
-    } catch (e) {
-      if (e instanceof ScopeViolationError) {
-        applyEnforcement(e, res);
-        const result = await requestsRepo.addWatcher(req.tenantId, req.params.publicId, body, actor);
-        if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
-        if (result.wasNew) {
-          await audit(req, {
-            action: 'request.watcher.add', resourceKind: 'ServiceRequest', resourceId: result.internalId,
-            before: { watchers: result.before.watchers ?? [] }, after: { watchers: result.after.watchers ?? [] }, scopeMode: 'bypass',
-          });
-        }
-        return res.status(result.wasNew ? 201 : 200).json({ watchers: result.after.watchers ?? [], wasNew: result.wasNew });
-      }
-      throw e;
     }
+    res.status(result.wasNew ? 201 : 200).json({
+      watchers: result.after.watchers ?? [],
+      wasNew: result.wasNew,
+    });
   }),
 );
 
@@ -447,37 +301,21 @@ itsmRouter.delete(
   requirePermission('request.write'),
   asyncHandler(async (req, res) => {
     const actor = await getActor(req);
-    try {
-      const wrapped = await scoped(req).serviceRequests.removeWatcher(req.params.publicId, req.params.userId, actor);
-      if (!wrapped) throw new HttpError(404, 'Request not found');
-      const result = wrapped.result;
-      if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
-      if (result.wasPresent) {
-        await audit(req, {
-          action: 'request.watcher.remove',
-          resourceKind: 'ServiceRequest',
-          resourceId: result.internalId,
-          before: { watchers: result.before.watchers ?? [] },
-          after:  { watchers: result.after.watchers ?? [] },
-          scopeMode: wrapped.scopeMode,
-        });
-      }
-      res.status(204).end();
-    } catch (e) {
-      if (e instanceof ScopeViolationError) {
-        applyEnforcement(e, res);
-        const result = await requestsRepo.removeWatcher(req.tenantId, req.params.publicId, req.params.userId, actor);
-        if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
-        if (result.wasPresent) {
-          await audit(req, {
-            action: 'request.watcher.remove', resourceKind: 'ServiceRequest', resourceId: result.internalId,
-            before: { watchers: result.before.watchers ?? [] }, after: { watchers: result.after.watchers ?? [] }, scopeMode: 'bypass',
-          });
-        }
-        return res.status(204).end();
-      }
-      throw e;
+    const wrapped = await scoped(req).serviceRequests.removeWatcher(req.params.publicId, req.params.userId, actor);
+    if (!wrapped) throw new HttpError(404, 'Request not found');
+    const result = wrapped.result;
+    if (result.kind === 'not-found') throw new HttpError(404, 'Request not found');
+    if (result.wasPresent) {
+      await audit(req, {
+        action: 'request.watcher.remove',
+        resourceKind: 'ServiceRequest',
+        resourceId: result.internalId,
+        before: { watchers: result.before.watchers ?? [] },
+        after:  { watchers: result.after.watchers ?? [] },
+        scopeMode: wrapped.scopeMode,
+      });
     }
+    res.status(204).end();
   }),
 );
 
