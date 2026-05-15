@@ -22,6 +22,8 @@ import { authRouter } from './routes/auth';
 import { adminRouter } from './routes/admin';
 import { HttpError } from './util';
 import { requireAuth, sessionMiddleware } from './middleware/auth';
+import { withScopedDb } from './middleware/scopedDb';
+import { ScopeViolationError } from './scope/errors';
 import { logger } from './logger';
 import { prisma } from './db';
 
@@ -84,6 +86,7 @@ export const createApp = () => {
   app.use('/api/v1/auth/', authLimiter);
 
   app.use(sessionMiddleware);
+  app.use(withScopedDb);
 
   // Per-tenant limiter on the wider API surface. Once the session middleware
   // resolves `req.tenantId`, throttle requests keyed by tenant so a single
@@ -137,6 +140,10 @@ export const createApp = () => {
   });
 
   const errorHandler: ErrorRequestHandler = (err, req, res, _next: NextFunction) => {
+    if (err instanceof ScopeViolationError) {
+      res.status(403).json(err.toJSON());
+      return;
+    }
     if (err instanceof HttpError) {
       res.status(err.status).json({ message: err.message, body: err.body });
       return;
