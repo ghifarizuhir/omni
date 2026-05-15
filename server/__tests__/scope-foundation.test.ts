@@ -1,4 +1,4 @@
-import { describe, expect, it, afterAll } from 'vitest';
+import { describe, expect, it, afterAll, beforeAll } from 'vitest';
 import { prisma } from '../db';
 import {
   FUNCTIONAL_ROLE_CODES,
@@ -7,6 +7,12 @@ import {
   AUDITOR,
   type FunctionalRoleCode,
 } from '../constants/functionalRoles';
+
+const ROOT_TENANT_SLUG = (process.env.ROOT_TENANT_SLUG ?? 'default').trim();
+
+async function getRootTenant() {
+  return prisma.tenant.findUniqueOrThrow({ where: { slug: ROOT_TENANT_SLUG } });
+}
 
 describe('functional role codes', () => {
   it('exposes the three bypass roles as constants', () => {
@@ -33,7 +39,7 @@ afterAll(async () => {
 
 describe('functional roles seeded', () => {
   it('every bypass role exists for the root tenant', async () => {
-    const tenant = await prisma.tenant.findFirstOrThrow();
+    const tenant = await getRootTenant();
     const rows = await prisma.functionalRole.findMany({
       where: { tenantId: tenant.id, code: { in: [...FUNCTIONAL_ROLE_CODES] } },
     });
@@ -43,34 +49,70 @@ describe('functional roles seeded', () => {
 });
 
 describe('ApplicationTeam.role default', () => {
-  it('defaults to CONTRIBUTOR when not specified', async () => {
-    const tenant = await prisma.tenant.findFirstOrThrow();
+  const TEST_APP_ID = 'app-scope-foundation-test';
+  const TEST_DEPT_ID = 'dept-scope-foundation-test';
+  const TEST_TEAM_ID = 'team-scope-foundation-test';
+  const TEST_DIV_ID = 'div-scope-foundation-test';
 
-    let app = await prisma.application.findFirst({ where: { tenantId: tenant.id } });
-    if (!app) {
-      app = await prisma.application.create({
-        data: {
-          id: 'app-scope-test',
-          tenantId: tenant.id,
-          code: 'SCOPE_TEST',
-          name: 'Scope Test App',
-        },
-      });
-    }
-    const team = await prisma.team.findFirstOrThrow({ where: { tenantId: tenant.id } });
+  beforeAll(async () => {
+    const tenant = await getRootTenant();
 
+    // Ephemeral division → department → team chain so the test owns its data.
+    await prisma.division.upsert({
+      where: { tenantId_code: { tenantId: tenant.id, code: 'SCOPE_TEST_DIV' } },
+      update: {},
+      create: { id: TEST_DIV_ID, tenantId: tenant.id, code: 'SCOPE_TEST_DIV', name: 'Scope Test Div' },
+    });
+    await prisma.department.upsert({
+      where: { tenantId_code: { tenantId: tenant.id, code: 'SCOPE_TEST_DEPT' } },
+      update: {},
+      create: {
+        id: TEST_DEPT_ID,
+        tenantId: tenant.id,
+        divisionId: TEST_DIV_ID,
+        code: 'SCOPE_TEST_DEPT',
+        name: 'Scope Test Dept',
+      },
+    });
+    await prisma.team.upsert({
+      where: { tenantId_code: { tenantId: tenant.id, code: 'SCOPE_TEST_TEAM' } },
+      update: {},
+      create: {
+        id: TEST_TEAM_ID,
+        tenantId: tenant.id,
+        departmentId: TEST_DEPT_ID,
+        code: 'SCOPE_TEST_TEAM',
+        name: 'Scope Test Team',
+      },
+    });
+    await prisma.application.upsert({
+      where: { tenantId_code: { tenantId: tenant.id, code: 'SCOPE_TEST_APP' } },
+      update: {},
+      create: { id: TEST_APP_ID, tenantId: tenant.id, code: 'SCOPE_TEST_APP', name: 'Scope Test App' },
+    });
+  });
+
+  afterAll(async () => {
     await prisma.applicationTeam
-      .delete({ where: { applicationId_teamId: { applicationId: app.id, teamId: team.id } } })
+      .deleteMany({ where: { applicationId: TEST_APP_ID } })
+      .catch(() => undefined);
+    await prisma.application.delete({ where: { id: TEST_APP_ID } }).catch(() => undefined);
+    await prisma.team.delete({ where: { id: TEST_TEAM_ID } }).catch(() => undefined);
+    await prisma.department.delete({ where: { id: TEST_DEPT_ID } }).catch(() => undefined);
+    await prisma.division.delete({ where: { id: TEST_DIV_ID } }).catch(() => undefined);
+  });
+
+  it('defaults to CONTRIBUTOR when not specified', async () => {
+    await prisma.applicationTeam
+      .delete({
+        where: { applicationId_teamId: { applicationId: TEST_APP_ID, teamId: TEST_TEAM_ID } },
+      })
       .catch(() => undefined);
 
     const row = await prisma.applicationTeam.create({
-      data: { applicationId: app.id, teamId: team.id },
+      data: { applicationId: TEST_APP_ID, teamId: TEST_TEAM_ID },
     });
 
     expect(row.role).toBe('CONTRIBUTOR');
-
-    await prisma.applicationTeam.delete({
-      where: { applicationId_teamId: { applicationId: app.id, teamId: team.id } },
-    });
   });
 });
