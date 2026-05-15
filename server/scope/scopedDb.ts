@@ -3,7 +3,7 @@ import type { ScopeContext } from './context';
 import { ScopeViolationError } from './errors';
 import { POLICY } from './policy';
 import { cmdbRepo } from '../repositories/cmdb';
-import { eventsRepo } from '../repositories/events';
+import { eventsRepo, monitoringRepo } from '../repositories/events';
 import { incidentsRepo } from '../repositories/incidents';
 import { problemsRepo, changesRepo, releasesRepo, requestsRepo } from '../repositories/docs';
 
@@ -90,6 +90,21 @@ export interface IncidentsScope {
   ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.postComms>>; scopeMode: ScopeMode } | null>;
 }
 
+export interface MonitoringScope {
+  // rules
+  listRules(): Promise<Awaited<ReturnType<typeof monitoringRepo.listRules>>>;
+  getRule(publicId: string): Promise<Awaited<ReturnType<typeof monitoringRepo.getRule>>>;
+  createRule(input: Parameters<typeof monitoringRepo.createRule>[1], actor: Parameters<typeof monitoringRepo.createRule>[2]): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.createRule>>; scopeMode: ScopeMode }>;
+  updateRule(publicId: string, input: Parameters<typeof monitoringRepo.updateRule>[2]): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.updateRule>>; scopeMode: ScopeMode } | null>;
+  deleteRule(publicId: string): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.deleteRule>>; scopeMode: ScopeMode } | null>;
+  // routes
+  listRoutes(): Promise<Awaited<ReturnType<typeof monitoringRepo.listRoutes>>>;
+  getRoute(publicId: string): Promise<Awaited<ReturnType<typeof monitoringRepo.getRoute>>>;
+  createRoute(input: Parameters<typeof monitoringRepo.createRoute>[1]): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.createRoute>>; scopeMode: ScopeMode }>;
+  updateRoute(publicId: string, input: Parameters<typeof monitoringRepo.updateRoute>[2]): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.updateRoute>>; scopeMode: ScopeMode } | null>;
+  deleteRoute(publicId: string): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.deleteRoute>>; scopeMode: ScopeMode } | null>;
+}
+
 export interface ProblemsScope {
   list(): Promise<Awaited<ReturnType<typeof problemsRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof problemsRepo.get>>>;
@@ -163,6 +178,7 @@ export interface ScopedDb {
   cmdb: CmdbScope;
   events: EventsScope;
   incidents: IncidentsScope;
+  monitoring: MonitoringScope;
   problems: ProblemsScope;
   changes: ChangesScope;
   releases: ReleasesScope;
@@ -431,6 +447,51 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     },
   };
 
+  // ── Monitoring scope (read=global, write=admin_only) ─────────────────────────
+
+  function requireAdminFor(module: 'monitoring_rule' | 'alert_route', action: 'create' | 'update' | 'delete'): void {
+    if (!isPlatformAdmin) {
+      throw new ScopeViolationError({ module, action });
+    }
+  }
+
+  const monitoring: MonitoringScope = {
+    listRules: () => monitoringRepo.listRules(ctx.tenantId),
+    getRule: (id) => monitoringRepo.getRule(ctx.tenantId, id),
+    listRoutes: () => monitoringRepo.listRoutes(ctx.tenantId),
+    getRoute: (id) => monitoringRepo.getRoute(ctx.tenantId, id),
+    async createRule(input, actor) {
+      requireAdminFor('monitoring_rule', 'create');
+      const result = await monitoringRepo.createRule(ctx.tenantId, input, actor);
+      return { result, scopeMode: 'admin' };
+    },
+    async updateRule(publicId, input) {
+      requireAdminFor('monitoring_rule', 'update');
+      const result = await monitoringRepo.updateRule(ctx.tenantId, publicId, input);
+      return result ? { result, scopeMode: 'admin' as const } : null;
+    },
+    async deleteRule(publicId) {
+      requireAdminFor('monitoring_rule', 'delete');
+      const result = await monitoringRepo.deleteRule(ctx.tenantId, publicId);
+      return result ? { result, scopeMode: 'admin' as const } : null;
+    },
+    async createRoute(input) {
+      requireAdminFor('alert_route', 'create');
+      const result = await monitoringRepo.createRoute(ctx.tenantId, input);
+      return { result, scopeMode: 'admin' };
+    },
+    async updateRoute(publicId, input) {
+      requireAdminFor('alert_route', 'update');
+      const result = await monitoringRepo.updateRoute(ctx.tenantId, publicId, input);
+      return result ? { result, scopeMode: 'admin' as const } : null;
+    },
+    async deleteRoute(publicId) {
+      requireAdminFor('alert_route', 'delete');
+      const result = await monitoringRepo.deleteRoute(ctx.tenantId, publicId);
+      return result ? { result, scopeMode: 'admin' as const } : null;
+    },
+  };
+
   // ── Problems scope (read=global, write=scoped — no write endpoints yet) ──────
 
   const problems: ProblemsScope = {
@@ -624,5 +685,5 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     },
   };
 
-  return { cmdb, events, incidents, problems, changes, releases, serviceRequests };
+  return { cmdb, events, incidents, monitoring, problems, changes, releases, serviceRequests };
 }
