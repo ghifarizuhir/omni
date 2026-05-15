@@ -5,6 +5,7 @@ import type {
 import type { CatalogItem } from '@/src/types/request';
 import type { Release } from '@/src/types/release';
 import { rbacService, requestsService, releasesService } from '@/src/services';
+import { useAuthSession } from '@/src/lib/auth/session';
 import { registerRbacOrgTree } from './engine';
 import { registerCatalogItems } from './requestResource';
 import { registerReleases } from './deploymentResource';
@@ -48,6 +49,9 @@ const CurrentUserContext = createContext<CurrentUserContextValue | null>(null);
 const STORAGE_KEY = 'ois.rbac.currentUserId';
 
 export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const session = useAuthSession();
+  const sessionUserId = session?.user.id ?? null;
+
   const [users, setUsers] = useState<RbacUser[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -96,9 +100,9 @@ export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const initialUserId = (() => {
     try {
-      return localStorage.getItem(STORAGE_KEY) || 'u-super';
+      return localStorage.getItem(STORAGE_KEY) || sessionUserId || '';
     } catch {
-      return 'u-super';
+      return sessionUserId || '';
     }
   })();
   const [currentUserId, setCurrentUserId] = useState<string>(initialUserId);
@@ -111,6 +115,17 @@ export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, currentUserId); } catch {}
   }, [currentUserId]);
+
+  useEffect(() => {
+    if (users.length === 0) return;
+    const resolved = users.find(u => u.id === currentUserId);
+    if (resolved) return;
+    const fromSession = sessionUserId ? users.find(u => u.id === sessionUserId) : null;
+    const fallback = fromSession ?? users[0];
+    if (fallback && fallback.id !== currentUserId) {
+      setCurrentUserId(fallback.id);
+    }
+  }, [users, currentUserId, sessionUserId]);
 
   const setUserById = useCallback((id: string) => setCurrentUserId(id), []);
 
