@@ -5,6 +5,7 @@ import { resolveScopeContext, type ScopeContext } from '../scope/context';
 import { prisma } from '../db';
 import type { Response } from 'express';
 import { applyEnforcement, readEnforcementMode } from '../scope/enforcement';
+import { buildScopedDb, type ScopedDb } from '../scope/scopedDb';
 
 afterAll(async () => {
   await prisma.$disconnect();
@@ -105,5 +106,41 @@ describe('enforcement mode', () => {
     ).not.toThrow();
     expect((res as unknown as { locals: { headers: Record<string, string> } }).locals.headers['X-Scope-Warning'])
       .toBe('cmdb.update:a1');
+  });
+});
+
+describe('buildScopedDb resolvers', () => {
+  it('cmdb.canWrite returns true when user is a CONTRIBUTOR of the target app', () => {
+    const db: ScopedDb = buildScopedDb(prisma, {
+      userId: 'u', tenantId: 't',
+      appMemberships: [{ appId: 'app-a', role: 'CONTRIBUTOR' }],
+      functionalRoles: [],
+    });
+    expect(db.cmdb.canWriteApp('app-a')).toBe(true);
+    expect(db.cmdb.canWriteApp('app-b')).toBe(false);
+  });
+
+  it('cmdb.canWrite returns true for PLATFORM_ADMIN regardless of membership', () => {
+    const db = buildScopedDb(prisma, {
+      userId: 'u', tenantId: 't',
+      appMemberships: [],
+      functionalRoles: ['PLATFORM_ADMIN'],
+    });
+    expect(db.cmdb.canWriteApp('app-x')).toBe(true);
+  });
+
+  it('cmdb.canWrite returns true for NULL applicationId only for PLATFORM_ADMIN', () => {
+    const member = buildScopedDb(prisma, {
+      userId: 'u', tenantId: 't',
+      appMemberships: [{ appId: 'app-a', role: 'CONTRIBUTOR' }],
+      functionalRoles: [],
+    });
+    const admin = buildScopedDb(prisma, {
+      userId: 'u', tenantId: 't',
+      appMemberships: [],
+      functionalRoles: ['PLATFORM_ADMIN'],
+    });
+    expect(member.cmdb.canWriteApp(null)).toBe(false);
+    expect(admin.cmdb.canWriteApp(null)).toBe(true);
   });
 });
