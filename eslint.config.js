@@ -22,6 +22,7 @@ export default [
     ignores: [
       'server/routes/admin.ts',
       'server/routes/admin/dataQuality.ts',
+      'server/routes/admin/applicationMembership.ts',
       'server/routes/platform.ts',
       'server/routes/auth.ts',
       'server/routes/integrations.ts',
