@@ -1,5 +1,55 @@
 # OIS Frontend — Mock Data & API Wiring Audit
 
+> **Resolved 2026-05-15** on branch `feature/audit-mock-data-fixes` (commits `ec40a4d..07700f0`). All MOCK/STATIC findings and 4 of 5 PARTIAL findings wired to real APIs; remaining residue documented at the bottom.
+>
+> Plan: `docs/superpowers/plans/2026-05-15-audit-mock-data-fixes.md`.
+
+## Resolution summary
+
+| Original finding | Fix | Commit |
+|---|---|---|
+| Hard-coded `NOW`/`TODAY` in IncidentQueue, RequestQueue, RequestDetail, DRPlans | Runtime values | `33e6a89` |
+| NewChange `plannedStart/End` defaults | Lazy `now+1h..now+3h` | `055d93b` |
+| UserMenu "Admin · Platform Engineering", UserSwitcher "(mock)" label | Derived from `/users/me` + teams | `470544a` |
+| Dashboard On-Call card (3 hard-coded names + handover) | Bound to `/on-call/schedules` | `f7b9cc0` |
+| Profile.tsx — `SARAH_CHEN`, `INITIAL_TOKENS` | `/users/me` + `/users/me/tokens` | `2e9d3d1`, `b2697be` |
+| Settings.tsx — `SARAH_CHEN`, tokens, hard-coded channel addresses | `/users/me/tokens` + `/users/me/channels` | `2e9d3d1`, `b2697be` |
+| RequestDetail comment box mutating local state | `POST /requests/:id/comments` | `36e85c2`, `3149edb` |
+| SLATargets / Outages hard-coded tab + severity counts | Derived from fetched data | `36cee62` |
+| CapacityDashboard / CapacityForecast hard-coded KPIs | Derived from metrics/forecasts | `02f413b` |
+| ExecutiveDashboard fully STATIC | `GET /measurement/exec-summary` | `2f8d8d0`, `a6f2110` |
+| ReportBuilder no persistence | `POST /measurement/reports` | `2f8d8d0`, `a6f2110` |
+| AiWorkspace `getMockAiResponse()` | `POST /ai/sessions/:id/messages` (placeholder assistant reply) | `b545509`, `77590c0` |
+| Hard-coded `TODAY` in ImprovementRow, OverrideCard, DRPlanCard, AvailabilityTrendChart (out-of-original-scope but same bug class) | Runtime values | `5b429e3` |
+| Hard-coded date anchors in 4 oncall helper components | Runtime / start-of-week | `07700f0` |
+
+### New backend endpoints
+
+- `GET/POST/DELETE /users/me/tokens`
+- `GET/PUT /users/me/channels[/:kind]`
+- `GET/POST /requests/:publicId/comments`
+- `GET /measurement/exec-summary`
+- `POST /measurement/reports`
+- `GET/POST /ai/sessions/:id/messages`
+
+### New Prisma models
+
+`ApiToken`, `NotificationChannel`, `RequestComment`, `AiMessage` (migrations `20260515060255_*`, `20260515061047_*`, `20260515062429_*`).
+
+### Residual / deferred
+
+These items were either out of the original audit scope or require larger work:
+
+1. **`src/components/ai/AiQuickPanel.tsx`** — still calls `getMockAiResponse('quick-panel', ...)`. The panel has no real session lifecycle; wiring requires creating/fetching a session on mount and converting the handler to async. Track as a follow-up.
+2. **`src/components/improvement/BenefitTracker/CumulativeBenefitChart.tsx`** — `MONTH_DATES` array is fixed-axis chart data; intentional, not a "now" bug.
+3. **`GenerateTokenModal`** — Profile/Settings still display a self-generated fake secret in the reveal modal; the real token returned by `POST /users/me/tokens` is currently dropped after persisting the row. Lift the real token into the modal in a follow-up.
+4. **Exec summary** — backend returns 0 for several metrics because the Prisma schema lacks fields (`Incident.resolvedAt`, `SlaTarget` model, `Change.plannedEnd`). Adding those columns is a separate schema-evolution task.
+5. **AI assistant reply** — backend returns a deterministic `Acknowledged: "<input>"` placeholder. Integration with a real LLM is explicitly out of scope.
+
+---
+
+## Original audit (pre-fix snapshot)
+
 **Date:** 2026-05-15
 **Scope:** Every authenticated route + shared shell components (TopBar, Sidebar, AppShell, InboxDrawer, NotificationDropdown, UserMenu, UserSwitcher).
 **Method:** Each file inspected for (a) calls to real backend services (`useResource()` / `apiFetch()` → `/api/v1/...`) and (b) hard-coded constants or arrays that bypass the API.
