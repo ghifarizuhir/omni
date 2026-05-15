@@ -2,9 +2,8 @@ import type {
   Problem, Change, Release, Deployment, DeploymentLogEntry, EnvironmentInfo,
   ServiceRequest, RequestComment, CatalogItem, ImprovementInitiative,
 } from '../types';
-import type { mockBenefitMeasurements } from '../mocks/benefitMeasurements';
-import type { mockROICalculations, getROICalculation } from '../mocks/roiCalculations';
 import { apiFetch } from './core';
+import type { BenefitMeasurement, ROICalculation } from '../types/improvement';
 import type { RescheduleChangeInput } from '../shared/schemas/change';
 import type {
   CancelRequestInput, ReassignRequestStepInput, AddRequestWatcherInput,
@@ -118,8 +117,8 @@ export const improvementsService = {
   getByAnyId: (id: string) => apiFetch<ImprovementInitiative | null>(`/improvements/${id}`),
   totalEstimatedBenefitUSD: () => apiFetch<number>('/improvements/totals/estimated'),
   totalActualBenefitUSD: () => apiFetch<number>('/improvements/totals/actual'),
-  benefitMeasurements: () => apiFetch<typeof mockBenefitMeasurements>('/improvements/benefit-measurements'),
-  roiCalculations: () => apiFetch<typeof mockROICalculations>('/improvements/roi'),
+  benefitMeasurements: () => apiFetch<BenefitMeasurement[]>('/improvements/benefit-measurements'),
+  roiCalculations: () => apiFetch<ROICalculation[]>('/improvements/roi'),
   roiCalculation: (initiativeId: string) =>
-    apiFetch<ReturnType<typeof getROICalculation>>(`/improvements/${initiativeId}/roi`),
+    apiFetch<ROICalculation | undefined>(`/improvements/${initiativeId}/roi`),
 };

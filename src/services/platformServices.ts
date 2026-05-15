@@ -19,9 +19,8 @@ import type { kbAnalytics } from '../mocks/kbAnalytics';
 import type { mockStatusPageEntries, mockStatusPageIncidents } from '../mocks/statusPageEntries';
 import type { mockRbacUsers, mockRbacTeams, mockApplications, mockDepartments, mockDivisions, mockFunctionalRoles } from '../mocks/rbac';
 import type { mockReports } from '../mocks/reports';
-import type { mockROICalculations } from '../mocks/roiCalculations';
-import type { mockBenefitMeasurements } from '../mocks/benefitMeasurements';
-import type { mockMeasurementDashboards } from '../mocks/measurementDashboards';
+import type { BenefitMeasurement, ROICalculation } from '../types/improvement';
+import type { MeasurementDashboard } from '../types/measurement';
 import type { mockMetricDefinitions } from '../mocks/metricDefinitions';
 
 export const usersService = {
@@ -105,8 +104,8 @@ export const continuityService = {
 
 export const measurementService = {
   reports: () => apiFetch<typeof mockReports>('/measurement/reports'),
-  roi: () => apiFetch<typeof mockROICalculations>('/measurement/roi'),
-  benefits: () => apiFetch<typeof mockBenefitMeasurements>('/measurement/benefits'),
-  dashboards: () => apiFetch<typeof mockMeasurementDashboards>('/measurement/dashboards'),
+  roi: () => apiFetch<ROICalculation[]>('/measurement/roi'),
+  benefits: () => apiFetch<BenefitMeasurement[]>('/measurement/benefits'),
+  dashboards: () => apiFetch<MeasurementDashboard[]>('/measurement/dashboards'),
   metrics: () => apiFetch<typeof mockMetricDefinitions>('/measurement/metrics'),
 };

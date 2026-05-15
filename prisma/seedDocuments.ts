@@ -17,8 +17,19 @@ import {
   mockDepartments, mockDivisions, mockFunctionalRoles,
 } from '../src/mocks/rbac';
 import { mockReports } from '../src/mocks/reports';
-import { mockROICalculations } from '../src/mocks/roiCalculations';
-import { mockBenefitMeasurements } from '../src/mocks/benefitMeasurements';
+import type { ROICalculation } from '../src/types/improvement';
+import type { BenefitMeasurement } from '../src/types/improvement';
+
+const mockROICalculations: ROICalculation[] = [
+  { initiativeId: 'imp-011', calculatedAt: '2026-04-25T00:00:00Z', implementationCostUSD: 9600, ongoingMonthlyCostUSD: 200, totalCost12mUSD: 12000, projectedAnnualBenefitUSD: 320000, actualBenefitToDateUSD: 0, roi12mPercent: 2567, paybackMonths: 0.45, npv5yUSD: 1480000, pessimisticROI: 1283, optimisticROI: 3208 },
+  { initiativeId: 'imp-012', calculatedAt: '2026-05-05T00:00:00Z', implementationCostUSD: 4000, ongoingMonthlyCostUSD: 0, totalCost12mUSD: 4000, projectedAnnualBenefitUSD: 180000, actualBenefitToDateUSD: 0, roi12mPercent: 4400, paybackMonths: 0.27, npv5yUSD: 820000, pessimisticROI: 2200, optimisticROI: 5500 },
+  { initiativeId: 'imp-006', calculatedAt: '2026-03-10T00:00:00Z', implementationCostUSD: 16000, ongoingMonthlyCostUSD: 0, totalCost12mUSD: 16000, projectedAnnualBenefitUSD: 480000, actualBenefitToDateUSD: 0, roi12mPercent: 2900, paybackMonths: 0.4, npv5yUSD: 2200000, pessimisticROI: 1450, optimisticROI: 3625 },
+];
+
+const mockBenefitMeasurements: BenefitMeasurement[] = [
+  { id: 'bm-001', initiativeId: 'imp-009', initiativePublicId: 'IMP-2026-00009', measurementDate: '2026-05-10', periodLabel: 'Month 1 (post-completion)', benefitType: 'risk_reduction', measuredValueUSD: 2000, cumulativeValueUSD: 2000, isEstimate: false, supportingMetric: 'INC-2026-00184 detected 8 min earlier due to reduced cooldown', methodology: 'Estimated 8 min reduction × avg P1 cost of $800/min', recordedById: 'u-005', recordedByName: 'Yuki Tanaka' },
+  { id: 'bm-002', initiativeId: 'imp-005', initiativePublicId: 'IMP-2026-00005', measurementDate: '2026-04-01', periodLabel: 'Q1 Audit (actual)', benefitType: 'efficiency_gain', measuredValueUSD: 60000, cumulativeValueUSD: 60000, isEstimate: false, supportingMetric: '3 days saved × 4 engineers at $5k/day rate', methodology: 'Engineer time tracking during Q1 2026 PCI audit vs 2025 baseline', recordedById: 'u-001', recordedByName: 'Sarah Chen' },
+];
 import { mockMeasurementDashboards } from '../src/mocks/measurementDashboards';
 import { mockMetricDefinitions } from '../src/mocks/metricDefinitions';
 import { mockKBFeedback } from '../src/mocks/kbFeedback';
