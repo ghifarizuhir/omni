@@ -14,13 +14,6 @@ const SLACard: React.FC<{ sla: SLATarget; breach?: SLABreach }> = (props) => (
 
 type StatusFilter = 'all' | AvailabilitySLAStatus;
 
-const STATUS_TABS: Array<{ label: string; value: StatusFilter; count: number }> = [
-  { label: 'All', value: 'all', count: 8 },
-  { label: 'Meeting', value: 'meeting', count: 6 },
-  { label: 'At Risk', value: 'at_risk', count: 0 },
-  { label: 'Breached', value: 'breached', count: 2 },
-];
-
 export const SLATargets: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -31,6 +24,17 @@ export const SLATargets: React.FC = () => {
   const { data: servicesData } = useResource(() => servicesService.list(), []);
   const mockSLATargets = slaData ?? [];
   const mockSLABreaches = breachesData ?? [];
+
+  const STATUS_TABS = useMemo(() => {
+    const t = mockSLATargets;
+    const by = (s: string) => t.filter(x => x.status === s).length;
+    return [
+      { label: 'All', value: 'all' as StatusFilter, count: t.length },
+      { label: 'Meeting', value: 'meeting' as StatusFilter, count: by('meeting') },
+      { label: 'At Risk', value: 'at_risk' as StatusFilter, count: by('at_risk') },
+      { label: 'Breached', value: 'breached' as StatusFilter, count: by('breached') },
+    ];
+  }, [mockSLATargets]);
   const mockServices = servicesData ?? [];
 
   const serviceOptions = useMemo(

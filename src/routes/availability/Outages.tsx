@@ -23,14 +23,6 @@ function formatDuration(minutes?: number): string {
 
 type TypeFilter = 'all' | OutageType;
 
-const TYPE_TABS: Array<{ label: string; value: TypeFilter; count: number }> = [
-  { label: 'All', value: 'all', count: 24 },
-  { label: 'Unplanned', value: 'unplanned', count: 16 },
-  { label: 'Planned', value: 'planned', count: 5 },
-  { label: 'Partial', value: 'partial', count: 2 },
-  { label: 'Detected', value: 'detected_only', count: 1 },
-];
-
 export const Outages: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialService = searchParams.get('service') ?? 'all';
@@ -39,6 +31,28 @@ export const Outages: React.FC = () => {
   const { data: servicesData } = useResource(() => servicesService.list(), []);
   const mockOutages = outagesData ?? [];
   const mockServices = servicesData ?? [];
+
+  const TYPE_TABS = useMemo(() => {
+    const o = mockOutages;
+    const by = (t: string) => o.filter(x => x.type === t).length;
+    return [
+      { label: 'All', value: 'all' as TypeFilter, count: o.length },
+      { label: 'Unplanned', value: 'unplanned' as TypeFilter, count: by('unplanned') },
+      { label: 'Planned', value: 'planned' as TypeFilter, count: by('planned') },
+      { label: 'Partial', value: 'partial' as TypeFilter, count: by('partial') },
+      { label: 'Detected', value: 'detected_only' as TypeFilter, count: by('detected_only') },
+    ];
+  }, [mockOutages]);
+
+  const sevCounts = useMemo(
+    () => (['P1', 'P2', 'P3', 'P4'] as const).map(s => mockOutages.filter(o => o.severity === s).length),
+    [mockOutages],
+  );
+
+  const customerFacing = useMemo(
+    () => mockOutages.filter(o => o.customerFacing).length,
+    [mockOutages],
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -197,31 +211,28 @@ export const Outages: React.FC = () => {
             </span>
           </button>
         ))}
-        {(['P1', 'P2', 'P3', 'P4'] as const).map((sev, i) => {
-          const counts = [4, 8, 9, 3];
-          return (
-            <button
-              key={sev}
-              onClick={() => setSeverityFilter(severityFilter === sev ? 'all' : sev)}
+        {(['P1', 'P2', 'P3', 'P4'] as const).map((sev, i) => (
+          <button
+            key={sev}
+            onClick={() => setSeverityFilter(severityFilter === sev ? 'all' : sev)}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+              severityFilter === sev
+                ? 'border-primary-300 bg-primary-50 text-primary-700'
+                : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
+            )}
+          >
+            {sev}
+            <span
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                severityFilter === sev
-                  ? 'border-primary-300 bg-primary-50 text-primary-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
+                'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                severityFilter === sev ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500',
               )}
             >
-              {sev}
-              <span
-                className={cn(
-                  'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                  severityFilter === sev ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500',
-                )}
-              >
-                {counts[i]}
-              </span>
-            </button>
-          );
-        })}
+              {sevCounts[i]}
+            </span>
+          </button>
+        ))}
         <button
           onClick={() => setCustomerFacingFilter(customerFacingFilter === 'yes' ? 'all' : 'yes')}
           className={cn(
@@ -238,7 +249,7 @@ export const Outages: React.FC = () => {
               customerFacingFilter === 'yes' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500',
             )}
           >
-            14
+            {customerFacing}
           </span>
         </button>
       </div>
