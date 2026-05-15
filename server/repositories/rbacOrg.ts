@@ -198,6 +198,11 @@ export async function upsertRbacUser(tenantId: string, id: string, input: RbacUs
       if (!fr) throw new Error(`Unknown functional role code: ${code}`);
       await tx.userFunctionalRole.create({ data: { userId: user.id, functionalRoleId: fr.id } });
     }
+    await tx.tenantMembership.upsert({
+      where: { tenantId_userId: { tenantId, userId: user.id } },
+      create: { tenantId, userId: user.id },
+      update: {},
+    });
     return user;
   });
 }

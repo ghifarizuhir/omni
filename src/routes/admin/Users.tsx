@@ -65,8 +65,12 @@ const UserProfiles: React.FC = () => {
     upsertUser({ ...u, ...(saved ?? {}) });
     setOpen(false);
     if (isCreate) {
-      const result = await adminApi.resetUserPassword((saved ?? u).id);
-      setTempPassword(result.tempPassword);
+      try {
+        const result = await adminApi.resetUserPassword((saved ?? u).id);
+        setTempPassword(result.tempPassword);
+      } catch (e) {
+        alert('Failed to generate temporary password: ' + (e instanceof Error ? e.message : String(e)));
+      }
     }
   };
 
@@ -135,8 +139,12 @@ const UserProfiles: React.FC = () => {
                     <Pencil size={14} />
                   </Button>
                   <Button size="icon" variant="ghost" title="Reset password" onClick={async () => {
-                    const result = await adminApi.resetUserPassword(u.id);
-                    setTempPassword(result.tempPassword);
+                    try {
+                      const result = await adminApi.resetUserPassword(u.id);
+                      setTempPassword(result.tempPassword);
+                    } catch (e) {
+                      alert('Reset failed: ' + (e instanceof Error ? e.message : String(e)));
+                    }
                   }}>
                     <ShieldCheck size={14} className="text-ois-primary" />
                   </Button>
