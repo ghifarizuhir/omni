@@ -35,9 +35,8 @@ export const getDocById = async <T,>(delegate: Delegate, tenantId: string, id: s
 
 import type {
   Problem, Change, Release, Deployment, DeploymentLogEntry, ServiceRequest,
-  RequestComment, CatalogItem, Integration, KBArticle,
+  RequestComment, CatalogItem, Integration, KBArticle, Service,
 } from '../../src/types';
-import type { Service } from '../../src/services/cmdbService';
 import { randomUUID } from 'node:crypto';
 
 export const servicesRepo = {

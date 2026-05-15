@@ -1,20 +1,10 @@
-import type { ConfigurationItem, CIRelationship, CIAuditEntry, ServiceHealthStatus } from '../types';
+import type { ConfigurationItem, CIRelationship, CIAuditEntry, Service } from '../types';
 import { apiFetch } from './core';
 import type { UpdateCIInput } from '../shared/schemas/ci';
 
 export type { UpdateCIInput } from '../shared/schemas/ci';
 export { updateCISchema } from '../shared/schemas/ci';
-
-export interface Service {
-  id: string;
-  name: string;
-  tier: 'critical' | 'important' | 'standard';
-  ownerId: string;
-  ownerTeamId: string;
-  slaTarget: number;
-  currentHealth: ServiceHealthStatus;
-  uptime30d: number;
-}
+export type { Service } from '../types';
 
 export const cisService = {
   list: () => apiFetch<ConfigurationItem[]>('/cis'),
