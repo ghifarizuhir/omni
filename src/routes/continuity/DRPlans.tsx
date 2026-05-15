@@ -9,7 +9,7 @@ import { DRTestRunnerWizard } from '@/src/components/continuity/DRTestRunner/DRT
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { Can } from '@/src/lib/rbac';
 
-const TODAY = new Date('2026-05-10');
+const TODAY = new Date();
 
 function isOverdue(isoString: string): boolean {
   return new Date(isoString) < TODAY;

@@ -21,7 +21,7 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const NOW = new Date('2026-05-09T10:00:00Z').getTime();
+const NOW = Date.now();
 
 const CATEGORY_COLOR: Record<CatalogCategory, string> = {
   access:        '#1F4FD4',
