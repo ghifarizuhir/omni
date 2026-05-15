@@ -278,7 +278,7 @@ Semua membership change tulis `AuditLog` `module: 'application_membership'`. Tab
 |---|---|
 | **0 — Schema persiapan** | Migration additive: `applicationId?` di tabel scoped, `role` di `ApplicationTeam`, functional role seeds, index `(tenantId, applicationId)`. ✅ done (Plan A, `0f71d8d`) |
 | **1 — Backfill** | `prisma/backfillAppScope.ts` mengisi `applicationId` dari `ownerTeamId` (CI) & dari CI referensi (Event/Incident). Report row gagal → admin UI `/admin/data-quality`. |
-| **2 — Enforcement toggle** | Env `SCOPE_ENFORCEMENT_MODE = off \| warn \| enforce`. `warn` mencatat violation + header `X-Scope-Warning`, request lolos. Default rollout: dev `enforce`, staging `warn`→`enforce`, prod `warn` selama 2 sprint lalu `enforce`. 🚧 in progress (Plan B-1: infra + CMDB pilot landed; remaining modules in Plan B-2) |
+| **2 — Enforcement toggle** | Env `SCOPE_ENFORCEMENT_MODE = off \| warn \| enforce`. `warn` mencatat violation + header `X-Scope-Warning`, request lolos. Default rollout: dev `enforce`, staging `warn`→`enforce`, prod `warn` selama 2 sprint lalu `enforce`. ✅ done (Plan B-1: infra + CMDB pilot; Plan B-2: rollout to Events/Incidents/Problems/Changes/Releases/ServiceRequests/Monitoring + ESLint `no-restricted-imports` guard on `server/routes/*`) |
 | **3 — Required `applicationId`** | Migration `NOT NULL` setelah backfill >99%. Row sisa pindah ke "App: Unassigned" sintetis (PlatformAdmin only). |
 | **4 — UX rollout** | `AppScopeSwitcher` di feature flag `feature.app_scope_ui`. Pilot 1 tenant test 1 minggu, lalu enable semua. |
 | **5 — Cleanup** | Hapus `off`/`warn` path. Hapus backfill scripts dari runtime path (tetap di repo). |
