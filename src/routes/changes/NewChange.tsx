@@ -38,26 +38,11 @@ interface FormState {
   commsChannels: string[];
 }
 
-const INITIAL: FormState = {
-  title: '',
-  description: '',
-  justification: '',
-  type: 'normal',
-  affectedCIs: [],
-  linkedProblems: [],
-  linkedIncidents: [],
-  linkedRelease: '',
-  plannedStart: '2026-05-14T14:00',
-  plannedEnd: '2026-05-14T16:00',
-  risk: 'medium',
-  riskFactors: [],
-  impact: 'moderate',
-  implementationPlan: '',
-  rollbackPlan: '',
-  testPlan: '',
-  commsRequired: false,
-  commsChannels: [],
-};
+function isoLocal(offsetMs: number): string {
+  const d = new Date(Date.now() + offsetMs);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+const HOUR = 60 * 60 * 1000;
 
 const STEPS = ['Basics', 'Plan', 'Review', 'Submit'];
 
@@ -244,7 +229,26 @@ const NewChangeDenied: React.FC = () => {
 const NewChangeForm: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState<FormState>(INITIAL);
+  const [form, setForm] = useState<FormState>(() => ({
+    title: '',
+    description: '',
+    justification: '',
+    type: 'normal',
+    affectedCIs: [],
+    linkedProblems: [],
+    linkedIncidents: [],
+    linkedRelease: '',
+    plannedStart: isoLocal(HOUR),
+    plannedEnd: isoLocal(3 * HOUR),
+    risk: 'medium',
+    riskFactors: [],
+    impact: 'moderate',
+    implementationPlan: '',
+    rollbackPlan: '',
+    testPlan: '',
+    commsRequired: false,
+    commsChannels: [],
+  }));
   const [submitted, setSubmitted] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
   const draftSavedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -799,7 +803,7 @@ const NewChangeForm: React.FC = () => {
       <p className="text-xs text-ois-text-subtle mb-6">Opening change detail…</p>
 
       <div className="flex gap-3">
-        <Button variant="outline" onClick={() => { localStorage.removeItem('new-change-draft'); setStep(0); setForm(INITIAL); setSubmitted(false); setCreatedPublicId(null); }}>
+        <Button variant="outline" onClick={() => { localStorage.removeItem('new-change-draft'); setStep(0); setForm({ title: '', description: '', justification: '', type: 'normal', affectedCIs: [], linkedProblems: [], linkedIncidents: [], linkedRelease: '', plannedStart: isoLocal(HOUR), plannedEnd: isoLocal(3 * HOUR), risk: 'medium', riskFactors: [], impact: 'moderate', implementationPlan: '', rollbackPlan: '', testPlan: '', commsRequired: false, commsChannels: [] }); setSubmitted(false); setCreatedPublicId(null); }}>
           Submit another
         </Button>
         <Button onClick={() => createdPublicId && navigate(`/changes/${createdPublicId}`)} disabled={!createdPublicId}>
