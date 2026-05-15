@@ -7,7 +7,9 @@
 // TODO(M8+): replace polling scheduler with BullMQ (Redis-backed) workers and
 // move job definitions under `server/jobs/*` to dedicated processors here.
 
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
+loadEnv({ path: '.env.local' });
+loadEnv();
 import { startScheduler, stopScheduler } from './jobs';
 import { initTelemetry } from './telemetry';
 

@@ -1,4 +1,8 @@
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
+// Load .env.local first (developer overrides) then .env (defaults). Matches
+// Vite's resolution so frontend and backend agree on which env file wins.
+loadEnv({ path: '.env.local' });
+loadEnv();
 import http from 'node:http';
 import { createApp } from './app';
 import { initRealtime } from './realtime';
