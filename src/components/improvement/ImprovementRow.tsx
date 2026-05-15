@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { MoreVertical, AlertCircle, Zap } from 'lucide-react';
 import { ImprovementInitiative } from '../../types/improvement';
 import { formatBenefitUSD } from '../../lib/constants';
@@ -14,16 +14,15 @@ export interface ImprovementRowProps {
   onOpen: () => void;
 }
 
-const TODAY = new Date('2026-05-10');
-
 function formatDate(str?: string): string {
   if (!str) return '—';
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export const ImprovementRow: React.FC<ImprovementRowProps> = ({ initiative, onOpen }) => {
+  const today = useMemo(() => new Date(), []);
   const isPastDue = initiative.targetCompletionDate
-    ? new Date(initiative.targetCompletionDate) < TODAY
+    ? new Date(initiative.targetCompletionDate) < today
     : false;
 
   const linkedId = initiative.linkedProblemPublicId ?? initiative.linkedIncidentPublicId;
