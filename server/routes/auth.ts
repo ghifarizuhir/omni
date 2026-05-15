@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db';
 import {
   clearSessionCookie, createSession, destroySession, getSessionIdFromRequest,
-  setSessionCookie, verifyPassword,
+  hashPassword, setSessionCookie, verifyPassword,
 } from '../auth/session';
 import { asyncHandler, HttpError } from '../util';
 
@@ -54,4 +54,33 @@ authRouter.get('/auth/me', asyncHandler(async (req, res) => {
     roleNames: req.session.roles.map(r => r.name),
     permissions: Array.from(req.permissions ?? []),
   });
+}));
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+authRouter.post('/auth/change-password', asyncHandler(async (req, res) => {
+  if (!req.session) throw new HttpError(401, 'Authentication required');
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) throw new HttpError(400, 'New password must be at least 8 characters');
+  const { currentPassword, newPassword } = parsed.data;
+  if (currentPassword === newPassword) throw new HttpError(409, 'New password must differ from current');
+
+  const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+  if (!user || !user.passwordHash) throw new HttpError(401, 'Invalid credentials');
+  const ok = await verifyPassword(user.passwordHash, currentPassword);
+  if (!ok) throw new HttpError(401, 'Invalid credentials');
+
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash, mustChangePassword: false },
+  });
+
+  await destroySession(req.session.sessionId);
+  const fresh = await createSession(user.id, req.session.tenantId);
+  setSessionCookie(res, fresh.sessionId);
+  res.status(204).end();
 }));
