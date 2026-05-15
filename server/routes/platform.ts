@@ -243,3 +243,45 @@ platformRouter.get('/measurement/roi', asyncHandler(async (req, res) => res.json
 platformRouter.get('/measurement/benefits', asyncHandler(async (req, res) => res.json(await listByKind(req.tenantId, 'benefit-measurement'))));
 platformRouter.get('/measurement/dashboards', asyncHandler(async (req, res) => res.json(await listByKind(req.tenantId, 'measurement-dashboard'))));
 platformRouter.get('/measurement/metrics', asyncHandler(async (req, res) => res.json(await listByKind(req.tenantId, 'metric-def'))));
+
+platformRouter.get('/measurement/exec-summary', asyncHandler(async (req, res) => {
+  const tenantId = req.tenantId;
+  // Incident has no resolvedAt column — MTTR always 0 in current schema.
+  // SlaTarget is not a dedicated table — stored as Documents; compliance defaults to 0.
+  const [changeSample, majorOpen] = await Promise.all([
+    prisma.change.findMany({
+      where: { tenantId, status: { in: ['successful', 'failed', 'rolled_back'] } },
+      select: { status: true },
+      take: 200,
+      orderBy: { id: 'desc' },
+    }),
+    prisma.incident.count({ where: { tenantId, isMajor: true, status: { not: 'resolved' } } }),
+  ]);
+  const changeSuccessPct = changeSample.length
+    ? Math.round(changeSample.filter(c => c.status === 'successful').length / changeSample.length * 100)
+    : 0;
+  res.json({
+    slaCompliancePct: 0,
+    mttrMinutes: 0,
+    changeSuccessPct,
+    openMajorIncidents: majorOpen,
+  });
+}));
+
+platformRouter.post('/measurement/reports', asyncHandler(async (req, res) => {
+  const { name, definition, schedule } = req.body ?? {};
+  if (!name || typeof name !== 'string') {
+    res.status(400).json({ error: 'name required' });
+    return;
+  }
+  const { randomUUID } = await import('crypto');
+  const row = await prisma.document.create({
+    data: {
+      tenantId: req.tenantId,
+      kind: 'report',
+      key: randomUUID(),
+      data: JSON.stringify({ name, definition: definition ?? {}, schedule: schedule ?? null, createdBy: req.session?.userId }),
+    },
+  });
+  res.status(201).json({ id: row.id, name, definition: definition ?? {}, schedule: schedule ?? null, createdAt: row.createdAt });
+}));
