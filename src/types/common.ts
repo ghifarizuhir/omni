@@ -30,6 +30,7 @@ export interface User {
   role: UserRole;
   team?: string; // team id
   timezone: string; // IANA, e.g. 'Asia/Jakarta'
+  mustChangePassword?: boolean;
 }
 
 export interface Team {

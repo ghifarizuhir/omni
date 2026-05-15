@@ -31,6 +31,7 @@ export { capacityService } from './capacityService';
 
 export {
   usersService,
+  authService,
   apiTokensService,
   userChannelsService,
   teamsService,
