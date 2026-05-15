@@ -477,6 +477,17 @@ export const requestsRepo = {
       return { kind: 'ok' as const, before, after, internalId: row.id, wasPresent };
     });
   },
+
+  async listComments(tenantId: string, publicId: string) {
+    const sr = await getDocByPublicId<ServiceRequest>(prisma.serviceRequest, tenantId, publicId);
+    if (!sr) return [];
+    const row = await prisma.serviceRequest.findFirst({ where: { tenantId, publicId }, select: { id: true } });
+    if (!row) return [];
+    return prisma.requestComment.findMany({
+      where: { tenantId, requestId: row.id },
+      orderBy: { createdAt: 'asc' },
+    });
+  },
 };
 
 export const catalogRepo = {

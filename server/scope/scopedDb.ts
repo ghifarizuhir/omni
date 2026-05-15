@@ -5,6 +5,7 @@ import { POLICY } from './policy';
 import { cmdbRepo } from '../repositories/cmdb';
 import { eventsRepo } from '../repositories/events';
 import { incidentsRepo } from '../repositories/incidents';
+import { problemsRepo, changesRepo, releasesRepo, requestsRepo } from '../repositories/docs';
 
 export type ScopeMode = 'member' | 'noc' | 'owner' | 'admin' | 'legacy' | 'bypass';
 
@@ -89,10 +90,83 @@ export interface IncidentsScope {
   ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.postComms>>; scopeMode: ScopeMode } | null>;
 }
 
+export interface ProblemsScope {
+  list(): Promise<Awaited<ReturnType<typeof problemsRepo.list>>>;
+  get(publicId: string): Promise<Awaited<ReturnType<typeof problemsRepo.get>>>;
+}
+
+export interface ChangesScope {
+  list(): Promise<Awaited<ReturnType<typeof changesRepo.list>>>;
+  get(publicId: string): Promise<Awaited<ReturnType<typeof changesRepo.get>>>;
+  create(
+    requester: { id: string; name: string },
+    input: Parameters<typeof changesRepo.create>[2] & { applicationId?: string | null },
+  ): Promise<{ result: Awaited<ReturnType<typeof changesRepo.create>>; scopeMode: ScopeMode }>;
+  cancel(publicId: string, reason: string): Promise<{ result: Awaited<ReturnType<typeof changesRepo.cancel>>; scopeMode: ScopeMode } | null>;
+  reschedule(
+    publicId: string,
+    input: Parameters<typeof changesRepo.reschedule>[2],
+    actor: { id: string; name: string },
+  ): Promise<{ result: Awaited<ReturnType<typeof changesRepo.reschedule>>; scopeMode: ScopeMode } | null>;
+  setTechnicalAssessment(
+    publicId: string,
+    reviewer: { id: string; name: string },
+    assessment: Parameters<typeof changesRepo.setTechnicalAssessment>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof changesRepo.setTechnicalAssessment>>; scopeMode: ScopeMode } | null>;
+}
+
+export interface ReleasesScope {
+  list(): Promise<Awaited<ReturnType<typeof releasesRepo.list>>>;
+  get(publicId: string): Promise<Awaited<ReturnType<typeof releasesRepo.get>>>;
+}
+
+export interface ServiceRequestsScope {
+  list(): Promise<Awaited<ReturnType<typeof requestsRepo.list>>>;
+  get(publicId: string): Promise<Awaited<ReturnType<typeof requestsRepo.get>>>;
+  listComments(publicId: string): Promise<Awaited<ReturnType<typeof requestsRepo.listComments>>>;
+  decideStep(
+    publicId: string,
+    stepId: string,
+    actor: { id: string; name: string },
+    decision: 'approved' | 'rejected',
+    note?: string,
+  ): Promise<{ result: Awaited<ReturnType<typeof requestsRepo.decideStep>>; scopeMode: ScopeMode } | null>;
+  addComment(
+    publicId: string,
+    author: { id: string; name: string },
+    body: string,
+  ): Promise<{ result: Awaited<ReturnType<typeof requestsRepo.addComment>>; scopeMode: ScopeMode } | null>;
+  cancel(
+    publicId: string,
+    reason: string,
+    actor: { id: string; name: string },
+  ): Promise<{ result: Awaited<ReturnType<typeof requestsRepo.cancel>>; scopeMode: ScopeMode } | null>;
+  reassignStep(
+    publicId: string,
+    stepId: string,
+    assignee: { id: string; name?: string },
+    actor: { id: string; name: string },
+  ): Promise<{ result: Awaited<ReturnType<typeof requestsRepo.reassignStep>>; scopeMode: ScopeMode } | null>;
+  addWatcher(
+    publicId: string,
+    watcher: Parameters<typeof requestsRepo.addWatcher>[2],
+    actor: { id: string; name: string },
+  ): Promise<{ result: Awaited<ReturnType<typeof requestsRepo.addWatcher>>; scopeMode: ScopeMode } | null>;
+  removeWatcher(
+    publicId: string,
+    userId: string,
+    actor: { id: string; name: string },
+  ): Promise<{ result: Awaited<ReturnType<typeof requestsRepo.removeWatcher>>; scopeMode: ScopeMode } | null>;
+}
+
 export interface ScopedDb {
   cmdb: CmdbScope;
   events: EventsScope;
   incidents: IncidentsScope;
+  problems: ProblemsScope;
+  changes: ChangesScope;
+  releases: ReleasesScope;
+  serviceRequests: ServiceRequestsScope;
 }
 
 export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb {
@@ -357,5 +431,198 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     },
   };
 
-  return { cmdb, events, incidents };
+  // ── Problems scope (read=global, write=scoped — no write endpoints yet) ──────
+
+  const problems: ProblemsScope = {
+    list: () => problemsRepo.list(ctx.tenantId),
+    get: (publicId) => problemsRepo.get(ctx.tenantId, publicId),
+  };
+
+  // ── Changes scope (read=global, write=scoped) ──────────────────────────────
+
+  function changeCanWrite(appId: string | null): boolean {
+    if (isPlatformAdmin) return true;
+    if (appId === null) return true; // legacy — allow
+    if (POLICY.change.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
+    return writableApps.has(appId);
+  }
+
+  function changeScopeMode(appId: string | null): ScopeMode {
+    if (appId === null) return 'legacy';
+    if (isPlatformAdmin) return 'admin';
+    if (POLICY.change.writeBypass.some((r) => ctx.functionalRoles.includes(r) && r !== 'PLATFORM_ADMIN')) return 'noc';
+    if (ownerApps.has(appId)) return 'owner';
+    return 'member';
+  }
+
+  async function loadChangeAppId(publicId: string): Promise<string | null | undefined> {
+    const raw = await prisma.change.findFirst({
+      where: { tenantId: ctx.tenantId, publicId },
+      select: { applicationId: true },
+    });
+    return raw ? (raw.applicationId ?? null) : undefined;
+  }
+
+  const changes: ChangesScope = {
+    list: () => changesRepo.list(ctx.tenantId),
+    get: (publicId) => changesRepo.get(ctx.tenantId, publicId),
+
+    async create(requester, input) {
+      const appId = input.applicationId ?? null;
+      if (appId !== null && !changeCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'change', action: 'create', applicationId: appId });
+      }
+      const mode = changeScopeMode(appId);
+      // Strip applicationId from the input for changesRepo.create (which doesn't accept it yet).
+      const { applicationId: _appId, ...repoInput } = input;
+      const result = await changesRepo.create(ctx.tenantId, requester, repoInput);
+      // Backfill applicationId on the DB row if provided.
+      if (appId) {
+        await prisma.change.update({
+          where: { id: result.id },
+          data: { applicationId: appId },
+        });
+      }
+      return { result, scopeMode: mode };
+    },
+
+    async cancel(publicId, reason) {
+      const appId = await loadChangeAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !changeCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'change', action: 'update', applicationId: appId });
+      }
+      const result = await changesRepo.cancel(ctx.tenantId, publicId, reason);
+      return { result, scopeMode: changeScopeMode(appId) };
+    },
+
+    async reschedule(publicId, input, actor) {
+      const appId = await loadChangeAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !changeCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'change', action: 'update', applicationId: appId });
+      }
+      const result = await changesRepo.reschedule(ctx.tenantId, publicId, input, actor);
+      return { result, scopeMode: changeScopeMode(appId) };
+    },
+
+    async setTechnicalAssessment(publicId, reviewer, assessment) {
+      const appId = await loadChangeAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !changeCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'change', action: 'update', applicationId: appId });
+      }
+      const result = await changesRepo.setTechnicalAssessment(ctx.tenantId, publicId, assessment, reviewer);
+      return { result, scopeMode: changeScopeMode(appId) };
+    },
+  };
+
+  // ── Releases scope (read=global, write=admin_only — no write endpoints) ──────
+
+  const releases: ReleasesScope = {
+    list: () => releasesRepo.list(ctx.tenantId),
+    get: (publicId) => releasesRepo.get(ctx.tenantId, publicId),
+  };
+
+  // ── ServiceRequests scope (read=scoped, write=scoped) ─────────────────────
+
+  const isSrReadBypass = POLICY.service_request.readBypass.some((r) => ctx.functionalRoles.includes(r));
+  const readableApps = new Set([...writableApps, ...ownerApps]);
+
+  function srCanWrite(appId: string | null): boolean {
+    if (isPlatformAdmin) return true;
+    if (appId === null) return true; // legacy
+    if (POLICY.service_request.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
+    return writableApps.has(appId);
+  }
+
+  function srScopeMode(appId: string | null): ScopeMode {
+    if (appId === null) return 'legacy';
+    if (isPlatformAdmin) return 'admin';
+    if (POLICY.service_request.writeBypass.some((r) => ctx.functionalRoles.includes(r) && r !== 'PLATFORM_ADMIN')) return 'noc';
+    if (ownerApps.has(appId)) return 'owner';
+    return 'member';
+  }
+
+  async function loadSrAppId(publicId: string): Promise<string | null | undefined> {
+    const raw = await prisma.serviceRequest.findFirst({
+      where: { tenantId: ctx.tenantId, publicId },
+      select: { applicationId: true },
+    });
+    return raw ? ((raw as { applicationId?: string | null }).applicationId ?? null) : undefined;
+  }
+
+  const serviceRequests: ServiceRequestsScope = {
+    async list() {
+      const rows = await requestsRepo.list(ctx.tenantId);
+      if (isSrReadBypass) return rows;
+      return (rows as { applicationId?: string | null }[]).filter(
+        (r) => r.applicationId == null || readableApps.has(r.applicationId!),
+      ) as typeof rows;
+    },
+    get: (publicId) => requestsRepo.get(ctx.tenantId, publicId),
+    listComments: (publicId) => requestsRepo.listComments(ctx.tenantId, publicId),
+
+    async decideStep(publicId, stepId, actor, decision, note) {
+      const appId = await loadSrAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !srCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'service_request', action: 'update', applicationId: appId });
+      }
+      const result = await requestsRepo.decideStep(ctx.tenantId, publicId, stepId, decision, actor, note);
+      return { result, scopeMode: srScopeMode(appId) };
+    },
+
+    async addComment(publicId, author, body) {
+      const appId = await loadSrAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !srCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'service_request', action: 'update', applicationId: appId });
+      }
+      const result = await requestsRepo.addComment(ctx.tenantId, publicId, author, body);
+      return { result, scopeMode: srScopeMode(appId) };
+    },
+
+    async cancel(publicId, reason, actor) {
+      const appId = await loadSrAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !srCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'service_request', action: 'update', applicationId: appId });
+      }
+      const result = await requestsRepo.cancel(ctx.tenantId, publicId, reason, actor);
+      return { result, scopeMode: srScopeMode(appId) };
+    },
+
+    async reassignStep(publicId, stepId, assignee, actor) {
+      const appId = await loadSrAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !srCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'service_request', action: 'update', applicationId: appId });
+      }
+      const result = await requestsRepo.reassignStep(ctx.tenantId, publicId, stepId, assignee, actor);
+      return { result, scopeMode: srScopeMode(appId) };
+    },
+
+    async addWatcher(publicId, watcher, actor) {
+      const appId = await loadSrAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !srCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'service_request', action: 'update', applicationId: appId });
+      }
+      const result = await requestsRepo.addWatcher(ctx.tenantId, publicId, watcher, actor);
+      return { result, scopeMode: srScopeMode(appId) };
+    },
+
+    async removeWatcher(publicId, userId, actor) {
+      const appId = await loadSrAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !srCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'service_request', action: 'update', applicationId: appId });
+      }
+      const result = await requestsRepo.removeWatcher(ctx.tenantId, publicId, userId, actor);
+      return { result, scopeMode: srScopeMode(appId) };
+    },
+  };
+
+  return { cmdb, events, incidents, problems, changes, releases, serviceRequests };
 }
