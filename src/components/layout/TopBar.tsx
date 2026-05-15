@@ -6,7 +6,6 @@ import { Avatar } from '../ui/Avatar';
 import { cn } from '@/src/lib/utils';
 import { NotificationDropdown } from './NotificationDropdown';
 import { UserMenu } from './UserMenu';
-import { UserSwitcher } from './UserSwitcher';
 import { useBreadcrumbs } from '@/src/lib/breadcrumbs';
 import { inboxService, notificationsService, usersService, useResource } from '@/src/services';
 
@@ -96,10 +95,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox }) 
           {showNotifications && (
             <NotificationDropdown onClose={() => setShowNotifications(false)} />
           )}
-        </div>
-
-        <div className="ml-2 hidden lg:block">
-          <UserSwitcher />
         </div>
 
         <div className="relative ml-2">

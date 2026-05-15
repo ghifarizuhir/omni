@@ -58,22 +58,6 @@ export const AdminLayout: React.FC = () => {
     );
   }
 
-  // Gate 2 — persona: the switched-to persona must be a superadmin so the
-  // engine and permission-rule UI work correctly.
-  if (!user.isSuperadmin) {
-    return (
-      <div className="max-w-xl mx-auto mt-16 p-8 bg-white rounded-xl border border-ois-border text-center">
-        <Shield className="mx-auto text-ois-danger" size={36} />
-        <h2 className="mt-3 text-lg font-bold text-ois-text">Switch to a superadmin persona</h2>
-        <p className="text-sm text-ois-text-muted mt-1">
-          Your login has admin access, but the active persona in the top-bar user switcher
-          is not a superadmin. Switch the persona to <strong>Super Admin</strong> to use
-          the admin panel.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
