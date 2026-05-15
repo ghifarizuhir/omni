@@ -62,7 +62,7 @@ const UserProfiles: React.FC = () => {
   const handleSave = async (u: RbacUser) => {
     const isCreate = editing === null;
     const saved = await rbacService.upsertRbacUser(u);
-    upsertUser(saved ?? u);
+    upsertUser({ ...u, ...(saved ?? {}) });
     setOpen(false);
     if (isCreate) {
       const result = await adminApi.resetUserPassword((saved ?? u).id);
