@@ -11,8 +11,6 @@ import { legacyMockInboxItems } from '../src/mocks/inbox';
 import { mockInboxItems } from '../src/mocks/inboxItems';
 import { mockOnCallSchedules } from '../src/mocks/onCallSchedules';
 import { mockOnCallOverrides } from '../src/mocks/onCallOverrides';
-import { mockDailyServiceHealth } from '../src/mocks/dailyServiceHealth';
-import { mockAvailabilityData } from '../src/mocks/availabilityData';
 import { mockStatusPageEntries, mockStatusPageIncidents } from '../src/mocks/statusPageEntries';
 import {
   mockRbacUsers, mockRbacTeams, mockApplications,
@@ -52,8 +50,6 @@ export const seedDocuments = async (prisma: PrismaClient, tenantId: string) => {
     { kind: 'inbox-item', items: mockInboxItems },
     { kind: 'on-call-schedule', items: mockOnCallSchedules },
     { kind: 'on-call-override', items: mockOnCallOverrides },
-    { kind: 'daily-health', items: mockDailyServiceHealth },
-    { kind: 'availability-series', items: mockAvailabilityData },
     { kind: 'status-page-entry', items: mockStatusPageEntries },
     { kind: 'status-page-incident', items: mockStatusPageIncidents },
     { kind: 'rbac-user', items: mockRbacUsers },

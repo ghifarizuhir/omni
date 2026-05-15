@@ -1,6 +1,4 @@
-import type { Outage, SLATarget, SLABreach } from '../types';
-import type { mockDailyServiceHealth } from '../mocks/dailyServiceHealth';
-import type { mockAvailabilityData } from '../mocks/availabilityData';
+import type { Outage, SLATarget, SLABreach, AvailabilityDataPoint, DailyServiceHealth } from '../types';
 import { apiFetch } from './core';
 
 export const availabilityService = {
@@ -8,6 +6,6 @@ export const availabilityService = {
   slaTargets: () => apiFetch<SLATarget[]>('/availability/sla-targets'),
   slaBreaches: () => apiFetch<SLABreach[]>('/availability/sla-breaches'),
   activeBreaches: () => apiFetch<SLABreach[]>('/availability/sla-breaches', { query: { active: true } }),
-  dailyHealth: () => apiFetch<typeof mockDailyServiceHealth>('/availability/daily-health'),
-  series: () => apiFetch<typeof mockAvailabilityData>('/availability/series'),
+  dailyHealth: () => apiFetch<DailyServiceHealth[]>('/availability/daily-health'),
+  series: () => apiFetch<AvailabilityDataPoint[]>('/availability/series'),
 };

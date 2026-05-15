@@ -1,6 +1,4 @@
-export * from './availabilityData';
 export * from './benefitMeasurements';
-export * from './dailyServiceHealth';
 export * from './inbox';
 export * from './inboxItems';
 export * from './kbAnalytics';

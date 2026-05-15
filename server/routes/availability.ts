@@ -1,9 +1,7 @@
 import { Router } from 'express';
 import type {
-  Outage, SLATarget, SLABreach,
+  Outage, SLATarget, SLABreach, DailyServiceHealth, AvailabilityDataPoint,
 } from '../../src/types';
-import type { mockDailyServiceHealth as DailyHealth } from '../../src/mocks/dailyServiceHealth';
-import type { mockAvailabilityData as AvailSeries } from '../../src/mocks/availabilityData';
 import { listByKind } from '../repositories/documents';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, qBool } from '../util';
@@ -26,9 +24,9 @@ availabilityRouter.get('/availability/sla-breaches', asyncHandler(async (req, re
 }));
 
 availabilityRouter.get('/availability/daily-health', asyncHandler(async (req, res) => {
-  res.json(await listByKind<typeof DailyHealth[number]>(req.tenantId, 'daily-health'));
+  res.json(await listByKind<DailyServiceHealth>(req.tenantId, 'daily-health'));
 }));
 
 availabilityRouter.get('/availability/series', asyncHandler(async (req, res) => {
-  res.json(await listByKind<typeof AvailSeries[number]>(req.tenantId, 'availability-series'));
+  res.json(await listByKind<AvailabilityDataPoint>(req.tenantId, 'availability-series'));
 }));
