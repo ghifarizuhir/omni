@@ -5,33 +5,7 @@ import { ProfileForm } from '../../components/platform/ProfileForm';
 import { APITokenRow } from '../../components/platform/APITokenRow';
 import type { APIToken } from '../../components/platform/APITokenRow';
 import { GenerateTokenModal } from '../../components/platform/GenerateTokenModal';
-
-const SARAH_CHEN = {
-  name: 'Sarah Chen',
-  title: 'Platform Engineering Manager',
-  team: 'Platform Engineering',
-  timezone: 'America/New_York',
-  language: 'en',
-  manager: 'Helena Vasquez',
-  bio: 'Sarah oversees platform reliability for Acme Corp. Joined 2023.',
-};
-
-const INITIAL_TOKENS: APIToken[] = [
-  {
-    id: 'tok-001',
-    name: 'OIS API Token (default)',
-    createdAt: '2026-01-15',
-    lastUsed: '5m ago',
-    scope: 'read:all write:all',
-  },
-  {
-    id: 'tok-002',
-    name: 'Claude Code',
-    createdAt: '2026-03-02',
-    lastUsed: '2 days ago',
-    scope: 'read:all',
-  },
-];
+import { usersService, apiTokensService, useResource } from '../../services';
 
 const SectionHeading: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
   <div className="mb-5">
@@ -41,32 +15,38 @@ const SectionHeading: React.FC<{ title: string; description?: string }> = ({ tit
 );
 
 export const Profile: React.FC = () => {
-  const [tokens, setTokens] = useState<APIToken[]>(INITIAL_TOKENS);
+  const { data: user } = useResource(() => usersService.current(), []);
+  const { data: tokenData, refresh: refetchTokens } = useResource(() => apiTokensService.list(), []);
   const [showGenModal, setShowGenModal] = useState(false);
   const [dangerAlert, setDangerAlert] = useState(false);
 
-  const handleRevoke = (id: string) => {
-    setTokens(prev => prev.filter(t => t.id !== id));
+  const tokens: APIToken[] = (tokenData ?? []).map(t => ({
+    id: t.id,
+    name: t.name,
+    createdAt: t.createdAt.split('T')[0],
+    lastUsed: t.lastUsedAt ? new Date(t.lastUsedAt).toLocaleDateString() : 'Never',
+    scope: t.prefix,
+  }));
+
+  const handleRevoke = async (id: string) => {
+    await apiTokensService.revoke(id);
+    refetchTokens();
   };
 
-  const handleRevokeAll = () => {
-    setTokens([]);
+  const handleRevokeAll = async () => {
+    for (const t of tokens) {
+      await apiTokensService.revoke(t.id);
+    }
+    refetchTokens();
   };
 
-  const handleGenerated = (name: string, scope: string) => {
-    const newToken: APIToken = {
-      id: `tok-${Date.now()}`,
-      name,
-      createdAt: new Date().toISOString().split('T')[0],
-      lastUsed: 'Never',
-      scope,
-    };
-    setTokens(prev => [...prev, newToken]);
+  const handleGenerated = async (name: string, _scope: string) => {
+    await apiTokensService.create(name);
+    refetchTokens();
   };
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-10">
-      {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-ois-text tracking-tight">My Profile</h1>
         <p className="text-sm text-ois-text-muted mt-1">
@@ -74,11 +54,10 @@ export const Profile: React.FC = () => {
         </p>
       </div>
 
-      {/* Avatar + identity */}
       <section className="flex items-start gap-5">
         <div className="relative shrink-0">
           <div className="w-20 h-20 rounded-full bg-ois-primary flex items-center justify-center text-white text-2xl font-bold select-none">
-            SC
+            {user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : '—'}
           </div>
         </div>
         <div className="flex-1 min-w-0">
@@ -88,22 +67,27 @@ export const Profile: React.FC = () => {
               Change photo
             </Button>
           </div>
-          <p className="text-lg font-bold text-ois-text leading-tight">{SARAH_CHEN.name}</p>
-          <p className="text-sm text-ois-text-muted">{SARAH_CHEN.title} · {SARAH_CHEN.team}</p>
+          <p className="text-lg font-bold text-ois-text leading-tight">{user?.name ?? '—'}</p>
+          <p className="text-sm text-ois-text-muted">— · —</p>
           <div className="flex flex-col gap-0.5 mt-2">
-            <p className="text-xs text-ois-text-muted">sarah.chen@acme.io</p>
-            <p className="text-xs text-ois-text-muted">+1 (555) 012-3456</p>
+            <p className="text-xs text-ois-text-muted">{user?.email ?? '—'}</p>
           </div>
         </div>
       </section>
 
-      {/* Profile form */}
       <section>
         <SectionHeading title="Profile information" description="Update your display name, role, and contact preferences." />
-        <ProfileForm initialValues={SARAH_CHEN} />
+        <ProfileForm initialValues={{
+          name: user?.name ?? '',
+          title: '—',
+          team: user?.team ?? '',
+          timezone: user?.timezone ?? '',
+          language: '—',
+          manager: '—',
+          bio: '—',
+        }} />
       </section>
 
-      {/* API Tokens */}
       <section id="tokens">
         <div className="flex items-center justify-between mb-4">
           <SectionHeading title="API tokens" description="Tokens you've generated to access the OIS API." />
@@ -133,7 +117,7 @@ export const Profile: React.FC = () => {
                   <th className="text-left py-2.5 px-4 text-xs font-semibold text-ois-text-muted">Name</th>
                   <th className="text-left py-2.5 px-4 text-xs font-semibold text-ois-text-muted">Created</th>
                   <th className="text-left py-2.5 px-4 text-xs font-semibold text-ois-text-muted">Last used</th>
-                  <th className="text-left py-2.5 px-4 text-xs font-semibold text-ois-text-muted">Scope</th>
+                  <th className="text-left py-2.5 px-4 text-xs font-semibold text-ois-text-muted">Prefix</th>
                   <th className="py-2.5 px-4" />
                 </tr>
               </thead>
@@ -151,7 +135,6 @@ export const Profile: React.FC = () => {
         )}
       </section>
 
-      {/* Danger zone */}
       <section className="border border-red-200 rounded-ois-card p-5 bg-red-50/50">
         <h2 className="text-sm font-bold text-red-700 mb-1">Danger zone</h2>
         <p className="text-xs text-red-600 mb-4">

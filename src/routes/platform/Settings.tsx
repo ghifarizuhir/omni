@@ -3,7 +3,8 @@ import { Camera, Plus, Trash2, AlertTriangle, Mail, Phone, MessageSquare, User, 
 import { AppearanceSettings } from '../../components/platform/AppearanceSettings';
 import { AddIntegrationModal } from '../../components/platform/AddIntegrationModal';
 import { IntegrationRow } from '../../components/platform/IntegrationRow';
-import { integrationsService, notificationsService, useResource } from '../../services';
+import { integrationsService, notificationsService, usersService, apiTokensService, userChannelsService, useResource } from '../../services';
+import type { ApiTokenSummary } from '../../services';
 import type { Integration } from '../../types/integration';
 import { ProfileForm } from '../../components/platform/ProfileForm';
 import { APITokenRow } from '../../components/platform/APITokenRow';
@@ -66,18 +67,13 @@ const SectionBlock: React.FC<{ title: string; description?: string; children: Re
 
 // ── Profile panel ─────────────────────────────────────────────────────────────
 
-const SARAH_CHEN = {
-  name: 'Sarah Chen',
-  title: 'Platform Engineering Manager',
-  team: 'Platform Engineering',
-  timezone: 'America/New_York',
-  language: 'en',
-  manager: 'Helena Vasquez',
-  bio: 'Sarah oversees platform reliability for Acme Corp. Joined 2023.',
-};
-
 const ProfilePanel: React.FC = () => {
+  const { data: user } = useResource(() => usersService.current(), []);
   const [dangerAlert, setDangerAlert] = useState(false);
+
+  const initials = user?.name
+    ? user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+    : '—';
 
   return (
     <div className="max-w-2xl space-y-10">
@@ -88,13 +84,13 @@ const ProfilePanel: React.FC = () => {
         <div className="flex items-start gap-5">
           <div className="shrink-0">
             <div className="w-16 h-16 rounded-full bg-ois-primary flex items-center justify-center text-white text-xl font-bold select-none">
-              SC
+              {initials}
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-base font-bold text-ois-text leading-tight">{SARAH_CHEN.name}</p>
-            <p className="text-sm text-ois-text-muted">{SARAH_CHEN.title} · {SARAH_CHEN.team}</p>
-            <p className="text-xs text-ois-text-muted mt-1">sarah.chen@acme.io</p>
+            <p className="text-base font-bold text-ois-text leading-tight">{user?.name ?? '—'}</p>
+            <p className="text-sm text-ois-text-muted">— · {user?.team ?? '—'}</p>
+            <p className="text-xs text-ois-text-muted mt-1">{user?.email ?? '—'}</p>
             <Button variant="ghost" size="sm" className="mt-2 gap-1.5 text-xs -ml-2">
               <Camera size={12} /> Change photo
             </Button>
@@ -104,7 +100,15 @@ const ProfilePanel: React.FC = () => {
 
       {/* Profile form */}
       <SectionBlock title="Profile information" description="Update your display name, role, and contact preferences.">
-        <ProfileForm initialValues={SARAH_CHEN} />
+        <ProfileForm initialValues={{
+          name: user?.name ?? '',
+          title: '—',
+          team: user?.team ?? '',
+          timezone: user?.timezone ?? '',
+          language: '—',
+          manager: '—',
+          bio: '—',
+        }} />
       </SectionBlock>
 
       {/* Danger zone */}
@@ -132,16 +136,33 @@ const ProfilePanel: React.FC = () => {
 const NotificationsPanel: React.FC = () => {
   const { data: prefData } = useResource(() => notificationsService.preferences(), []);
   const { data: quietData } = useResource(() => notificationsService.quietHours(), []);
+  const { data: channels, refresh: refetchChannels } = useResource(() => userChannelsService.list(), []);
   const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
   const [quietHours, setQuietHours] = useState<QuietHoursConfig | null>(null);
   const [saved, setSaved] = useState(false);
+  const [emailAddr, setEmailAddr] = useState('');
+  const [smsAddr, setSmsAddr] = useState('');
+  const [slackAddr, setSlackAddr] = useState('');
 
   React.useEffect(() => { if (prefData) setPreferences(prefData); }, [prefData]);
   React.useEffect(() => { if (quietData) setQuietHours(quietData); }, [quietData]);
+  React.useEffect(() => {
+    if (channels) {
+      setEmailAddr(channels.find(c => c.kind === 'email')?.address ?? '');
+      setSmsAddr(channels.find(c => c.kind === 'sms')?.address ?? '');
+      setSlackAddr(channels.find(c => c.kind === 'slack')?.address ?? '');
+    }
+  }, [channels]);
 
   const handleSavePrefs = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleChannelBlur = async (kind: 'email' | 'sms' | 'slack', address: string) => {
+    if (!address) return;
+    await userChannelsService.upsert(kind, address);
+    refetchChannels();
   };
 
   return (
@@ -164,11 +185,11 @@ const NotificationsPanel: React.FC = () => {
 
       <SectionBlock title="Connected channels" description="Where OIS delivers your notifications.">
         <div className="border border-ois-border rounded-ois-card overflow-hidden bg-ois-surface">
-          {[
-            { Icon: Mail,         label: 'Email',  value: 'sarah.chen@acmecorp.io' },
-            { Icon: Phone,        label: 'SMS',    value: '+1 (415) 555-0192' },
-            { Icon: MessageSquare, label: 'Slack', value: '@sarah.chen · #ois-alerts' },
-          ].map(({ Icon, label, value }) => (
+          {([
+            { Icon: Mail,          label: 'Email', kind: 'email' as const, value: emailAddr, setValue: setEmailAddr },
+            { Icon: Phone,         label: 'SMS',   kind: 'sms'   as const, value: smsAddr,   setValue: setSmsAddr   },
+            { Icon: MessageSquare, label: 'Slack', kind: 'slack' as const, value: slackAddr, setValue: setSlackAddr },
+          ]).map(({ Icon, label, kind, value, setValue }) => (
             <div key={label} className="flex items-center justify-between px-5 py-3.5 border-b border-ois-border last:border-0">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-ois-surface-muted flex items-center justify-center text-ois-text-muted">
@@ -176,10 +197,15 @@ const NotificationsPanel: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">{label}</p>
-                  <p className="text-sm text-ois-text font-medium">{value}</p>
+                  <input
+                    className="text-sm text-ois-text font-medium bg-transparent border-none outline-none focus:underline"
+                    value={value}
+                    onChange={e => setValue(e.target.value)}
+                    onBlur={() => handleChannelBlur(kind, value)}
+                    placeholder="Not set"
+                  />
                 </div>
               </div>
-              <Button variant="outline" size="sm">Change</Button>
             </div>
           ))}
         </div>
@@ -190,23 +216,31 @@ const NotificationsPanel: React.FC = () => {
 
 // ── API Tokens panel ──────────────────────────────────────────────────────────
 
-const INITIAL_TOKENS: APIToken[] = [
-  { id: 'tok-001', name: 'OIS API Token (default)', createdAt: '2026-01-15', lastUsed: '5m ago',    scope: 'read:all write:all' },
-  { id: 'tok-002', name: 'Claude Code',             createdAt: '2026-03-02', lastUsed: '2 days ago', scope: 'read:all' },
-];
-
 const APITokensPanel: React.FC = () => {
-  const [tokens, setTokens] = useState<APIToken[]>(INITIAL_TOKENS);
+  const { data: tokenData, refresh: refetchTokens } = useResource(() => apiTokensService.list(), []);
   const [showGenModal, setShowGenModal] = useState(false);
 
-  const handleRevoke = (id: string) => setTokens(prev => prev.filter(t => t.id !== id));
-  const handleRevokeAll = () => setTokens([]);
-  const handleGenerated = (name: string, scope: string) => {
-    setTokens(prev => [...prev, {
-      id: `tok-${Date.now()}`, name,
-      createdAt: new Date().toISOString().split('T')[0],
-      lastUsed: 'Never', scope,
-    }]);
+  const tokens: APIToken[] = (tokenData ?? []).map((t: ApiTokenSummary) => ({
+    id: t.id,
+    name: t.name,
+    createdAt: t.createdAt.split('T')[0],
+    lastUsed: t.lastUsedAt ? new Date(t.lastUsedAt).toLocaleDateString() : 'Never',
+    scope: t.prefix,
+  }));
+
+  const handleRevoke = async (id: string) => {
+    await apiTokensService.revoke(id);
+    refetchTokens();
+  };
+  const handleRevokeAll = async () => {
+    for (const t of tokens) {
+      await apiTokensService.revoke(t.id);
+    }
+    refetchTokens();
+  };
+  const handleGenerated = async (name: string, _scope: string) => {
+    await apiTokensService.create(name);
+    refetchTokens();
   };
 
   return (
