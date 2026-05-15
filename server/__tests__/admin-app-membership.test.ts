@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { requireAppManager } from '../middleware/appManager';
 import { prisma } from '../db';
 import {
   addTeamToApp, changeTeamRole, removeTeamFromApp, listTeamsForApp,
@@ -53,5 +54,43 @@ describe('applicationMembership repo', () => {
       where: { applicationId_teamId: { applicationId: fx.appId, teamId: fx.teamAId } },
       data: { role: 'CONTRIBUTOR' },
     });
+  });
+});
+
+function makeFakeReq(userId: string, hasSystemAdmin = false) {
+  return {
+    session: { userId, tenantId, sessionId: 'x', roles: [] },
+    permissions: new Set<string>(hasSystemAdmin ? ['system.admin'] : []),
+    tenantId,
+  } as unknown as import('express').Request;
+}
+
+describe('requireAppManager', () => {
+  it('passes for system.admin permission holder', async () => {
+    const req = makeFakeReq(fx.memberBUserId, true);
+    await expect(requireAppManager(req, fx.appId)).resolves.toBeUndefined();
+  });
+
+  it('passes for PLATFORM_ADMIN functional role', async () => {
+    const req = makeFakeReq(fx.platformAdminUserId);
+    await expect(requireAppManager(req, fx.appId)).resolves.toBeUndefined();
+  });
+
+  it('passes for Application Owner of the app', async () => {
+    await prisma.applicationTeam.update({
+      where: { applicationId_teamId: { applicationId: fx.appId, teamId: fx.teamAId } },
+      data: { role: 'OWNER' },
+    });
+    const req = makeFakeReq(fx.memberAUserId);
+    await expect(requireAppManager(req, fx.appId)).resolves.toBeUndefined();
+    await prisma.applicationTeam.update({
+      where: { applicationId_teamId: { applicationId: fx.appId, teamId: fx.teamAId } },
+      data: { role: 'CONTRIBUTOR' },
+    });
+  });
+
+  it('rejects a non-admin non-owner user with 403', async () => {
+    const req = makeFakeReq(fx.memberBUserId);
+    await expect(requireAppManager(req, fx.appId)).rejects.toMatchObject({ status: 403 });
   });
 });
