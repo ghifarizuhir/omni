@@ -25,6 +25,14 @@ export const usersService = {
   current: () => apiFetch<User>('/users/me'),
 };
 
+export const authService = {
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiFetch<void>('/auth/change-password', {
+      method: 'POST',
+      body: { currentPassword, newPassword },
+    }),
+};
+
 export interface ApiTokenSummary {
   id: string;
   name: string;

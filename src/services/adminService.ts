@@ -52,4 +52,10 @@ export const adminApi = {
       `/admin/memberships/${membershipId}/roles`,
       { method: 'PUT', body: { roleIds } },
     ),
+
+  resetUserPassword: (userId: string) =>
+    apiFetch<{ tempPassword: string }>(
+      `/admin/rbac/users/${userId}/reset-password`,
+      { method: 'POST' },
+    ),
 };

@@ -12,6 +12,7 @@ export interface AuthSessionUser {
   email: string;
   name: string;
   avatarUrl: string | null;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthSession {

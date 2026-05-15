@@ -44,7 +44,8 @@ model User {
   email        String             @unique
   name         String
   avatarUrl    String?
-  passwordHash String?
+  passwordHash       String?
+  mustChangePassword Boolean            @default(false)
   isSuperadmin Boolean            @default(false)
   level        String?
   divisionId   String?

@@ -6,6 +6,8 @@ import { audit } from '../audit';
 import { invalidatePermissionCache, permissionCatalog } from '../auth/permissions';
 import { upsertDocument, deleteDocument } from '../repositories/documents';
 import { asyncHandler, HttpError, qString } from '../util';
+import { hashPassword } from '../auth/session';
+import { generateTempPassword } from '../lib/passwordGen';
 import {
   upsertDivision, deleteDivision,
   upsertDepartment, deleteDepartment,
@@ -325,6 +327,26 @@ adminRouter.delete('/admin/rbac/users/:id', asyncHandler(async (req, res) => {
   await deleteRbacUser(req.params.id);
   await audit(req, { action: 'delete', resourceKind: 'user', resourceId: req.params.id });
   res.status(204).end();
+}));
+
+adminRouter.post('/admin/rbac/users/:id/reset-password', asyncHandler(async (req, res) => {
+  const target = await prisma.user.findFirst({
+    where: { id: req.params.id, memberships: { some: { tenantId: req.tenantId } } },
+  });
+  if (!target) throw new HttpError(404, 'User not found');
+  const tempPassword = generateTempPassword();
+  const passwordHash = await hashPassword(tempPassword);
+  await prisma.user.update({
+    where: { id: target.id },
+    data: { passwordHash, mustChangePassword: true },
+  });
+  await audit(req, {
+    action: 'reset-password',
+    resourceKind: 'user',
+    resourceId: target.id,
+    after: { mustChangePassword: true },
+  });
+  res.status(201).json({ tempPassword });
 }));
 
 // ── helpers ───────────────────────────────────────────────────────────────────

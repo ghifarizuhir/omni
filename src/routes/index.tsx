@@ -98,15 +98,21 @@ import { Applications as AdminApplications } from './admin/Applications';
 import { Roles as AdminRoles } from './admin/Roles';
 import { Permissions as AdminPermissions } from './admin/Permissions';
 import { RequireAuth } from '../components/auth/RequireAuth';
+import { ChangePassword } from './ChangePassword';
+import { RequirePasswordChange } from '../components/auth/RequirePasswordChange';
 
 export const routes: RouteObject[] = [
   { path: '/login',         element: <Login /> },
   {
     element: <RequireAuth />,
-    children: [{
-    path: '/',
-    element: <AppShell />,
     children: [
+    { path: '/change-password', element: <ChangePassword /> },
+    {
+      element: <RequirePasswordChange />,
+      children: [{
+      path: '/',
+      element: <AppShell />,
+      children: [
       { index: true,                            element: <Dashboard /> },
       // Doc 1 — CMDB
       { path: 'cmdb',                           element: <CMDBList /> },
@@ -237,5 +243,7 @@ export const routes: RouteObject[] = [
       { path: 'ai/:sessionId', element: <AiWorkspace /> },
     ]
   }],
+    },
+  ],
   },
 ];

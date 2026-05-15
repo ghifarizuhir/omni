@@ -45,7 +45,7 @@ platformRouter.get('/users/me', asyncHandler(async (req, res) => {
     return;
   }
   const u = await prisma.user.findUnique({ where: { id: req.session.userId } });
-  res.json(u && { id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl });
+  res.json(u && { id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl, mustChangePassword: u.mustChangePassword });
 }));
 // user API tokens
 const VALID_CHANNEL_KINDS = ['email', 'sms', 'slack'];

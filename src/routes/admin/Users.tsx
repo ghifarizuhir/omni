@@ -14,6 +14,8 @@ import { LEVEL_LABEL } from '@/src/types/rbac';
 import { Pencil, Trash2, ShieldCheck } from 'lucide-react';
 import { Tabs } from '@/src/components/ui/Tabs';
 import { UserSystemRoles } from './UserSystemRoles';
+import { adminApi } from '@/src/services/adminService';
+import { NewPasswordModal } from '@/src/components/admin/NewPasswordModal';
 
 const ALL_LEVELS: HierarchyLevel[] = ['group_head', 'dept_head', 'team_lead', 'officer', 'requester'];
 
@@ -44,6 +46,7 @@ const UserProfiles: React.FC = () => {
   const [divFilter, setDivFilter] = useState('all');
   const [editing, setEditing] = useState<RbacUser | null>(null);
   const [open, setOpen] = useState(false);
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
 
   const filtered = users.filter(u => {
     if (divFilter !== 'all' && u.divisionId !== divFilter) return false;
@@ -57,9 +60,14 @@ const UserProfiles: React.FC = () => {
   const roleName = (code: string) => functionalRoles.find(r => r.code === code)?.name ?? code;
 
   const handleSave = async (u: RbacUser) => {
-    await rbacService.upsertRbacUser(u);
-    upsertUser(u);
+    const isCreate = editing === null;
+    const saved = await rbacService.upsertRbacUser(u);
+    upsertUser(saved ?? u);
     setOpen(false);
+    if (isCreate) {
+      const result = await adminApi.resetUserPassword((saved ?? u).id);
+      setTempPassword(result.tempPassword);
+    }
   };
 
   const handleDelete = async (u: RbacUser) => {
@@ -126,6 +134,12 @@ const UserProfiles: React.FC = () => {
                   <Button size="icon" variant="ghost" onClick={() => { setEditing(u); setOpen(true); }}>
                     <Pencil size={14} />
                   </Button>
+                  <Button size="icon" variant="ghost" title="Reset password" onClick={async () => {
+                    const result = await adminApi.resetUserPassword(u.id);
+                    setTempPassword(result.tempPassword);
+                  }}>
+                    <ShieldCheck size={14} className="text-ois-primary" />
+                  </Button>
                   <Button size="icon" variant="ghost" onClick={() => handleDelete(u)}>
                     <Trash2 size={14} className="text-ois-danger" />
                   </Button>
@@ -142,6 +156,10 @@ const UserProfiles: React.FC = () => {
           onClose={() => setOpen(false)}
           onSave={handleSave}
         />
+      )}
+
+      {tempPassword && (
+        <NewPasswordModal tempPassword={tempPassword} onClose={() => setTempPassword(null)} />
       )}
     </>
   );
