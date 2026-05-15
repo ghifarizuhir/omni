@@ -183,14 +183,24 @@ model Application {
   @@index([tenantId])
 }
 
+enum ApplicationTeamRole {
+  OWNER
+  CONTRIBUTOR
+  VIEWER
+}
+
 model ApplicationTeam {
   applicationId String
   teamId        String
+  role          ApplicationTeamRole @default(CONTRIBUTOR)
+  addedById     String?
+  addedAt       DateTime            @default(now())
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   team        Team        @relation(fields: [teamId],        references: [id], onDelete: Cascade)
 
   @@id([applicationId, teamId])
   @@index([teamId])
+  @@index([applicationId, role])
 }
 
 model FunctionalRole {
