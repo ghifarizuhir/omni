@@ -197,10 +197,27 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-8">
+      {/* Hero region — radial glow backdrop spans header + KPI row */}
+      <div className="relative">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-x-6 -top-8 h-[360px]"
+          style={{
+            background:
+              'radial-gradient(45% 70% at 18% 30%, rgba(31,79,212,0.10), transparent 70%), radial-gradient(35% 60% at 85% 40%, rgba(11,165,236,0.08), transparent 70%)',
+          }}
+        />
+        <div className="relative space-y-6">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-ois-text">Operational Pulse</h1>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="h-px w-6 bg-ois-primary" />
+            <span className="font-mono text-[10.5px] tracking-[0.18em] text-ois-text-muted">
+              / OPERATIONAL PULSE / {timeRange.toUpperCase()} /
+            </span>
+          </div>
+          <h1 className="text-3xl font-bold text-ois-text tracking-[-0.02em]">Operational Pulse</h1>
           <p className="text-sm text-ois-text-muted mt-1">
             {now.toLocaleString(undefined, {
               weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
@@ -261,7 +278,7 @@ export const Dashboard: React.FC = () => {
         <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
           <div className="flex items-center gap-2">
             <Activity size={16} className="text-ois-primary" />
-            <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Service Health</p>
+            <p className="font-mono text-[10.5px] font-medium text-ois-text-muted uppercase tracking-[0.18em]">Service Health</p>
           </div>
           <Link to="/status" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
             View status page <ArrowRight size={12} />
@@ -329,6 +346,8 @@ export const Dashboard: React.FC = () => {
           icon={<CheckCircle2 className="w-5 h-5" />}
         />
       </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Section C - Left: Active Incidents Feed (60%) */}
@@ -358,7 +377,7 @@ export const Dashboard: React.FC = () => {
         <Card className="lg:col-span-3">
           <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
             <div className="flex items-center gap-2">
-              <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Active Incidents</p>
+              <p className="font-mono text-[10.5px] font-medium text-ois-text-muted uppercase tracking-[0.18em]">Active Incidents</p>
               <Badge variant="neutral" className="ml-1 bg-ois-surface-muted text-ois-text-muted">
                 {filteredActiveIncidents.length}
               </Badge>
@@ -411,7 +430,7 @@ export const Dashboard: React.FC = () => {
         <Card className="lg:col-span-2">
           <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
             <div className="flex items-center gap-2">
-              <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Action Required</p>
+              <p className="font-mono text-[10.5px] font-medium text-ois-text-muted uppercase tracking-[0.18em]">Action Required</p>
             </div>
             <Link to="/inbox" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
               Open Inbox <ArrowRight size={12} />
@@ -458,7 +477,7 @@ export const Dashboard: React.FC = () => {
         <Card>
           <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
             <div className="flex items-center gap-2">
-              <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Change Calendar — Next 7 days</p>
+              <p className="font-mono text-[10.5px] font-medium text-ois-text-muted uppercase tracking-[0.18em]">Change Calendar — Next 7 days</p>
             </div>
             <Link to="/changes/calendar" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
               Calendar <ArrowRight size={12} />
@@ -511,7 +530,7 @@ export const Dashboard: React.FC = () => {
           <Card>
             <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
               <div className="flex items-center gap-2">
-                <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">On-Call Right Now</p>
+                <p className="font-mono text-[10.5px] font-medium text-ois-text-muted uppercase tracking-[0.18em]">On-Call Right Now</p>
               </div>
               <Link to="/on-call" className="text-xs font-bold text-ois-primary hover:underline flex items-center gap-1">
                 View schedule <ArrowRight size={12} />
@@ -546,7 +565,7 @@ export const Dashboard: React.FC = () => {
           <Card>
             <CardHeader className="flex items-center justify-between border-b border-ois-border px-4 py-2.5 bg-ois-surface-muted">
               <div className="flex items-center gap-2">
-                <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest">Improvement Pipeline</p>
+                <p className="font-mono text-[10.5px] font-medium text-ois-text-muted uppercase tracking-[0.18em]">Improvement Pipeline</p>
                 <Badge variant="neutral" className="ml-1 bg-ois-surface-muted text-ois-text-muted">
                   {improvements.filter(i => i.status === 'in_progress').length} active
                 </Badge>

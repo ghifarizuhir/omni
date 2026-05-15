@@ -257,8 +257,26 @@ export const ExecutiveDashboard: React.FC = () => {
   );
 
   return (
-    <div className="p-6 space-y-6 max-w-screen-xl mx-auto">
-      <div className="flex items-center justify-end">
+    <div className="p-6 space-y-6 max-w-screen-xl mx-auto relative">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[320px]"
+        style={{
+          background:
+            'radial-gradient(50% 60% at 20% 40%, rgba(31,79,212,0.08), transparent 70%), radial-gradient(40% 50% at 80% 30%, rgba(11,165,236,0.07), transparent 70%)',
+        }}
+      />
+      <div className="relative flex items-end justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="h-px w-6 bg-ois-primary" />
+            <span className="font-mono text-[10.5px] tracking-[0.18em] text-ois-text-muted">
+              / EXECUTIVE DASHBOARD / {timeRange.toUpperCase()} /
+            </span>
+          </div>
+          <h1 className="text-3xl font-bold text-ois-text tracking-[-0.02em]">Executive Dashboard</h1>
+          <p className="text-sm text-ois-text-muted mt-1">Service reliability, change outcomes, and SLA performance at a glance.</p>
+        </div>
         <div className="flex items-center gap-2 shrink-0">
           {/* Time Range Dropdown */}
           <div className="relative">
@@ -358,11 +376,11 @@ export const ExecutiveDashboard: React.FC = () => {
       {/* Row 1: Availability Trend + Incident Volume */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h2 className="mb-4 text-sm font-semibold text-ois-text">Availability Trend ({services.length} services)</h2>
+          <h2 className="mb-4 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-ois-text-muted">Availability Trend ({services.length} services)</h2>
           <AvailabilityTrendChart timeRange={timeRange} services={services} />
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h2 className="mb-4 text-sm font-semibold text-ois-text">Incident Volume by Priority</h2>
+          <h2 className="mb-4 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-ois-text-muted">Incident Volume by Priority</h2>
           <IncidentVolumeChart data={incidentVolumeData} />
         </div>
       </div>
@@ -370,11 +388,11 @@ export const ExecutiveDashboard: React.FC = () => {
       {/* Row 2: Change Outcomes + SLA Compliance Table */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h2 className="mb-4 text-sm font-semibold text-ois-text">Change Outcomes ({TIME_RANGE_LABELS[timeRange].toLowerCase()})</h2>
+          <h2 className="mb-4 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-ois-text-muted">Change Outcomes ({TIME_RANGE_LABELS[timeRange].toLowerCase()})</h2>
           <ChangeOutcomesChart data={changeOutcomesData} />
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h2 className="mb-4 text-sm font-semibold text-ois-text">SLA Compliance by Service</h2>
+          <h2 className="mb-4 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-ois-text-muted">SLA Compliance by Service</h2>
           <SLAComplianceTable rows={slaTableRows} />
         </div>
       </div>
