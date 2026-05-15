@@ -4,6 +4,7 @@ import { ScopeViolationError } from './errors';
 import { POLICY } from './policy';
 import { cmdbRepo } from '../repositories/cmdb';
 import { eventsRepo } from '../repositories/events';
+import { incidentsRepo } from '../repositories/incidents';
 
 export type ScopeMode = 'member' | 'noc' | 'owner' | 'admin' | 'legacy' | 'bypass';
 
@@ -36,9 +37,62 @@ export interface EventsScope {
   ): Promise<{ id: string; publicId: string; scopeMode: ScopeMode }>;
 }
 
+export interface IncidentsScope {
+  list(filters: Parameters<typeof incidentsRepo.list>[1]): Promise<Awaited<ReturnType<typeof incidentsRepo.list>>>;
+  get(publicId: string): Promise<Awaited<ReturnType<typeof incidentsRepo.get>>>;
+  comments(incidentId: string): Promise<Awaited<ReturnType<typeof incidentsRepo.comments>>>;
+  timeline(incidentId: string): Promise<Awaited<ReturnType<typeof incidentsRepo.timeline>>>;
+  addComment(
+    incidentId: string,
+    input: Parameters<typeof incidentsRepo.addComment>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.addComment>>; scopeMode: ScopeMode } | null>;
+  setStatus(
+    publicId: string,
+    input: Parameters<typeof incidentsRepo.setStatus>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.setStatus>>; scopeMode: ScopeMode } | null>;
+  resolve(
+    publicId: string,
+    input: Parameters<typeof incidentsRepo.resolve>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.resolve>>; scopeMode: ScopeMode } | null>;
+  promoteMajor(
+    publicId: string,
+    input: Parameters<typeof incidentsRepo.promoteMajor>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.promoteMajor>>; scopeMode: ScopeMode } | null>;
+  assign(
+    publicId: string,
+    input: Parameters<typeof incidentsRepo.assign>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.assign>>; scopeMode: ScopeMode } | null>;
+  setLinks(
+    publicId: string,
+    input: Parameters<typeof incidentsRepo.setLinks>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.setLinks>>; scopeMode: ScopeMode } | null>;
+  addWatcher(
+    incidentId: string,
+    input: Parameters<typeof incidentsRepo.addWatcher>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.addWatcher>>; scopeMode: ScopeMode } | null>;
+  removeWatcher(
+    incidentId: string,
+    userId: string,
+    actorId: string,
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.removeWatcher>>; scopeMode: ScopeMode } | null>;
+  update(
+    publicId: string,
+    input: Parameters<typeof incidentsRepo.update>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.update>>; scopeMode: ScopeMode } | null>;
+  standDown(
+    publicId: string,
+    input: Parameters<typeof incidentsRepo.standDown>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.standDown>>; scopeMode: ScopeMode } | null>;
+  postComms(
+    publicId: string,
+    input: Parameters<typeof incidentsRepo.postComms>[2],
+  ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.postComms>>; scopeMode: ScopeMode } | null>;
+}
+
 export interface ScopedDb {
   cmdb: CmdbScope;
   events: EventsScope;
+  incidents: IncidentsScope;
 }
 
 export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb {
@@ -144,5 +198,164 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     },
   };
 
-  return { cmdb, events };
+  // ── Incidents scope ────────────────────────────────────────────────────────
+
+  const isIncidentReadBypass = POLICY.incident.readBypass.some((r) => ctx.functionalRoles.includes(r));
+
+  function incidentCanWrite(appId: string | null, opts: { allowNoc?: boolean } = { allowNoc: true }): boolean {
+    if (isPlatformAdmin) return true;
+    if (opts.allowNoc && POLICY.incident.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
+    if (appId === null) return false;
+    return writableApps.has(appId);
+  }
+
+  function incidentScopeMode(appId: string | null, opts: { allowNoc?: boolean } = { allowNoc: true }): ScopeMode {
+    if (appId === null) return 'legacy';
+    if (isPlatformAdmin) return 'admin';
+    if (opts.allowNoc && POLICY.incident.writeBypass.some((r) => ctx.functionalRoles.includes(r) && r !== 'PLATFORM_ADMIN')) return 'noc';
+    if (ownerApps.has(appId)) return 'owner';
+    return 'member';
+  }
+
+  async function loadIncidentAppId(publicId: string): Promise<string | null | undefined> {
+    const raw = await prisma.incident.findFirst({
+      where: { tenantId: ctx.tenantId, publicId },
+      select: { applicationId: true },
+    });
+    return raw ? (raw.applicationId ?? null) : undefined;
+  }
+
+  async function loadIncidentAppIdById(incidentId: string): Promise<string | null | undefined> {
+    const raw = await prisma.incident.findFirst({
+      where: { tenantId: ctx.tenantId, id: incidentId },
+      select: { applicationId: true },
+    });
+    return raw ? (raw.applicationId ?? null) : undefined;
+  }
+
+  const incidents: IncidentsScope = {
+    async list(filters) {
+      const rows = await incidentsRepo.list(ctx.tenantId, filters);
+      if (isIncidentReadBypass) return rows;
+      const readable = new Set([...writableApps, ...ownerApps]);
+      return (rows as { applicationId?: string | null }[]).filter(
+        (i) => i.applicationId == null || readable.has(i.applicationId!),
+      ) as typeof rows;
+    },
+    get: (publicId) => incidentsRepo.get(ctx.tenantId, publicId),
+    comments: (incidentId) => incidentsRepo.comments(ctx.tenantId, incidentId),
+    timeline: (incidentId) => incidentsRepo.timeline(ctx.tenantId, incidentId),
+
+    async addComment(incidentId, input) {
+      const appId = await loadIncidentAppIdById(incidentId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.addComment(ctx.tenantId, incidentId, input);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+
+    async setStatus(publicId, input) {
+      const appId = await loadIncidentAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.setStatus(ctx.tenantId, publicId, input);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+
+    async resolve(publicId, input) {
+      const appId = await loadIncidentAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId, { allowNoc: false })) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.resolve(ctx.tenantId, publicId, input);
+      return { result, scopeMode: incidentScopeMode(appId, { allowNoc: false }) };
+    },
+
+    async promoteMajor(publicId, input) {
+      const appId = await loadIncidentAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.promoteMajor(ctx.tenantId, publicId, input);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+
+    async assign(publicId, input) {
+      const appId = await loadIncidentAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.assign(ctx.tenantId, publicId, input);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+
+    async setLinks(publicId, input) {
+      const appId = await loadIncidentAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.setLinks(ctx.tenantId, publicId, input);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+
+    async addWatcher(incidentId, input) {
+      const appId = await loadIncidentAppIdById(incidentId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.addWatcher(ctx.tenantId, incidentId, input);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+
+    async removeWatcher(incidentId, userId, actorId) {
+      const appId = await loadIncidentAppIdById(incidentId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.removeWatcher(ctx.tenantId, incidentId, userId, actorId);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+
+    async update(publicId, input) {
+      const appId = await loadIncidentAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.update(ctx.tenantId, publicId, input);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+
+    async standDown(publicId, input) {
+      const appId = await loadIncidentAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.standDown(ctx.tenantId, publicId, input);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+
+    async postComms(publicId, input) {
+      const appId = await loadIncidentAppId(publicId);
+      if (appId === undefined) return null;
+      if (appId !== null && !incidentCanWrite(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
+      }
+      const result = await incidentsRepo.postComms(ctx.tenantId, publicId, input);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+  };
+
+  return { cmdb, events, incidents };
 }
