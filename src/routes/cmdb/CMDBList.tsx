@@ -20,6 +20,9 @@ import { CreateCIModal } from '../../components/cmdb/modals/CreateCIModal';
 import { ImportCIModal } from '../../components/cmdb/modals/ImportCIModal';
 import { ciTypeMeta } from '../../lib/constants';
 import { Can } from '@/src/lib/rbac';
+import { useScope } from '@/src/lib/scope/ScopeContext';
+import { useScopeUiEnabled } from '@/src/lib/scope/featureFlag';
+import { PageScopeChip } from '../../components/scope/PageScopeChip';
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 interface ToastState { message: string }
@@ -78,10 +81,21 @@ export const CMDBList: React.FC = () => {
     });
   }, [SERVICE_IDS]);
 
+  const scopeEnabled = useScopeUiEnabled();
+  const { scope, scopedAppIds } = useScope();
+
   const allCIs = useMemo(() => [...extraCIs, ...mockCIs], [extraCIs, mockCIs]);
 
+  const scopeFilteredCIs = useMemo(() => {
+    if (!scopeEnabled || scope === 'all') return allCIs;
+    return allCIs.filter((ci) => {
+      const appId = ci.primaryApplicationId;
+      return !appId || scopedAppIds.includes(appId);
+    });
+  }, [allCIs, scopeEnabled, scope, scopedAppIds]);
+
   const filteredCIs = useMemo(() => {
-    return allCIs.filter(ci => {
+    return scopeFilteredCIs.filter(ci => {
       const matchesSearch = ci.name.toLowerCase().includes(search.toLowerCase()) ||
                            ci.publicId.toLowerCase().includes(search.toLowerCase()) ||
                            JSON.stringify(ci.attributes).toLowerCase().includes(search.toLowerCase());
@@ -90,7 +104,7 @@ export const CMDBList: React.FC = () => {
       const matchesHealth = healthFilter === 'all' || ci.health === healthFilter;
       return matchesSearch && matchesType && matchesCrit && matchesHealth;
     });
-  }, [allCIs, search, typeFilter, critFilter, healthFilter]);
+  }, [scopeFilteredCIs, search, typeFilter, critFilter, healthFilter]);
 
   const toggleService = (id: string) => {
     setExpandedServices(prev => ({ ...prev, [id]: !prev[id] }));
@@ -173,7 +187,10 @@ export const CMDBList: React.FC = () => {
     <div className="space-y-6 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ois-text">CMDB Explorer</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-ois-text">CMDB Explorer</h1>
+            <PageScopeChip />
+          </div>
           <p className="text-sm text-ois-text-muted font-medium mt-1">
             {allCIs.length} configuration items · {mockCIRelationships.length} relationships · Last updated {formatRelative([...allCIs].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]?.updatedAt ?? new Date())}
           </p>
