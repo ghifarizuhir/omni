@@ -338,6 +338,26 @@ export const requestsRepo = {
     return { comment, internalId: row.id };
   },
 
+  /** Like addComment but also persists a RequestComment row for structured querying. */
+  async appendComment(
+    tenantId: string,
+    publicId: string,
+    actor: { id: string; name: string },
+    body: string,
+  ): Promise<{ comment: RequestComment; internalId: string; dbCommentId: string } | null> {
+    const result = await requestsRepo.addComment(tenantId, publicId, actor, body);
+    if (!result) return null;
+    const dbComment = await prisma.requestComment.create({
+      data: {
+        tenantId,
+        requestId: result.internalId,
+        authorId: actor.id,
+        body,
+      },
+    });
+    return { ...result, dbCommentId: dbComment.id };
+  },
+
   // M6.11 (B2.2) — cancel a service request. Sets status to 'cancelled',
   // stamps cancellationReason + closedAt, and skips any remaining
   // pending/active workflow steps so the UI stops showing "next up".
@@ -475,6 +495,17 @@ export const requestsRepo = {
         data: { data: JSON.stringify(after) },
       });
       return { kind: 'ok' as const, before, after, internalId: row.id, wasPresent };
+    });
+  },
+
+  async listComments(tenantId: string, publicId: string) {
+    const sr = await getDocByPublicId<ServiceRequest>(prisma.serviceRequest, tenantId, publicId);
+    if (!sr) return [];
+    const row = await prisma.serviceRequest.findFirst({ where: { tenantId, publicId }, select: { id: true } });
+    if (!row) return [];
+    return prisma.requestComment.findMany({
+      where: { tenantId, requestId: row.id },
+      orderBy: { createdAt: 'asc' },
     });
   },
 };

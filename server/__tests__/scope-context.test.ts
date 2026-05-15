@@ -54,6 +54,19 @@ describe('scope policy table', () => {
     expect(POLICY.incident.writeBypass).toContain('NOC_OPERATOR');
     expect(POLICY.service_request.writeBypass).toContain('NOC_OPERATOR');
   });
+
+  it('declares Problem/Change as global read, scoped write', () => {
+    expect(POLICY.problem.read).toBe('global');
+    expect(POLICY.problem.write).toBe('scoped');
+    expect(POLICY.change.read).toBe('global');
+    expect(POLICY.change.write).toBe('scoped');
+  });
+
+  it('declares Release/MonitoringRule/AlertRoute as admin-only write', () => {
+    expect(POLICY.release.write).toBe('admin_only');
+    expect(POLICY.monitoring_rule.write).toBe('admin_only');
+    expect(POLICY.alert_route.write).toBe('admin_only');
+  });
 });
 
 describe('resolveScopeContext', () => {

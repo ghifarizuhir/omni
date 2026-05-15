@@ -18,7 +18,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit && tsc --noEmit -p server/tsconfig.json"
+    "lint": "tsc --noEmit && tsc --noEmit -p server/tsconfig.json && eslint 'server/routes/**/*.ts' --max-warnings 0"
   },
   "dependencies": {
     "@faker-js/faker": "^10.4.0",
@@ -57,8 +57,11 @@
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/supertest": "^7.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.3",
+    "@typescript-eslint/parser": "^8.59.3",
     "autoprefixer": "^10.4.21",
     "dotenv-cli": "^11.0.0",
+    "eslint": "^10.3.0",
     "supertest": "^7.2.2",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",

@@ -81,3 +81,18 @@ export const getSessionIdFromRequest = (req: Request): string | undefined => {
   const c = (req as Request & { cookies?: Record<string, string> }).cookies;
   return c?.[SESSION_COOKIE];
 };
+
+import type { User } from '@prisma/client';
+import { HttpError } from '../util';
+
+/**
+ * Resolve the authenticated user row from the request, memoized per request.
+ * Throws 401 when no session is present.
+ */
+export const getActor = async (req: Request): Promise<User> => {
+  if (req.actor) return req.actor;
+  if (!req.session) throw new HttpError(401, 'Authentication required');
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: req.session.userId } });
+  req.actor = user;
+  return user;
+};

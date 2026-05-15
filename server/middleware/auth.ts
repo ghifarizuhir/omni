@@ -11,6 +11,7 @@ declare module 'express-serve-static-core' {
     session?: SessionContext;
     permissions?: Set<Permission>;
     tenantId: string;
+    actor?: import('@prisma/client').User;
   }
 }
 
