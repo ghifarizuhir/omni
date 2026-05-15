@@ -99,6 +99,7 @@ import { ApplicationDetail } from './admin/ApplicationDetail';
 import { Roles as AdminRoles } from './admin/Roles';
 import { Permissions as AdminPermissions } from './admin/Permissions';
 import { DataQuality } from './admin/DataQuality';
+import { ApplicationCatalog } from './admin/ApplicationCatalog';
 import { RequireAuth } from '../components/auth/RequireAuth';
 import { ChangePassword } from './ChangePassword';
 import { RequirePasswordChange } from '../components/auth/RequirePasswordChange';
@@ -227,6 +228,8 @@ export const routes: RouteObject[] = [
       { path: 'profile',                        element: <Profile /> },
       // Settings
       { path: 'settings',                       element: <Settings /> },
+      // Application Catalog (all authenticated users)
+      { path: 'applications/catalog', element: <ApplicationCatalog /> },
       // RBAC Admin (superadmin only)
       { path: 'admin', element: <AdminLayout />, children: [
         { index: true,             element: <AdminOverview /> },

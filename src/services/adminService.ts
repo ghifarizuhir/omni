@@ -90,6 +90,19 @@ export interface DataQualitySummary {
   service_request: { total: number; orphan: number };
 }
 
+export interface CatalogAppDto {
+  id: string;
+  code: string;
+  name: string;
+  criticality: string | null;
+  ownerTeamIds: string[];
+  isMember: boolean;
+}
+
+export const applicationCatalogApi = {
+  list: () => apiFetch<CatalogAppDto[]>('/applications/catalog'),
+};
+
 export const dataQualityApi = {
   summary: () => apiFetch<DataQualitySummary>('/admin/data-quality/summary'),
   list:    (module: string) => apiFetch<unknown[]>(`/admin/data-quality/${module}`),
