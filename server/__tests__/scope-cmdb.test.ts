@@ -87,7 +87,6 @@ afterAll(async () => {
 
 describe('CMDB scope enforcement — scoped CI', () => {
   it('1. CMDB read is global — memberB (outsider) GET /cis returns 200', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
     const cookie = await loginAs('member-b');
     const res = await request(app)
       .get('/api/v1/cis')
@@ -97,7 +96,6 @@ describe('CMDB scope enforcement — scoped CI', () => {
   });
 
   it('2. memberA PATCH /cis/:id succeeds in enforce mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
     const cookie = await loginAs('member-a');
     const res = await request(app)
       .patch(`/api/v1/cis/${ciPublicId}`)
@@ -107,31 +105,7 @@ describe('CMDB scope enforcement — scoped CI', () => {
     expect(res.body).toMatchObject({ publicId: ciPublicId });
   });
 
-  it('3. memberB PATCH /cis/:id succeeds in off mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'off';
-    const cookie = await loginAs('member-b');
-    const res = await request(app)
-      .patch(`/api/v1/cis/${ciPublicId}`)
-      .set('Cookie', cookie)
-      .send({ name: 'Scoped CI — updated by B (off)' });
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ publicId: ciPublicId });
-  });
-
-  it('4. memberB PATCH /cis/:id returns 200 + X-Scope-Warning header in warn mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'warn';
-    const cookie = await loginAs('member-b');
-    const res = await request(app)
-      .patch(`/api/v1/cis/${ciPublicId}`)
-      .set('Cookie', cookie)
-      .send({ name: 'Scoped CI — updated by B (warn)' });
-    expect(res.status).toBe(200);
-    expect(res.headers['x-scope-warning']).toBeTruthy();
-    expect(res.body).toMatchObject({ publicId: ciPublicId });
-  });
-
-  it('5. memberB PATCH /cis/:id returns 403 in enforce mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
+  it('3. memberB PATCH /cis/:id returns 403 (outsider blocked)', async () => {
     const cookie = await loginAs('member-b');
     const res = await request(app)
       .patch(`/api/v1/cis/${ciPublicId}`)
@@ -145,8 +119,7 @@ describe('CMDB scope enforcement — scoped CI', () => {
     });
   });
 
-  it('6. PLATFORM_ADMIN PATCH /cis/:id returns 200 in enforce mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
+  it('4. PLATFORM_ADMIN PATCH /cis/:id returns 200', async () => {
     const cookie = await loginAs('admin');
     const res = await request(app)
       .patch(`/api/v1/cis/${ciPublicId}`)
@@ -161,7 +134,6 @@ describe('CMDB scope enforcement — scoped CI', () => {
 
 describe('CMDB scope enforcement — scoped CI (outsider blocked)', () => {
   it('7. memberB PATCH CI scoped to appId returns 403 in enforce mode (NOT NULL: no null bypass)', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
     const cookie = await loginAs('member-b');
     const res = await request(app)
       .patch(`/api/v1/cis/${legacyCiPublicId}`)

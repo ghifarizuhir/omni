@@ -72,7 +72,6 @@ async function loginAs(handle: 'member-a' | 'member-b' | 'noc' | 'admin') {
 
 describe('Incidents scope — PATCH /status', () => {
   it('1. memberA (contributor) succeeds in enforce mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
     const cookie = await loginAs('member-a');
     const res = await request(app)
       .patch(`/api/v1/incidents/${publicId}/status`)
@@ -82,7 +81,6 @@ describe('Incidents scope — PATCH /status', () => {
   });
 
   it('2. memberB (outsider) gets 403 in enforce mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
     const cookie = await loginAs('member-b');
     const res = await request(app)
       .patch(`/api/v1/incidents/${publicId}/status`)
@@ -92,19 +90,7 @@ describe('Incidents scope — PATCH /status', () => {
     expect(res.body).toMatchObject({ error: 'scope_violation', module: 'incident', action: 'update' });
   });
 
-  it('3. memberB gets 200 + X-Scope-Warning in warn mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'warn';
-    const cookie = await loginAs('member-b');
-    const res = await request(app)
-      .patch(`/api/v1/incidents/${publicId}/status`)
-      .set('Cookie', cookie)
-      .send({ status: 'in_progress' });
-    expect(res.status).toBe(200);
-    expect(res.headers['x-scope-warning']).toMatch(/^incident\.update:/);
-  });
-
-  it('4. NOC succeeds in enforce mode (bypass)', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
+  it('3. NOC succeeds (bypass via functional role)', async () => {
     const cookie = await loginAs('noc');
     const res = await request(app)
       .patch(`/api/v1/incidents/${publicId}/status`)
@@ -116,7 +102,6 @@ describe('Incidents scope — PATCH /status', () => {
 
 describe('Incidents scope — POST /resolve (no NOC bypass)', () => {
   it('5. NOC gets 403 in enforce mode (resolve cannot be bypassed)', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
     const cookie = await loginAs('noc');
     const res = await request(app)
       .post(`/api/v1/incidents/${publicId}/resolve`)
