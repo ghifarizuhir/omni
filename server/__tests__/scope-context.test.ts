@@ -3,7 +3,6 @@ import { ScopeViolationError } from '../scope/errors';
 import { POLICY, type ModuleKey } from '../scope/policy';
 import { resolveScopeContext, type ScopeContext } from '../scope/context';
 import { prisma } from '../db';
-import type { Response } from 'express';
 import { applyEnforcement, readEnforcementMode } from '../scope/enforcement';
 import { buildScopedDb, type ScopedDb } from '../scope/scopedDb';
 
@@ -86,39 +85,19 @@ describe('resolveScopeContext', () => {
   });
 });
 
-function mockRes(): Response {
-  const headers: Record<string, string> = {};
-  return { setHeader: (k: string, v: string) => { headers[k] = v; }, locals: { headers } } as unknown as Response;
-}
-
-describe('enforcement mode', () => {
-  it('defaults to off when env unset', () => {
+describe('enforcement mode (Plan F: always enforce)', () => {
+  it('readEnforcementMode always returns "enforce"', () => {
     delete process.env.SCOPE_ENFORCEMENT_MODE;
-    expect(readEnforcementMode()).toBe('off');
+    expect(readEnforcementMode()).toBe('enforce');
+    process.env.SCOPE_ENFORCEMENT_MODE = 'off'; // deprecated value
+    expect(readEnforcementMode()).toBe('enforce');
+    delete process.env.SCOPE_ENFORCEMENT_MODE;
   });
 
-  it('throws in enforce mode', () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
+  it('applyEnforcement always throws the violation', () => {
     expect(() =>
-      applyEnforcement(new ScopeViolationError({ module: 'cmdb', action: 'update', applicationId: 'a1' }), mockRes()),
+      applyEnforcement(new ScopeViolationError({ module: 'cmdb', action: 'update', applicationId: 'a1' })),
     ).toThrow(ScopeViolationError);
-  });
-
-  it('returns silently in off mode', () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'off';
-    expect(() =>
-      applyEnforcement(new ScopeViolationError({ module: 'cmdb', action: 'update' }), mockRes()),
-    ).not.toThrow();
-  });
-
-  it('sets X-Scope-Warning in warn mode and does not throw', () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'warn';
-    const res = mockRes();
-    expect(() =>
-      applyEnforcement(new ScopeViolationError({ module: 'cmdb', action: 'update', applicationId: 'a1' }), res),
-    ).not.toThrow();
-    expect((res as unknown as { locals: { headers: Record<string, string> } }).locals.headers['X-Scope-Warning'])
-      .toBe('cmdb.update:a1');
   });
 });
 

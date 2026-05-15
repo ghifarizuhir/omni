@@ -122,6 +122,19 @@ async function main() {
     `[seed.prod] functional roles upserted (${FUNCTIONAL_ROLE_CODES.length}): ${FUNCTIONAL_ROLE_CODES.join(', ')}`,
   );
 
+  // 4c. Grant PLATFORM_ADMIN functional role to the seed admin user so the
+  //     scope layer's isPlatformAdmin bypass actually kicks in for them.
+  //     (system.admin permission alone does NOT grant scope bypass post-Plan F.)
+  const platformAdminRole = await prisma.functionalRole.findUniqueOrThrow({
+    where: { tenantId_code: { tenantId: tenant.id, code: 'PLATFORM_ADMIN' } },
+  });
+  await prisma.userFunctionalRole.upsert({
+    where: { userId_functionalRoleId: { userId: user.id, functionalRoleId: platformAdminRole.id } },
+    update: {},
+    create: { userId: user.id, functionalRoleId: platformAdminRole.id },
+  });
+  console.log(`[seed.prod] granted PLATFORM_ADMIN functional role to admin user ${user.id}.`);
+
   // 5. MembershipRole — ensure the admin role is attached. After step 4 the
   //    role row exists with its full permission set already attached.
   const adminRole = await prisma.role.findUniqueOrThrow({
