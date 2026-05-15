@@ -41,3 +41,36 @@ describe('functional roles seeded', () => {
     expect(codes).toEqual(['AUDITOR', 'NOC_OPERATOR', 'PLATFORM_ADMIN']);
   });
 });
+
+describe('ApplicationTeam.role default', () => {
+  it('defaults to CONTRIBUTOR when not specified', async () => {
+    const tenant = await prisma.tenant.findFirstOrThrow();
+
+    let app = await prisma.application.findFirst({ where: { tenantId: tenant.id } });
+    if (!app) {
+      app = await prisma.application.create({
+        data: {
+          id: 'app-scope-test',
+          tenantId: tenant.id,
+          code: 'SCOPE_TEST',
+          name: 'Scope Test App',
+        },
+      });
+    }
+    const team = await prisma.team.findFirstOrThrow({ where: { tenantId: tenant.id } });
+
+    await prisma.applicationTeam
+      .delete({ where: { applicationId_teamId: { applicationId: app.id, teamId: team.id } } })
+      .catch(() => undefined);
+
+    const row = await prisma.applicationTeam.create({
+      data: { applicationId: app.id, teamId: team.id },
+    });
+
+    expect(row.role).toBe('CONTRIBUTOR');
+
+    await prisma.applicationTeam.delete({
+      where: { applicationId_teamId: { applicationId: app.id, teamId: team.id } },
+    });
+  });
+});
