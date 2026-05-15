@@ -115,7 +115,7 @@ Plus index `(tenantId, applicationId)` di semua tabel di atas.
 
 Aturan tambahan:
 
-- **NOC** hanya boleh *create / triage* Incident di app yang Team-nya bukan member. Untuk *close* / edit field bisnis, harus eskalasi ke Team app pemilik. Mempertahankan akuntabilitas.
+- **NOC** hanya boleh *create / triage* Incident & Service Request di app yang Team-nya bukan member (sesuai matriks kolom "Bypass write"). Untuk *close* / edit field bisnis, harus eskalasi ke Team app pemilik. Mempertahankan akuntabilitas.
 - **Application Owner** = `ApplicationTeam.role = OWNER`. Otomatis write penuh di semua modul app-nya, plus kelola membership.
 
 ## 7. UX
