@@ -606,6 +606,7 @@ model AuditLog {
   after        String? // JSON
   ip           String?
   userAgent    String?
+  scopeMode    String?
   createdAt    DateTime @default(now())
 
   @@index([tenantId, resourceKind, resourceId])
