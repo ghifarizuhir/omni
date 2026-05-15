@@ -5,6 +5,7 @@ import { InboxDrawer } from './InboxDrawer';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { AiQuickPanel } from '@/src/components/ai/AiQuickPanel';
+import { ScopeProvider } from '@/src/lib/scope/ScopeContext';
 
 export const AppShell: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -48,6 +49,7 @@ export const AppShell: React.FC = () => {
   }, [isAiRoute]);
 
   return (
+    <ScopeProvider>
     <div className="flex h-screen w-full bg-ois-bg overflow-hidden">
       {/* Sidebar — owns brand, mode toggle, and content switching internally */}
       <Sidebar
@@ -85,5 +87,6 @@ export const AppShell: React.FC = () => {
       </AnimatePresence>
 
     </div>
+    </ScopeProvider>
   );
 };

@@ -31,6 +31,21 @@ describe('GET /api/v1/applications/catalog', () => {
   });
 });
 
+describe('GET /api/v1/applications/catalog — myRole', () => {
+  it('returns the strongest role for the calling user', async () => {
+    const memberCookie = await login(app, fx.emailOf('member-a'), fx.password);
+    const r = await request(app).get('/api/v1/applications/catalog').set('Cookie', memberCookie);
+    expect(r.status).toBe(200);
+    const fxApp = (r.body as Array<{ id: string; myRole: string | null }>).find((a) => a.id === fx.appId);
+    expect(fxApp?.myRole).toBe('CONTRIBUTOR');
+
+    const outsider = await login(app, fx.emailOf('member-b'), fx.password);
+    const r2 = await request(app).get('/api/v1/applications/catalog').set('Cookie', outsider);
+    const fxApp2 = (r2.body as Array<{ id: string; myRole: string | null }>).find((a) => a.id === fx.appId);
+    expect(fxApp2?.myRole).toBeNull();
+  });
+});
+
 describe('Application Owner self-service via /api/v1/applications', () => {
   it('Application Owner (no system.admin) can add a team to their own app', async () => {
     // Promote memberA's team to OWNER for fx.appId.

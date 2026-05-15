@@ -8,6 +8,7 @@ import { NotificationDropdown } from './NotificationDropdown';
 import { UserMenu } from './UserMenu';
 import { useBreadcrumbs } from '@/src/lib/breadcrumbs';
 import { inboxService, notificationsService, usersService, useResource } from '@/src/services';
+import { AppScopeSwitcher } from '../scope/AppScopeSwitcher';
 
 interface TopBarProps {
   onToggleSidebar: () => void;
@@ -56,8 +57,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox, on
         </nav>
       </div>
 
-      {/* Right — search + inbox + notifications + user */}
+      {/* Right — scope switcher + search + inbox + notifications + user */}
       <div className="flex items-center gap-2 ml-auto">
+        <AppScopeSwitcher />
         <div className="relative mr-4 hidden md:block w-72 lg:w-96">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none">
             <SearchIcon size={16} />

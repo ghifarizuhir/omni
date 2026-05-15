@@ -132,6 +132,7 @@ export interface ConfigurationItem {
 
   // Service context
   serviceId?: string;          // Which logical service this CI belongs to (optional for infra-only)
+  primaryApplicationId?: string; // App scope linkage (Plan A/F — optional until migration)
 
   // Health (derived from monitoring; here mocked)
   health: ServiceHealthStatus;

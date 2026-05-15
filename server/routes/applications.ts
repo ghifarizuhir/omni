@@ -12,8 +12,7 @@ applicationsRouter.use(requireAuth);
 // Mount catalog BEFORE the catch-all sub-router so /:appId doesn't shadow it.
 applicationsRouter.get('/catalog', asyncHandler(async (req, res) => {
   const ctx = await resolveScopeContext({ userId: req.session!.userId, tenantId: req.tenantId });
-  const userAppIds = ctx.appMemberships.map((m) => m.appId);
-  const catalog = await listCatalog(req.tenantId, userAppIds);
+  const catalog = await listCatalog(req.tenantId, ctx.appMemberships);
   res.json(catalog);
 }));
 

@@ -26,6 +26,7 @@ export interface CreateChangeInput {
   implementationPlan?: string;
   rollbackPlan?: string;
   affectedCIIds?: string[];
+  applicationId?: string;
 }
 
 export const changesService = {

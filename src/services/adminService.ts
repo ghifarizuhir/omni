@@ -97,6 +97,7 @@ export interface CatalogAppDto {
   criticality: string | null;
   ownerTeamIds: string[];
   isMember: boolean;
+  myRole: 'OWNER' | 'CONTRIBUTOR' | 'VIEWER' | null;
 }
 
 export const applicationCatalogApi = {

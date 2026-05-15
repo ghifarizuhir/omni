@@ -14,6 +14,10 @@ import { changeTypeMeta, riskMeta } from '../../lib/constants';
 import { useCan } from '../../lib/rbac';
 import { changesService } from '../../services';
 import { ShieldAlert } from 'lucide-react';
+import { useScopedAppId } from '@/src/hooks/useScopedAppId';
+import { useScope } from '@/src/lib/scope/ScopeContext';
+import { useScopeUiEnabled } from '@/src/lib/scope/featureFlag';
+import { ScopeMismatchModal } from '@/src/components/scope/ScopeMismatchModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -268,6 +272,10 @@ const NewChangeForm: React.FC = () => {
   // Holds the publicId returned by the server after a successful POST /changes.
   const [createdPublicId, setCreatedPublicId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const enabled = useScopeUiEnabled();
+  const { scope } = useScope();
+  const { value: scopedAppId, setValue: setScopedAppId, requireApplicationId, writableApps } = useScopedAppId();
+  const [pendingSubmit, setPendingSubmit] = useState<null | (() => Promise<void>)>(null);
 
   // Auto-navigate after submit lands the created change ID.
   useEffect(() => {
@@ -687,6 +695,40 @@ const NewChangeForm: React.FC = () => {
           </Card>
         )}
 
+        {/* Application scope picker */}
+        {enabled && (
+          <Card>
+            <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
+              <h4 className="text-xs font-bold text-ois-text-subtle uppercase tracking-widest">Application</h4>
+            </div>
+            <CardBody>
+              {requireApplicationId ? (
+                <div>
+                  <label className="block text-sm font-medium text-ois-text">Application *</label>
+                  <select
+                    value={scopedAppId ?? ''}
+                    onChange={(e) => setScopedAppId(e.target.value || null)}
+                    className="mt-1 w-full h-10 px-3 rounded-md border border-ois-border bg-white focus:border-ois-primary focus:ring-1 focus:ring-ois-primary"
+                    required
+                  >
+                    <option value="">Select an application…</option>
+                    {writableApps.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="text-xs text-ois-text-muted">
+                  Application:{' '}
+                  <span className="font-medium text-ois-text">
+                    {writableApps.find((a) => a.id === scopedAppId)?.name ?? '—'}
+                  </span>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        )}
+
         {/* Comms */}
         <Card>
           <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
@@ -821,13 +863,11 @@ const NewChangeForm: React.FC = () => {
     return true;
   };
 
-  const handleNext = async () => {
-    if (step < 3) { setStep(step + 1); return; }
-    // Final step: POST to server. Note that `<input type="datetime-local">`
-    // yields a naive local-time string ("2026-06-01T22:00"); coerce to an
-    // ISO timestamp the server can parse.
+  const doSubmit = async () => {
     setSubmitError(null);
     try {
+      // Note: `<input type="datetime-local">` yields a naive local-time string
+      // ("2026-06-01T22:00"); coerce to an ISO timestamp the server can parse.
       const change = await changesService.create({
         title: form.title,
         description: form.description,
@@ -840,6 +880,7 @@ const NewChangeForm: React.FC = () => {
         implementationPlan: form.implementationPlan,
         rollbackPlan: form.rollbackPlan,
         affectedCIIds: form.affectedCIs,
+        applicationId: scopedAppId ?? undefined,
       });
       localStorage.removeItem('new-change-draft');
       setCreatedPublicId(change.publicId);
@@ -850,8 +891,41 @@ const NewChangeForm: React.FC = () => {
     }
   };
 
+  const handleNext = async () => {
+    if (step < 3) { setStep(step + 1); return; }
+    // Final step.
+    if (enabled && requireApplicationId && !scopedAppId) {
+      setSubmitError('Please choose an Application.');
+      return;
+    }
+    if (enabled && scope !== 'all' && scopedAppId && scope.appId !== scopedAppId) {
+      setPendingSubmit(() => doSubmit);
+      return;
+    }
+    await doSubmit();
+  };
+
   return (
     <div className="max-w-3xl mx-auto pb-12">
+      {/* Scope mismatch confirmation */}
+      {pendingSubmit && (
+        <ScopeMismatchModal
+          open
+          currentScopeName={
+            scope !== 'all'
+              ? (writableApps.find((a) => a.id === scope.appId)?.name ?? scope.appId)
+              : ''
+          }
+          submittedAppName={writableApps.find((a) => a.id === scopedAppId)?.name ?? scopedAppId!}
+          onCancel={() => setPendingSubmit(null)}
+          onConfirm={async () => {
+            const fn = pendingSubmit;
+            setPendingSubmit(null);
+            if (fn) await fn();
+          }}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <Link to="/changes" className="flex items-center gap-1.5 text-sm text-ois-text-muted hover:text-ois-text transition-colors">
