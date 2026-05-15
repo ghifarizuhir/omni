@@ -3,7 +3,8 @@ import { z } from 'zod';
 import {
   deploymentsRepo, catalogRepo, kbRepo,
 } from '../repositories/docs';
-import { listByKind, findByPublicId, findByKey } from '../repositories/documents';
+import { listByKind, findByPublicId, findByKey, upsertDocument } from '../repositories/documents';
+import { randomUUID } from 'crypto';
 import { audit } from '../audit';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qBool, required } from '../util';
@@ -333,6 +334,24 @@ itsmRouter.get('/improvements/totals/actual', requirePermission('improvement.rea
 }));
 itsmRouter.get('/improvements/benefit-measurements', requirePermission('improvement.read'), asyncHandler(async (req, res) => {
   res.json(await listByKind(req.tenantId, 'benefit-measurement'));
+}));
+itsmRouter.post('/improvements/benefit-measurements', requirePermission('improvement.write'), asyncHandler(async (req, res) => {
+  const schema = z.object({
+    initiativeId:        z.string().min(1),
+    initiativePublicId:  z.string().optional().default(''),
+    measurementDate:     z.string().min(1),
+    periodLabel:         z.string().optional().default(''),
+    benefitType:         z.string().min(1),
+    measuredValueUSD:    z.number().finite(),
+    isEstimate:          z.boolean().optional().default(false),
+    supportingMetric:    z.string().optional().default(''),
+  });
+  const input = schema.parse(req.body);
+  const id = randomUUID();
+  const measurement = { id, ...input, recordedBy: req.session?.userId ?? null, recordedAt: new Date().toISOString() };
+  await upsertDocument(req.tenantId, 'benefit-measurement', id, measurement);
+  await audit(req, { action: 'create', resourceKind: 'benefit-measurement', resourceId: id, after: measurement });
+  res.status(201).json(measurement);
 }));
 itsmRouter.get('/improvements/roi', requirePermission('improvement.read'), asyncHandler(async (req, res) => {
   res.json(await listByKind(req.tenantId, 'roi-calc'));

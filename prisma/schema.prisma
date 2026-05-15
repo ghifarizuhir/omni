@@ -51,12 +51,19 @@ model User {
   divisionId   String?
   departmentId String?
   teamId       String?
+  title        String?
+  bio          String?
+  timezone     String?
+  language     String?
+  managerId    String?
   createdAt    DateTime           @default(now())
   memberships  TenantMembership[]
   sessions     Session[]
   division     Division?          @relation(fields: [divisionId],   references: [id], onDelete: SetNull)
   department   Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   team         Team?              @relation(fields: [teamId],       references: [id], onDelete: SetNull)
+  manager      User?              @relation("UserManager", fields: [managerId], references: [id], onDelete: SetNull)
+  reports      User[]             @relation("UserManager")
   functionalRoles      UserFunctionalRole[]
   apiTokens            ApiToken[]
   notificationChannels NotificationChannel[]

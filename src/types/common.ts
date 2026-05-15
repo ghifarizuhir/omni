@@ -28,8 +28,19 @@ export interface User {
   email: string;
   avatarUrl?: string;
   role: UserRole;
-  team?: string; // team id
-  timezone: string; // IANA, e.g. 'Asia/Jakarta'
+  team?: string | null;             // team name (display)
+  teamId?: string | null;
+  division?: string | null;
+  divisionId?: string | null;
+  department?: string | null;
+  departmentId?: string | null;
+  level?: string | null;
+  title?: string | null;
+  bio?: string | null;
+  timezone?: string | null;         // IANA, e.g. 'Asia/Jakarta'
+  language?: string | null;
+  managerId?: string | null;
+  manager?: { id: string; name: string; email: string } | null;
   mustChangePassword?: boolean;
 }
 

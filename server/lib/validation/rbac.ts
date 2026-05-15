@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
 const idSlug = z.string().min(1).max(64).regex(/^[a-z0-9-]+$/);
+// Functional role `code` values are upper-snake constants (e.g. `PLATFORM_ADMIN`,
+// `NOC_OPERATOR`). The repo layer looks them up by exact match against
+// `FunctionalRole.code`, so the schema accepts that shape instead of idSlug.
+const functionalRoleCode = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/);
 
 export const divisionSchema = z.object({
   id: idSlug.optional(),
@@ -47,7 +51,7 @@ export const rbacUserSchema = z.object({
   divisionId: idSlug.nullable().optional(),
   departmentId: idSlug.nullable().optional(),
   teamId: idSlug.nullable().optional(),
-  functionalRoles: z.array(idSlug).default([]),
+  functionalRoles: z.array(functionalRoleCode).default([]),
 });
 
 export type DivisionInput = z.infer<typeof divisionSchema>;

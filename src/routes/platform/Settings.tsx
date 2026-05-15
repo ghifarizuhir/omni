@@ -68,7 +68,7 @@ const SectionBlock: React.FC<{ title: string; description?: string; children: Re
 // ── Profile panel ─────────────────────────────────────────────────────────────
 
 const ProfilePanel: React.FC = () => {
-  const { data: user } = useResource(() => usersService.current(), []);
+  const { data: user, refresh: refetchUser } = useResource(() => usersService.current(), []);
   const [dangerAlert, setDangerAlert] = useState(false);
 
   const initials = user?.name
@@ -83,15 +83,25 @@ const ProfilePanel: React.FC = () => {
       <SectionBlock title="Identity">
         <div className="flex items-start gap-5">
           <div className="shrink-0">
-            <div className="w-16 h-16 rounded-full bg-ois-primary flex items-center justify-center text-white text-xl font-bold select-none">
-              {initials}
+            <div className="w-16 h-16 rounded-full bg-ois-primary flex items-center justify-center text-white text-xl font-bold select-none overflow-hidden">
+              {user?.avatarUrl
+                ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                : initials}
             </div>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-base font-bold text-ois-text leading-tight">{user?.name ?? '—'}</p>
-            <p className="text-sm text-ois-text-muted">— · {user?.team ?? '—'}</p>
+            <p className="text-sm text-ois-text-muted">
+              {user?.title ?? '—'}{user?.team ? <> · {user.team}</> : null}
+            </p>
             <p className="text-xs text-ois-text-muted mt-1">{user?.email ?? '—'}</p>
-            <Button variant="ghost" size="sm" className="mt-2 gap-1.5 text-xs -ml-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 gap-1.5 text-xs -ml-2"
+              disabled
+              title="Photo upload is coming soon. Ask your administrator to update your avatar in the meantime."
+            >
               <Camera size={12} /> Change photo
             </Button>
           </div>
@@ -100,15 +110,19 @@ const ProfilePanel: React.FC = () => {
 
       {/* Profile form */}
       <SectionBlock title="Profile information" description="Update your display name, role, and contact preferences.">
-        <ProfileForm initialValues={{
-          name: user?.name ?? '',
-          title: '—',
-          team: user?.team ?? '',
-          timezone: user?.timezone ?? '',
-          language: '—',
-          manager: '—',
-          bio: '—',
-        }} />
+        <ProfileForm
+          key={user?.id ?? 'loading'}
+          initialValues={{
+            name:     user?.name ?? '',
+            title:    user?.title ?? '',
+            team:     user?.team ?? '',
+            timezone: user?.timezone ?? '',
+            language: user?.language ?? '',
+            manager:  user?.manager?.name ?? '',
+            bio:      user?.bio ?? '',
+          }}
+          onSaved={() => refetchUser()}
+        />
       </SectionBlock>
 
       {/* Danger zone */}

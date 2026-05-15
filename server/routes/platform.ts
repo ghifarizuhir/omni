@@ -44,8 +44,69 @@ platformRouter.get('/users/me', asyncHandler(async (req, res) => {
     res.status(401).json({ message: 'Authentication required' });
     return;
   }
-  const u = await prisma.user.findUnique({ where: { id: req.session.userId } });
-  res.json(u && { id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl, mustChangePassword: u.mustChangePassword });
+  const u = await prisma.user.findUnique({
+    where: { id: req.session.userId },
+    include: {
+      team: { select: { id: true, name: true } },
+      division: { select: { id: true, name: true } },
+      department: { select: { id: true, name: true } },
+      manager: { select: { id: true, name: true, email: true } },
+    },
+  });
+  res.json(u && {
+    id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl,
+    mustChangePassword: u.mustChangePassword,
+    level: u.level,
+    title: u.title,
+    bio: u.bio,
+    timezone: u.timezone,
+    language: u.language,
+    teamId: u.teamId, team: u.team?.name ?? null,
+    divisionId: u.divisionId, division: u.division?.name ?? null,
+    departmentId: u.departmentId, department: u.department?.name ?? null,
+    managerId: u.managerId,
+    manager: u.manager ? { id: u.manager.id, name: u.manager.name, email: u.manager.email } : null,
+  });
+}));
+
+// Self-service profile update. Whitelist of fields the user is allowed to
+// edit; org-managed fields (team, division, department, manager, level) are
+// admin-only and live under /admin/rbac/users.
+platformRouter.patch('/users/me', asyncHandler(async (req, res) => {
+  if (!req.session) { res.status(401).json({ message: 'Authentication required' }); return; }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const data: Record<string, string | null> = {};
+  const strOrNull = (v: unknown) => v == null ? null : String(v).trim().slice(0, 4000) || null;
+  if ('name'     in body) {
+    const n = typeof body.name === 'string' ? body.name.trim() : '';
+    if (!n) { res.status(400).json({ message: 'name cannot be empty' }); return; }
+    data.name = n.slice(0, 200);
+  }
+  if ('title'    in body) data.title    = strOrNull(body.title);
+  if ('bio'      in body) data.bio      = strOrNull(body.bio);
+  if ('timezone' in body) data.timezone = strOrNull(body.timezone);
+  if ('language' in body) data.language = strOrNull(body.language);
+  const u = await prisma.user.update({
+    where: { id: req.session.userId },
+    data,
+    include: {
+      team: { select: { id: true, name: true } },
+      division: { select: { id: true, name: true } },
+      department: { select: { id: true, name: true } },
+      manager: { select: { id: true, name: true, email: true } },
+    },
+  });
+  res.json({
+    id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl,
+    mustChangePassword: u.mustChangePassword,
+    level: u.level, title: u.title, bio: u.bio,
+    timezone: u.timezone, language: u.language,
+    teamId: u.teamId, team: u.team?.name ?? null,
+    divisionId: u.divisionId, division: u.division?.name ?? null,
+    departmentId: u.departmentId, department: u.department?.name ?? null,
+    managerId: u.managerId,
+    manager: u.manager ? { id: u.manager.id, name: u.manager.name, email: u.manager.email } : null,
+  });
 }));
 // user API tokens
 const VALID_CHANNEL_KINDS = ['email', 'sms', 'slack'];

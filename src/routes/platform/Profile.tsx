@@ -15,7 +15,7 @@ const SectionHeading: React.FC<{ title: string; description?: string }> = ({ tit
 );
 
 export const Profile: React.FC = () => {
-  const { data: user } = useResource(() => usersService.current(), []);
+  const { data: user, refresh: refetchUser } = useResource(() => usersService.current(), []);
   const { data: tokenData, refresh: refetchTokens } = useResource(() => apiTokensService.list(), []);
   const [showGenModal, setShowGenModal] = useState(false);
   const [dangerAlert, setDangerAlert] = useState(false);
@@ -56,19 +56,30 @@ export const Profile: React.FC = () => {
 
       <section className="flex items-start gap-5">
         <div className="relative shrink-0">
-          <div className="w-20 h-20 rounded-full bg-ois-primary flex items-center justify-center text-white text-2xl font-bold select-none">
-            {user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : '—'}
+          <div className="w-20 h-20 rounded-full bg-ois-primary flex items-center justify-center text-white text-2xl font-bold select-none overflow-hidden">
+            {user?.avatarUrl
+              ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              : (user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : '—')}
           </div>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-3 mb-2">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-xs"
+              disabled
+              title="Photo upload is coming soon. Ask your administrator to update your avatar in the meantime."
+            >
               <Camera size={13} />
               Change photo
             </Button>
           </div>
           <p className="text-lg font-bold text-ois-text leading-tight">{user?.name ?? '—'}</p>
-          <p className="text-sm text-ois-text-muted">— · —</p>
+          <p className="text-sm text-ois-text-muted">
+            {user?.title ?? '—'}
+            {user?.team ? <> · {user.team}</> : null}
+          </p>
           <div className="flex flex-col gap-0.5 mt-2">
             <p className="text-xs text-ois-text-muted">{user?.email ?? '—'}</p>
           </div>
@@ -77,15 +88,19 @@ export const Profile: React.FC = () => {
 
       <section>
         <SectionHeading title="Profile information" description="Update your display name, role, and contact preferences." />
-        <ProfileForm initialValues={{
-          name: user?.name ?? '',
-          title: '—',
-          team: user?.team ?? '',
-          timezone: user?.timezone ?? '',
-          language: '—',
-          manager: '—',
-          bio: '—',
-        }} />
+        <ProfileForm
+          key={user?.id ?? 'loading'}
+          initialValues={{
+            name:     user?.name ?? '',
+            title:    user?.title ?? '',
+            team:     user?.team ?? '',
+            timezone: user?.timezone ?? '',
+            language: user?.language ?? '',
+            manager:  user?.manager?.name ?? '',
+            bio:      user?.bio ?? '',
+          }}
+          onSaved={() => refetchUser()}
+        />
       </section>
 
       <section id="tokens">

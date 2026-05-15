@@ -122,6 +122,8 @@ export const improvementsService = {
   totalEstimatedBenefitUSD: () => apiFetch<number>('/improvements/totals/estimated'),
   totalActualBenefitUSD: () => apiFetch<number>('/improvements/totals/actual'),
   benefitMeasurements: () => apiFetch<BenefitMeasurement[]>('/improvements/benefit-measurements'),
+  createBenefitMeasurement: (input: Partial<BenefitMeasurement>) =>
+    apiFetch<BenefitMeasurement>('/improvements/benefit-measurements', { method: 'POST', body: input }),
   roiCalculations: () => apiFetch<ROICalculation[]>('/improvements/roi'),
   roiCalculation: (initiativeId: string) =>
     apiFetch<ROICalculation | undefined>(`/improvements/${initiativeId}/roi`),

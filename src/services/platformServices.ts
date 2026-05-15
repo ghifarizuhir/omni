@@ -19,10 +19,20 @@ import type {
 import type { Report, MeasurementDashboard, MetricDefinition } from '../types/measurement';
 import type { BenefitMeasurement, ROICalculation } from '../types/improvement';
 
+export interface UpdateProfileInput {
+  name?: string;
+  title?: string | null;
+  bio?: string | null;
+  timezone?: string | null;
+  language?: string | null;
+}
+
 export const usersService = {
   list: () => apiFetch<User[]>('/users'),
   get: (id: string) => apiFetch<User>(`/users/${id}`),
   current: () => apiFetch<User>('/users/me'),
+  updateMe: (input: UpdateProfileInput) =>
+    apiFetch<User>('/users/me', { method: 'PATCH', body: input }),
 };
 
 export const authService = {
