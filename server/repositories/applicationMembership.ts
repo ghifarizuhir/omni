@@ -114,7 +114,16 @@ export async function listManageableApps(tenantId: string, ownerAppIds: string[]
   return prisma.application.findMany({ where: { tenantId, id: { in: ownerAppIds } }, orderBy: { name: 'asc' } });
 }
 
-export async function listCatalog(tenantId: string, userAppIds: string[]) {
+const ROLE_RANK: Record<'OWNER' | 'CONTRIBUTOR' | 'VIEWER', number> = {
+  OWNER: 3,
+  CONTRIBUTOR: 2,
+  VIEWER: 1,
+};
+
+export async function listCatalog(
+  tenantId: string,
+  userMemberships: Array<{ appId: string; role: 'OWNER' | 'CONTRIBUTOR' | 'VIEWER' }>,
+) {
   const apps = await prisma.application.findMany({ where: { tenantId }, orderBy: { name: 'asc' } });
   const ownerships = await prisma.applicationTeam.findMany({
     where: { applicationId: { in: apps.map((a) => a.id) }, role: 'OWNER' },
@@ -126,13 +135,23 @@ export async function listCatalog(tenantId: string, userAppIds: string[]) {
     arr.push(o.teamId);
     ownerTeamsByApp.set(o.applicationId, arr);
   }
-  const memberSet = new Set(userAppIds);
+
+  // Compute strongest role per app for the calling user.
+  const roleByApp = new Map<string, 'OWNER' | 'CONTRIBUTOR' | 'VIEWER'>();
+  for (const m of userMemberships) {
+    const current = roleByApp.get(m.appId);
+    if (!current || ROLE_RANK[m.role] > ROLE_RANK[current]) {
+      roleByApp.set(m.appId, m.role);
+    }
+  }
+
   return apps.map((a) => ({
     id: a.id,
     code: a.code,
     name: a.name,
     criticality: a.criticality,
     ownerTeamIds: ownerTeamsByApp.get(a.id) ?? [],
-    isMember: memberSet.has(a.id),
+    isMember: roleByApp.has(a.id),
+    myRole: roleByApp.get(a.id) ?? null,
   }));
 }
