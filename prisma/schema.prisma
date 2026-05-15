@@ -56,7 +56,9 @@ model User {
   division     Division?          @relation(fields: [divisionId],   references: [id], onDelete: SetNull)
   department   Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   team         Team?              @relation(fields: [teamId],       references: [id], onDelete: SetNull)
-  functionalRoles UserFunctionalRole[]
+  functionalRoles      UserFunctionalRole[]
+  apiTokens            ApiToken[]
+  notificationChannels NotificationChannel[]
 }
 
 model TenantMembership {
@@ -223,6 +225,33 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model ApiToken {
+  id         String    @id @default(cuid())
+  tenantId   String
+  userId     String
+  name       String
+  tokenHash  String    @unique
+  prefix     String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+}
+
+model NotificationChannel {
+  id       String  @id @default(cuid())
+  tenantId String
+  userId   String
+  kind     String
+  address  String
+  verified Boolean @default(false)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind])
 }
 
 // ── CMDB ──────────────────────────────────────────────────────────────────────

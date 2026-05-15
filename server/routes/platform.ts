@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { createHash, randomBytes } from 'crypto';
 import { prisma } from '../db';
 import { listByKind, findByKey, firstByKind } from '../repositories/documents';
 import { requirePermission } from '../middleware/auth';
@@ -46,6 +47,90 @@ platformRouter.get('/users/me', asyncHandler(async (req, res) => {
   const u = await prisma.user.findUnique({ where: { id: req.session.userId } });
   res.json(u && { id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl });
 }));
+// user API tokens
+const VALID_CHANNEL_KINDS = ['email', 'sms', 'slack'];
+
+platformRouter.get('/users/me/tokens', asyncHandler(async (req, res) => {
+  if (!req.session) { res.status(401).json({ message: 'Authentication required' }); return; }
+  const tokens = await prisma.apiToken.findMany({
+    where: { userId: req.session.userId, revokedAt: null },
+    select: { id: true, name: true, prefix: true, createdAt: true, lastUsedAt: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(tokens);
+}));
+
+platformRouter.post('/users/me/tokens', asyncHandler(async (req, res) => {
+  if (!req.session) { res.status(401).json({ message: 'Authentication required' }); return; }
+  const { name } = req.body as { name?: string };
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    res.status(400).json({ message: 'name is required' });
+    return;
+  }
+  const rawBytes = randomBytes(24);
+  const rawToken = `ois_${rawBytes.toString('base64url')}`;
+  const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+  const prefix = rawToken.slice(0, 12);
+  const token = await prisma.apiToken.create({
+    data: {
+      tenantId: req.tenantId,
+      userId: req.session.userId,
+      name: name.trim(),
+      tokenHash,
+      prefix,
+    },
+    select: { id: true, name: true, prefix: true, createdAt: true },
+  });
+  res.status(201).json({ ...token, token: rawToken });
+}));
+
+platformRouter.delete('/users/me/tokens/:id', asyncHandler(async (req, res) => {
+  if (!req.session) { res.status(401).json({ message: 'Authentication required' }); return; }
+  const existing = await prisma.apiToken.findFirst({
+    where: { id: req.params.id, userId: req.session.userId },
+  });
+  if (!existing) { res.status(404).json({ message: 'Token not found' }); return; }
+  await prisma.apiToken.update({
+    where: { id: req.params.id },
+    data: { revokedAt: new Date() },
+  });
+  res.status(204).end();
+}));
+
+// user notification channels
+platformRouter.get('/users/me/channels', asyncHandler(async (req, res) => {
+  if (!req.session) { res.status(401).json({ message: 'Authentication required' }); return; }
+  const channels = await prisma.notificationChannel.findMany({
+    where: { userId: req.session.userId },
+  });
+  res.json(channels);
+}));
+
+platformRouter.put('/users/me/channels/:kind', asyncHandler(async (req, res) => {
+  if (!req.session) { res.status(401).json({ message: 'Authentication required' }); return; }
+  const { kind } = req.params;
+  if (!VALID_CHANNEL_KINDS.includes(kind)) {
+    res.status(400).json({ message: `kind must be one of: ${VALID_CHANNEL_KINDS.join(', ')}` });
+    return;
+  }
+  const { address } = req.body as { address?: string };
+  if (!address || typeof address !== 'string' || !address.trim()) {
+    res.status(400).json({ message: 'address is required' });
+    return;
+  }
+  const channel = await prisma.notificationChannel.upsert({
+    where: { userId_kind: { userId: req.session.userId, kind } },
+    create: {
+      tenantId: req.tenantId,
+      userId: req.session.userId,
+      kind,
+      address: address.trim(),
+    },
+    update: { address: address.trim() },
+  });
+  res.json(channel);
+}));
+
 platformRouter.get('/users/:id', asyncHandler(async (req, res) => {
   const u = await prisma.user.findUnique({
     where: { id: req.params.id },
