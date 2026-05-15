@@ -222,10 +222,16 @@ export async function runBackfill(opts: BackfillOptions = {}): Promise<BackfillR
 async function cli() {
   const argv = process.argv.slice(2);
   const apply = argv.includes('--apply');
-  const moduleArg = argv.find((a) => a.startsWith('--module='))?.split('=')[1] as ModuleKey | undefined;
+  const moduleArg = argv.find((a) => a.startsWith('--module='))?.split('=')[1];
   const tenantArg = argv.find((a) => a.startsWith('--tenant='))?.split('=')[1];
 
-  const reports = await runBackfill({ apply, module: moduleArg, tenantId: tenantArg });
+  if (moduleArg && !(moduleArg in MODULES)) {
+    console.error(`error: unknown --module="${moduleArg}". Valid: ${Object.keys(MODULES).join(', ')}`);
+    await prisma.$disconnect();
+    process.exit(2);
+  }
+
+  const reports = await runBackfill({ apply, module: moduleArg as ModuleKey | undefined, tenantId: tenantArg });
   for (const r of reports) console.log(JSON.stringify(r));
 
   const totals = reports.reduce(
