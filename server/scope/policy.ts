@@ -7,7 +7,9 @@ export type ModuleKey =
   | 'service_request'
   | 'problem'
   | 'change'
-  | 'release';
+  | 'release'
+  | 'monitoring_rule'
+  | 'alert_route';
 
 export type ReadPolicy = 'global' | 'scoped';
 export type WritePolicy = 'scoped' | 'admin_only';
@@ -29,4 +31,6 @@ export const POLICY: Record<ModuleKey, ModulePolicy> = {
   incident:       { read: 'scoped', write: 'scoped',     readBypass: ['NOC_OPERATOR', 'AUDITOR', 'PLATFORM_ADMIN'], writeBypass: ['NOC_OPERATOR', 'PLATFORM_ADMIN'] },
   service_request:{ read: 'scoped', write: 'scoped',     readBypass: ['AUDITOR', 'PLATFORM_ADMIN'],                  writeBypass: ['NOC_OPERATOR', 'PLATFORM_ADMIN'] },
   release:        { read: 'global', write: 'admin_only', readBypass: [],                          writeBypass: ['PLATFORM_ADMIN'] },
+  monitoring_rule:{ read: 'global', write: 'admin_only', readBypass: [],                          writeBypass: ['PLATFORM_ADMIN'] },
+  alert_route:    { read: 'global', write: 'admin_only', readBypass: [],                          writeBypass: ['PLATFORM_ADMIN'] },
 };
