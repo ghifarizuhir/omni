@@ -365,11 +365,13 @@ model Event {
   linkedIncidentId    String?
   payload             String    @default("{}") // JSON
   tags                String // JSON array
+  applicationId       String?
   tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, status])
   @@index([tenantId, severity])
   @@index([tenantId, firedAt])
+  @@index([tenantId, applicationId])
 }
 
 model MonitoringRule {
@@ -408,6 +410,7 @@ model Incident {
   linkedProblemPublicId String?
   affectedCIIds         String // JSON array (for filtering)
   affectedCIPublicIds   String // JSON array
+  applicationId         String?
   createdAt             DateTime
   updatedAt             DateTime
   tenant                Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -417,6 +420,7 @@ model Incident {
   @@index([tenantId, status])
   @@index([tenantId, isMajor])
   @@index([tenantId, linkedProblemPublicId])
+  @@index([tenantId, applicationId])
 }
 
 model IncidentComment {
