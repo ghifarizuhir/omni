@@ -41,7 +41,7 @@ applicationMembershipRouter.get('/:appId/teams', asyncHandler(async (req, res) =
 
 const addBody = z.object({ teamId: z.string().min(1), role: roleSchema });
 applicationMembershipRouter.post('/:appId/teams', asyncHandler(async (req, res) => {
-  await requireAppManager(req, req.params.appId);
+  const actorKind = await requireAppManager(req, req.params.appId);
   const { teamId, role } = addBody.parse(req.body);
   try {
     const row = await addTeamToApp({
@@ -49,7 +49,7 @@ applicationMembershipRouter.post('/:appId/teams', asyncHandler(async (req, res) 
     });
     await audit(req, {
       action: 'application_membership.add', resourceKind: 'Application',
-      resourceId: req.params.appId, after: { teamId, role }, scopeMode: 'admin',
+      resourceId: req.params.appId, after: { teamId, role }, scopeMode: actorKind,
     });
     res.status(201).json(row);
   } catch (e) {
@@ -59,7 +59,7 @@ applicationMembershipRouter.post('/:appId/teams', asyncHandler(async (req, res) 
 
 const patchBody = z.object({ role: roleSchema });
 applicationMembershipRouter.patch('/:appId/teams/:teamId', asyncHandler(async (req, res) => {
-  await requireAppManager(req, req.params.appId);
+  const actorKind = await requireAppManager(req, req.params.appId);
   const { role } = patchBody.parse(req.body);
   try {
     const row = await changeTeamRole({
@@ -67,7 +67,7 @@ applicationMembershipRouter.patch('/:appId/teams/:teamId', asyncHandler(async (r
     });
     await audit(req, {
       action: 'application_membership.change_role', resourceKind: 'Application',
-      resourceId: req.params.appId, after: { teamId: req.params.teamId, toRole: role }, scopeMode: 'admin',
+      resourceId: req.params.appId, after: { teamId: req.params.teamId, toRole: role }, scopeMode: actorKind,
     });
     res.json(row);
   } catch (e) {
@@ -76,14 +76,14 @@ applicationMembershipRouter.patch('/:appId/teams/:teamId', asyncHandler(async (r
 }));
 
 applicationMembershipRouter.delete('/:appId/teams/:teamId', asyncHandler(async (req, res) => {
-  await requireAppManager(req, req.params.appId);
+  const actorKind = await requireAppManager(req, req.params.appId);
   try {
     await removeTeamFromApp({
       appId: req.params.appId, teamId: req.params.teamId, actorId: req.session!.userId,
     });
     await audit(req, {
       action: 'application_membership.remove', resourceKind: 'Application',
-      resourceId: req.params.appId, after: { teamId: req.params.teamId }, scopeMode: 'admin',
+      resourceId: req.params.appId, after: { teamId: req.params.teamId }, scopeMode: actorKind,
     });
     res.status(204).end();
   } catch (e) {

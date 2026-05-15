@@ -84,7 +84,7 @@ export async function changeTeamRole(args: {
       data: { role: args.role },
     });
     return { appId: row.applicationId, teamId: row.teamId, role: row.role, addedById: row.addedById, addedAt: row.addedAt };
-  });
+  }, { isolationLevel: 'Serializable' });
 }
 
 export async function removeTeamFromApp(args: {
@@ -104,7 +104,7 @@ export async function removeTeamFromApp(args: {
     await tx.applicationTeam.delete({
       where: { applicationId_teamId: { applicationId: args.appId, teamId: args.teamId } },
     });
-  });
+  }, { isolationLevel: 'Serializable' });
 }
 
 export async function listManageableApps(tenantId: string, ownerAppIds: string[], isPlatformAdmin: boolean) {

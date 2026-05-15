@@ -68,23 +68,23 @@ function makeFakeReq(userId: string, hasSystemAdmin = false) {
 }
 
 describe('requireAppManager', () => {
-  it('passes for system.admin permission holder', async () => {
+  it('returns "admin" for system.admin permission holder', async () => {
     const req = makeFakeReq(fx.memberBUserId, true);
-    await expect(requireAppManager(req, fx.appId)).resolves.toBeUndefined();
+    await expect(requireAppManager(req, fx.appId)).resolves.toBe('admin');
   });
 
-  it('passes for PLATFORM_ADMIN functional role', async () => {
+  it('returns "admin" for PLATFORM_ADMIN functional role', async () => {
     const req = makeFakeReq(fx.platformAdminUserId);
-    await expect(requireAppManager(req, fx.appId)).resolves.toBeUndefined();
+    await expect(requireAppManager(req, fx.appId)).resolves.toBe('admin');
   });
 
-  it('passes for Application Owner of the app', async () => {
+  it('returns "owner" for Application Owner of the app', async () => {
     await prisma.applicationTeam.update({
       where: { applicationId_teamId: { applicationId: fx.appId, teamId: fx.teamAId } },
       data: { role: 'OWNER' },
     });
     const req = makeFakeReq(fx.memberAUserId);
-    await expect(requireAppManager(req, fx.appId)).resolves.toBeUndefined();
+    await expect(requireAppManager(req, fx.appId)).resolves.toBe('owner');
     await prisma.applicationTeam.update({
       where: { applicationId_teamId: { applicationId: fx.appId, teamId: fx.teamAId } },
       data: { role: 'CONTRIBUTOR' },
