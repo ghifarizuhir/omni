@@ -21,3 +21,6 @@ prisma/*.db-journal
 # Local docker compose override (secrets, dev tweaks). See
 # compose.override.yml.example for the starter template.
 compose.override.yml
+
+# Superpowers brainstorm scratch (mockups, server state — not for VCS)
+.superpowers/
