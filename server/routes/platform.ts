@@ -3,6 +3,10 @@ import { prisma } from '../db';
 import { listByKind, findByKey, firstByKind } from '../repositories/documents';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, qBool, qString, required } from '../util';
+import {
+  listDivisions, listDepartments, listTeams,
+  listApplications, listFunctionalRoles, listRbacUsers,
+} from '../repositories/rbacOrg';
 import type {
   Team, KBCategory, TestPlan, TestCase, TestRun, SignOff, AiSession,
   DRPlan, DRTestRun, BIAEntry,
@@ -136,12 +140,12 @@ platformRouter.get('/ai/sessions/:id', asyncHandler(async (req, res) => {
 }));
 
 // RBAC catalog
-platformRouter.get('/rbac/users', asyncHandler(async (req, res) => res.json(await listByKind(req.tenantId, 'rbac-user'))));
-platformRouter.get('/rbac/teams', asyncHandler(async (req, res) => res.json(await listByKind(req.tenantId, 'rbac-team'))));
-platformRouter.get('/rbac/applications', asyncHandler(async (req, res) => res.json(await listByKind(req.tenantId, 'rbac-application'))));
-platformRouter.get('/rbac/departments', asyncHandler(async (req, res) => res.json(await listByKind(req.tenantId, 'rbac-department'))));
-platformRouter.get('/rbac/divisions', asyncHandler(async (req, res) => res.json(await listByKind(req.tenantId, 'rbac-division'))));
-platformRouter.get('/rbac/roles', asyncHandler(async (req, res) => res.json(await listByKind(req.tenantId, 'rbac-role'))));
+platformRouter.get('/rbac/users',        asyncHandler(async (req, res) => res.json(await listRbacUsers(req.tenantId))));
+platformRouter.get('/rbac/teams',        asyncHandler(async (req, res) => res.json(await listTeams(req.tenantId))));
+platformRouter.get('/rbac/applications', asyncHandler(async (req, res) => res.json(await listApplications(req.tenantId))));
+platformRouter.get('/rbac/departments',  asyncHandler(async (req, res) => res.json(await listDepartments(req.tenantId))));
+platformRouter.get('/rbac/divisions',    asyncHandler(async (req, res) => res.json(await listDivisions(req.tenantId))));
+platformRouter.get('/rbac/roles',        asyncHandler(async (req, res) => res.json(await listFunctionalRoles(req.tenantId))));
 
 // continuity
 platformRouter.get('/continuity/dr-plans', asyncHandler(async (req, res) => res.json(await listByKind<DRPlan>(req.tenantId, 'dr-plan'))));
