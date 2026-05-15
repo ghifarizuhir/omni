@@ -2,15 +2,21 @@ import React from 'react';
 import { User, Settings, LogOut, Moon, UserCircle } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { usersService, useResource } from '@/src/services';
+import { usersService, teamsService, useResource } from '@/src/services';
 
 interface UserMenuProps {
   onClose: () => void;
 }
 
+function roleLabel(role: string | undefined): string {
+  if (!role) return 'User';
+  return role.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+}
+
 export const UserMenu: React.FC<UserMenuProps> = ({ onClose }) => {
   const navigate = useNavigate();
   const { data: currentUser } = useResource(() => usersService.current(), []);
+  const { data: teams } = useResource(() => teamsService.list(), []);
 
   const handleLogout = () => {
     navigate('/login');
@@ -26,11 +32,11 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onClose }) => {
         <div className="text-xs text-ois-text-subtle truncate">{currentUser?.email ?? ''}</div>
         <div className="mt-1 flex items-center gap-1.5">
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-ois-primary-pale text-ois-primary uppercase">
-            Admin
+            {roleLabel(currentUser?.role)}
           </span>
           <span className="text-[11px] text-ois-text-muted font-medium">•</span>
           <span className="text-[11px] text-ois-text-muted font-medium truncate">
-            Platform Engineering
+            {currentUser?.team ? (teams?.find(t => t.id === currentUser.team)?.name ?? 'Unassigned') : 'Unassigned'}
           </span>
         </div>
       </div>
