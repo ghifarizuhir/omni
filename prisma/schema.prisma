@@ -278,6 +278,7 @@ model ConfigurationItem {
   criticality         String
   ownerId             String?
   ownerTeamId         String
+  primaryApplicationId String?
   serviceId           String?
   health              String
   attributes          String // JSON
@@ -295,6 +296,7 @@ model ConfigurationItem {
 
   @@index([tenantId, type])
   @@index([tenantId, environment])
+  @@index([tenantId, primaryApplicationId])
 }
 
 model CIRelationship {
