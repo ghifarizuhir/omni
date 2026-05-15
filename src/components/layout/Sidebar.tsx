@@ -24,6 +24,7 @@ import {
   useResource,
 } from '@/src/services';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
+import { useAuthSession } from '@/src/lib/auth/session';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -34,6 +35,8 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, isAiRoute, aiSidebarContent }) => {
   const navigate = useNavigate();
   const { user } = useCurrentUser();
+  const session = useAuthSession();
+  const isAdmin = !!session?.permissions.includes('system.admin');
   // ── Live signals ──────────────────────────────────────────────────────────
   const { data: inboxItems } = useResource(() => inboxService.items(), []);
   const { data: incidents } = useResource(() => incidentsService.list(), []);
@@ -232,7 +235,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, isAiRoute, aiSideba
 
               {/* Footer Settings */}
               <div className="p-2 border-t border-ois-sidebar-border shrink-0 space-y-1">
-                {user?.isSuperadmin && (
+                {isAdmin && (
                   <SidebarItem icon={<Shield size={18} />} label="RBAC Admin" to="/admin" collapsed={collapsed} />
                 )}
                 <SidebarItem icon={<Settings size={18} />} label="Settings" to="/settings" collapsed={collapsed} />
