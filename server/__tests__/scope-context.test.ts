@@ -3,6 +3,8 @@ import { ScopeViolationError } from '../scope/errors';
 import { POLICY, type ModuleKey } from '../scope/policy';
 import { resolveScopeContext, type ScopeContext } from '../scope/context';
 import { prisma } from '../db';
+import type { Response } from 'express';
+import { applyEnforcement, readEnforcementMode } from '../scope/enforcement';
 
 afterAll(async () => {
   await prisma.$disconnect();
@@ -67,5 +69,41 @@ describe('resolveScopeContext', () => {
     expect(ctx.tenantId).toBe(tenant.id);
     expect(Array.isArray(ctx.appMemberships)).toBe(true);
     expect(Array.isArray(ctx.functionalRoles)).toBe(true);
+  });
+});
+
+function mockRes(): Response {
+  const headers: Record<string, string> = {};
+  return { setHeader: (k: string, v: string) => { headers[k] = v; }, locals: { headers } } as unknown as Response;
+}
+
+describe('enforcement mode', () => {
+  it('defaults to off when env unset', () => {
+    delete process.env.SCOPE_ENFORCEMENT_MODE;
+    expect(readEnforcementMode()).toBe('off');
+  });
+
+  it('throws in enforce mode', () => {
+    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
+    expect(() =>
+      applyEnforcement(new ScopeViolationError({ module: 'cmdb', action: 'update', applicationId: 'a1' }), mockRes()),
+    ).toThrow(ScopeViolationError);
+  });
+
+  it('returns silently in off mode', () => {
+    process.env.SCOPE_ENFORCEMENT_MODE = 'off';
+    expect(() =>
+      applyEnforcement(new ScopeViolationError({ module: 'cmdb', action: 'update' }), mockRes()),
+    ).not.toThrow();
+  });
+
+  it('sets X-Scope-Warning in warn mode and does not throw', () => {
+    process.env.SCOPE_ENFORCEMENT_MODE = 'warn';
+    const res = mockRes();
+    expect(() =>
+      applyEnforcement(new ScopeViolationError({ module: 'cmdb', action: 'update', applicationId: 'a1' }), res),
+    ).not.toThrow();
+    expect((res as unknown as { locals: { headers: Record<string, string> } }).locals.headers['X-Scope-Warning'])
+      .toBe('cmdb.update:a1');
   });
 });
