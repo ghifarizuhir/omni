@@ -276,7 +276,7 @@ Semua membership change tulis `AuditLog` `module: 'application_membership'`. Tab
 
 | Fase | Ruang lingkup |
 |---|---|
-| **0 — Schema persiapan** | Migration additive: `applicationId?` di tabel scoped, `role` di `ApplicationTeam`, functional role seeds, index `(tenantId, applicationId)`. |
+| **0 — Schema persiapan** | Migration additive: `applicationId?` di tabel scoped, `role` di `ApplicationTeam`, functional role seeds, index `(tenantId, applicationId)`. ✅ done (Plan A, `0f71d8d`) |
 | **1 — Backfill** | `prisma/backfillAppScope.ts` mengisi `applicationId` dari `ownerTeamId` (CI) & dari CI referensi (Event/Incident). Report row gagal → admin UI `/admin/data-quality`. |
 | **2 — Enforcement toggle** | Env `SCOPE_ENFORCEMENT_MODE = off \| warn \| enforce`. `warn` mencatat violation + header `X-Scope-Warning`, request lolos. Default rollout: dev `enforce`, staging `warn`→`enforce`, prod `warn` selama 2 sprint lalu `enforce`. |
 | **3 — Required `applicationId`** | Migration `NOT NULL` setelah backfill >99%. Row sisa pindah ke "App: Unassigned" sintetis (PlatformAdmin only). |
