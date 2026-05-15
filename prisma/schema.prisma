@@ -32,6 +32,11 @@ model Tenant {
   rules       MonitoringRule[]
   routes      AlertRoute[]
   incidents   Incident[]
+  divisions      Division[]
+  departments    Department[]
+  teams          Team[]
+  applications   Application[]
+  functionalRoles FunctionalRole[]
 }
 
 model User {
@@ -40,9 +45,18 @@ model User {
   name         String
   avatarUrl    String?
   passwordHash String?
+  isSuperadmin Boolean            @default(false)
+  level        String?
+  divisionId   String?
+  departmentId String?
+  teamId       String?
   createdAt    DateTime           @default(now())
   memberships  TenantMembership[]
   sessions     Session[]
+  division     Division?          @relation(fields: [divisionId],   references: [id], onDelete: SetNull)
+  department   Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  team         Team?              @relation(fields: [teamId],       references: [id], onDelete: SetNull)
+  functionalRoles UserFunctionalRole[]
 }
 
 model TenantMembership {
@@ -99,6 +113,106 @@ model MembershipRole {
 
   @@id([membershipId, roleId])
   @@index([roleId])
+}
+
+model Division {
+  id        String   @id
+  tenantId  String
+  code      String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  departments Department[]
+  users       User[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Department {
+  id         String   @id
+  tenantId   String
+  divisionId String
+  code       String
+  name       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  division Division @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  teams    Team[]
+  users    User[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([divisionId])
+}
+
+model Team {
+  id           String   @id
+  tenantId     String
+  departmentId String
+  code         String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  users      User[]
+  applications ApplicationTeam[]
+
+  @@unique([tenantId, code])
+  @@index([departmentId])
+}
+
+model Application {
+  id          String   @id
+  tenantId    String
+  code        String
+  name        String
+  criticality String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teams  ApplicationTeam[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model ApplicationTeam {
+  applicationId String
+  teamId        String
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  team        Team        @relation(fields: [teamId],        references: [id], onDelete: Cascade)
+
+  @@id([applicationId, teamId])
+  @@index([teamId])
+}
+
+model FunctionalRole {
+  id          String   @id
+  tenantId    String
+  code        String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users  UserFunctionalRole[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model UserFunctionalRole {
+  userId           String
+  functionalRoleId String
+  user User           @relation(fields: [userId],           references: [id], onDelete: Cascade)
+  role FunctionalRole @relation(fields: [functionalRoleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, functionalRoleId])
+  @@index([functionalRoleId])
 }
 
 model Session {
