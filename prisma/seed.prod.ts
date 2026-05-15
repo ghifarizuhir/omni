@@ -97,6 +97,31 @@ async function main() {
     `[seed.prod] RBAC catalog seeded (${rbacResult.permissions} permissions, ${rbacResult.roles} system roles)`,
   );
 
+  // 4b. Functional roles — tenant-scoped bypass roles for app scope enforcement.
+  //     See docs/superpowers/specs/2026-05-15-rbac-app-scope-design.md §5.2.
+  const {
+    FUNCTIONAL_ROLE_CODES,
+    FUNCTIONAL_ROLE_DEFINITIONS,
+  } = await import('../server/constants/functionalRoles');
+
+  for (const code of FUNCTIONAL_ROLE_CODES) {
+    const def = FUNCTIONAL_ROLE_DEFINITIONS[code];
+    await prisma.functionalRole.upsert({
+      where: { tenantId_code: { tenantId: tenant.id, code } },
+      update: { name: def.name, description: def.description },
+      create: {
+        id: `frole-${tenant.id}-${code.toLowerCase()}`,
+        tenantId: tenant.id,
+        code,
+        name: def.name,
+        description: def.description,
+      },
+    });
+  }
+  console.log(
+    `[seed.prod] functional roles upserted (${FUNCTIONAL_ROLE_CODES.length}): ${FUNCTIONAL_ROLE_CODES.join(', ')}`,
+  );
+
   // 5. MembershipRole — ensure the admin role is attached. After step 4 the
   //    role row exists with its full permission set already attached.
   const adminRole = await prisma.role.findUniqueOrThrow({

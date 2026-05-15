@@ -183,14 +183,24 @@ model Application {
   @@index([tenantId])
 }
 
+enum ApplicationTeamRole {
+  OWNER
+  CONTRIBUTOR
+  VIEWER
+}
+
 model ApplicationTeam {
   applicationId String
   teamId        String
+  role          ApplicationTeamRole @default(CONTRIBUTOR)
+  addedById     String?
+  addedAt       DateTime            @default(now())
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   team        Team        @relation(fields: [teamId],        references: [id], onDelete: Cascade)
 
   @@id([applicationId, teamId])
   @@index([teamId])
+  @@index([applicationId, role])
 }
 
 model FunctionalRole {
@@ -268,6 +278,7 @@ model ConfigurationItem {
   criticality         String
   ownerId             String?
   ownerTeamId         String
+  primaryApplicationId String?
   serviceId           String?
   health              String
   attributes          String // JSON
@@ -285,6 +296,7 @@ model ConfigurationItem {
 
   @@index([tenantId, type])
   @@index([tenantId, environment])
+  @@index([tenantId, primaryApplicationId])
 }
 
 model CIRelationship {
@@ -353,11 +365,13 @@ model Event {
   linkedIncidentId    String?
   payload             String    @default("{}") // JSON
   tags                String // JSON array
+  applicationId       String?
   tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, status])
   @@index([tenantId, severity])
   @@index([tenantId, firedAt])
+  @@index([tenantId, applicationId])
 }
 
 model MonitoringRule {
@@ -396,6 +410,7 @@ model Incident {
   linkedProblemPublicId String?
   affectedCIIds         String // JSON array (for filtering)
   affectedCIPublicIds   String // JSON array
+  applicationId         String?
   createdAt             DateTime
   updatedAt             DateTime
   tenant                Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -405,6 +420,7 @@ model Incident {
   @@index([tenantId, status])
   @@index([tenantId, isMajor])
   @@index([tenantId, linkedProblemPublicId])
+  @@index([tenantId, applicationId])
 }
 
 model IncidentComment {
@@ -443,14 +459,16 @@ model Service {
 }
 
 model Problem {
-  id        String   @id
-  publicId  String   @unique
-  tenantId  String
-  status    String
-  data      String
-  createdAt DateTime @default(now())
+  id            String   @id
+  publicId      String   @unique
+  tenantId      String
+  status        String
+  data          String
+  applicationId String?
+  createdAt     DateTime @default(now())
 
   @@index([tenantId, status])
+  @@index([tenantId, applicationId])
 }
 
 model Change {
@@ -461,19 +479,23 @@ model Change {
   riskLevel      String?
   data           String
   scheduledStart DateTime?
+  applicationId  String?
 
   @@index([tenantId, status])
   @@index([tenantId, scheduledStart])
+  @@index([tenantId, applicationId])
 }
 
 model Release {
-  id       String @id
-  publicId String @unique
-  tenantId String
-  status   String
-  data     String
+  id            String  @id
+  publicId      String  @unique
+  tenantId      String
+  status        String
+  data          String
+  applicationId String?
 
   @@index([tenantId, status])
+  @@index([tenantId, applicationId])
 }
 
 model Deployment {
@@ -500,13 +522,15 @@ model DeploymentLog {
 }
 
 model ServiceRequest {
-  id       String @id
-  publicId String @unique
-  tenantId String
-  status   String
-  data     String
+  id            String  @id
+  publicId      String  @unique
+  tenantId      String
+  status        String
+  data          String
+  applicationId String?
 
   @@index([tenantId, status])
+  @@index([tenantId, applicationId])
 }
 
 model RequestComment {
