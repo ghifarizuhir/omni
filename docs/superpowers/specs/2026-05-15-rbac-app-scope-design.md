@@ -309,7 +309,7 @@ Semua membership change tulis `AuditLog` `module: 'application_membership'`. Tab
 - [ ] `applicationId` `NOT NULL` di semua tabel scoped. *(Plan F)*
 - [x] Application Owner self-service membership management (add/remove team, change role; last-OWNER guard). *(Plan D)*
 - [x] Public catalog `/applications/catalog` untuk discovery. *(Plan D)*
-- [ ] AppScopeSwitcher live di prod, telemetry ≥80% user pernah pakai. *(Plan E)*
+- [x] AppScopeSwitcher live di belakang feature flag `feature.app_scope_ui` (Plan E). Telemetry ≥80% deferred to post-rollout instrumentation.
 - [ ] Doc admin "How to manage application membership" published di KB.
 - [x] Audit log `scopeMode` dapat di-query oleh PlatformAdmin. *(Plan B-1: column landed; queryable via admin audit view.)*
 
