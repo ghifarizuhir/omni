@@ -16,73 +16,22 @@ function assertModule(key: string): asserts key is ModuleKey {
 }
 
 async function countOne(m: ModuleKey, tenantId: string): Promise<{ total: number; orphan: number }> {
+  // applicationId / primaryApplicationId are NOT NULL since Plan F migration;
+  // orphan count is always 0 — the DB constraint makes it impossible.
   switch (m) {
-    case 'cmdb': {
-      const total = await prisma.configurationItem.count({ where: { tenantId } });
-      const orphan = await prisma.configurationItem.count({ where: { tenantId, primaryApplicationId: null } });
-      return { total, orphan };
-    }
-    case 'event': {
-      const total = await prisma.event.count({ where: { tenantId } });
-      const orphan = await prisma.event.count({ where: { tenantId, applicationId: null } });
-      return { total, orphan };
-    }
-    case 'incident': {
-      const total = await prisma.incident.count({ where: { tenantId } });
-      const orphan = await prisma.incident.count({ where: { tenantId, applicationId: null } });
-      return { total, orphan };
-    }
-    case 'change': {
-      const total = await prisma.change.count({ where: { tenantId } });
-      const orphan = await prisma.change.count({ where: { tenantId, applicationId: null } });
-      return { total, orphan };
-    }
-    case 'problem': {
-      const total = await prisma.problem.count({ where: { tenantId } });
-      const orphan = await prisma.problem.count({ where: { tenantId, applicationId: null } });
-      return { total, orphan };
-    }
-    case 'service_request': {
-      const total = await prisma.serviceRequest.count({ where: { tenantId } });
-      const orphan = await prisma.serviceRequest.count({ where: { tenantId, applicationId: null } });
-      return { total, orphan };
-    }
+    case 'cmdb': return { total: await prisma.configurationItem.count({ where: { tenantId } }), orphan: 0 };
+    case 'event': return { total: await prisma.event.count({ where: { tenantId } }), orphan: 0 };
+    case 'incident': return { total: await prisma.incident.count({ where: { tenantId } }), orphan: 0 };
+    case 'change': return { total: await prisma.change.count({ where: { tenantId } }), orphan: 0 };
+    case 'problem': return { total: await prisma.problem.count({ where: { tenantId } }), orphan: 0 };
+    case 'service_request': return { total: await prisma.serviceRequest.count({ where: { tenantId } }), orphan: 0 };
   }
 }
 
-async function listOrphans(m: ModuleKey, tenantId: string) {
-  switch (m) {
-    case 'cmdb':
-      return prisma.configurationItem.findMany({
-        where: { tenantId, primaryApplicationId: null }, take: 200,
-        select: { id: true, publicId: true, name: true, ownerTeamId: true, type: true, environment: true },
-      });
-    case 'event':
-      return prisma.event.findMany({
-        where: { tenantId, applicationId: null }, take: 200,
-        select: { id: true, publicId: true, title: true, severity: true, status: true, firedAt: true, affectedCIPublicIds: true },
-      });
-    case 'incident':
-      return prisma.incident.findMany({
-        where: { tenantId, applicationId: null }, take: 200,
-        select: { id: true, publicId: true, status: true, priority: true, severity: true, createdAt: true },
-      });
-    case 'change':
-      return prisma.change.findMany({
-        where: { tenantId, applicationId: null }, take: 200,
-        select: { id: true, publicId: true, status: true, riskLevel: true, scheduledStart: true },
-      });
-    case 'problem':
-      return prisma.problem.findMany({
-        where: { tenantId, applicationId: null }, take: 200,
-        select: { id: true, publicId: true, status: true },
-      });
-    case 'service_request':
-      return prisma.serviceRequest.findMany({
-        where: { tenantId, applicationId: null }, take: 200,
-        select: { id: true, publicId: true, status: true },
-      });
-  }
+async function listOrphans(_m: ModuleKey, _tenantId: string) {
+  // applicationId / primaryApplicationId are NOT NULL since Plan F migration;
+  // no orphan rows can exist — DB constraint guarantees it.
+  return [];
 }
 
 async function assignOne(m: ModuleKey, tenantId: string, publicId: string, applicationId: string): Promise<boolean> {

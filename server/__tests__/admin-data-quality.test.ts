@@ -30,13 +30,14 @@ async function getTenantId(): Promise<string> {
   return tenant.id;
 }
 
-async function createOrphanCI(tenantId: string, publicId: string) {
+async function createTestCI(tenantId: string, publicId: string) {
+  // primaryApplicationId is NOT NULL since Plan F; use the fixture app.
   return prisma.configurationItem.create({
     data: {
       id: `ci-${publicId}`,
       tenantId,
       publicId,
-      name: `Orphan CI ${publicId}`,
+      name: `Test CI ${publicId}`,
       type: 'server',
       environment: 'production',
       status: 'active',
@@ -45,7 +46,7 @@ async function createOrphanCI(tenantId: string, publicId: string) {
       health: 'healthy',
       attributes: '{}',
       tags: '[]',
-      primaryApplicationId: null,
+      primaryApplicationId: fix.appId,
     },
   });
 }
@@ -80,25 +81,22 @@ describe('GET /admin/data-quality/summary', () => {
 });
 
 describe('GET /admin/data-quality/:module', () => {
-  it('lists orphan CIs for the cmdb module', async () => {
-    const tenantId = await getTenantId();
-    await createOrphanCI(tenantId, 'dq-test-orphan-1');
-
+  it('returns empty array for cmdb module (no orphans possible since NOT NULL constraint)', async () => {
     const cookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
     const res = await request(app)
       .get('/api/v1/admin/data-quality/cmdb')
       .set('Cookie', cookie);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
-    const found = res.body.find((r: { publicId: string }) => r.publicId === 'dq-test-orphan-1');
-    expect(found).toBeDefined();
+    // primaryApplicationId is NOT NULL — no orphans can exist.
+    expect(res.body).toHaveLength(0);
   });
 });
 
 describe('PATCH /admin/data-quality/:module/:id', () => {
   it('assigns an application to an orphan CI', async () => {
     const tenantId = await getTenantId();
-    await createOrphanCI(tenantId, 'dq-test-patch-1');
+    await createTestCI(tenantId, 'dq-test-patch-1');
 
     const cookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
     const res = await request(app)
@@ -115,7 +113,7 @@ describe('PATCH /admin/data-quality/:module/:id', () => {
 
   it('returns 400 when applicationId does not exist in tenant', async () => {
     const tenantId = await getTenantId();
-    await createOrphanCI(tenantId, 'dq-test-patch-bad');
+    await createTestCI(tenantId, 'dq-test-patch-bad');
 
     const cookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
     const res = await request(app)
@@ -130,8 +128,8 @@ describe('PATCH /admin/data-quality/:module/:id', () => {
 describe('POST /admin/data-quality/:module/bulk', () => {
   it('bulk assigns multiple CIs to an application', async () => {
     const tenantId = await getTenantId();
-    await createOrphanCI(tenantId, 'dq-test-bulk-1');
-    await createOrphanCI(tenantId, 'dq-test-bulk-2');
+    await createTestCI(tenantId, 'dq-test-bulk-1');
+    await createTestCI(tenantId, 'dq-test-bulk-2');
 
     const cookie = await login(app, ADMIN_EMAIL, ADMIN_PASSWORD);
     const res = await request(app)

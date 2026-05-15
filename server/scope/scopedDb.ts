@@ -6,6 +6,7 @@ import { cmdbRepo } from '../repositories/cmdb';
 import { eventsRepo, monitoringRepo } from '../repositories/events';
 import { incidentsRepo } from '../repositories/incidents';
 import { problemsRepo, changesRepo, releasesRepo, requestsRepo } from '../repositories/docs';
+import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
 
 export type ScopeMode = 'member' | 'noc' | 'owner' | 'admin' | 'legacy' | 'bypass';
 
@@ -115,7 +116,7 @@ export interface ChangesScope {
   get(publicId: string): Promise<Awaited<ReturnType<typeof changesRepo.get>>>;
   create(
     requester: { id: string; name: string },
-    input: Parameters<typeof changesRepo.create>[2] & { applicationId?: string | null },
+    input: Omit<Parameters<typeof changesRepo.create>[2], 'applicationId'> & { applicationId?: string | null },
   ): Promise<{ result: Awaited<ReturnType<typeof changesRepo.create>>; scopeMode: ScopeMode }>;
   cancel(publicId: string, reason: string): Promise<{ result: Awaited<ReturnType<typeof changesRepo.cancel>>; scopeMode: ScopeMode } | null>;
   reschedule(
@@ -534,16 +535,9 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
         throw new ScopeViolationError({ module: 'change', action: 'create', applicationId: appId });
       }
       const mode = changeScopeMode(appId);
-      // Strip applicationId from the input for changesRepo.create (which doesn't accept it yet).
       const { applicationId: _appId, ...repoInput } = input;
-      const result = await changesRepo.create(ctx.tenantId, requester, repoInput);
-      // Backfill applicationId on the DB row if provided.
-      if (appId) {
-        await prisma.change.update({
-          where: { id: result.id },
-          data: { applicationId: appId },
-        });
-      }
+      const resolvedAppId = appId ?? await ensureUnassignedApp(ctx.tenantId);
+      const result = await changesRepo.create(ctx.tenantId, requester, { ...repoInput, applicationId: resolvedAppId });
       return { result, scopeMode: mode };
     },
 

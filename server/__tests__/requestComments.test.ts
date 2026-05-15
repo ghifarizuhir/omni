@@ -38,8 +38,15 @@ beforeAll(async () => {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
+  // Ensure an Unassigned app exists for tenant-demo so the NOT NULL constraint is satisfied.
+  const applicationId = await (async () => {
+    const existing = await prisma.application.findFirst({ where: { tenantId: 'tenant-demo', code: 'UNASSIGNED' } });
+    if (existing) return existing.id;
+    const created = await prisma.application.create({ data: { id: 'app-unassigned-tenant-demo', tenantId: 'tenant-demo', code: 'UNASSIGNED', name: 'Unassigned', criticality: null } });
+    return created.id;
+  })();
   await prisma.serviceRequest.create({
-    data: { id, publicId, tenantId: 'tenant-demo', status: 'submitted', data },
+    data: { id, publicId, tenantId: 'tenant-demo', status: 'submitted', data, applicationId },
   });
   testPublicId = publicId;
 });

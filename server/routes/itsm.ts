@@ -64,8 +64,10 @@ itsmRouter.post('/changes', requirePermission('change.write'), asyncHandler(asyn
   } catch (e) {
     if (e instanceof ScopeViolationError) {
       applyEnforcement(e, res);
-      const { applicationId: _appId, ...repoInput } = body;
-      const change = await changesRepo.create(req.tenantId, requester, repoInput);
+      const { applicationId: bodyAppId, ...repoInput } = body;
+      const { ensureUnassignedApp } = await import('../../prisma/preflightScopeNotNull');
+      const applicationId = bodyAppId ?? await ensureUnassignedApp(req.tenantId);
+      const change = await changesRepo.create(req.tenantId, requester, { ...repoInput, applicationId });
       await audit(req, { action: 'create', resourceKind: 'Change', resourceId: change.id, after: change, scopeMode: 'bypass' });
       return res.status(201).json(change);
     }

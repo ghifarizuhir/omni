@@ -65,7 +65,7 @@ export const changesRepo = {
     input: Pick<Change,
       'title' | 'description' | 'justification' | 'type' | 'risk' | 'impact'
       | 'plannedStart' | 'plannedEnd' | 'implementationPlan' | 'rollbackPlan' | 'affectedCIIds'
-    >,
+    > & { applicationId: string },
   ): Promise<Change> {
     const now = new Date();
     const id = `chg-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -114,6 +114,7 @@ export const changesRepo = {
         riskLevel: input.risk,
         scheduledStart: new Date(input.plannedStart),
         data: JSON.stringify(change),
+        applicationId: input.applicationId,
       },
     });
     return change;
