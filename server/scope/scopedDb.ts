@@ -146,11 +146,11 @@ export interface ServiceRequestsScope {
     decision: 'approved' | 'rejected',
     note?: string,
   ): Promise<{ result: Awaited<ReturnType<typeof requestsRepo.decideStep>>; scopeMode: ScopeMode } | null>;
-  addComment(
+  appendComment(
     publicId: string,
     author: { id: string; name: string },
     body: string,
-  ): Promise<{ result: Awaited<ReturnType<typeof requestsRepo.addComment>>; scopeMode: ScopeMode } | null>;
+  ): Promise<{ result: Awaited<ReturnType<typeof requestsRepo.appendComment>>; scopeMode: ScopeMode } | null>;
   cancel(
     publicId: string,
     reason: string,
@@ -634,13 +634,13 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
       return { result, scopeMode: srScopeMode(appId) };
     },
 
-    async addComment(publicId, author, body) {
+    async appendComment(publicId, author, body) {
       const appId = await loadSrAppId(publicId);
       if (appId === undefined) return null;
       if (appId !== null && !srCanWrite(appId)) {
         throw new ScopeViolationError({ module: 'service_request', action: 'update', applicationId: appId });
       }
-      const result = await requestsRepo.addComment(ctx.tenantId, publicId, author, body);
+      const result = await requestsRepo.appendComment(ctx.tenantId, publicId, author, body);
       return { result, scopeMode: srScopeMode(appId) };
     },
 

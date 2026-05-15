@@ -14,7 +14,10 @@ import { applyEnforcement } from '../scope/enforcement';
 export const monitoringRouter = Router();
 
 /** Convenience accessor — `req.scoped` is attached by withScopedDb middleware. */
-const scoped = (req: Request) => req.scoped;
+function scoped(req: Request) {
+  if (!req.scoped) throw new HttpError(500, 'scope not initialized');
+  return req.scoped;
+}
 
 monitoringRouter.get('/monitoring/rules', requirePermission('rule.read'), asyncHandler(async (req, res) => {
   res.json(await scoped(req).monitoring.listRules());

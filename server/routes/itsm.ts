@@ -282,11 +282,8 @@ itsmRouter.post(
     const body = requestCommentSchema.parse(req.body);
     const author = await getActor(req);
     try {
-      const wrapped = await scoped(req).serviceRequests.addComment(req.params.publicId, author, body.body);
-      if (!wrapped) throw new HttpError(404, 'Request not found');
-      if (!wrapped.result) throw new HttpError(404, 'Request not found');
-      // Also persist to the RequestComment table for structured querying.
-      const dbComment = await requestsRepo.appendComment(req.tenantId, req.params.publicId, author, body.body);
+      const wrapped = await scoped(req).serviceRequests.appendComment(req.params.publicId, author, body.body);
+      if (!wrapped || !wrapped.result) throw new HttpError(404, 'Request not found');
       await audit(req, {
         action: 'comment',
         resourceKind: 'ServiceRequest',
@@ -294,7 +291,7 @@ itsmRouter.post(
         after: wrapped.result.comment,
         scopeMode: wrapped.scopeMode,
       });
-      res.status(201).json({ ...wrapped.result.comment, dbId: dbComment?.dbCommentId });
+      res.status(201).json({ ...wrapped.result.comment, dbId: wrapped.result.dbCommentId });
     } catch (e) {
       if (e instanceof ScopeViolationError) {
         applyEnforcement(e, res);
