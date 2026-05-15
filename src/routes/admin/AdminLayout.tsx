@@ -23,9 +23,17 @@ export const AdminLayout: React.FC = () => {
   const session = useAuthSession();
   const location = useLocation();
 
-  // Still loading session or persona list — show nothing yet to avoid flicker.
-  if (session === null || user === null) {
-    return <div className="text-sm text-ois-text-muted p-8">Loading…</div>;
+  // Still loading session or persona list. Distinguish the two so a stuck
+  // loading state is diagnosable instead of an opaque spinner.
+  if (session === null) {
+    return <div className="text-sm text-ois-text-muted p-8">Loading session…</div>;
+  }
+  if (user === null) {
+    return (
+      <div className="text-sm text-ois-text-muted p-8">
+        Loading user persona… If this persists, the RBAC org tree did not load (check browser console for `[rbac] … failed` errors).
+      </div>
+    );
   }
 
   // Gate 1 — actual session: does the logged-in account have system.admin?

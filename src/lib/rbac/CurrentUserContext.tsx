@@ -64,17 +64,32 @@ export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // mock import is gone as part of M6.1 leakage sweep.
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      rbacService.users() as Promise<RbacUser[]>,
-      rbacService.divisions() as Promise<Division[]>,
-      rbacService.departments() as Promise<Department[]>,
-      rbacService.teams() as Promise<RbacTeam[]>,
-      rbacService.applications() as Promise<Application[]>,
-      rbacService.roles() as Promise<FunctionalRole[]>,
-      requestsService.catalog() as Promise<CatalogItem[]>,
-      releasesService.list() as Promise<Release[]>,
-    ]).then(([usersResp, divs, depts, tms, apps, roles, cat, rels]) => {
+    const calls = [
+      ['users', () => rbacService.users() as Promise<RbacUser[]>] as const,
+      ['divisions', () => rbacService.divisions() as Promise<Division[]>] as const,
+      ['departments', () => rbacService.departments() as Promise<Department[]>] as const,
+      ['teams', () => rbacService.teams() as Promise<RbacTeam[]>] as const,
+      ['applications', () => rbacService.applications() as Promise<Application[]>] as const,
+      ['roles', () => rbacService.roles() as Promise<FunctionalRole[]>] as const,
+      ['catalog', () => requestsService.catalog() as Promise<CatalogItem[]>] as const,
+      ['releases', () => releasesService.list() as Promise<Release[]>] as const,
+    ];
+    Promise.allSettled(calls.map(([, fn]) => fn())).then(results => {
       if (cancelled) return;
+      const get = <T,>(i: number): T | null => {
+        const r = results[i];
+        if (r.status === 'fulfilled') return r.value as T;
+        console.error(`[rbac] ${calls[i][0]} failed:`, r.reason);
+        return null;
+      };
+      const usersResp = get<RbacUser[]>(0) ?? [];
+      const divs     = get<Division[]>(1) ?? [];
+      const depts    = get<Department[]>(2) ?? [];
+      const tms      = get<RbacTeam[]>(3) ?? [];
+      const apps     = get<Application[]>(4) ?? [];
+      const roles    = get<FunctionalRole[]>(5) ?? [];
+      const cat      = get<CatalogItem[]>(6) ?? [];
+      const rels     = get<Release[]>(7) ?? [];
       setUsers(usersResp);
       setDivisions(divs);
       setDepartments(depts);
@@ -84,9 +99,6 @@ export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ c
       registerRbacOrgTree({ applications: apps, teams: tms, departments: depts, divisions: divs });
       registerCatalogItems(cat);
       registerReleases(rels);
-    }).catch(() => {
-      // Anonymous sessions hit 401 and the UI redirects to /login via
-      // RequireAuth — leave state empty until the user signs in.
     });
     return () => { cancelled = true; };
   }, []);
