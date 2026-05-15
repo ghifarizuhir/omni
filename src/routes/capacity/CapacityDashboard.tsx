@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardBody } from '@/src/components/ui/Card';
 import { KPICard } from '@/src/components/ui/KPICard';
@@ -41,20 +41,41 @@ export default function CapacityDashboard() {
   const urgentRecs = mockScalingRecommendations.filter(r => r.priority === 'urgent');
   const highRecs = mockScalingRecommendations.filter(r => r.priority === 'high' && r.status !== 'dismissed');
 
+  const cpuMetrics = useMemo(() => mockCapacityMetrics.filter(m => m.resourceType === 'cpu'), [mockCapacityMetrics]);
+  const memoryMetrics = useMemo(() => mockCapacityMetrics.filter(m => m.resourceType === 'memory'), [mockCapacityMetrics]);
+
+  const avgCpuPct = useMemo(() => {
+    if (!cpuMetrics.length) return null;
+    return Math.round(cpuMetrics.reduce((s, m) => s + m.utilizationPercent, 0) / cpuMetrics.length);
+  }, [cpuMetrics]);
+
+  const avgMemoryPct = useMemo(() => {
+    if (!memoryMetrics.length) return null;
+    return Math.round(memoryMetrics.reduce((s, m) => s + m.utilizationPercent, 0) / memoryMetrics.length);
+  }, [memoryMetrics]);
+
+  const { data: forecastsData } = useResource(() => capacityService.forecasts(), []);
+  const forecasts = forecastsData ?? [];
+
+  const forecastAlerts = useMemo(
+    () => forecasts.filter(f => typeof f.daysUntilBreach === 'number' && f.daysUntilBreach <= 14).length,
+    [forecasts],
+  );
+
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* KPI Row */}
       <div className="grid grid-cols-4 gap-4">
         <KPICard
           label="Avg CPU (24h)"
-          value="62%"
+          value={avgCpuPct !== null ? `${avgCpuPct}%` : '—'}
           trend={8}
           trendLabel="vs prev week"
           trendBetter="low"
         />
         <KPICard
           label="Avg Memory (24h)"
-          value="71%"
+          value={avgMemoryPct !== null ? `${avgMemoryPct}%` : '—'}
           trend={3}
           trendLabel="vs prev week"
           trendBetter="low"
@@ -66,7 +87,7 @@ export default function CapacityDashboard() {
         />
         <KPICard
           label="Forecast Alerts"
-          value="4"
+          value={forecastAlerts}
           subDetail="Within 14 days"
         />
       </div>

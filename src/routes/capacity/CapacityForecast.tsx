@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { Card, CardBody } from '@/src/components/ui/Card';
@@ -19,6 +19,38 @@ export default function CapacityForecast() {
   const mockCapacityMetrics = metricsData ?? [];
   const mockCapacityForecasts = forecastsData ?? [];
   const imminentForecastsList = imminentData ?? [];
+
+  const confidenceToAccuracyPct = (c: string | undefined) => {
+    if (c === 'high') return 90;
+    if (c === 'medium') return 75;
+    if (c === 'low') return 55;
+    return null;
+  };
+
+  const methodAccuracy = useMemo(() => {
+    const methods = ['linear', 'seasonal', 'arima'] as const;
+    return methods.reduce(
+      (acc, method) => {
+        const group = mockCapacityForecasts.filter(f => f.predictionMethod === method);
+        if (!group.length) { acc[method] = null; return acc; }
+        const avg = Math.round(
+          group.reduce((s, f) => s + (confidenceToAccuracyPct(f.confidence) ?? 0), 0) / group.length,
+        );
+        acc[method] = avg;
+        return acc;
+      },
+      {} as Record<string, number | null>,
+    );
+  }, [mockCapacityForecasts]);
+
+  const topDriverForecasts = useMemo(
+    () =>
+      [...mockCapacityForecasts]
+        .filter(f => typeof f.daysUntilBreach === 'number')
+        .sort((a, b) => (a.daysUntilBreach ?? Infinity) - (b.daysUntilBreach ?? Infinity))
+        .slice(0, 3),
+    [mockCapacityForecasts],
+  );
 
   const handleGenerateForecast = () => {
     if (isGenerating) return;
@@ -192,15 +224,21 @@ export default function CapacityForecast() {
               <div className="space-y-1.5 text-xs text-gray-600 font-mono">
                 <div className="flex justify-between">
                   <span>Linear</span>
-                  <span className="text-green-700 font-semibold">87% accurate</span>
+                  <span className={methodAccuracy['linear'] !== null ? 'text-green-700 font-semibold' : 'text-gray-400'}>
+                    {methodAccuracy['linear'] !== null ? `${methodAccuracy['linear']}% accurate` : '—'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Seasonal</span>
-                  <span className="text-amber-600 font-semibold">72% accurate</span>
+                  <span className={methodAccuracy['seasonal'] !== null ? 'text-amber-600 font-semibold' : 'text-gray-400'}>
+                    {methodAccuracy['seasonal'] !== null ? `${methodAccuracy['seasonal']}% accurate` : '—'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>ARIMA</span>
-                  <span className="text-green-700 font-semibold">91% accurate (slow)</span>
+                  <span className={methodAccuracy['arima'] !== null ? 'text-green-700 font-semibold' : 'text-gray-400'}>
+                    {methodAccuracy['arima'] !== null ? `${methodAccuracy['arima']}% accurate (slow)` : '—'}
+                  </span>
                 </div>
               </div>
               <p className="text-xs text-gray-500 pt-1">Default method: Linear</p>
@@ -211,20 +249,16 @@ export default function CapacityForecast() {
           <Card>
             <CardBody className="p-4 space-y-3">
               <h3 className="text-sm font-semibold text-gray-800">Top Drivers</h3>
-              <p className="text-xs text-gray-500 font-medium">Recent capacity changes:</p>
+              <p className="text-xs text-gray-500 font-medium">Imminent breaches:</p>
               <ul className="space-y-1.5 text-xs text-gray-600">
-                <li className="flex items-start gap-1.5">
-                  <span className="text-gray-400 shrink-0">•</span>
-                  <span>Order traffic <span className="font-semibold text-gray-800">+18% MoM</span></span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-gray-400 shrink-0">•</span>
-                  <span>Payment QPS <span className="font-semibold text-gray-800">+12% MoM</span></span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-gray-400 shrink-0">•</span>
-                  <span>Search ingestion <span className="font-semibold text-gray-800">+8% MoM</span></span>
-                </li>
+                {topDriverForecasts.length > 0 ? topDriverForecasts.map(f => (
+                  <li key={f.id} className="flex items-start gap-1.5">
+                    <span className="text-gray-400 shrink-0">•</span>
+                    <span>{f.metricName} — breach in <span className="font-semibold text-gray-800">{f.daysUntilBreach ?? '—'} days</span></span>
+                  </li>
+                )) : (
+                  <li className="text-gray-400">No imminent breaches</li>
+                )}
               </ul>
             </CardBody>
           </Card>
