@@ -6,8 +6,9 @@ import { cmdbRepo } from '../repositories/cmdb';
 import { eventsRepo, monitoringRepo } from '../repositories/events';
 import { incidentsRepo } from '../repositories/incidents';
 import { problemsRepo, changesRepo, releasesRepo, requestsRepo } from '../repositories/docs';
+import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
 
-export type ScopeMode = 'member' | 'noc' | 'owner' | 'admin' | 'legacy' | 'bypass';
+export type ScopeMode = 'member' | 'noc' | 'owner' | 'admin';
 
 export interface CmdbScope {
   listCIs(): Promise<Awaited<ReturnType<typeof cmdbRepo.listCIs>>>;
@@ -21,8 +22,8 @@ export interface CmdbScope {
    * (mirrors cmdbRepo.updateCI behaviour).
    */
   updateCI(publicId: string, patch: Parameters<typeof cmdbRepo.updateCI>[2]): Promise<{ result: Awaited<ReturnType<typeof cmdbRepo.updateCI>>; scopeMode: ScopeMode } | null>;
-  canWriteApp(appId: string | null): boolean;
-  resolveScopeMode(appId: string | null): ScopeMode | null;
+  canWriteApp(appId: string): boolean;
+  resolveScopeMode(appId: string): ScopeMode | null;
 }
 
 export interface EventsScope {
@@ -115,7 +116,7 @@ export interface ChangesScope {
   get(publicId: string): Promise<Awaited<ReturnType<typeof changesRepo.get>>>;
   create(
     requester: { id: string; name: string },
-    input: Parameters<typeof changesRepo.create>[2] & { applicationId?: string | null },
+    input: Omit<Parameters<typeof changesRepo.create>[2], 'applicationId'> & { applicationId?: string | null },
   ): Promise<{ result: Awaited<ReturnType<typeof changesRepo.create>>; scopeMode: ScopeMode }>;
   cancel(publicId: string, reason: string): Promise<{ result: Awaited<ReturnType<typeof changesRepo.cancel>>; scopeMode: ScopeMode } | null>;
   reschedule(
@@ -197,18 +198,17 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     ctx.appMemberships.filter((m) => m.role === 'OWNER').map((m) => m.appId),
   );
 
-  function canWriteApp(appId: string | null): boolean {
+  function canWriteApp(appId: string): boolean {
     if (isPlatformAdmin) return true;
-    if (appId === null) return false; // only PLATFORM_ADMIN may write null
     if (POLICY.cmdb.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
     return writableApps.has(appId);
   }
 
-  function resolveScopeMode(appId: string | null): ScopeMode | null {
+  function resolveScopeMode(appId: string): ScopeMode | null {
     if (!canWriteApp(appId)) return null;
     if (isPlatformAdmin) return 'admin';
     if (POLICY.cmdb.writeBypass.some((r) => ctx.functionalRoles.includes(r) && r !== 'PLATFORM_ADMIN')) return 'noc';
-    if (appId && ownerApps.has(appId)) return 'owner';
+    if (ownerApps.has(appId)) return 'owner';
     return 'member';
   }
 
@@ -225,13 +225,11 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
         select: { primaryApplicationId: true },
       });
       if (!raw) return null;
-      const appId = raw.primaryApplicationId ?? null;
-      // NULL appId is legacy/unbackfilled — skip enforcement.
-      if (appId !== null && !canWriteApp(appId)) {
+      const appId = raw.primaryApplicationId;
+      if (!canWriteApp(appId)) {
         throw new ScopeViolationError({ module: 'cmdb', action: 'update', applicationId: appId });
       }
-      // appId === null → legacy/unbackfilled row, no scope to assign.
-      const mode: ScopeMode = appId === null ? 'legacy' : (resolveScopeMode(appId) ?? 'admin');
+      const mode: ScopeMode = resolveScopeMode(appId) ?? 'admin';
       const result = await cmdbRepo.updateCI(ctx.tenantId, publicId, patch);
       return { result, scopeMode: mode };
     },
@@ -241,17 +239,16 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
 
   const isEventReadBypass = POLICY.event.readBypass.some((r) => ctx.functionalRoles.includes(r));
 
-  function eventCanWrite(appId: string | null): boolean {
+  function eventCanWrite(appId: string): boolean {
     if (isPlatformAdmin) return true;
-    if (appId === null) return false;
     if (POLICY.event.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
     return writableApps.has(appId);
   }
 
-  function eventScopeMode(appId: string | null): ScopeMode {
+  function eventScopeMode(appId: string): ScopeMode {
     if (isPlatformAdmin) return 'admin';
     if (POLICY.event.writeBypass.some((r) => ctx.functionalRoles.includes(r) && r !== 'PLATFORM_ADMIN')) return 'noc';
-    if (appId && ownerApps.has(appId)) return 'owner';
+    if (ownerApps.has(appId)) return 'owner';
     return 'member';
   }
 
@@ -259,10 +256,10 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     async list(filter) {
       const rows = await eventsRepo.list(ctx.tenantId, filter);
       if (isEventReadBypass) return rows;
-      // Post-filter: keep legacy (null applicationId) or writable/owned apps.
+      // Post-filter: keep writable/owned apps.
       return rows.filter((e) => {
         const appId = (e as { applicationId?: string | null }).applicationId ?? null;
-        if (appId === null) return true;
+        if (!appId) return false;
         return writableApps.has(appId) || ownerApps.has(appId);
       });
     },
@@ -274,17 +271,17 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
         select: { applicationId: true },
       });
       if (!raw) return null;
-      const appId = raw.applicationId ?? null;
-      if (appId !== null && !eventCanWrite(appId)) {
+      const appId = raw.applicationId;
+      if (!eventCanWrite(appId)) {
         throw new ScopeViolationError({ module: 'event', action: 'update', applicationId: appId });
       }
-      const mode: ScopeMode = appId === null ? 'legacy' : eventScopeMode(appId);
+      const mode: ScopeMode = eventScopeMode(appId);
       const result = await eventsRepo.setStatus(ctx.tenantId, publicId, patch);
       return { result, scopeMode: mode };
     },
     async ingest(input) {
       const { id, publicId } = await eventsRepo.ingest(ctx.tenantId, input);
-      return { id, publicId, scopeMode: 'legacy' };
+      return { id, publicId, scopeMode: 'admin' as const };
     },
   };
 
@@ -300,10 +297,9 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   }
 
   function incidentScopeMode(appId: string | null, opts: { allowNoc?: boolean } = { allowNoc: true }): ScopeMode {
-    if (appId === null) return 'legacy';
     if (isPlatformAdmin) return 'admin';
     if (opts.allowNoc && POLICY.incident.writeBypass.some((r) => ctx.functionalRoles.includes(r) && r !== 'PLATFORM_ADMIN')) return 'noc';
-    if (ownerApps.has(appId)) return 'owner';
+    if (appId && ownerApps.has(appId)) return 'owner';
     return 'member';
   }
 
@@ -503,16 +499,15 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
 
   function changeCanWrite(appId: string | null): boolean {
     if (isPlatformAdmin) return true;
-    if (appId === null) return true; // legacy — allow
+    if (appId === null) return false;
     if (POLICY.change.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
     return writableApps.has(appId);
   }
 
   function changeScopeMode(appId: string | null): ScopeMode {
-    if (appId === null) return 'legacy';
     if (isPlatformAdmin) return 'admin';
     if (POLICY.change.writeBypass.some((r) => ctx.functionalRoles.includes(r) && r !== 'PLATFORM_ADMIN')) return 'noc';
-    if (ownerApps.has(appId)) return 'owner';
+    if (appId && ownerApps.has(appId)) return 'owner';
     return 'member';
   }
 
@@ -534,16 +529,9 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
         throw new ScopeViolationError({ module: 'change', action: 'create', applicationId: appId });
       }
       const mode = changeScopeMode(appId);
-      // Strip applicationId from the input for changesRepo.create (which doesn't accept it yet).
       const { applicationId: _appId, ...repoInput } = input;
-      const result = await changesRepo.create(ctx.tenantId, requester, repoInput);
-      // Backfill applicationId on the DB row if provided.
-      if (appId) {
-        await prisma.change.update({
-          where: { id: result.id },
-          data: { applicationId: appId },
-        });
-      }
+      const resolvedAppId = appId ?? await ensureUnassignedApp(ctx.tenantId);
+      const result = await changesRepo.create(ctx.tenantId, requester, { ...repoInput, applicationId: resolvedAppId });
       return { result, scopeMode: mode };
     },
 
@@ -592,16 +580,15 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
 
   function srCanWrite(appId: string | null): boolean {
     if (isPlatformAdmin) return true;
-    if (appId === null) return true; // legacy
+    if (appId === null) return false;
     if (POLICY.service_request.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
     return writableApps.has(appId);
   }
 
   function srScopeMode(appId: string | null): ScopeMode {
-    if (appId === null) return 'legacy';
     if (isPlatformAdmin) return 'admin';
     if (POLICY.service_request.writeBypass.some((r) => ctx.functionalRoles.includes(r) && r !== 'PLATFORM_ADMIN')) return 'noc';
-    if (ownerApps.has(appId)) return 'owner';
+    if (appId && ownerApps.has(appId)) return 'owner';
     return 'member';
   }
 

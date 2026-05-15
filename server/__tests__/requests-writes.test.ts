@@ -53,6 +53,7 @@ async function cloneFreshRequest(): Promise<{ publicId: string; stepId: string }
       tenantId: original.tenantId,
       status: original.status,
       data: JSON.stringify(clone),
+      applicationId: original.applicationId,
     },
   });
   return { publicId, stepId: fixture.stepId };

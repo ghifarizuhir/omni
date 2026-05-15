@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Event, EventStatus, MonitoringRule, AlertRoute, Severity } from '../../src/types';
 import { prisma } from '../db';
+import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
 
 const parseArr = (s: string): string[] => { try { return JSON.parse(s); } catch { return []; } };
 const parseObj = <T,>(s: string, fb: T): T => { try { return JSON.parse(s); } catch { return fb; } };
@@ -98,6 +99,7 @@ export const eventsRepo = {
       affectedCIIds: string[]; affectedCIPublicIds: string[];
       correlationKey?: string;
       payload: Record<string, unknown>; tags: string[];
+      applicationId?: string | null;
     },
   ): Promise<{ id: string; publicId: string }> {
     const now = new Date();
@@ -125,7 +127,7 @@ export const eventsRepo = {
         lastSeenAt: now,
         payload: JSON.stringify(input.payload),
         tags: JSON.stringify(input.tags),
-        applicationId: null,
+        applicationId: input.applicationId ?? await ensureUnassignedApp(tenantId),
       },
     });
     return { id, publicId };

@@ -53,6 +53,7 @@ async function cloneRequest(
       tenantId: original.tenantId,
       status: clone.status,
       data: JSON.stringify(clone),
+      applicationId: original.applicationId,
     },
   });
   return { publicId, internalId: id, stepId: fixture.stepId };

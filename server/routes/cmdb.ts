@@ -4,9 +4,6 @@ import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qString, required } from '../util';
 import { audit } from '../audit';
 import { updateCISchema } from '../../src/shared/schemas/ci';
-import { ScopeViolationError } from '../scope/errors';
-import { applyEnforcement } from '../scope/enforcement';
-import { cmdbRepo } from '../repositories/cmdb';
 
 export const cmdbRouter = Router();
 
@@ -34,42 +31,20 @@ cmdbRouter.get('/cis/:ciId/relationships', requirePermission('cmdb.read'), async
 }));
 
 // M6.11 (B1.3) — PATCH /cis/:publicId. Partial update guarded by `cmdb.write`.
-// Routes through req.scoped so scope enforcement (off/warn/enforce) applies.
-// ScopeViolationError is caught at the route boundary; applyEnforcement decides
-// whether to 403 (enforce), warn (warn), or silently allow (off).
+// ScopeViolationError propagates to the global error handler → 403.
 cmdbRouter.patch('/cis/:publicId', requirePermission('cmdb.write'), asyncHandler(async (req, res) => {
   const body = updateCISchema.parse(req.body);
-  try {
-    const wrapped = await scoped(req).cmdb.updateCI(req.params.publicId, body);
-    if (!wrapped) throw new HttpError(404, 'CI not found');
-    await audit(req, {
-      action: 'update',
-      resourceKind: 'ConfigurationItem',
-      resourceId: wrapped.result!.internalId,
-      before: wrapped.result!.before,
-      after: wrapped.result!.after,
-      scopeMode: wrapped.scopeMode,
-    });
-    res.json(wrapped.result!.after);
-  } catch (e) {
-    if (e instanceof ScopeViolationError) {
-      // applyEnforcement throws in 'enforce' mode; in 'warn'/'off' it returns.
-      applyEnforcement(e, res);
-      // Bypass: perform the update via the raw repo (scope already checked intent).
-      const result = await cmdbRepo.updateCI(req.tenantId, req.params.publicId, body);
-      if (!result) throw new HttpError(404, 'CI not found');
-      await audit(req, {
-        action: 'update',
-        resourceKind: 'ConfigurationItem',
-        resourceId: result.internalId,
-        before: result.before,
-        after: result.after,
-        scopeMode: 'bypass',
-      });
-      return res.json(result.after);
-    }
-    throw e;
-  }
+  const wrapped = await scoped(req).cmdb.updateCI(req.params.publicId, body);
+  if (!wrapped) throw new HttpError(404, 'CI not found');
+  await audit(req, {
+    action: 'update',
+    resourceKind: 'ConfigurationItem',
+    resourceId: wrapped.result!.internalId,
+    before: wrapped.result!.before,
+    after: wrapped.result!.after,
+    scopeMode: wrapped.scopeMode,
+  });
+  res.json(wrapped.result!.after);
 }));
 
 cmdbRouter.get('/services', requirePermission('service.read'), asyncHandler(async (req, res) => {

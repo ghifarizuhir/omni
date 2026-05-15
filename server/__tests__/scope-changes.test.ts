@@ -56,7 +56,6 @@ async function loginAs(handle: 'member-a' | 'member-b' | 'noc' | 'admin') {
 
 describe('Changes scope — POST /changes', () => {
   it('1. memberA (contributor of the app) succeeds in enforce mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
     const cookie = await loginAs('member-a');
     const res = await request(app)
       .post('/api/v1/changes')
@@ -66,7 +65,6 @@ describe('Changes scope — POST /changes', () => {
   });
 
   it('2. memberB (outsider) gets 403 in enforce mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
     const cookie = await loginAs('member-b');
     const res = await request(app)
       .post('/api/v1/changes')
@@ -77,7 +75,6 @@ describe('Changes scope — POST /changes', () => {
   });
 
   it('3. platformAdmin succeeds in enforce mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'enforce';
     const cookie = await loginAs('admin');
     const res = await request(app)
       .post('/api/v1/changes')
@@ -86,25 +83,4 @@ describe('Changes scope — POST /changes', () => {
     expect(res.status).toBe(201);
   });
 
-  it('4. memberB gets 201 + X-Scope-Warning in warn mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'warn';
-    const cookie = await loginAs('member-b');
-    const res = await request(app)
-      .post('/api/v1/changes')
-      .set('Cookie', cookie)
-      .send({ ...CHANGE_BODY, applicationId: fx.appId });
-    expect(res.status).toBe(201);
-    expect(res.headers['x-scope-warning']).toMatch(/^change\.create:/);
-  });
-
-  it('5. memberB succeeds silently in off mode', async () => {
-    process.env.SCOPE_ENFORCEMENT_MODE = 'off';
-    const cookie = await loginAs('member-b');
-    const res = await request(app)
-      .post('/api/v1/changes')
-      .set('Cookie', cookie)
-      .send({ ...CHANGE_BODY, applicationId: fx.appId });
-    expect(res.status).toBe(201);
-    expect(res.headers['x-scope-warning']).toBeUndefined();
-  });
 });
