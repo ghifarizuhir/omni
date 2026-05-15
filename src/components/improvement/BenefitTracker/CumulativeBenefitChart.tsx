@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -9,45 +9,77 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
-import { BenefitMeasurement } from '../../../types/improvement';
+import { BenefitMeasurement, ImprovementInitiative } from '../../../types/improvement';
 import { formatBenefitUSD } from '../../../lib/constants';
 
 interface CumulativeBenefitChartProps {
   measurements: BenefitMeasurement[];
+  initiatives?: ImprovementInitiative[];
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-const MONTH_DATES = [
-  new Date('2026-01-01'),
-  new Date('2026-02-01'),
-  new Date('2026-03-01'),
-  new Date('2026-04-01'),
-  new Date('2026-05-01'),
-];
+const MONTHS_TO_SHOW = 6;
 
-const ANNUAL_PROJECTED = 1_290_000;
+/** Start-of-month for the given anchor date. */
+function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
 
-export function CumulativeBenefitChart({ measurements: measurementsProp }: CumulativeBenefitChartProps) {
-  // Sort by date
-  const sorted = [...measurementsProp].sort(
-    (a, b) => new Date(a.measurementDate).getTime() - new Date(b.measurementDate).getTime(),
-  );
+/** Build a list of {label, end} buckets spanning the last N months ending this month. */
+function buildBuckets(now: Date, n: number): { label: string; end: Date }[] {
+  const buckets: { label: string; end: Date }[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const monthStart = startOfMonth(new Date(now.getFullYear(), now.getMonth() - i, 1));
+    const end = startOfMonth(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1));
+    buckets.push({
+      label: monthStart.toLocaleDateString('en-US', { month: 'short' }),
+      end,
+    });
+  }
+  return buckets;
+}
 
-  // Build cumulative actual per month
-  const chartData = MONTHS.map((label, idx) => {
-    const monthEnd = idx < 4 ? MONTH_DATES[idx + 1] : new Date('2026-06-01');
-    const cumulativeActual = sorted
-      .filter((m) => new Date(m.measurementDate) < monthEnd)
-      .reduce((s, m) => s + m.measuredValueUSD, 0);
+export function CumulativeBenefitChart({ measurements, initiatives = [] }: CumulativeBenefitChartProps) {
+  const chartData = useMemo(() => {
+    const buckets = buildBuckets(new Date(), MONTHS_TO_SHOW);
 
-    const projected = Math.round((ANNUAL_PROJECTED / 12) * (idx + 1));
+    // Projected: sum of estimated annual benefit across initiatives, prorated
+    // evenly across the buckets and accumulated. Falls back to undefined when
+    // no initiatives exist so the projected line simply doesn't render.
+    const annualProjected = initiatives.reduce(
+      (s, i) => s + (i.estimatedBenefit?.annualValueUSD ?? 0),
+      0,
+    );
 
-    return {
-      label,
-      actual: cumulativeActual || undefined,
-      projected,
-    };
-  });
+    const sorted = [...measurements].sort(
+      (a, b) => new Date(a.measurementDate).getTime() - new Date(b.measurementDate).getTime(),
+    );
+
+    return buckets.map((b, idx) => {
+      const cumulativeActual = sorted
+        .filter((m) => new Date(m.measurementDate) < b.end)
+        .reduce((s, m) => s + m.measuredValueUSD, 0);
+
+      const projected = annualProjected > 0
+        ? Math.round((annualProjected / 12) * (idx + 1))
+        : undefined;
+
+      return {
+        label: b.label,
+        actual: cumulativeActual || undefined,
+        projected,
+      };
+    });
+  }, [measurements, initiatives]);
+
+  const empty = chartData.every(d => !d.actual && !d.projected);
+
+  if (empty) {
+    return (
+      <div className="h-[260px] flex items-center justify-center text-xs text-ois-text-muted">
+        No benefit measurements or initiative projections yet.
+      </div>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height={260}>

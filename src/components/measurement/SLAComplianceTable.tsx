@@ -1,22 +1,20 @@
 import React from 'react';
 import { cn } from '@/src/lib/utils';
 
-interface SLAComplianceTableProps {
-  timeRange: string;
+export interface SLAComplianceRow {
+  service: string;
+  current: number | null;
+  target:  number | null;
 }
 
-const rows = [
-  { service: 'Payment Svc',   current: 99.97, target: 99.95 },
-  { service: 'Auth Svc',      current: 99.99, target: 99.99 },
-  { service: 'Order Svc',     current: 99.82, target: 99.90 },
-  { service: 'Search Svc',    current: 98.41, target: 99.50 },
-  { service: 'Analytics',     current: 99.11, target: 99.00 },
-  { service: 'Inventory',     current: 99.88, target: 99.90 },
-  { service: 'Notifications', current: 99.95, target: 99.90 },
-  { service: 'API Gateway',   current: 99.91, target: 99.95 },
-];
+interface SLAComplianceTableProps {
+  rows: SLAComplianceRow[];
+}
 
-export const SLAComplianceTable: React.FC<SLAComplianceTableProps> = () => {
+export const SLAComplianceTable: React.FC<SLAComplianceTableProps> = ({ rows }) => {
+  if (rows.length === 0) {
+    return <div className="text-xs text-ois-text-muted py-6 text-center">No services configured.</div>;
+  }
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -30,18 +28,20 @@ export const SLAComplianceTable: React.FC<SLAComplianceTableProps> = () => {
         </thead>
         <tbody className="divide-y divide-ois-border">
           {rows.map((row) => {
-            const ok = row.current >= row.target;
+            const ok = row.current != null && row.target != null && row.current >= row.target;
             return (
               <tr key={row.service} className="hover:bg-ois-surface-muted/50 transition-colors">
                 <td className="py-2.5 pr-4 font-medium text-ois-text">{row.service}</td>
-                <td className={cn('py-2.5 pr-4 text-right font-mono text-xs', ok ? 'text-[#12B76A]' : 'text-[#F04438]')}>
-                  {row.current.toFixed(2)}%
+                <td className={cn('py-2.5 pr-4 text-right font-mono text-xs', row.current == null ? 'text-ois-text-subtle' : ok ? 'text-[#12B76A]' : 'text-[#F04438]')}>
+                  {row.current == null ? '—' : `${row.current.toFixed(2)}%`}
                 </td>
                 <td className="py-2.5 pr-4 text-right font-mono text-xs text-ois-text-subtle">
-                  {row.target.toFixed(2)}%
+                  {row.target == null ? '—' : `${row.target.toFixed(2)}%`}
                 </td>
                 <td className="py-2.5 text-center">
-                  {ok ? (
+                  {row.current == null || row.target == null ? (
+                    <span className="text-ois-text-subtle text-sm">—</span>
+                  ) : ok ? (
                     <span className="text-[#12B76A] font-bold text-sm">✓</span>
                   ) : (
                     <span className="text-[#F04438] font-bold text-sm">✗</span>

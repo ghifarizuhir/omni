@@ -17,11 +17,16 @@ interface BenefitByTypeDonutProps {
 export function BenefitByTypeDonut({ initiatives }: BenefitByTypeDonutProps) {
   const grouped: Partial<Record<BenefitType, number>> = {};
   for (const i of initiatives) {
-    const t = i.estimatedBenefit.primaryType;
-    grouped[t] = (grouped[t] ?? 0) + i.estimatedBenefit.annualValueUSD;
+    const t = i.estimatedBenefit?.primaryType;
+    if (!t) continue;
+    grouped[t] = (grouped[t] ?? 0) + (i.estimatedBenefit?.annualValueUSD ?? 0);
   }
 
-  const total = Object.values(grouped).reduce((s, v) => s + (v ?? 0), 0) || 1;
+  const total = Object.values(grouped).reduce((s, v) => s + (v ?? 0), 0);
+
+  if (total === 0) {
+    return <div className="h-[240px] flex items-center justify-center text-xs text-ois-text-muted">No initiative benefits to chart.</div>;
+  }
 
   const data = (Object.entries(grouped) as [BenefitType, number][]).map(([type, value]) => ({
     name: benefitTypeMeta[type].label,

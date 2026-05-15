@@ -77,18 +77,18 @@ export const ChangeCalendar: React.FC = () => {
   const awaitingApproval = useMemo(
     () => visibleChanges.filter(
       (c) => c.status === 'in_review' &&
-        c.approvals.some((a) => a.approverId === 'u-001' && a.decision === 'pending'),
+        (c.approvals ?? []).some((a) => a.approverId === 'u-001' && a.decision === 'pending'),
     ),
     [visibleChanges],
   );
 
   const activeConflicts = useMemo(
-    () => visibleChanges.filter((c) => c.conflicts.some((cf) => !cf.resolvedAt)),
+    () => visibleChanges.filter((c) => (c.conflicts ?? []).some((cf) => !cf.resolvedAt)),
     [visibleChanges],
   );
 
   const implementingThisWeek = visibleChanges.filter((c) => c.status === 'implementing').length;
-  const totalConflicts = visibleChanges.reduce((n, c) => n + c.conflicts.filter((cf) => !cf.resolvedAt).length, 0);
+  const totalConflicts = visibleChanges.reduce((n, c) => n + (c.conflicts ?? []).filter((cf) => !cf.resolvedAt).length, 0);
 
   const filteredListChanges = useMemo(() => {
     const query = listSearch.trim().toLowerCase();
@@ -285,7 +285,7 @@ export const ChangeCalendar: React.FC = () => {
                           <p className="text-[10px] text-ois-text-subtle ml-3.5">
                             {c.type.charAt(0).toUpperCase() + c.type.slice(1)} · {formatDate(c.plannedStart, 'HH:mm')} UTC
                           </p>
-                          {c.conflicts.some((cf) => !cf.resolvedAt) && (
+                          {(c.conflicts ?? []).some((cf) => !cf.resolvedAt) && (
                             <p className="text-[10px] text-ois-warning font-semibold ml-3.5 flex items-center gap-1">
                               <AlertTriangle size={9} className="text-ois-warning shrink-0" /> Conflict
                             </p>
@@ -358,7 +358,7 @@ export const ChangeCalendar: React.FC = () => {
             <CardBody className="p-0">
               <div className="divide-y divide-ois-border">
                 {activeConflicts.map((c) =>
-                  c.conflicts.filter((cf) => !cf.resolvedAt).map((cf) => (
+                  (c.conflicts ?? []).filter((cf) => !cf.resolvedAt).map((cf) => (
                     <div key={cf.id} className="px-4 py-3">
                       <div className="flex items-center gap-2 mb-1">
                         <AlertTriangle size={11} className="text-ois-warning shrink-0" />

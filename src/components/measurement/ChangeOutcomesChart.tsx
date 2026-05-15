@@ -8,18 +8,21 @@ import {
   Legend,
 } from 'recharts';
 
-interface ChangeOutcomesChartProps {
-  timeRange: string;
+export interface ChangeOutcomeSlice {
+  name: string;
+  value: number;
+  color: string;
 }
 
-const data = [
-  { name: 'Successful',   value: 70,  color: '#12B76A' },
-  { name: 'Failed',       value: 13,  color: '#F04438' },
-  { name: 'Cancelled',    value: 7,   color: '#98A2B3' },
-  { name: 'In Progress',  value: 10,  color: '#1F4FD4' },
-];
+interface ChangeOutcomesChartProps {
+  data: ChangeOutcomeSlice[];
+}
 
-export const ChangeOutcomesChart: React.FC<ChangeOutcomesChartProps> = () => {
+export const ChangeOutcomesChart: React.FC<ChangeOutcomesChartProps> = ({ data }) => {
+  const total = data.reduce((a, b) => a + b.value, 0);
+  if (total === 0) {
+    return <div className="h-[260px] flex items-center justify-center text-xs text-ois-text-muted">No changes in window</div>;
+  }
   return (
     <ResponsiveContainer width="100%" height={260}>
       <PieChart>

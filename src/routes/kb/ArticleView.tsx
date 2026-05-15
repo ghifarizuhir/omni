@@ -525,6 +525,12 @@ export const ArticleView: React.FC = () => {
     setToast('Link copied to clipboard.');
   };
 
+  // Must be declared before any early return so hook order stays stable.
+  const rendered    = useMemo(
+    () => article ? renderMarkdown(article.body, refHref) : null,
+    [article, refHref],
+  );
+
   if (!article) {
     if (!articlesData) return <div className="p-6 text-sm text-ois-text-muted">Loading…</div>;
     return (
@@ -541,7 +547,6 @@ export const ArticleView: React.FC = () => {
   const ctMeta      = CONTENT_TYPE_META[article.contentType];
   const totalVotes  = helpfulCount + unhelpfulCount;
   const helpfulPct  = totalVotes > 0 ? Math.round((helpfulCount / totalVotes) * 100) : null;
-  const rendered    = useMemo(() => renderMarkdown(article.body, refHref), [article.body, refHref]);
 
   return (
     <div className="-m-6 flex flex-col bg-ois-bg" style={{ height: 'calc(100vh - 3.5rem)' }}>

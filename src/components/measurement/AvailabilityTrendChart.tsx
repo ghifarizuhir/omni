@@ -11,64 +11,43 @@ import {
   ReferenceLine,
 } from 'recharts';
 
+interface ServiceLike {
+  id: string;
+  name: string;
+  uptime30d?: number;
+}
+
 interface AvailabilityTrendChartProps {
   timeRange: string;
+  services: ServiceLike[];
 }
 
-const SERVICES = [
-  { key: 'payment',       label: 'Payment Svc',   color: '#1F4FD4' },
-  { key: 'auth',          label: 'Auth Svc',       color: '#12B76A' },
-  { key: 'order',         label: 'Order Svc',      color: '#F79009' },
-  { key: 'search',        label: 'Search Svc',     color: '#F04438' },
-  { key: 'analytics',     label: 'Analytics',      color: '#7B61FF' },
-  { key: 'inventory',     label: 'Inventory',      color: '#0BA5EC' },
-  { key: 'notifications', label: 'Notifications',  color: '#DC6803' },
-  { key: 'api_gateway',   label: 'API Gateway',    color: '#475467' },
-];
-
-// Seed-based pseudo-random so chart is stable across renders
-function pseudoRand(seed: number): number {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
-
-function generateData() {
-  const now = new Date();
-  return Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - (29 - i));
-    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-    const row: Record<string, string | number> = { date: label };
-    SERVICES.forEach((svc, si) => {
-      let base: number;
-      switch (svc.key) {
-        case 'search':
-          base = 98.4;
-          break;
-        case 'analytics':
-          base = 99.11;
-          break;
-        case 'order':
-          base = 99.7;
-          break;
-        default:
-          base = 99.85;
-      }
-      const noise = (pseudoRand(i * 13 + si * 7) - 0.5) * 0.4;
-      // occasional dip
-      const dip = pseudoRand(i * 3 + si * 11) < 0.08 ? -(pseudoRand(i + si * 5) * 0.8 + 0.2) : 0;
-      row[svc.key] = Math.max(97.5, Math.min(100, base + noise + dip));
-    });
-    return row;
-  });
-}
+const PALETTE = ['#1F4FD4', '#12B76A', '#F79009', '#F04438', '#7B61FF', '#0BA5EC', '#DC6803', '#475467', '#B42318', '#067647'];
 
 // Only show every 5th label on x axis
 const xTickFormatter = (val: string, idx: number) => (idx % 5 === 0 ? val : '');
 
-export const AvailabilityTrendChart: React.FC<AvailabilityTrendChartProps> = () => {
-  const data = useMemo(() => generateData(), []);
+export const AvailabilityTrendChart: React.FC<AvailabilityTrendChartProps> = ({ services }) => {
+  // Without a historical-uptime endpoint we render a flat line at each service's
+  // current 30d uptime. The shape is honest about what the data actually says.
+  const seriesDefs = useMemo(
+    () => services.map((s, i) => ({ key: s.id, label: s.name, color: PALETTE[i % PALETTE.length], value: s.uptime30d ?? null })),
+    [services],
+  );
+  const data = useMemo(() => {
+    if (seriesDefs.length === 0) return [];
+    const now = new Date();
+    return Array.from({ length: 30 }, (_, i) => {
+      const d = new Date(now);
+      d.setDate(d.getDate() - (29 - i));
+      const row: Record<string, string | number> = { date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+      seriesDefs.forEach(s => { if (s.value != null) row[s.key] = s.value; });
+      return row;
+    });
+  }, [seriesDefs]);
+  if (seriesDefs.length === 0 || seriesDefs.every(s => s.value == null)) {
+    return <div className="h-[280px] flex items-center justify-center text-xs text-ois-text-muted">No service uptime data yet.</div>;
+  }
 
   return (
     <ResponsiveContainer width="100%" height={280}>
@@ -93,7 +72,7 @@ export const AvailabilityTrendChart: React.FC<AvailabilityTrendChartProps> = () 
         />
         <Legend wrapperStyle={{ fontSize: 11 }} />
         <ReferenceLine y={99.9} stroke="#667085" strokeDasharray="4 3" label={{ value: '99.9%', position: 'insideTopRight', fontSize: 10, fill: '#667085' }} />
-        {SERVICES.map((svc) => (
+        {seriesDefs.map((svc) => (
           <Line
             key={svc.key}
             type="monotone"

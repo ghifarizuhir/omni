@@ -10,18 +10,22 @@ import {
   Legend,
 } from 'recharts';
 
-interface IncidentVolumeChartProps {
-  timeRange: string;
+export interface IncidentVolumeRow {
+  week: string;
+  P1: number;
+  P2: number;
+  P3: number;
+  P4: number;
 }
 
-const data = [
-  { week: 'Wk 1', P1: 2, P2: 5, P3: 12, P4: 18 },
-  { week: 'Wk 2', P1: 1, P2: 4, P3: 9,  P4: 22 },
-  { week: 'Wk 3', P1: 3, P2: 7, P3: 14, P4: 15 },
-  { week: 'Wk 4', P1: 1, P2: 3, P3: 8,  P4: 19 },
-];
+interface IncidentVolumeChartProps {
+  data: IncidentVolumeRow[];
+}
 
-export const IncidentVolumeChart: React.FC<IncidentVolumeChartProps> = () => {
+export const IncidentVolumeChart: React.FC<IncidentVolumeChartProps> = ({ data }) => {
+  if (!data.length || data.every(r => r.P1 + r.P2 + r.P3 + r.P4 === 0)) {
+    return <div className="h-[240px] flex items-center justify-center text-xs text-ois-text-muted">No incidents in window</div>;
+  }
   return (
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>

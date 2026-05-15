@@ -64,7 +64,9 @@ function futureTime(isoStr?: string): string {
 export const ReportRow: React.FC<ReportRowProps> = ({ report, onGenerate, onViewVersions }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const typeMeta = reportTypeMeta[report.type];
+  // Reports created without an explicit `type` (e.g. minimal POST) fall back to
+  // the generic "Custom" meta so the row still renders.
+  const typeMeta = reportTypeMeta[report.type] ?? reportTypeMeta.custom;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -118,7 +120,7 @@ export const ReportRow: React.FC<ReportRowProps> = ({ report, onGenerate, onView
       {/* Formats */}
       <td className="py-3 pr-3">
         <div className="flex flex-wrap gap-1">
-          {report.format.map((fmt) => (
+          {(report.format ?? []).map((fmt) => (
             <span key={fmt} className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-ois-surface-muted border border-ois-border text-ois-text-muted">
               {formatIcons[fmt]}
               {formatLabels[fmt]}

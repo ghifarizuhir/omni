@@ -1,33 +1,15 @@
 import React from 'react';
 
-interface SummaryStatBlockProps {
-  timeRange: string;
+export interface SummaryStatCell {
+  label: string;
+  value: string;
 }
 
-const rows = [
-  [
-    { label: 'incidents resolved',  value: '25' },
-    { label: 'avg MTTR',            value: '2h 14m' },
-    { label: 'total downtime',      value: '12h 47m' },
-  ],
-  [
-    { label: 'changes implemented', value: '15' },
-    { label: 'success rate',        value: '87%' },
-    { label: 'failed · 1 rolled back', value: '2' },
-  ],
-  [
-    { label: 'service requests',    value: '25' },
-    { label: 'fulfilled',           value: '78%' },
-    { label: 'SLA breaches active', value: '2' },
-  ],
-  [
-    { label: 'test runs',           value: '124' },
-    { label: 'pass rate',           value: '91%' },
-    { label: 'content gaps in KB',  value: '4' },
-  ],
-];
+interface SummaryStatBlockProps {
+  rows: SummaryStatCell[][];
+}
 
-export const SummaryStatBlock: React.FC<SummaryStatBlockProps> = () => {
+export const SummaryStatBlock: React.FC<SummaryStatBlockProps> = ({ rows }) => {
   return (
     <div className="flex flex-col divide-y divide-ois-border">
       {rows.map((row, ri) => (

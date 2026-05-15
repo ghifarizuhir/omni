@@ -21,10 +21,10 @@ const SCENARIO_COLORS: Record<string, string> = {
 };
 
 export function ROICalculator() {
-  const [effortDays, setEffortDays] = useState(12);
-  const [dailyRate, setDailyRate] = useState(800);
-  const [ongoingMonthly, setOngoingMonthly] = useState(200);
-  const [annualBenefit, setAnnualBenefit] = useState(320000);
+  const [effortDays, setEffortDays] = useState(0);
+  const [dailyRate, setDailyRate] = useState(0);
+  const [ongoingMonthly, setOngoingMonthly] = useState(0);
+  const [annualBenefit, setAnnualBenefit] = useState(0);
   const [confidence, setConfidence] = useState<'low' | 'medium' | 'high'>('medium');
   const [benefitType, setBenefitType] = useState<BenefitType>('risk_reduction');
 

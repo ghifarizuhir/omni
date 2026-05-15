@@ -604,32 +604,19 @@ export const RequestDetail: React.FC = () => {
   const requestRes = req ? requestResource(req) : undefined;
   const canApproveRequest = useCanRbac('request', 'approve', { resource: requestRes });
 
-  if (!req) {
-    if (!requestsData) return <div className="p-6 text-sm text-ois-text-muted">Loading…</div>;
-    return <NotFound />;
-  }
-
-  const statusMeta  = STATUS_META[req.status];
-  const activity    = buildActivity(req);
-  const linkedArticles = req.linkedKBSlugs.map(s => getArticleBySlug(s)).filter(Boolean);
-  const activeStepForApproval = req.workflow.steps.find(s => s.id === approveStep);
-  const activeStepForReject   = req.workflow.steps.find(s => s.id === rejectStep);
-  const slaElapsed  = slaPercent(req);
-  const canUserApprove = req.workflow.steps.some(s => isApprover(s, userId));
-
-  // Auto-watchers: requester + each step's assignee. These are always
-  // included and never user-removable. `req.watchers` adds the explicit
-  // (user-added) watchers from the server snapshot.
+  // Hooks below must run unconditionally — declare them before any early
+  // return so hook order stays stable when `req` loads.
   const autoWatcherIds = useMemo(() => {
     const ids = new Set<string>();
+    if (!req) return ids;
     ids.add(req.requesterId);
-    req.workflow.steps.forEach(s => { if (s.assigneeId) ids.add(s.assigneeId); });
+    (req.workflow?.steps ?? []).forEach(s => { if (s.assigneeId) ids.add(s.assigneeId); });
     return ids;
   }, [req]);
 
   const explicitWatcherIds = useMemo(
-    () => (req.watchers ?? []).map(w => w.userId),
-    [req.watchers],
+    () => (req?.watchers ?? []).map(w => w.userId),
+    [req?.watchers],
   );
 
   const watchers = useMemo(() => {
@@ -640,6 +627,19 @@ export const RequestDetail: React.FC = () => {
   }, [autoWatcherIds, explicitWatcherIds, mockUsers]);
 
   const watcherIdSet = useMemo(() => new Set(watchers.map(u => u!.id)), [watchers]);
+
+  if (!req) {
+    if (!requestsData) return <div className="p-6 text-sm text-ois-text-muted">Loading…</div>;
+    return <NotFound />;
+  }
+
+  const statusMeta  = STATUS_META[req.status];
+  const activity    = buildActivity(req);
+  const linkedArticles = (req.linkedKBSlugs ?? []).map(s => getArticleBySlug(s)).filter(Boolean);
+  const activeStepForApproval = (req.workflow?.steps ?? []).find(s => s.id === approveStep);
+  const activeStepForReject   = (req.workflow?.steps ?? []).find(s => s.id === rejectStep);
+  const slaElapsed  = slaPercent(req);
+  const canUserApprove = (req.workflow?.steps ?? []).some(s => isApprover(s, userId));
 
   const activeStep = req.workflow.steps.find(s => s.status === 'active');
   const activeStepCurrentAssignee = activeStep?.assigneeName;
@@ -920,7 +920,7 @@ export const RequestDetail: React.FC = () => {
             </div>
             <h1 className="text-xl font-bold text-ois-text leading-tight">{req.title}</h1>
             <div className="flex flex-wrap gap-1 mt-2">
-              {req.tags.map(tag => (
+              {(req.tags ?? []).map(tag => (
                 <span key={tag} className="text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full">
                   #{tag}
                 </span>

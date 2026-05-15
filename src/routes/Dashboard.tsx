@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { KPICard } from '../components/ui/KPICard';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
@@ -21,6 +21,7 @@ import {
   changesService,
   improvementsService,
   onCallService,
+  measurementService,
   useResource,
 } from '../services';
 import { formatRelative, formatDate } from '@/src/lib/format';
@@ -36,22 +37,29 @@ const DASHBOARD_RANGE_LABELS: Record<DashboardTimeRange, string> = {
   '30d': 'Last 30 days',
 };
 
-const DASHBOARD_REFERENCE_DATE = new Date('2026-05-08');
+const RANGE_MS: Record<DashboardTimeRange, number> = {
+  '24h': 86_400_000,
+  '7d':  7  * 86_400_000,
+  '30d': 30 * 86_400_000,
+};
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const { data: servicesData } = useResource(() => servicesService.list(), []);
   const { data: activeIncidentsData } = useResource(() => incidentsService.active(), []);
+  const { data: allIncidentsData } = useResource(() => incidentsService.list(), []);
   const { data: majorIncidentsData } = useResource(() => incidentsService.major(), []);
   const { data: usersData } = useResource(() => usersService.list(), []);
   const { data: inboxData } = useResource(() => inboxService.items(), []);
   const { data: changesData } = useResource(() => changesService.list(), []);
   const { data: improvementsData } = useResource(() => improvementsService.list(), []);
   const { data: schedules } = useResource(() => onCallService.schedules(), []);
+  const { data: execSummary } = useResource(() => measurementService.execSummary(), []);
 
   const services = servicesData ?? [];
   const activeIncidents = activeIncidentsData ?? [];
+  const allIncidents = allIncidentsData ?? [];
   const majorIncidents = (majorIncidentsData ?? []).filter(i => !['resolved', 'closed'].includes(i.status));
   const users = usersData ?? [];
   const inboxItems = inboxData ?? [];
@@ -61,29 +69,88 @@ export const Dashboard: React.FC = () => {
   const [timeRange, setTimeRange]         = useState<DashboardTimeRange>('24h');
   const [timeRangeOpen, setTimeRangeOpen] = useState(false);
   const [refreshCount, setRefreshCount]   = useState(0);
-  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [now, setNow]                     = useState<Date>(() => new Date());
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date());
+
+  // Keep the header clock + relative timestamps fresh without re-fetching.
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const referenceDate = now;
+
+  const rangeMs = RANGE_MS[timeRange];
 
   const filteredActiveIncidents = useMemo(() => {
-    const ms =
-      timeRange === '24h' ? 86_400_000 :
-      timeRange === '7d'  ? 7  * 86_400_000 :
-                            30 * 86_400_000;
-    const cutoff = new Date(DASHBOARD_REFERENCE_DATE.getTime() - ms);
+    const cutoff = referenceDate.getTime() - rangeMs;
     return activeIncidents.filter(
-      i => new Date(i.createdAt).getTime() >= cutoff.getTime()
+      i => new Date(i.createdAt).getTime() >= cutoff
     );
-  }, [timeRange, refreshCount, activeIncidents]);
+  }, [rangeMs, refreshCount, activeIncidents, referenceDate]);
 
   const filteredInboxItems = useMemo(() => {
-    const ms =
-      timeRange === '24h' ? 86_400_000 :
-      timeRange === '7d'  ? 7  * 86_400_000 :
-                            30 * 86_400_000;
-    const cutoff = new Date(DASHBOARD_REFERENCE_DATE.getTime() - ms);
+    const cutoff = referenceDate.getTime() - rangeMs;
     return inboxItems.filter(
-      item => new Date(item.receivedAt).getTime() >= cutoff.getTime()
+      item => new Date(item.receivedAt).getTime() >= cutoff
     );
-  }, [timeRange, refreshCount, inboxItems]);
+  }, [rangeMs, refreshCount, inboxItems, referenceDate]);
+
+  // Trend: incidents opened in current window vs prior window of the same size.
+  const incidentTrend = useMemo(() => {
+    const end = referenceDate.getTime();
+    const cur = end - rangeMs;
+    const prev = cur - rangeMs;
+    const cntCur  = allIncidents.filter(i => { const t = new Date(i.createdAt).getTime(); return t >= cur  && t <  end;  }).length;
+    const cntPrev = allIncidents.filter(i => { const t = new Date(i.createdAt).getTime(); return t >= prev && t <  cur;  }).length;
+    return { value: cntCur - cntPrev, prev: cntPrev };
+  }, [allIncidents, rangeMs, referenceDate, refreshCount]);
+
+  // MTTR over the selected window, computed from incidents that resolved within it.
+  const mttrMinutes = useMemo(() => {
+    const end = referenceDate.getTime();
+    const start = end - rangeMs;
+    const durations: number[] = [];
+    for (const inc of allIncidents) {
+      const r = inc.resolution?.resolvedAt;
+      if (!r) continue;
+      const rt = new Date(r).getTime();
+      if (rt < start || rt > end) continue;
+      durations.push((rt - new Date(inc.createdAt).getTime()) / 60_000);
+    }
+    if (durations.length === 0) return null;
+    return Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
+  }, [allIncidents, rangeMs, referenceDate, refreshCount]);
+
+  // SLA compliance proxy: of resolved incidents in the window, how many did not breach.
+  const slaPct = useMemo(() => {
+    const end = referenceDate.getTime();
+    const start = end - rangeMs;
+    const resolvedInWindow = allIncidents.filter(i => {
+      const r = i.resolution?.resolvedAt;
+      if (!r) return false;
+      const rt = new Date(r).getTime();
+      return rt >= start && rt <= end;
+    });
+    if (resolvedInWindow.length === 0) return null;
+    const breached = resolvedInWindow.filter(
+      i => i.slaResponseStatus === 'breached' || i.slaResolveStatus === 'breached'
+    ).length;
+    return Math.round((resolvedInWindow.length - breached) / resolvedInWindow.length * 1000) / 10;
+  }, [allIncidents, rangeMs, referenceDate, refreshCount]);
+
+  // Pending Approvals: changes awaiting CAB or technical review.
+  const pendingApprovals = useMemo(
+    () => changes.filter(c => c.status === 'submitted' || c.status === 'in_review'),
+    [changes],
+  );
+  const pendingDueSoon = useMemo(() => {
+    const end = referenceDate.getTime() + 86_400_000;
+    return pendingApprovals.filter(c => {
+      const t = new Date(c.plannedStart).getTime();
+      return t >= referenceDate.getTime() && t <= end;
+    }).length;
+  }, [pendingApprovals, referenceDate]);
   
   // Section A Logic
   const getStatusColor = (status: ServiceHealthStatus) => {
@@ -105,7 +172,7 @@ export const Dashboard: React.FC = () => {
   }).slice(0, 3);
 
   // Section D Logic: Group changes by day
-  const today = new Date('2026-05-08');
+  const today = referenceDate;
   const getDayLabel = (dateStr: string) => {
     const d = new Date(dateStr);
     if (d.toDateString() === today.toDateString()) return 'TODAY';
@@ -116,10 +183,9 @@ export const Dashboard: React.FC = () => {
   };
 
   const upcomingChanges = changes.filter((c) => {
-    const now = new Date('2026-05-09T00:00:00Z');
-    const limit = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const start = new Date(c.plannedStart);
-    return start >= now && start <= limit &&
+    const limit = referenceDate.getTime() + 7 * 86_400_000;
+    return start.getTime() >= referenceDate.getTime() && start.getTime() <= limit &&
       !['closed_successful', 'closed_failed', 'rejected', 'cancelled'].includes(c.status);
   });
   const groupedChanges = upcomingChanges.reduce((acc, change) => {
@@ -136,7 +202,10 @@ export const Dashboard: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-ois-text">Operational Pulse</h1>
           <p className="text-sm text-ois-text-muted mt-1">
-            Tuesday, May 8 2026, 08:42 UTC
+            {now.toLocaleString(undefined, {
+              weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+              hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+            })}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -180,11 +249,9 @@ export const Dashboard: React.FC = () => {
               <RefreshCw size={14} />
               Refresh
             </Button>
-            {lastRefreshed && (
-              <span className="text-[11px] text-ois-text-subtle">
-                Refreshed just now
-              </span>
-            )}
+            <span className="text-[11px] text-ois-text-subtle">
+              Refreshed {formatRelative(lastRefreshed.toISOString())}
+            </span>
           </div>
         </div>
       </div>
@@ -234,38 +301,32 @@ export const Dashboard: React.FC = () => {
         <KPICard
           label="Open Incidents"
           value={filteredActiveIncidents.length}
-          trend={2}
-          trendLabel="+2 from yest"
+          trend={incidentTrend.value}
+          trendLabel={`${incidentTrend.value >= 0 ? '+' : ''}${incidentTrend.value} vs prior ${timeRange}`}
           trendBetter="low"
           subDetail={`${filteredActiveIncidents.filter(i => i.severity === 'P1').length} P1 · ${filteredActiveIncidents.filter(i => i.severity === 'P2').length} P2`}
           icon={<AlertCircle className="w-5 h-5" />}
         />
-        <KPICard 
-          label="MTTR (24h)" 
-          value="28m" 
-          trend={-7} 
-          trendLabel="-7m vs 7d avg" 
+        <KPICard
+          label={`MTTR (${timeRange})`}
+          value={mttrMinutes == null ? '—' : `${mttrMinutes}m`}
           trendBetter="low"
-          subDetail="Target: 30m"
-          icon={<Clock className="w-5 h-5" />} 
+          subDetail={mttrMinutes == null ? 'No resolved incidents in window' : `Backend avg: ${execSummary?.mttrMinutes ?? 0}m`}
+          icon={<Clock className="w-5 h-5" />}
         />
-        <KPICard 
-          label="SLA Compliance" 
-          value="99.4%" 
-          trend={0.2} 
-          trendLabel="+0.2% vs week" 
+        <KPICard
+          label="SLA Compliance"
+          value={slaPct == null ? '—' : `${slaPct}%`}
           trendBetter="high"
-          subDetail="8 services"
-          icon={<ShieldCheck className="w-5 h-5" />} 
+          subDetail={slaPct == null ? 'No resolved incidents in window' : `${services.length} service${services.length === 1 ? '' : 's'}`}
+          icon={<ShieldCheck className="w-5 h-5" />}
         />
-        <KPICard 
-          label="Pending Approvals" 
-          value="3" 
-          trend={2} 
-          trendLabel="2 urgent" 
+        <KPICard
+          label="Pending Approvals"
+          value={pendingApprovals.length}
           trendBetter="neutral"
-          subDetail="Due in 24h"
-          icon={<CheckCircle2 className="w-5 h-5" />} 
+          subDetail={pendingDueSoon > 0 ? `${pendingDueSoon} due in 24h` : 'None due in 24h'}
+          icon={<CheckCircle2 className="w-5 h-5" />}
         />
       </div>
 
@@ -530,10 +591,9 @@ export const Dashboard: React.FC = () => {
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-ois-border mt-8 text-[11px] text-ois-text-subtle font-medium">
-        <div>Last data refresh: 2 min ago</div>
+        <div>Last data refresh: {formatRelative(lastRefreshed.toISOString())}</div>
         <div className="flex items-center gap-4">
           <span>Powered by OIS</span>
-          <span>v0.1.0</span>
         </div>
       </div>
     </div>

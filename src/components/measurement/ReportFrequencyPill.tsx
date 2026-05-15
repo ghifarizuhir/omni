@@ -14,8 +14,10 @@ const frequencyMeta: Record<ReportFrequency, { label: string; className: string 
   quarterly:  { label: 'Quarterly',  className: 'bg-violet-50 text-violet-700 border-violet-200' },
 };
 
+const UNKNOWN_META = { label: '—', className: 'bg-gray-50 text-gray-500 border-gray-200' };
+
 export const ReportFrequencyPill: React.FC<ReportFrequencyPillProps> = ({ frequency }) => {
-  const meta = frequencyMeta[frequency];
+  const meta = frequencyMeta[frequency] ?? UNKNOWN_META;
   return (
     <span className={cn(
       'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',

@@ -8,23 +8,38 @@ import { BenefitMeasurementTable } from '@/src/components/improvement/BenefitTra
 import { LogBenefitModal } from '@/src/components/improvement/BenefitTracker/LogBenefitModal';
 import { ROICalculator } from '@/src/components/improvement/BenefitTracker/ROICalculator';
 import { Button } from '@/src/components/ui/Button';
+import type { BenefitMeasurement } from '@/src/types/improvement';
 
 export const BenefitTracker: React.FC = () => {
   const [showLogModal, setShowLogModal] = useState(false);
+  const [saveError, setSaveError]       = useState<string | null>(null);
   const { data: improvementsData } = useResource(() => improvementsService.list(), []);
-  const { data: measurementsData } = useResource(() => improvementsService.benefitMeasurements(), []);
-  const mockImprovements = improvementsData ?? [];
-  const mockBenefitMeasurements = measurementsData ?? [];
+  const { data: measurementsData, refresh: refreshMeasurements } =
+    useResource(() => improvementsService.benefitMeasurements(), []);
+  const improvements = improvementsData ?? [];
+  const measurements = measurementsData ?? [];
+
+  const handleLogSubmit = async (data: Partial<BenefitMeasurement>) => {
+    setSaveError(null);
+    try {
+      await improvementsService.createBenefitMeasurement(data);
+      await refreshMeasurements();
+      setShowLogModal(false);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to log measurement');
+    }
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Action row */}
       <div className="shrink-0 flex items-center justify-end gap-2 px-6 py-2.5 border-b border-ois-border bg-ois-surface">
+        {saveError && <span className="text-xs text-ois-danger">{saveError}</span>}
         <Button
           variant="primary"
           size="sm"
           className="gap-1.5"
-          onClick={() => setShowLogModal(true)}
+          onClick={() => { setSaveError(null); setShowLogModal(true); }}
         >
           <Plus size={14} /> Log measurement
         </Button>
@@ -36,11 +51,11 @@ export const BenefitTracker: React.FC = () => {
           {/* Top section — 60/40 split */}
           <div className="flex gap-5 items-start">
             <div className="flex-1 min-w-0">
-              <CumulativeBenefitChart measurements={mockBenefitMeasurements} />
+              <CumulativeBenefitChart measurements={measurements} initiatives={improvements} />
             </div>
             <div className="w-[38%] shrink-0 space-y-4">
-              <BenefitByTypeDonut initiatives={mockImprovements} />
-              <TopContributorsList initiatives={mockImprovements} />
+              <BenefitByTypeDonut initiatives={improvements} />
+              <TopContributorsList initiatives={improvements} />
             </div>
           </div>
 
@@ -48,8 +63,8 @@ export const BenefitTracker: React.FC = () => {
           <div className="space-y-3">
             <h2 className="text-sm font-bold text-ois-text uppercase tracking-widest">Benefit measurements</h2>
             <BenefitMeasurementTable
-              measurements={mockBenefitMeasurements}
-              initiatives={mockImprovements}
+              measurements={measurements}
+              initiatives={improvements}
             />
           </div>
 
@@ -61,9 +76,9 @@ export const BenefitTracker: React.FC = () => {
       {/* Log benefit modal — fixed-positioned, safe anywhere in tree */}
       <LogBenefitModal
         open={showLogModal}
-        initiatives={mockImprovements}
+        initiatives={improvements}
         onClose={() => setShowLogModal(false)}
-        onSubmit={() => setShowLogModal(false)}
+        onSubmit={handleLogSubmit}
       />
     </div>
   );
