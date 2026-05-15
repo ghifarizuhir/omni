@@ -6,7 +6,6 @@ import {
 } from '../repositories/docs'; // bypass paths only (repo imports kept for bypass pattern)
 import { listByKind, findByPublicId, findByKey } from '../repositories/documents';
 import { audit } from '../audit';
-import { prisma } from '../db';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qBool, required } from '../util';
 import { getActor } from '../auth/session';
@@ -288,14 +287,7 @@ itsmRouter.post(
       if (!wrapped) throw new HttpError(404, 'Request not found');
       if (!wrapped.result) throw new HttpError(404, 'Request not found');
       // Also persist to the RequestComment table for structured querying.
-      const dbComment = await prisma.requestComment.create({
-        data: {
-          tenantId: req.tenantId,
-          requestId: wrapped.result.internalId,
-          authorId: author.id,
-          body: body.body,
-        },
-      });
+      const dbComment = await requestsRepo.appendComment(req.tenantId, req.params.publicId, author, body.body);
       await audit(req, {
         action: 'comment',
         resourceKind: 'ServiceRequest',
@@ -303,22 +295,14 @@ itsmRouter.post(
         after: wrapped.result.comment,
         scopeMode: wrapped.scopeMode,
       });
-      res.status(201).json({ ...wrapped.result.comment, dbId: dbComment.id });
+      res.status(201).json({ ...wrapped.result.comment, dbId: dbComment?.dbCommentId });
     } catch (e) {
       if (e instanceof ScopeViolationError) {
         applyEnforcement(e, res);
-        const result = await requestsRepo.addComment(req.tenantId, req.params.publicId, author, body.body);
+        const result = await requestsRepo.appendComment(req.tenantId, req.params.publicId, author, body.body);
         if (!result) throw new HttpError(404, 'Request not found');
-        const dbComment = await prisma.requestComment.create({
-          data: {
-            tenantId: req.tenantId,
-            requestId: result.internalId,
-            authorId: author.id,
-            body: body.body,
-          },
-        });
         await audit(req, { action: 'comment', resourceKind: 'ServiceRequest', resourceId: result.internalId, after: result.comment, scopeMode: 'bypass' });
-        return res.status(201).json({ ...result.comment, dbId: dbComment.id });
+        return res.status(201).json({ ...result.comment, dbId: result.dbCommentId });
       }
       throw e;
     }
@@ -542,10 +526,7 @@ itsmRouter.get('/kb/articles/:publicId', requirePermission('kb.read'), asyncHand
 
 itsmRouter.post('/kb/articles', requirePermission('kb.write'), asyncHandler(async (req, res) => {
   const body = createKBArticleSchema.parse(req.body);
-  if (!req.session) throw new HttpError(401, 'Authentication required');
-  const author = await prisma.user.findUniqueOrThrow({
-    where: { id: req.session.userId }, select: { id: true, name: true },
-  });
+  const author = await getActor(req);
   const { after, internalId } = await kbRepo.create(req.tenantId, author, body);
   await audit(req, { action: 'create', resourceKind: 'KBArticle', resourceId: internalId, after });
   res.status(201).json(after);
@@ -564,10 +545,7 @@ itsmRouter.patch('/kb/articles/:publicId', requirePermission('kb.write'), asyncH
 
 itsmRouter.patch('/kb/articles/:publicId/status', requirePermission('kb.write'), asyncHandler(async (req, res) => {
   const body = setKBArticleStatusSchema.parse(req.body);
-  if (!req.session) throw new HttpError(401, 'Authentication required');
-  const actor = await prisma.user.findUniqueOrThrow({
-    where: { id: req.session.userId }, select: { id: true, name: true },
-  });
+  const actor = await getActor(req);
   const result = await kbRepo.setStatus(req.tenantId, req.params.publicId, body.status, actor);
   if (result.kind === 'not-found') throw new HttpError(404, 'KB article not found');
   if (result.kind === 'same-status') throw new HttpError(400, `Article is already in status '${body.status}'`);

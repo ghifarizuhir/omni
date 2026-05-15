@@ -338,6 +338,26 @@ export const requestsRepo = {
     return { comment, internalId: row.id };
   },
 
+  /** Like addComment but also persists a RequestComment row for structured querying. */
+  async appendComment(
+    tenantId: string,
+    publicId: string,
+    actor: { id: string; name: string },
+    body: string,
+  ): Promise<{ comment: RequestComment; internalId: string; dbCommentId: string } | null> {
+    const result = await requestsRepo.addComment(tenantId, publicId, actor, body);
+    if (!result) return null;
+    const dbComment = await prisma.requestComment.create({
+      data: {
+        tenantId,
+        requestId: result.internalId,
+        authorId: actor.id,
+        body,
+      },
+    });
+    return { ...result, dbCommentId: dbComment.id };
+  },
+
   // M6.11 (B2.2) — cancel a service request. Sets status to 'cancelled',
   // stamps cancellationReason + closedAt, and skips any remaining
   // pending/active workflow steps so the UI stops showing "next up".
