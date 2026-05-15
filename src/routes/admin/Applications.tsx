@@ -6,6 +6,7 @@ import { Table, THead, TBody, TR, TH, TD } from '@/src/components/ui/Table';
 import { Badge } from '@/src/components/ui/Badge';
 import { EntityToolbar } from '@/src/components/admin/EntityToolbar';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
+import { rbacService } from '@/src/services/platformServices';
 import type { Application } from '@/src/types/rbac';
 import { Pencil, Trash2 } from 'lucide-react';
 
@@ -18,7 +19,6 @@ export const Applications: React.FC = () => {
   const [editing, setEditing] = useState<Application | null>(null);
   const [open, setOpen] = useState(false);
 
-  // Only APS teams can own apps
   const apsDivision = divisions.find(d => d.code === 'APS');
   const apsDeptIds = departments.filter(d => d.divisionId === apsDivision?.id).map(d => d.id);
   const apsTeams = teams.filter(t => apsDeptIds.includes(t.departmentId));
@@ -32,6 +32,22 @@ export const Applications: React.FC = () => {
   const deptOfTeam = (id: string) => {
     const t = teams.find(x => x.id === id);
     return departments.find(d => d.id === t?.departmentId)?.name ?? '—';
+  };
+
+  const handleSave = async (a: Application) => {
+    await rbacService.upsertApplication(a);
+    upsertApplication(a);
+    setOpen(false);
+  };
+
+  const handleDelete = async (a: Application) => {
+    if (!confirm(`Delete application ${a.name}?`)) return;
+    try {
+      await rbacService.deleteApplication(a.id);
+      removeApplication(a.id);
+    } catch (e) {
+      alert('Delete failed: ' + (e instanceof Error ? e.message : 'Unknown error'));
+    }
   };
 
   return (
@@ -59,9 +75,7 @@ export const Applications: React.FC = () => {
                   <Button size="icon" variant="ghost" onClick={() => { setEditing(a); setOpen(true); }}>
                     <Pencil size={14} />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => {
-                    if (confirm(`Delete application ${a.name}?`)) removeApplication(a.id);
-                  }}>
+                  <Button size="icon" variant="ghost" onClick={() => handleDelete(a)}>
                     <Trash2 size={14} className="text-ois-danger" />
                   </Button>
                 </div>
@@ -76,7 +90,7 @@ export const Applications: React.FC = () => {
           initial={editing}
           apsTeams={apsTeams}
           onClose={() => setOpen(false)}
-          onSave={(a) => { upsertApplication(a); setOpen(false); }}
+          onSave={handleSave}
         />
       )}
     </div>
@@ -87,16 +101,40 @@ const AppForm: React.FC<{
   initial: Application | null;
   apsTeams: { id: string; name: string }[];
   onClose: () => void;
-  onSave: (a: Application) => void;
+  onSave: (a: Application) => Promise<void>;
 }> = ({ initial, apsTeams, onClose, onSave }) => {
   const [code, setCode] = useState(initial?.code ?? '');
   const [name, setName] = useState(initial?.name ?? '');
   const [ownerTeamId, setOwnerTeamId] = useState(initial?.ownerTeamId ?? apsTeams[0]?.id ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async () => {
+    if (!code.trim() || !name.trim() || !ownerTeamId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        id: initial?.id ?? `app-${Date.now()}`,
+        code: code.trim(), name: name.trim(),
+        ownerTeamId, description: description.trim() || undefined,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Modal isOpen onClose={onClose} title={initial ? 'Edit Application' : 'New Application'}>
       <div className="space-y-3 py-4">
+        {error && (
+          <div className="rounded-md border border-ois-danger/30 bg-ois-danger/5 px-3 py-2 text-xs text-ois-danger">
+            {error}
+          </div>
+        )}
         <Input label="Code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} />
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
         <div>
@@ -118,15 +156,8 @@ const AppForm: React.FC<{
         </div>
       </div>
       <div className="flex justify-end gap-2 py-4 border-t border-ois-border">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button onClick={() => {
-          if (!code.trim() || !name.trim() || !ownerTeamId) return;
-          onSave({
-            id: initial?.id ?? `app-${Date.now()}`,
-            code: code.trim(), name: name.trim(),
-            ownerTeamId, description: description.trim() || undefined,
-          });
-        }}>Save</Button>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={save} loading={saving}>Save</Button>
       </div>
     </Modal>
   );

@@ -90,6 +90,36 @@ export const rbacService = {
   departments: () => apiFetch<Department[]>('/rbac/departments'),
   divisions: () => apiFetch<Division[]>('/rbac/divisions'),
   roles: () => apiFetch<FunctionalRole[]>('/rbac/roles'),
+
+  upsertDivision: (d: Division) =>
+    apiFetch<Division>(`/admin/rbac/divisions/${d.id}`, { method: 'PUT', body: d }),
+  deleteDivision: (id: string) =>
+    apiFetch<void>(`/admin/rbac/divisions/${id}`, { method: 'DELETE' }),
+
+  upsertDepartment: (d: Department) =>
+    apiFetch<Department>(`/admin/rbac/departments/${d.id}`, { method: 'PUT', body: d }),
+  deleteDepartment: (id: string) =>
+    apiFetch<void>(`/admin/rbac/departments/${id}`, { method: 'DELETE' }),
+
+  upsertTeam: (t: RbacTeam) =>
+    apiFetch<RbacTeam>(`/admin/rbac/teams/${t.id}`, { method: 'PUT', body: t }),
+  deleteTeam: (id: string) =>
+    apiFetch<void>(`/admin/rbac/teams/${id}`, { method: 'DELETE' }),
+
+  upsertApplication: (a: Application) =>
+    apiFetch<Application>(`/admin/rbac/applications/${a.id}`, { method: 'PUT', body: a }),
+  deleteApplication: (id: string) =>
+    apiFetch<void>(`/admin/rbac/applications/${id}`, { method: 'DELETE' }),
+
+  upsertFunctionalRole: (r: FunctionalRole) =>
+    apiFetch<FunctionalRole>(`/admin/rbac/roles/${r.id}`, { method: 'PUT', body: r }),
+  deleteFunctionalRole: (id: string) =>
+    apiFetch<void>(`/admin/rbac/roles/${id}`, { method: 'DELETE' }),
+
+  upsertRbacUser: (u: RbacUser) =>
+    apiFetch<RbacUser>(`/admin/rbac/users/${u.id}`, { method: 'PUT', body: u }),
+  deleteRbacUser: (id: string) =>
+    apiFetch<void>(`/admin/rbac/users/${id}`, { method: 'DELETE' }),
 };
 
 export const continuityService = {

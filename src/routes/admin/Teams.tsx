@@ -5,6 +5,7 @@ import { Input } from '@/src/components/ui/Input';
 import { Table, THead, TBody, TR, TH, TD } from '@/src/components/ui/Table';
 import { EntityToolbar } from '@/src/components/admin/EntityToolbar';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
+import { rbacService } from '@/src/services/platformServices';
 import type { RbacTeam } from '@/src/types/rbac';
 import { Pencil, Trash2 } from 'lucide-react';
 
@@ -31,6 +32,26 @@ export const Teams: React.FC = () => {
   };
   const memberCount = (id: string) => users.filter(u => u.teamId === id).length;
   const appsOwned = (id: string) => applications.filter(a => a.ownerTeamId === id).length;
+
+  const handleSave = async (t: RbacTeam) => {
+    await rbacService.upsertTeam(t);
+    upsertTeam(t);
+    setOpen(false);
+  };
+
+  const handleDelete = async (t: RbacTeam) => {
+    if (memberCount(t.id) > 0 || appsOwned(t.id) > 0) {
+      alert('Team still has members or owns applications.');
+      return;
+    }
+    if (!confirm(`Delete team ${t.name}?`)) return;
+    try {
+      await rbacService.deleteTeam(t.id);
+      removeTeam(t.id);
+    } catch (e) {
+      alert('Delete failed: ' + (e instanceof Error ? e.message : 'Unknown error'));
+    }
+  };
 
   return (
     <div className="bg-white border border-ois-border rounded-xl p-5">
@@ -68,13 +89,7 @@ export const Teams: React.FC = () => {
                   <Button size="icon" variant="ghost" onClick={() => { setEditing(t); setOpen(true); }}>
                     <Pencil size={14} />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => {
-                    if (memberCount(t.id) > 0 || appsOwned(t.id) > 0) {
-                      alert('Team still has members or owns applications.');
-                      return;
-                    }
-                    if (confirm(`Delete team ${t.name}?`)) removeTeam(t.id);
-                  }}>
+                  <Button size="icon" variant="ghost" onClick={() => handleDelete(t)}>
                     <Trash2 size={14} className="text-ois-danger" />
                   </Button>
                 </div>
@@ -88,7 +103,7 @@ export const Teams: React.FC = () => {
         <TeamForm
           initial={editing}
           onClose={() => setOpen(false)}
-          onSave={(t) => { upsertTeam(t); setOpen(false); }}
+          onSave={handleSave}
         />
       )}
     </div>
@@ -98,16 +113,39 @@ export const Teams: React.FC = () => {
 const TeamForm: React.FC<{
   initial: RbacTeam | null;
   onClose: () => void;
-  onSave: (t: RbacTeam) => void;
+  onSave: (t: RbacTeam) => Promise<void>;
 }> = ({ initial, onClose, onSave }) => {
   const { departments } = useCurrentUser();
   const [code, setCode] = useState(initial?.code ?? '');
   const [name, setName] = useState(initial?.name ?? '');
   const [departmentId, setDepartmentId] = useState(initial?.departmentId ?? departments[0]?.id ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async () => {
+    if (!code.trim() || !name.trim() || !departmentId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        id: initial?.id ?? `team-${Date.now()}`,
+        departmentId, code: code.trim(), name: name.trim(),
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Modal isOpen onClose={onClose} title={initial ? 'Edit Team' : 'New Team'}>
       <div className="space-y-3 py-4">
+        {error && (
+          <div className="rounded-md border border-ois-danger/30 bg-ois-danger/5 px-3 py-2 text-xs text-ois-danger">
+            {error}
+          </div>
+        )}
         <div>
           <label className="text-xs font-medium text-ois-text-muted">Department</label>
           <select
@@ -121,14 +159,8 @@ const TeamForm: React.FC<{
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="flex justify-end gap-2 py-4 border-t border-ois-border">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button onClick={() => {
-          if (!code.trim() || !name.trim() || !departmentId) return;
-          onSave({
-            id: initial?.id ?? `team-${Date.now()}`,
-            departmentId, code: code.trim(), name: name.trim(),
-          });
-        }}>Save</Button>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={save} loading={saving}>Save</Button>
       </div>
     </Modal>
   );

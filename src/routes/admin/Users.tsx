@@ -6,6 +6,7 @@ import { Table, THead, TBody, TR, TH, TD } from '@/src/components/ui/Table';
 import { Badge } from '@/src/components/ui/Badge';
 import { EntityToolbar } from '@/src/components/admin/EntityToolbar';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
+import { rbacService } from '@/src/services/platformServices';
 import type {
   RbacUser, HierarchyLevel, FunctionalRoleCode,
 } from '@/src/types/rbac';
@@ -54,6 +55,22 @@ const UserProfiles: React.FC = () => {
   const deptName = (id: string | null) => id ? departments.find(d => d.id === id)?.name ?? '—' : '—';
   const teamName = (id: string | null) => id ? teams.find(t => t.id === id)?.name ?? '—' : '—';
   const roleName = (code: string) => functionalRoles.find(r => r.code === code)?.name ?? code;
+
+  const handleSave = async (u: RbacUser) => {
+    await rbacService.upsertRbacUser(u);
+    upsertUser(u);
+    setOpen(false);
+  };
+
+  const handleDelete = async (u: RbacUser) => {
+    if (!confirm(`Delete user ${u.name}?`)) return;
+    try {
+      await rbacService.deleteRbacUser(u.id);
+      removeUser(u.id);
+    } catch (e) {
+      alert('Delete failed: ' + (e instanceof Error ? e.message : 'Unknown error'));
+    }
+  };
 
   return (
     <>
@@ -109,9 +126,7 @@ const UserProfiles: React.FC = () => {
                   <Button size="icon" variant="ghost" onClick={() => { setEditing(u); setOpen(true); }}>
                     <Pencil size={14} />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => {
-                    if (confirm(`Delete user ${u.name}?`)) removeUser(u.id);
-                  }}>
+                  <Button size="icon" variant="ghost" onClick={() => handleDelete(u)}>
                     <Trash2 size={14} className="text-ois-danger" />
                   </Button>
                 </div>
@@ -125,7 +140,7 @@ const UserProfiles: React.FC = () => {
         <UserForm
           initial={editing}
           onClose={() => setOpen(false)}
-          onSave={(u) => { upsertUser(u); setOpen(false); }}
+          onSave={handleSave}
         />
       )}
     </>
@@ -135,7 +150,7 @@ const UserProfiles: React.FC = () => {
 const UserForm: React.FC<{
   initial: RbacUser | null;
   onClose: () => void;
-  onSave: (u: RbacUser) => void;
+  onSave: (u: RbacUser) => Promise<void>;
 }> = ({ initial, onClose, onSave }) => {
   const { divisions, departments, teams, functionalRoles } = useCurrentUser();
   const [name, setName] = useState(initial?.name ?? '');
@@ -147,12 +162,13 @@ const UserForm: React.FC<{
   const [roles, setRoles] = useState<string[]>(initial?.functionalRoles as string[] ?? []);
   const [isSuperadmin, setIsSuperadmin] = useState(initial?.isSuperadmin ?? false);
   const [active, setActive] = useState(initial?.active ?? true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const division = divisions.find(d => d.id === divisionId);
   const filteredDepts = departments.filter(d => d.divisionId === divisionId);
   const filteredTeams = teams.filter(t => t.departmentId === departmentId);
 
-  // Reset cascading selections when parent changes
   React.useEffect(() => {
     if (departmentId && !filteredDepts.find(d => d.id === departmentId)) setDepartmentId(null);
   }, [divisionId]); // eslint-disable-line
@@ -169,9 +185,36 @@ const UserForm: React.FC<{
     setRoles(rs => rs.includes(code) ? rs.filter(r => r !== code) : [...rs, code]);
   };
 
+  const save = async () => {
+    if (!name.trim() || !email.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        id: initial?.id ?? `u-${Date.now()}`,
+        name: name.trim(),
+        email: email.trim(),
+        avatarUrl: initial?.avatarUrl,
+        divisionId, departmentId, teamId,
+        level: level || null,
+        functionalRoles: roles as FunctionalRoleCode[],
+        isSuperadmin, active,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Modal isOpen onClose={onClose} title={initial ? 'Edit User' : 'New User'} size="lg">
       <div className="space-y-4 py-4">
+        {error && (
+          <div className="rounded-md border border-ois-danger/30 bg-ois-danger/5 px-3 py-2 text-xs text-ois-danger">
+            {error}
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
           <Input label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -251,20 +294,8 @@ const UserForm: React.FC<{
       </div>
 
       <div className="flex justify-end gap-2 py-4 border-t border-ois-border">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button onClick={() => {
-          if (!name.trim() || !email.trim()) return;
-          onSave({
-            id: initial?.id ?? `u-${Date.now()}`,
-            name: name.trim(),
-            email: email.trim(),
-            avatarUrl: initial?.avatarUrl,
-            divisionId, departmentId, teamId,
-            level: level || null,
-            functionalRoles: roles as FunctionalRoleCode[],
-            isSuperadmin, active,
-          });
-        }}>Save</Button>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={save} loading={saving}>Save</Button>
       </div>
     </Modal>
   );

@@ -5,6 +5,8 @@ import { hash } from '@node-rs/argon2';
 import { seedDocuments } from './seedDocuments';
 import { seedRbac, systemRoleId } from './seedRbac';
 
+const ARGON_OPTS = { memoryCost: 19_456, timeCost: 2, parallelism: 1 } as const;
+
 const prisma = new PrismaClient();
 
 // All seeded users share the same password for dev convenience. The first user
@@ -52,6 +54,22 @@ async function main() {
 
   console.log('[seed] rbac (permission catalog + system roles)…');
   await seedRbac(prisma);
+
+  console.log('[seed] users…');
+  const passwordHash = await hash(DEMO_PASSWORD, ARGON_OPTS);
+  // Emails mirror the rbac-user documents so the persona switcher resolves correctly.
+  const demoUsers: { email: string; name: string; role: string }[] = [
+    { email: 'admin@omni.local',           name: 'Super Admin',      role: 'admin'    },
+    { email: 'andi.wibowo@omni.local',     name: 'Andi Wibowo',      role: 'operator' },
+    { email: 'fitri.handayani@omni.local', name: 'Fitri Handayani',  role: 'operator' },
+    { email: 'hadi.wijaya@omni.local',     name: 'Hadi Wijaya',      role: 'operator' },
+    { email: 'joko.susilo@omni.local',     name: 'Joko Susilo',      role: 'member'   },
+  ];
+  for (const u of demoUsers) {
+    const user = await prisma.user.create({ data: { email: u.email, name: u.name, passwordHash } });
+    const membership = await prisma.tenantMembership.create({ data: { tenantId: TENANT.id, userId: user.id } });
+    await prisma.membershipRole.create({ data: { membershipId: membership.id, roleId: systemRoleId(u.role) } });
+  }
 
   console.log('[seed] documents (catalogs + snapshots)…');
   await seedDocuments(prisma, TENANT.id);

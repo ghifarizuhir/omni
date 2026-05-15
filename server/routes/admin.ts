@@ -4,6 +4,7 @@ import { prisma } from '../db';
 import { requirePermission } from '../middleware/auth';
 import { audit } from '../audit';
 import { invalidatePermissionCache, permissionCatalog } from '../auth/permissions';
+import { upsertDocument, deleteDocument } from '../repositories/documents';
 import { asyncHandler, HttpError, qString } from '../util';
 
 export const adminRouter = Router();
@@ -238,6 +239,34 @@ adminRouter.put('/admin/memberships/:id/roles', asyncHandler(async (req, res) =>
     after: { roleIds: body.roleIds },
   });
   res.json({ membershipId: membership.id, roleIds: body.roleIds });
+}));
+
+// ── RBAC: document-backed org tree (divisions, departments, teams, apps, functional roles, users) ──
+
+const RBAC_ENTITY_MAP: Record<string, string> = {
+  divisions: 'rbac-division',
+  departments: 'rbac-department',
+  teams: 'rbac-team',
+  applications: 'rbac-application',
+  roles: 'rbac-role',
+  users: 'rbac-user',
+};
+
+adminRouter.put('/admin/rbac/:entity/:id', asyncHandler(async (req, res) => {
+  const kind = RBAC_ENTITY_MAP[req.params.entity];
+  if (!kind) throw new HttpError(404, 'Unknown RBAC entity type');
+  const payload = { ...req.body, id: req.params.id };
+  await upsertDocument(req.tenantId, kind, req.params.id, payload);
+  await audit(req, { action: 'upsert', resourceKind: kind, resourceId: req.params.id, after: payload });
+  res.json(payload);
+}));
+
+adminRouter.delete('/admin/rbac/:entity/:id', asyncHandler(async (req, res) => {
+  const kind = RBAC_ENTITY_MAP[req.params.entity];
+  if (!kind) throw new HttpError(404, 'Unknown RBAC entity type');
+  await deleteDocument(req.tenantId, kind, req.params.id);
+  await audit(req, { action: 'delete', resourceKind: kind, resourceId: req.params.id });
+  res.status(204).end();
 }));
 
 // ── helpers ───────────────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import { Badge } from '@/src/components/ui/Badge';
 import { Tabs } from '@/src/components/ui/Tabs';
 import { EntityToolbar } from '@/src/components/admin/EntityToolbar';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
+import { rbacService } from '@/src/services/platformServices';
 import type { FunctionalRole } from '@/src/types/rbac';
 import { Pencil, Trash2, Lock } from 'lucide-react';
 import { SystemRoles } from './SystemRoles';
@@ -43,6 +44,23 @@ const FunctionalRoles: React.FC = () => {
   const userCount = (code: string) =>
     users.filter(u => (u.functionalRoles as string[]).includes(code)).length;
 
+  const handleSave = async (r: FunctionalRole) => {
+    await rbacService.upsertFunctionalRole(r);
+    upsertFunctionalRole(r);
+    setOpen(false);
+  };
+
+  const handleDelete = async (r: FunctionalRole) => {
+    if (userCount(r.code) > 0) { alert('Role still assigned to users.'); return; }
+    if (!confirm(`Delete role ${r.name}?`)) return;
+    try {
+      await rbacService.deleteFunctionalRole(r.id);
+      removeFunctionalRole(r.id);
+    } catch (e) {
+      alert('Delete failed: ' + (e instanceof Error ? e.message : 'Unknown error'));
+    }
+  };
+
   return (
     <>
       <EntityToolbar
@@ -74,10 +92,7 @@ const FunctionalRoles: React.FC = () => {
                   <Button size="icon" variant="ghost" onClick={() => { setEditing(r); setOpen(true); }}>
                     <Pencil size={14} />
                   </Button>
-                  <Button size="icon" variant="ghost" disabled={r.builtIn} onClick={() => {
-                    if (userCount(r.code) > 0) { alert('Role still assigned to users.'); return; }
-                    if (confirm(`Delete role ${r.name}?`)) removeFunctionalRole(r.id);
-                  }}>
+                  <Button size="icon" variant="ghost" disabled={r.builtIn} onClick={() => handleDelete(r)}>
                     <Trash2 size={14} className={r.builtIn ? 'text-ois-text-subtle' : 'text-ois-danger'} />
                   </Button>
                 </div>
@@ -91,7 +106,7 @@ const FunctionalRoles: React.FC = () => {
         <RoleForm
           initial={editing}
           onClose={() => setOpen(false)}
-          onSave={(r) => { upsertFunctionalRole(r); setOpen(false); }}
+          onSave={handleSave}
         />
       )}
     </>
@@ -101,16 +116,40 @@ const FunctionalRoles: React.FC = () => {
 const RoleForm: React.FC<{
   initial: FunctionalRole | null;
   onClose: () => void;
-  onSave: (r: FunctionalRole) => void;
+  onSave: (r: FunctionalRole) => Promise<void>;
 }> = ({ initial, onClose, onSave }) => {
   const [code, setCode] = useState(initial?.code ?? '');
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const builtIn = initial?.builtIn ?? false;
+
+  const save = async () => {
+    if (!code.trim() || !name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        id: initial?.id ?? `role-${Date.now()}`,
+        code: code.trim(), name: name.trim(),
+        description: description.trim(), builtIn,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Modal isOpen onClose={onClose} title={initial ? 'Edit Role' : 'New Functional Role'}>
       <div className="space-y-3 py-4">
+        {error && (
+          <div className="rounded-md border border-ois-danger/30 bg-ois-danger/5 px-3 py-2 text-xs text-ois-danger">
+            {error}
+          </div>
+        )}
         <Input label="Code (snake_case)" value={code}
           onChange={(e) => setCode(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
           disabled={builtIn}
@@ -126,15 +165,8 @@ const RoleForm: React.FC<{
         </div>
       </div>
       <div className="flex justify-end gap-2 py-4 border-t border-ois-border">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button onClick={() => {
-          if (!code.trim() || !name.trim()) return;
-          onSave({
-            id: initial?.id ?? `role-${Date.now()}`,
-            code: code.trim(), name: name.trim(),
-            description: description.trim(), builtIn,
-          });
-        }}>Save</Button>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={save} loading={saving}>Save</Button>
       </div>
     </Modal>
   );

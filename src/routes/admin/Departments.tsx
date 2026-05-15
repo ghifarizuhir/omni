@@ -5,6 +5,7 @@ import { Input } from '@/src/components/ui/Input';
 import { Table, THead, TBody, TR, TH, TD } from '@/src/components/ui/Table';
 import { EntityToolbar } from '@/src/components/admin/EntityToolbar';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
+import { rbacService } from '@/src/services/platformServices';
 import type { Department } from '@/src/types/rbac';
 import { Pencil, Trash2 } from 'lucide-react';
 
@@ -22,6 +23,23 @@ export const Departments: React.FC = () => {
   });
   const divName = (id: string) => divisions.find(d => d.id === id)?.name ?? '—';
   const teamCount = (id: string) => teams.filter(t => t.departmentId === id).length;
+
+  const handleSave = async (d: Department) => {
+    await rbacService.upsertDepartment(d);
+    upsertDepartment(d);
+    setOpen(false);
+  };
+
+  const handleDelete = async (d: Department) => {
+    if (teamCount(d.id) > 0) { alert('Department still has teams.'); return; }
+    if (!confirm(`Delete department ${d.name}?`)) return;
+    try {
+      await rbacService.deleteDepartment(d.id);
+      removeDepartment(d.id);
+    } catch (e) {
+      alert('Delete failed: ' + (e instanceof Error ? e.message : 'Unknown error'));
+    }
+  };
 
   return (
     <div className="bg-white border border-ois-border rounded-xl p-5">
@@ -57,10 +75,7 @@ export const Departments: React.FC = () => {
                   <Button size="icon" variant="ghost" onClick={() => { setEditing(d); setOpen(true); }}>
                     <Pencil size={14} />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => {
-                    if (teamCount(d.id) > 0) { alert('Department still has teams.'); return; }
-                    if (confirm(`Delete department ${d.name}?`)) removeDepartment(d.id);
-                  }}>
+                  <Button size="icon" variant="ghost" onClick={() => handleDelete(d)}>
                     <Trash2 size={14} className="text-ois-danger" />
                   </Button>
                 </div>
@@ -74,7 +89,7 @@ export const Departments: React.FC = () => {
         <DeptForm
           initial={editing}
           onClose={() => setOpen(false)}
-          onSave={(d) => { upsertDepartment(d); setOpen(false); }}
+          onSave={handleSave}
         />
       )}
     </div>
@@ -84,16 +99,41 @@ export const Departments: React.FC = () => {
 const DeptForm: React.FC<{
   initial: Department | null;
   onClose: () => void;
-  onSave: (d: Department) => void;
+  onSave: (d: Department) => Promise<void>;
 }> = ({ initial, onClose, onSave }) => {
   const { divisions } = useCurrentUser();
   const [code, setCode] = useState(initial?.code ?? '');
   const [name, setName] = useState(initial?.name ?? '');
   const [divisionId, setDivisionId] = useState(initial?.divisionId ?? divisions[0]?.id ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async () => {
+    if (!code.trim() || !name.trim() || !divisionId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        id: initial?.id ?? `dept-${Date.now()}`,
+        divisionId,
+        code: code.trim(),
+        name: name.trim(),
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Modal isOpen onClose={onClose} title={initial ? 'Edit Department' : 'New Department'}>
       <div className="space-y-3 py-4">
+        {error && (
+          <div className="rounded-md border border-ois-danger/30 bg-ois-danger/5 px-3 py-2 text-xs text-ois-danger">
+            {error}
+          </div>
+        )}
         <div>
           <label className="text-xs font-medium text-ois-text-muted">Division</label>
           <select
@@ -107,16 +147,8 @@ const DeptForm: React.FC<{
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="flex justify-end gap-2 py-4 border-t border-ois-border">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button onClick={() => {
-          if (!code.trim() || !name.trim() || !divisionId) return;
-          onSave({
-            id: initial?.id ?? `dept-${Date.now()}`,
-            divisionId,
-            code: code.trim(),
-            name: name.trim(),
-          });
-        }}>Save</Button>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={save} loading={saving}>Save</Button>
       </div>
     </Modal>
   );

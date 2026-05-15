@@ -6,6 +6,7 @@ import { Table, THead, TBody, TR, TH, TD } from '@/src/components/ui/Table';
 import { Badge } from '@/src/components/ui/Badge';
 import { EntityToolbar } from '@/src/components/admin/EntityToolbar';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
+import { rbacService } from '@/src/services/platformServices';
 import type { Division, DivisionCode } from '@/src/types/rbac';
 import { Pencil, Trash2 } from 'lucide-react';
 
@@ -21,6 +22,23 @@ export const Divisions: React.FC = () => {
   );
 
   const deptCount = (divId: string) => departments.filter(d => d.divisionId === divId).length;
+
+  const handleSave = async (d: Division) => {
+    await rbacService.upsertDivision(d);
+    upsertDivision(d);
+    setOpen(false);
+  };
+
+  const handleDelete = async (d: Division) => {
+    if (deptCount(d.id) > 0) { alert('Division still has departments.'); return; }
+    if (!confirm(`Delete division ${d.name}?`)) return;
+    try {
+      await rbacService.deleteDivision(d.id);
+      removeDivision(d.id);
+    } catch (e) {
+      alert('Delete failed: ' + (e instanceof Error ? e.message : 'Unknown error'));
+    }
+  };
 
   return (
     <div className="bg-white border border-ois-border rounded-xl p-5">
@@ -48,10 +66,7 @@ export const Divisions: React.FC = () => {
                   <Button size="icon" variant="ghost" onClick={() => { setEditing(d); setOpen(true); }}>
                     <Pencil size={14} />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => {
-                    if (deptCount(d.id) > 0) { alert('Division still has departments.'); return; }
-                    if (confirm(`Delete division ${d.name}?`)) removeDivision(d.id);
-                  }}>
+                  <Button size="icon" variant="ghost" onClick={() => handleDelete(d)}>
                     <Trash2 size={14} className="text-ois-danger" />
                   </Button>
                 </div>
@@ -65,7 +80,7 @@ export const Divisions: React.FC = () => {
         <DivisionFormModal
           initial={editing}
           onClose={() => setOpen(false)}
-          onSave={(d) => { upsertDivision(d); setOpen(false); }}
+          onSave={handleSave}
         />
       )}
     </div>
@@ -75,27 +90,44 @@ export const Divisions: React.FC = () => {
 const DivisionFormModal: React.FC<{
   initial: Division | null;
   onClose: () => void;
-  onSave: (d: Division) => void;
+  onSave: (d: Division) => Promise<void>;
 }> = ({ initial, onClose, onSave }) => {
   const [code, setCode] = useState<DivisionCode | string>(initial?.code ?? '');
   const [name, setName] = useState(initial?.name ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async () => {
+    if (!code.trim() || !name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        id: initial?.id ?? `div-${Date.now()}`,
+        code: code.trim() as DivisionCode,
+        name: name.trim(),
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Modal isOpen onClose={onClose} title={initial ? 'Edit Division' : 'New Division'}>
       <div className="space-y-3 py-4">
+        {error && (
+          <div className="rounded-md border border-ois-danger/30 bg-ois-danger/5 px-3 py-2 text-xs text-ois-danger">
+            {error}
+          </div>
+        )}
         <Input label="Code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="STA / IFM / APS / USER_BUSINESS" />
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="flex justify-end gap-2 py-4 border-t border-ois-border">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button onClick={() => {
-          if (!code.trim() || !name.trim()) return;
-          onSave({
-            id: initial?.id ?? `div-${Date.now()}`,
-            code: code as DivisionCode,
-            name: name.trim(),
-          });
-        }}>Save</Button>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={save} loading={saving}>Save</Button>
       </div>
     </Modal>
   );

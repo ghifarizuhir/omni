@@ -1,6 +1,7 @@
 import React from 'react';
-import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
+import { useAuthSession } from '@/src/lib/auth/session';
 import { cn } from '@/src/lib/utils';
 import {
   Shield, Building2, FolderTree, Users, AppWindow, Key, Eye, LayoutGrid,
@@ -19,15 +20,47 @@ const tabs = [
 
 export const AdminLayout: React.FC = () => {
   const { user } = useCurrentUser();
+  const session = useAuthSession();
   const location = useLocation();
 
-  if (!user?.isSuperadmin) {
+  // Still loading session or persona list — show nothing yet to avoid flicker.
+  if (session === null || user === null) {
+    return <div className="text-sm text-ois-text-muted p-8">Loading…</div>;
+  }
+
+  // Gate 1 — actual session: does the logged-in account have system.admin?
+  const hasAdminPerm = session.permissions.includes('system.admin');
+  if (!hasAdminPerm) {
+    return (
+      <div className="max-w-xl mx-auto mt-16 p-8 bg-white rounded-xl border border-ois-border text-center">
+        <Shield className="mx-auto text-ois-warning" size={36} />
+        <h2 className="mt-3 text-lg font-bold text-ois-text">Session lacks admin access</h2>
+        <p className="text-sm text-ois-text-muted mt-1">
+          You are logged in as <strong>{session.user.email}</strong> which does not have the
+          <code className="mx-1 px-1 bg-ois-bg rounded text-xs">system.admin</code>
+          permission.
+        </p>
+        <p className="text-sm text-ois-text-muted mt-2">
+          Log out and log back in as <strong>admin@omni.local</strong>{' '}
+          (password: <code className="px-1 bg-ois-bg rounded text-xs">demo</code>), or run{' '}
+          <code className="px-1 bg-ois-bg rounded text-xs">npm run db:seed</code> if the DB
+          hasn't been seeded yet.
+        </p>
+      </div>
+    );
+  }
+
+  // Gate 2 — persona: the switched-to persona must be a superadmin so the
+  // engine and permission-rule UI work correctly.
+  if (!user.isSuperadmin) {
     return (
       <div className="max-w-xl mx-auto mt-16 p-8 bg-white rounded-xl border border-ois-border text-center">
         <Shield className="mx-auto text-ois-danger" size={36} />
-        <h2 className="mt-3 text-lg font-bold text-ois-text">Access denied</h2>
+        <h2 className="mt-3 text-lg font-bold text-ois-text">Switch to a superadmin persona</h2>
         <p className="text-sm text-ois-text-muted mt-1">
-          You need superadmin privileges to access the admin module.
+          Your login has admin access, but the active persona in the top-bar user switcher
+          is not a superadmin. Switch the persona to <strong>Super Admin</strong> to use
+          the admin panel.
         </p>
       </div>
     );

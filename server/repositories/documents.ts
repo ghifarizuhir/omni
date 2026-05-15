@@ -34,3 +34,17 @@ export const firstByKind = async <T>(tenantId: string, kind: string): Promise<T 
   });
   return row ? parse<T>(row.data) : null;
 };
+
+export const upsertDocument = async (
+  tenantId: string, kind: string, key: string, data: unknown,
+): Promise<void> => {
+  await prisma.document.upsert({
+    where: { tenantId_kind_key: { tenantId, kind, key } },
+    create: { tenantId, kind, key, data: JSON.stringify(data) },
+    update: { data: JSON.stringify(data) },
+  });
+};
+
+export const deleteDocument = async (tenantId: string, kind: string, key: string): Promise<void> => {
+  await prisma.document.deleteMany({ where: { tenantId, kind, key } });
+};
