@@ -76,6 +76,40 @@ async function main() {
     data: { membershipId: membership.id, roleId: systemRoleId('admin') },
   });
 
+  console.log('[seed] operator user…');
+  const opHash = await hash('demo', ARGON_OPTS);
+  const operator = await prisma.user.create({
+    data: {
+      email: 'operator@omni.local',
+      name: 'Demo Operator',
+      passwordHash: opHash,
+    },
+  });
+  const opMembership = await prisma.tenantMembership.create({
+    data: { tenantId: TENANT.id, userId: operator.id },
+  });
+  await prisma.membershipRole.create({
+    data: { membershipId: opMembership.id, roleId: systemRoleId('operator') },
+  });
+
+  console.log('[seed] demo CIs…');
+  await prisma.configurationItem.create({
+    data: {
+      id: 'ci-demo-001',
+      tenantId: TENANT.id,
+      publicId: 'CI-DEMO-001',
+      name: 'Demo Web Server',
+      type: 'server',
+      status: 'active',
+      criticality: 'high',
+      environment: 'production',
+      ownerTeamId: 'none',
+      health: 'healthy',
+      attributes: '{}',
+      tags: '[]',
+    },
+  });
+
   console.log('[seed] done.');
 }
 

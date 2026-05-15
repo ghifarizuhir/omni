@@ -11,6 +11,7 @@ export interface AuditEvent {
   resourceId: string;
   before?: unknown;
   after?: unknown;
+  scopeMode?: 'member' | 'noc' | 'owner' | 'admin';
 }
 
 export const audit = async (req: Request, ev: AuditEvent) => {
@@ -25,6 +26,7 @@ export const audit = async (req: Request, ev: AuditEvent) => {
       after: ev.after != null ? JSON.stringify(ev.after) : null,
       ip: req.ip ?? null,
       userAgent: req.get('user-agent') ?? null,
+      scopeMode: ev.scopeMode ?? null,
     },
   });
 };
