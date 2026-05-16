@@ -6,12 +6,14 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { AiQuickPanel } from '@/src/components/ai/AiQuickPanel';
 import { ScopeProvider } from '@/src/lib/scope/ScopeContext';
+import { CmdKPalette } from '@/src/components/ui/CmdKPalette';
 
 export const AppShell: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [aiSidebarContent, setAiSidebarContent] = useState<React.ReactNode>(null);
+  const [cmdKOpen, setCmdKOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -36,17 +38,17 @@ export const AppShell: React.FC = () => {
     return () => window.removeEventListener('auth:session-expired', onExpired);
   }, [navigate, location.pathname, location.search]);
 
-  // Cmd+K / Ctrl+K shortcut to toggle AI panel
+  // Cmd+K / Ctrl+K shortcut to open command palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !isAiRoute) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setAiPanelOpen((prev) => !prev);
+        setCmdKOpen(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAiRoute]);
+  }, []);
 
   return (
     <ScopeProvider>
@@ -85,6 +87,8 @@ export const AppShell: React.FC = () => {
           <AiQuickPanel onClose={() => setAiPanelOpen(false)} />
         )}
       </AnimatePresence>
+
+      <CmdKPalette open={cmdKOpen} onClose={() => setCmdKOpen(false)} />
 
     </div>
     </ScopeProvider>

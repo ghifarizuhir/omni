@@ -127,7 +127,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox, on
               <Sparkles size={20} />
             </Button>
             <div className="absolute top-full right-0 mt-1.5 px-2.5 py-1.5 bg-ois-text text-white rounded-md text-[11px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none shadow-lg">
-              AI Quick Assist <span className="opacity-60 ml-1">⌘K</span>
+              AI Quick Assist
             </div>
           </div>
         )}
