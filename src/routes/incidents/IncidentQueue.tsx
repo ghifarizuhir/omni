@@ -8,7 +8,6 @@ import { cn } from '@/src/lib/utils';
 import { formatRelative } from '@/src/lib/format';
 import { incidentsService, usersService, servicesService, useResource } from '@/src/services';
 import { Incident, IncidentStatus, IncidentPriority } from '@/src/types/incident';
-import { IncidentStatusPill } from '@/src/components/incidents/IncidentStatusPill';
 import { IncidentPriorityBadge } from '@/src/components/incidents/IncidentPriorityBadge';
 import { SLAIndicator } from '@/src/components/incidents/SLAIndicator';
 import { MajorIncidentBanner } from '@/src/components/incidents/MajorIncidentBanner';
@@ -20,6 +19,8 @@ import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { Modal } from '@/src/components/ui/Modal';
 import { Input } from '@/src/components/ui/Input';
 import { Can, useCurrentUser, filterReadable, incidentResource } from '@/src/lib/rbac';
+import { IDCell } from '@/src/components/ui/IDCell';
+import { StatusRing, type RingState } from '@/src/components/ui/StatusRing';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -659,6 +660,15 @@ const QuickFilterChip: React.FC<{ label: string; active: boolean; onClick: () =>
   </button>
 );
 
+const INCIDENT_STATUS_TO_RING: Record<string, RingState> = {
+  new:         'open',
+  triaging:    'acknowledged',
+  in_progress: 'investigating',
+  pending:     'investigating',
+  resolved:    'resolved',
+  closed:      'closed',
+};
+
 interface IncidentRowProps {
   incident: Incident;
   users: { id: string; name: string }[];
@@ -681,12 +691,15 @@ const IncidentRow: React.FC<IncidentRowProps> = ({
   const visibleTags = incident.tags.slice(0, 2);
   const extraTags = incident.tags.length - visibleTags.length;
 
+  const stripeColor = ({ P1: '#B42318', P2: '#DC6803', P3: '#DC6803', P4: '#027A48' } as Record<string, string>)[incident.severity] ?? '#1F4FD4';
+
   return (
     <tr
       className={cn(
-        'group hover:bg-ois-surface-muted/60 transition-colors cursor-pointer',
+        'group hover:bg-ois-surface-muted/60 transition-colors cursor-pointer border-l-[3px]',
         selected && 'bg-ois-primary/5'
       )}
+      style={{ borderLeftColor: stripeColor }}
     >
       {/* Checkbox */}
       <td className="px-3 py-2.5" onClick={e => { e.stopPropagation(); onSelect(); }}>
@@ -705,7 +718,7 @@ const IncidentRow: React.FC<IncidentRowProps> = ({
       <td className="px-2 py-2.5" onClick={onClick}>
         <div className="flex items-center gap-1">
           {incident.isMajor && <span title="Major incident">🚨</span>}
-          <span className="font-mono text-xs text-ois-primary font-semibold">{incident.publicId}</span>
+          <IDCell value={incident.publicId} />
         </div>
       </td>
 
@@ -725,7 +738,7 @@ const IncidentRow: React.FC<IncidentRowProps> = ({
 
       {/* Status */}
       <td className="px-2 py-2.5" onClick={onClick}>
-        <IncidentStatusPill status={incident.status} />
+        <StatusRing state={INCIDENT_STATUS_TO_RING[incident.status] ?? 'open'} aria-label={incident.status} />
       </td>
 
       {/* Assignee */}
