@@ -82,7 +82,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onOpenInbox, on
             className="w-full h-9 pl-10 pr-12 bg-ois-surface-muted rounded-ois-btn border border-ois-border text-ois-text placeholder:text-ois-text-subtle focus:bg-white focus:border-ois-primary focus:ring-2 focus:ring-ois-primary/15 text-sm transition-all"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded border border-ois-border bg-white text-[10px] font-medium text-ois-text-muted">/</kbd>
+            <kbd className="px-1.5 py-0.5 rounded border border-ois-border bg-white text-[10px] font-medium text-ois-text-muted font-mono">⌘K</kbd>
           </div>
         </div>
 
