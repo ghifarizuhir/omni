@@ -1,13 +1,34 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MoreHorizontal, ExternalLink, MessageSquare, Shield, Clock, PlusCircle } from 'lucide-react';
-import { Event } from '../../types/monitoring';
+import { Event, EventStatus, EventSource } from '../../types/monitoring';
 import { eventTypeMeta } from '../../lib/constants';
 import { cn } from '../../lib/utils';
 import { EventStatusBadge } from './EventStatusBadge';
 import { EventTypeBadge } from './EventTypeBadge';
-import { EventSourceChip } from './EventSourceChip';
 import { formatDistanceToNow } from 'date-fns';
+import { IDCell } from '@/src/components/ui/IDCell';
+import { StatusRing, type RingState } from '@/src/components/ui/StatusRing';
+import { Dot, type DotVariant } from '@/src/components/ui/Dot';
+import { SeverityStripeRow, type StripeSeverity } from '@/src/components/ui/SeverityStripe';
+
+const EVENT_STATUS_TO_RING: Record<EventStatus, RingState> = {
+  open:         'open',
+  acknowledged: 'acknowledged',
+  resolved:     'resolved',
+  suppressed:   'closed',
+};
+
+const EVENT_SOURCE_TO_DOT: Record<EventSource, DotVariant> = {
+  prometheus:     'info',
+  opentelemetry:  'info',
+  log_pattern:    'muted',
+  synthetic:      'warning',
+  webhook:        'muted',
+  cicd:           'warning',
+  cloud_provider: 'info',
+  manual:         'muted',
+};
 
 interface EventCardProps {
   event: Event;
@@ -27,23 +48,25 @@ export const EventCard: React.FC<EventCardProps> = ({ event, className }) => {
   };
 
   return (
-    <div
+    <SeverityStripeRow
+      severity={event.severity as StripeSeverity}
       onClick={handleCardClick}
       className={cn(
         "group relative flex items-stretch bg-ois-surface border border-ois-border rounded-ois-card shadow-ois-card hover:shadow-ois-card-hover hover:border-ois-primary/40 transition-all cursor-pointer overflow-hidden",
         className
       )}
     >
-      {/* Type/severity stripe */}
-      <div className="w-1 shrink-0" style={{ backgroundColor: typeMeta.color }} />
-
       <div className="flex-1 px-4 py-3 flex flex-col md:flex-row gap-3 items-start md:items-center">
         {/* Main content */}
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-ois-primary font-medium" onClick={stopProp}>
-              {event.publicId}
-            </span>
+            <StatusRing state={EVENT_STATUS_TO_RING[event.status] ?? 'open'} />
+            <Dot
+              variant={EVENT_SOURCE_TO_DOT[event.source] ?? 'muted'}
+              size="sm"
+              aria-label={`Source: ${event.source}`}
+            />
+            <span onClick={stopProp}><IDCell value={event.publicId} /></span>
             <span className="text-ois-border-strong">·</span>
             <span className="flex items-center gap-1 text-xs text-ois-text-subtle">
               <Clock size={11} /> {formatDistanceToNow(new Date(event.firedAt))} ago
@@ -57,7 +80,6 @@ export const EventCard: React.FC<EventCardProps> = ({ event, className }) => {
           <div className="flex flex-wrap items-center gap-1.5">
             <EventStatusBadge status={event.status} />
             <EventTypeBadge type={event.type} />
-            <EventSourceChip source={event.source} />
 
             {event.affectedCIIds.length > 0 && (
               <span className="flex items-center gap-1 px-2 py-0.5 rounded-ois-badge bg-ois-primary-pale text-ois-primary text-[10px] font-medium">
@@ -101,6 +123,6 @@ export const EventCard: React.FC<EventCardProps> = ({ event, className }) => {
           </button>
         </div>
       </div>
-    </div>
+    </SeverityStripeRow>
   );
 };
