@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, isAiRoute, aiSideba
           {!collapsed && (
             <div className="flex flex-col overflow-hidden">
               <span className="font-bold text-[13px] text-ois-text tracking-tight leading-none truncate">Omni</span>
-              <span className="text-[10px] text-ois-text-subtle tracking-[0.05em] uppercase leading-none mt-0.5">Intelligence Suite</span>
+              <span className="font-mono text-[10px] text-ois-text-subtle tracking-[0.12em] uppercase leading-none mt-0.5">Intelligence Suite</span>
             </div>
           )}
         </div>
@@ -131,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, isAiRoute, aiSideba
                   <motion.div
                     layoutId="sidebar-mode-indicator"
                     className="absolute inset-0 rounded-[6px] bg-white border border-ois-border"
-                    style={{ boxShadow: '0 1px 3px rgba(16,24,40,0.1), 0 1px 2px rgba(16,24,40,0.06)' }}
+                    style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.06), 0 1px 3px rgba(16,24,40,0.04)' }}
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />
                 )}
@@ -258,7 +258,7 @@ const SidebarSection: React.FC<{ label: string; collapsed: boolean; children: Re
   }
   return (
     <div className="mb-6 px-3 group/section">
-      <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-ois-sidebar-section-label group-has-[[aria-current='page']]/section:text-ois-primary transition-colors">
+      <div className="px-3 mb-2 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-ois-sidebar-section-label group-has-[[aria-current='page']]/section:text-ois-primary transition-colors">
         {label}
       </div>
       <div className="space-y-1">{children}</div>
@@ -299,10 +299,10 @@ const SidebarItem: React.FC<{
           {isActive && (
             <div
               className="absolute left-0 top-0 bottom-0 w-[3px] bg-ois-primary"
-              style={{ boxShadow: 'inset 3px 0 0 0 var(--ois-primary)' }}
+              style={{ boxShadow: '0 0 12px 0 rgba(31,79,212,0.35)' }}
             />
           )}
-          <div className={cn("shrink-0 relative", isActive ? "text-ois-primary font-bold" : "text-ois-text-muted group-hover:text-ois-text")}>
+          <div className={cn("shrink-0 relative", isActive ? "text-ois-primary" : "text-ois-text-muted group-hover:text-ois-text")}>
             {icon}
             {collapsed && hasBadge && (
               <span
@@ -323,7 +323,7 @@ const SidebarItem: React.FC<{
                     "shrink-0 flex items-center justify-center min-w-[20px] h-5 rounded px-1.5 text-[10px] font-bold leading-none",
                     badgeVariant === 'urgent'  ? "bg-ois-danger text-white" :
                     badgeVariant === 'warning' ? "bg-ois-warning text-white" :
-                    "bg-ois-border-strong text-ois-text-muted",
+                    "bg-ois-surface-muted text-ois-text-muted",
                   )}
                 >
                   {badge}

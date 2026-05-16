@@ -126,7 +126,27 @@ export const Login: React.FC = () => {
         {/* Top mono micro-label */}
         <div className="ois-fade-up flex items-center justify-between text-[11px] tracking-[0.18em]"
              style={{ fontFamily: MONO, color: '#A1A1AA', animationDelay: '0ms' }}>
-          <span>/ ENTERPRISE NODE v4.12.0 /</span>
+          {/* Brand lockup — mirrors the AppShell sidebar header so the surface feels continuous after sign-in */}
+          <span className="flex items-center gap-2.5">
+            <span
+              className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-[7px]"
+              style={{
+                background: 'linear-gradient(135deg, #1F4FD4 0%, #185FA5 60%, #0C447C 100%)',
+                boxShadow: '0 1px 4px rgba(31,79,212,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+              }}
+            >
+              <span
+                aria-hidden
+                className="absolute inset-0"
+                style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%)' }}
+              />
+              <span className="relative text-[10px] font-black tracking-tight text-white" style={{ fontFamily: JAKARTA }}>OIS</span>
+            </span>
+            <span className="flex flex-col leading-none">
+              <span className="text-[12px] font-bold tracking-tight text-white" style={{ fontFamily: JAKARTA }}>Omni</span>
+              <span className="mt-0.5 text-[9.5px] tracking-[0.18em] text-[#71717A]">INTELLIGENCE SUITE</span>
+            </span>
+          </span>
           <span className="flex items-center gap-2">
             <span className="relative inline-flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#12B76A] opacity-60" />
