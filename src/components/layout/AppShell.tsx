@@ -70,6 +70,12 @@ export const AppShell: React.FC = () => {
           showAi={!isAiRoute}
         />
 
+        <div
+          aria-hidden
+          className="ois-topbar-stripe h-[2px] w-full shrink-0"
+          style={{ background: 'linear-gradient(90deg, #1F4FD4 0%, #0BA5EC 100%)' }}
+        />
+
         <main className={isAiRoute ? 'flex-1 overflow-hidden flex min-h-0' : 'flex-1 overflow-y-auto p-6'}>
           <Outlet context={{ setAiSidebarContent }} />
         </main>
