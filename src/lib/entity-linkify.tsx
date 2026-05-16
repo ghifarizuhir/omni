@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/src/lib/utils';
+import { EntityHoverCard, type HoverEntityKind } from '@/src/components/catalog/EntityHoverCard';
 
 type EntityKind = 'incident' | 'problem' | 'change' | 'event' | 'ci';
 
@@ -64,23 +65,66 @@ interface EntityLinkProps {
 
 /**
  * A single entity reference rendered as a dotted-underline chip-link.
- * In PR-7 this gains hover-card behavior; for PR-5 it's just navigation.
+ * Hovering for ≥ 400ms opens an EntityHoverCard; 150ms grace on leave.
  */
-export const EntityLink: React.FC<EntityLinkProps> = ({ kind, id, className, children }) => (
-  <Link
-    to={ROUTE[kind](id)}
-    className={cn(
-      'text-ois-primary hover:text-ois-primary-hover transition-colors',
-      'underline decoration-dotted decoration-ois-text-subtle underline-offset-[3px]',
-      'font-mono text-[0.95em]',
-      className,
-    )}
-    data-entity-kind={kind}
-    data-entity-id={id}
-  >
-    {children ?? id}
-  </Link>
-);
+export const EntityLink: React.FC<EntityLinkProps> = ({ kind, id, className, children }) => {
+  const anchorRef = useRef<HTMLAnchorElement>(null);
+  const [hoverState, setHoverState] = useState<{ open: boolean; rect: DOMRect | null }>({ open: false, rect: null });
+  const enterTimer = useRef<number | null>(null);
+  const leaveTimer = useRef<number | null>(null);
+
+  const cancelTimers = () => {
+    if (enterTimer.current) { window.clearTimeout(enterTimer.current); enterTimer.current = null; }
+    if (leaveTimer.current) { window.clearTimeout(leaveTimer.current); leaveTimer.current = null; }
+  };
+
+  const onMouseEnter = () => {
+    cancelTimers();
+    enterTimer.current = window.setTimeout(() => {
+      const rect = anchorRef.current?.getBoundingClientRect();
+      if (rect) setHoverState({ open: true, rect });
+    }, 400);
+  };
+
+  const onMouseLeave = () => {
+    cancelTimers();
+    leaveTimer.current = window.setTimeout(() => {
+      setHoverState({ open: false, rect: null });
+    }, 150);
+  };
+
+  return (
+    <>
+      <Link
+        ref={anchorRef}
+        to={ROUTE[kind](id)}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        onFocus={onMouseEnter}
+        onBlur={onMouseLeave}
+        className={cn(
+          'text-ois-primary hover:text-ois-primary-hover transition-colors',
+          'underline decoration-dotted decoration-ois-text-subtle underline-offset-[3px]',
+          'font-mono text-[0.95em]',
+          className,
+        )}
+        data-entity-kind={kind}
+        data-entity-id={id}
+      >
+        {children ?? id}
+      </Link>
+      {hoverState.open && hoverState.rect && (
+        <EntityHoverCard
+          open
+          kind={kind as HoverEntityKind}
+          id={id}
+          anchor={hoverState.rect}
+          onClose={() => setHoverState({ open: false, rect: null })}
+        />
+      )}
+    </>
+  );
+};
 
 /**
  * Transform a string containing entity IDs into React children with
