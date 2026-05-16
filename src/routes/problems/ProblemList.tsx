@@ -11,7 +11,6 @@ import { Modal } from '@/src/components/ui/Modal';
 import { SeverityBadge } from '@/src/components/ui/StatusSeverityBadges';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { Avatar } from '@/src/components/ui/Avatar';
-import { ProblemStatusPill } from '@/src/components/problems/ProblemStatusPill';
 import { ProblemSourceChip } from '@/src/components/problems/ProblemSourceChip';
 import { problemsService, usersService, useResource } from '@/src/services';
 import { Can, useCurrentUser, filterReadable, problemResource } from '@/src/lib/rbac';
@@ -19,6 +18,8 @@ import { problemStatusMeta, problemSourceMeta } from '@/src/lib/constants';
 import { formatRelative } from '@/src/lib/format';
 import { Problem, ProblemStatus, ProblemSource } from '@/src/types/problem';
 import { cn } from '@/src/lib/utils';
+import { IDCell } from '@/src/components/ui/IDCell';
+import { StatusRing, type RingState } from '@/src/components/ui/StatusRing';
 
 type SortKey = 'lastIncidentDate' | 'createdAt' | 'relatedIncidentCount' | 'severity';
 type SortDir = 'asc' | 'desc';
@@ -27,6 +28,21 @@ const STATUSES: ProblemStatus[] = ['identified', 'investigating', 'known_error',
 const SOURCES: ProblemSource[] = ['incident_pattern', 'major_incident', 'proactive', 'audit', 'user_reported'];
 
 const SEVERITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
+
+const PROBLEM_STATUS_TO_RING: Record<string, RingState> = {
+  identified:      'open',
+  investigating:   'investigating',
+  known_error:     'investigating',
+  fix_in_progress: 'acknowledged',
+  closed:          'closed',
+};
+
+const SEVERITY_STRIPE: Record<string, string> = {
+  P1: '#B42318',
+  P2: '#DC6803',
+  P3: '#DC6803',
+  P4: '#027A48',
+};
 
 // Linked items icon row for a problem
 // Create Problem Modal Component
@@ -417,22 +433,18 @@ export const ProblemList: React.FC = () => {
             ) : (
               filtered.map(problem => {
                 const owner = USER_MAP[problem.ownerId];
+                const stripeColor = SEVERITY_STRIPE[problem.severity] ?? '#1F4FD4';
                 return (
                   <tr
                     key={problem.id}
-                    className="group hover:bg-ois-surface-muted/30 transition-colors cursor-pointer"
+                    className="group hover:bg-ois-surface-muted/30 transition-colors cursor-pointer border-l-[3px]"
                     onClick={() => navigate(`/problems/${problem.publicId}`)}
                     title={problem.description.slice(0, 200)}
+                    style={{ borderLeftColor: stripeColor }}
                   >
                     {/* Public ID */}
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Link
-                        to={`/problems/${problem.publicId}`}
-                        onClick={e => e.stopPropagation()}
-                        className="font-mono text-xs font-semibold text-ois-primary hover:underline"
-                      >
-                        {problem.publicId}
-                      </Link>
+                      <IDCell value={problem.publicId} />
                     </td>
 
                     {/* Title */}
@@ -449,7 +461,7 @@ export const ProblemList: React.FC = () => {
 
                     {/* Status */}
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <ProblemStatusPill status={problem.status} />
+                      <StatusRing state={PROBLEM_STATUS_TO_RING[problem.status] ?? 'open'} aria-label={problem.status} />
                     </td>
 
                     {/* Severity */}
