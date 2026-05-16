@@ -5,6 +5,16 @@ import { formatRelative } from '@/src/lib/format';
 import { cn } from '@/src/lib/utils';
 import { InboxTypeChip } from './InboxTypeChip';
 import { InboxPriorityBadge } from './InboxPriorityBadge';
+import { SeverityStripeRow, type StripeSeverity } from '@/src/components/ui/SeverityStripe';
+import { IDCell } from '@/src/components/ui/IDCell';
+import { Dot } from '@/src/components/ui/Dot';
+
+const PRIORITY_TO_SEVERITY: Record<string, StripeSeverity> = {
+  urgent: 'P1',
+  high:   'P2',
+  normal: 'P3',
+  low:    'P4',
+};
 
 interface InboxListItemProps {
   item: InboxItem;
@@ -26,7 +36,8 @@ export const InboxListItem: React.FC<InboxListItemProps> = ({
   const [hovered, setHovered] = useState(false);
 
   return (
-    <div
+    <SeverityStripeRow
+      severity={PRIORITY_TO_SEVERITY[item.priority] ?? 'P4'}
       role="button"
       tabIndex={0}
       onClick={onClick}
@@ -36,7 +47,7 @@ export const InboxListItem: React.FC<InboxListItemProps> = ({
       className={cn(
         'relative px-3 py-3 border-b border-ois-border cursor-pointer transition-colors',
         isSelected
-          ? 'bg-ois-primary/5 border-l-2 border-l-ois-primary'
+          ? 'bg-ois-primary/5'
           : 'hover:bg-ois-surface-muted'
       )}
     >
@@ -44,19 +55,20 @@ export const InboxListItem: React.FC<InboxListItemProps> = ({
         {/* Unread dot */}
         <div className="flex-shrink-0 mt-1.5">
           {!item.isRead ? (
-            <span className="block w-2 h-2 rounded-full bg-ois-primary" />
+            <Dot variant="info" size="sm" pulse aria-label="Unread" />
           ) : (
             <span className="block w-2 h-2 rounded-full bg-transparent" />
           )}
         </div>
 
         <div className="flex-1 min-w-0">
-          {/* Top row: priority + type + pin indicator */}
+          {/* Top row: priority + type + source ID + pin indicator */}
           <div className="flex items-center gap-1.5 mb-1">
             {(item.priority === 'urgent' || item.priority === 'high') && (
               <InboxPriorityBadge priority={item.priority} />
             )}
             <InboxTypeChip type={item.type} />
+            {item.sourcePublicId && <IDCell value={item.sourcePublicId} />}
             {item.isPinned && <Pin size={10} className="text-ois-text-subtle ml-auto" />}
           </div>
 
@@ -117,6 +129,6 @@ export const InboxListItem: React.FC<InboxListItemProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </SeverityStripeRow>
   );
 };
