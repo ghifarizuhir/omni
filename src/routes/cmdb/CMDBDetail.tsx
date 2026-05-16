@@ -378,7 +378,7 @@ export const CMDBDetail: React.FC = () => {
                   </div>
                 </Card>
                 <div className="flex justify-center">
-                  <Button variant="outline" className="gap-2 text-ois-primary border-ois-primary/30" onClick={() => navigate(`/cmdb/graph?focus=${ci.id}`)}>Open in Graph View →</Button>
+                  <Button variant="outline" className="gap-2 text-ois-primary border-ois-primary/30" onClick={() => navigate(`/cmdb?view=graph&focus=${ci.id}`)}>Open in Graph View →</Button>
                 </div>
               </div>
             )}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '@/src/lib/utils';
@@ -9,6 +9,8 @@ import {
   Lightbulb, Database, Settings,
   Sparkles, Activity, Shield, GitBranch, BarChart3,
 } from 'lucide-react';
+import { SidebarContextMenu } from './SidebarContextMenu';
+import { usePinnedPaths } from '@/src/lib/sidebar-pins';
 import {
   inboxService,
   incidentsService,
@@ -25,6 +27,31 @@ import {
 } from '@/src/services';
 import { useCurrentUser } from '@/src/lib/rbac/CurrentUserContext';
 import { useAuthSession } from '@/src/lib/auth/session';
+
+const SIDEBAR_LOOKUP: Record<string, { label: string; icon: React.ReactNode }> = {
+  '/':               { label: 'Overview',          icon: <LayoutDashboard size={18} /> },
+  '/inbox':          { label: 'Inbox',             icon: <Inbox size={18} /> },
+  '/incidents':      { label: 'Incidents',         icon: <AlertCircle size={18} /> },
+  '/problems':       { label: 'Problems',          icon: <Bug size={18} /> },
+  '/portal':         { label: 'Self-Service Portal', icon: <Store size={18} /> },
+  '/requests':       { label: 'Service Requests',  icon: <ShoppingCart size={18} /> },
+  '/kb':             { label: 'Knowledge Base',    icon: <BookOpen size={18} /> },
+  '/changes':        { label: 'Changes',           icon: <Wrench size={18} /> },
+  '/releases':       { label: 'Releases',          icon: <Package size={18} /> },
+  '/deployments':    { label: 'Deployments',       icon: <Rocket size={18} /> },
+  '/testing/plans':  { label: 'Testing',           icon: <CheckCircle2 size={18} /> },
+  '/availability':   { label: 'Availability',      icon: <Heart size={18} /> },
+  '/capacity':       { label: 'Capacity',          icon: <Zap size={18} /> },
+  '/continuity/bia': { label: 'Continuity',        icon: <Lock size={18} /> },
+  '/status':         { label: 'Status Page',       icon: <CircleDot size={18} /> },
+  '/monitoring':     { label: 'Monitoring',        icon: <Activity size={18} /> },
+  '/dashboards':     { label: 'Measurement',       icon: <BarChart3 size={18} /> },
+  '/cmdb':           { label: 'CMDB',              icon: <Database size={18} /> },
+  '/on-call':        { label: 'On-Call',           icon: <Clock size={18} /> },
+  '/improvement':    { label: 'Improvements',      icon: <Lightbulb size={18} /> },
+  '/admin':          { label: 'RBAC Admin',        icon: <Shield size={18} /> },
+  '/settings':       { label: 'Settings',          icon: <Settings size={18} /> },
+};
 
 interface SidebarProps {
   collapsed: boolean;
@@ -77,6 +104,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, isAiRoute, aiSideba
   const improvementsBlockedCount = (improvements ?? []).filter(
     i => i.priority === 'critical' && i.status === 'on_hold',
   ).length;
+
+  const [menu, setMenu] = useState<{ x: number; y: number; path: string; label: string } | null>(null);
+  const pinnedPaths = usePinnedPaths();
 
   return (
     <aside
@@ -194,56 +224,85 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, isAiRoute, aiSideba
               className="flex-1 overflow-y-auto flex flex-col min-h-0"
             >
               <div className="flex-1 overflow-y-auto py-4 custom-scrollbar">
+                {pinnedPaths.length > 0 && (
+                  <SidebarSection label="Favorites" collapsed={collapsed}>
+                    {pinnedPaths.map(path => {
+                      const meta = SIDEBAR_LOOKUP[path];
+                      if (!meta) return null;
+                      return (
+                        <SidebarItem
+                          key={path}
+                          icon={meta.icon}
+                          label={meta.label}
+                          to={path}
+                          collapsed={collapsed}
+                          onOpenContextMenu={(x, y) => setMenu({ x, y, path, label: meta.label })}
+                        />
+                      );
+                    })}
+                  </SidebarSection>
+                )}
+
                 <SidebarSection label="Operations" collapsed={collapsed}>
-                  <SidebarItem icon={<LayoutDashboard size={18} />} label="Overview" to="/" collapsed={collapsed} />
-                  <SidebarItem icon={<Inbox size={18} />} label="Inbox" to="/inbox" collapsed={collapsed} badge={urgentInboxCount} badgeVariant="urgent" />
-                  <SidebarItem icon={<AlertCircle size={18} />} label="Incidents" to="/incidents" collapsed={collapsed} badge={openIncidentCount} />
-                  <SidebarItem icon={<Bug size={18} />} label="Problems" to="/problems" collapsed={collapsed} badge={openProblemCount} />
+                  <SidebarItem icon={<LayoutDashboard size={18} />} label="Overview" to="/" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/', label: 'Overview' })} />
+                  <SidebarItem icon={<Inbox size={18} />} label="Inbox" to="/inbox" collapsed={collapsed} badge={urgentInboxCount} badgeVariant="urgent" onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/inbox', label: 'Inbox' })} />
+                  <SidebarItem icon={<AlertCircle size={18} />} label="Incidents" to="/incidents" collapsed={collapsed} badge={openIncidentCount} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/incidents', label: 'Incidents' })} />
+                  <SidebarItem icon={<Bug size={18} />} label="Problems" to="/problems" collapsed={collapsed} badge={openProblemCount} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/problems', label: 'Problems' })} />
                 </SidebarSection>
 
                 <SidebarSection label="Service Delivery" collapsed={collapsed}>
-                  <SidebarItem icon={<Store size={18} />} label="Self-Service Portal" to="/portal" collapsed={collapsed} />
-                  <SidebarItem icon={<ShoppingCart size={18} />} label="Service Requests" to="/requests" collapsed={collapsed} badge={requestsAwaitingUserCount} badgeVariant="warning" />
-                  <SidebarItem icon={<BookOpen size={18} />} label="Knowledge Base" to="/kb" collapsed={collapsed} />
+                  <SidebarItem icon={<Store size={18} />} label="Self-Service Portal" to="/portal" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/portal', label: 'Self-Service Portal' })} />
+                  <SidebarItem icon={<ShoppingCart size={18} />} label="Service Requests" to="/requests" collapsed={collapsed} badge={requestsAwaitingUserCount} badgeVariant="warning" onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/requests', label: 'Service Requests' })} />
+                  <SidebarItem icon={<BookOpen size={18} />} label="Knowledge Base" to="/kb" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/kb', label: 'Knowledge Base' })} />
                 </SidebarSection>
 
                 <SidebarSection label="Change & Delivery" collapsed={collapsed}>
-                  <SidebarItem icon={<Wrench size={18} />} label="Changes" to="/changes" collapsed={collapsed} badge={changesAwaitingCabCount} />
-                  <SidebarItem icon={<Package size={18} />} label="Releases" to="/releases" collapsed={collapsed} badge={releasesUrgentCount} badgeVariant="urgent" />
-                  <SidebarItem icon={<Rocket size={18} />} label="Deployments" to="/deployments" collapsed={collapsed} badge={deploymentsActiveCount} />
-                  <SidebarItem icon={<CheckCircle2 size={18} />} label="Testing" to="/testing/plans" collapsed={collapsed} badge={signOffsBreachedCount} badgeVariant="urgent" />
+                  <SidebarItem icon={<Wrench size={18} />} label="Changes" to="/changes" collapsed={collapsed} badge={changesAwaitingCabCount} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/changes', label: 'Changes' })} />
+                  <SidebarItem icon={<Package size={18} />} label="Releases" to="/releases" collapsed={collapsed} badge={releasesUrgentCount} badgeVariant="urgent" onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/releases', label: 'Releases' })} />
+                  <SidebarItem icon={<Rocket size={18} />} label="Deployments" to="/deployments" collapsed={collapsed} badge={deploymentsActiveCount} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/deployments', label: 'Deployments' })} />
+                  <SidebarItem icon={<CheckCircle2 size={18} />} label="Testing" to="/testing/plans" collapsed={collapsed} badge={signOffsBreachedCount} badgeVariant="urgent" onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/testing/plans', label: 'Testing' })} />
                 </SidebarSection>
 
                 <SidebarSection label="Service Health" collapsed={collapsed}>
-                  <SidebarItem icon={<Heart size={18} />} label="Availability" to="/availability" collapsed={collapsed} badge={availabilityCriticalCount} badgeVariant="urgent" />
-                  <SidebarItem icon={<Zap size={18} />} label="Capacity" to="/capacity" collapsed={collapsed} />
-                  <SidebarItem icon={<Lock size={18} />} label="Continuity" to="/continuity/bia" collapsed={collapsed} />
-                  <SidebarItem icon={<CircleDot size={18} />} label="Status Page" to="/status" collapsed={collapsed} />
+                  <SidebarItem icon={<Heart size={18} />} label="Availability" to="/availability" collapsed={collapsed} badge={availabilityCriticalCount} badgeVariant="urgent" onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/availability', label: 'Availability' })} />
+                  <SidebarItem icon={<Zap size={18} />} label="Capacity" to="/capacity" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/capacity', label: 'Capacity' })} />
+                  <SidebarItem icon={<Lock size={18} />} label="Continuity" to="/continuity/bia" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/continuity/bia', label: 'Continuity' })} />
+                  <SidebarItem icon={<CircleDot size={18} />} label="Status Page" to="/status" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/status', label: 'Status Page' })} />
                 </SidebarSection>
 
                 <SidebarSection label="Observability" collapsed={collapsed}>
-                  <SidebarItem icon={<Activity size={18} />} label="Monitoring" to="/monitoring" collapsed={collapsed} />
-                  <SidebarItem icon={<BarChart3 size={18} />} label="Measurement" to="/dashboards" collapsed={collapsed} />
+                  <SidebarItem icon={<Activity size={18} />} label="Monitoring" to="/monitoring" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/monitoring', label: 'Monitoring' })} />
+                  <SidebarItem icon={<BarChart3 size={18} />} label="Measurement" to="/dashboards" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/dashboards', label: 'Measurement' })} />
                 </SidebarSection>
 
                 <SidebarSection label="Foundation" collapsed={collapsed}>
-                  <SidebarItem icon={<Database size={18} />} label="CMDB" to="/cmdb" collapsed={collapsed} />
-                  <SidebarItem icon={<Clock size={18} />} label="On-Call" to="/on-call" collapsed={collapsed} badge={onCallActiveIncidentCount} badgeVariant="urgent" />
-                  <SidebarItem icon={<Lightbulb size={18} />} label="Improvements" to="/improvement" collapsed={collapsed} badge={improvementsBlockedCount} badgeVariant="urgent" />
+                  <SidebarItem icon={<Database size={18} />} label="CMDB" to="/cmdb" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/cmdb', label: 'CMDB' })} />
+                  <SidebarItem icon={<Clock size={18} />} label="On-Call" to="/on-call" collapsed={collapsed} badge={onCallActiveIncidentCount} badgeVariant="urgent" onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/on-call', label: 'On-Call' })} />
+                  <SidebarItem icon={<Lightbulb size={18} />} label="Improvements" to="/improvement" collapsed={collapsed} badge={improvementsBlockedCount} badgeVariant="urgent" onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/improvement', label: 'Improvements' })} />
                 </SidebarSection>
               </div>
 
               {/* Footer Settings */}
               <div className="p-2 border-t border-ois-sidebar-border shrink-0 space-y-1">
                 {isAdmin && (
-                  <SidebarItem icon={<Shield size={18} />} label="RBAC Admin" to="/admin" collapsed={collapsed} />
+                  <SidebarItem icon={<Shield size={18} />} label="RBAC Admin" to="/admin" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/admin', label: 'RBAC Admin' })} />
                 )}
-                <SidebarItem icon={<Settings size={18} />} label="Settings" to="/settings" collapsed={collapsed} />
+                <SidebarItem icon={<Settings size={18} />} label="Settings" to="/settings" collapsed={collapsed} onOpenContextMenu={(x, y) => setMenu({ x, y, path: '/settings', label: 'Settings' })} />
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+      {menu && (
+        <SidebarContextMenu
+          open
+          x={menu.x}
+          y={menu.y}
+          path={menu.path}
+          label={menu.label}
+          onClose={() => setMenu(null)}
+        />
+      )}
     </aside>
   );
 };
@@ -273,7 +332,8 @@ const SidebarItem: React.FC<{
   collapsed: boolean;
   badge?: number;
   badgeVariant?: 'default' | 'urgent' | 'warning';
-}> = ({ icon, label, to, collapsed, badge, badgeVariant = 'default' }) => {
+  onOpenContextMenu?: (x: number, y: number) => void;
+}> = ({ icon, label, to, collapsed, badge, badgeVariant = 'default', onOpenContextMenu }) => {
   const hasBadge = badge !== undefined && badge > 0;
   const dotColor =
     badgeVariant === 'urgent'  ? 'bg-ois-danger' :
@@ -293,6 +353,7 @@ const SidebarItem: React.FC<{
         )
       }
       title={collapsed ? (hasBadge ? `${label} (${badge})` : label) : undefined}
+      onContextMenu={onOpenContextMenu ? (e) => { e.preventDefault(); onOpenContextMenu(e.clientX, e.clientY); } : undefined}
     >
       {({ isActive }) => (
         <>

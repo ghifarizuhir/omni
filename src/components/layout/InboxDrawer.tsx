@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { inboxService, useResource } from '@/src/services';
 import { formatRelative } from '@/src/lib/format';
 import { cn } from '@/src/lib/utils';
+import { linkifyEntities } from '@/src/lib/entity-linkify';
 
 interface InboxDrawerProps {
   onClose: () => void;
@@ -85,7 +86,7 @@ export const InboxDrawer: React.FC<InboxDrawerProps> = ({ onClose }) => {
                 </div>
               </div>
 
-              <p className="text-sm text-ois-text-muted line-clamp-2 mb-4">{item.summary}</p>
+              <p className="text-sm text-ois-text-muted line-clamp-2 mb-4">{linkifyEntities(item.summary)}</p>
 
               <div className="flex items-center gap-2">
                 {item.primaryAction ? (

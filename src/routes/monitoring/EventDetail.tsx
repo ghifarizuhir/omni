@@ -394,7 +394,7 @@ export const EventDetail: React.FC = () => {
                 <div className="p-4 bg-ois-bg/30 border-t border-ois-border text-center">
                    <Button variant="ghost" size="sm" className="text-[11px] font-bold text-ois-primary gap-2" onClick={() => {
                       const firstCI = affectedCIs[0];
-                      navigate(firstCI ? `/cmdb/graph?ci=${firstCI.publicId}` : '/cmdb/graph');
+                      navigate(firstCI ? `/cmdb?view=graph&ci=${firstCI.publicId}` : '/cmdb?view=graph');
                    }}>
                       View full CMDB dependency graph <BarChart2 size={14} />
                    </Button>
