@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { linkifyEntities } from '@/src/lib/entity-linkify';
 import { Archive, Pin, MailOpen, Clock, ExternalLink } from 'lucide-react';
 import { InboxItem } from '@/src/types/platform';
 import { formatDate } from '@/src/lib/format';
@@ -18,7 +19,7 @@ function renderBody(text: string): React.ReactNode[] {
     } else if (part.startsWith('**') && part.endsWith('**')) {
       nodes.push(<strong key={`bold-${i}`}>{part.slice(2, -2)}</strong>);
     } else {
-      nodes.push(<React.Fragment key={`txt-${i}`}>{part}</React.Fragment>);
+      nodes.push(<React.Fragment key={`txt-${i}`}>{linkifyEntities(part)}</React.Fragment>);
     }
   });
   return nodes;
@@ -122,7 +123,7 @@ export const InboxItemDetail: React.FC<InboxItemDetailProps> = ({
             {renderBody(item.body)}
           </p>
         ) : (
-          <p className="text-sm text-ois-text-muted leading-relaxed">{item.summary}</p>
+          <p className="text-sm text-ois-text-muted leading-relaxed">{linkifyEntities(item.summary)}</p>
         )}
 
         {/* Divider */}

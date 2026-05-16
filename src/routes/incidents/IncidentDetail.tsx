@@ -5,6 +5,7 @@ import {
   Plus, BookOpen, Siren, Tag, CheckCircle2, ExternalLink, Edit3,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
+import { linkifyEntities } from '@/src/lib/entity-linkify';
 import { formatRelative } from '@/src/lib/format';
 import {
   incidentsService, usersService, servicesService, cisService,
@@ -585,7 +586,7 @@ export const IncidentDetail: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <div className="prose prose-sm max-w-none text-ois-text leading-relaxed whitespace-pre-wrap text-sm">{inc.description}</div>
+                  <div className="prose prose-sm max-w-none text-ois-text leading-relaxed whitespace-pre-wrap text-sm">{linkifyEntities(inc.description)}</div>
                   <button
                     onClick={() => { setDescDraft(inc.description); setEditingDesc(true); }}
                     className="mt-3 flex items-center gap-1 text-xs text-ois-primary hover:underline"
@@ -597,7 +598,7 @@ export const IncidentDetail: React.FC = () => {
               {inc.customerImpact && (
                 <div className="mt-3 pt-3 border-t border-ois-border">
                   <p className="text-[11px] font-semibold text-ois-text-subtle uppercase tracking-widest mb-1">Customer impact</p>
-                  <p className="text-sm text-ois-text">{inc.customerImpact}</p>
+                  <p className="text-sm text-ois-text">{linkifyEntities(inc.customerImpact)}</p>
                 </div>
               )}
             </CollapsibleSection>
