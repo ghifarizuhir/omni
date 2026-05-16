@@ -3,9 +3,8 @@ import { RouteObject } from 'react-router-dom';
 import { AppShell } from '@/src/components/layout/AppShell';
 import { Login } from './Login';
 import { Dashboard } from './Dashboard';
-import { CMDBList } from './cmdb/CMDBList';
+import { CmdbShell } from './cmdb/CmdbShell';
 import { CMDBDetail } from './cmdb/CMDBDetail';
-import { CMDBGraph } from './cmdb/CMDBGraph';
 import { CMDBAudit } from './cmdb/CMDBAudit';
 import { MonitoringLayout } from './monitoring/MonitoringLayout';
 import { MonitoringOverview } from './monitoring/MonitoringOverview';
@@ -118,8 +117,7 @@ export const routes: RouteObject[] = [
       children: [
       { index: true,                            element: <Dashboard /> },
       // Doc 1 — CMDB
-      { path: 'cmdb',                           element: <CMDBList /> },
-      { path: 'cmdb/graph',                     element: <CMDBGraph /> },
+      { path: 'cmdb',                           element: <CmdbShell /> },
       { path: 'cmdb/audit',                     element: <CMDBAudit /> },
       { path: 'cmdb/:ciId',                     element: <CMDBDetail /> },
       // Doc 2 — Monitoring (tab layout)
