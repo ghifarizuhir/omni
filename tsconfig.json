@@ -1,5 +1,5 @@
 {
-  "exclude": ["eslint.config.js"],
+  "exclude": ["eslint.config.js", "server", "prisma", "dist", "node_modules"],
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,

@@ -19,5 +19,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["./**/*.ts", "../src/mocks/**/*.ts", "../src/types/**/*.ts"]
+  "include": ["./**/*.ts", "../src/types/**/*.ts"],
+  "exclude": ["./__tests__/**/*.ts", "../node_modules", "../dist"]
 }
