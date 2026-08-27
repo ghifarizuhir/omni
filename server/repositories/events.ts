@@ -36,7 +36,11 @@ const toEvent = (row: EventRow): Event => ({
 });
 
 export const eventsRepo = {
-  async list(tenantId: string, filters: { status?: EventStatus[]; severities?: Severity[]; ruleId?: string }) {
+  async list(
+    tenantId: string,
+    filters: { status?: EventStatus[]; severities?: Severity[]; ruleId?: string },
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ) {
     const rows = await prisma.event.findMany({
       where: {
         tenantId,
@@ -44,6 +48,9 @@ export const eventsRepo = {
         ...(filters.severities?.length ? { severity: { in: filters.severities } } : {}),
         ...(filters.ruleId ? { ruleId: filters.ruleId } : {}),
       },
+      orderBy: { firedAt: 'desc' },
+      take: pagination.limit,
+      skip: pagination.offset,
     });
     return rows.map(toEvent);
   },
@@ -134,21 +141,24 @@ export const eventsRepo = {
   },
 
   async dashboardStats(tenantId: string) {
-    const [events, rules, routes, ciCount] = await Promise.all([
-      prisma.event.findMany({ where: { tenantId } }),
-      prisma.monitoringRule.findMany({ where: { tenantId } }),
-      prisma.alertRoute.findMany({ where: { tenantId } }),
+    const [active, p1Open, p2Open, unacknowledged, ciCount, rules, routes] = await Promise.all([
+      prisma.event.count({ where: { tenantId, status: { in: ['open', 'acknowledged'] } } }),
+      prisma.event.count({ where: { tenantId, severity: 'P1', status: 'open' } }),
+      prisma.event.count({ where: { tenantId, severity: 'P2', status: 'open' } }),
+      prisma.event.count({ where: { tenantId, status: 'open' } }),
       prisma.configurationItem.count({ where: { tenantId } }),
+      prisma.monitoringRule.findMany({ where: { tenantId }, take: 200 }),
+      prisma.alertRoute.findMany({ where: { tenantId }, take: 200 }),
     ]);
     const yesterday = Date.now() - 24 * 60 * 60 * 1000;
     const ruleObjs = rules.map(r => parseObj<MonitoringRule>(r.data, {} as MonitoringRule));
     const routeObjs = routes.map(r => parseObj<AlertRoute>(r.data, {} as AlertRoute));
     const coveredIds = new Set(ruleObjs.filter(r => r.enabled).flatMap(r => r.targetCIIds ?? []));
     return {
-      active: events.filter(e => e.status === 'open' || e.status === 'acknowledged').length,
-      p1Open: events.filter(e => e.severity === 'P1' && e.status === 'open').length,
-      p2Open: events.filter(e => e.severity === 'P2' && e.status === 'open').length,
-      unacknowledged: events.filter(e => e.status === 'open').length,
+      active,
+      p1Open,
+      p2Open,
+      unacknowledged,
       rules: {
         total: ruleObjs.length,
         enabled: ruleObjs.filter(r => r.enabled).length,
@@ -169,16 +179,16 @@ export const eventsRepo = {
 };
 
 export const monitoringRepo = {
-  async listRules(tenantId: string) {
-    const rows = await prisma.monitoringRule.findMany({ where: { tenantId } });
+  async listRules(tenantId: string, pagination: { limit: number; offset: number } = { limit: 50, offset: 0 }) {
+    const rows = await prisma.monitoringRule.findMany({ where: { tenantId }, orderBy: { publicId: 'asc' }, take: pagination.limit, skip: pagination.offset });
     return rows.map(r => parseObj<MonitoringRule>(r.data, {} as MonitoringRule));
   },
   async getRule(tenantId: string, publicId: string) {
     const row = await prisma.monitoringRule.findFirst({ where: { tenantId, publicId } });
     return row ? parseObj<MonitoringRule>(row.data, {} as MonitoringRule) : null;
   },
-  async listRoutes(tenantId: string) {
-    const rows = await prisma.alertRoute.findMany({ where: { tenantId } });
+  async listRoutes(tenantId: string, pagination: { limit: number; offset: number } = { limit: 50, offset: 0 }) {
+    const rows = await prisma.alertRoute.findMany({ where: { tenantId }, orderBy: { publicId: 'asc' }, take: pagination.limit, skip: pagination.offset });
     return rows.map(r => parseObj<AlertRoute>(r.data, {} as AlertRoute));
   },
   async getRoute(tenantId: string, publicId: string) {
