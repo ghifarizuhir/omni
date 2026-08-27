@@ -76,17 +76,26 @@ const diffArr = (a: string[] = [], b: string[] = []) => ({
 });
 
 export const incidentsRepo = {
-  async list(tenantId: string, filters: { active?: boolean; major?: boolean; ciId?: string; problemPublicId?: string }) {
+  async list(
+    tenantId: string,
+    filters: { active?: boolean; major?: boolean; ciId?: string; problemPublicId?: string },
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ) {
+    const where: Record<string, unknown> = {
+      tenantId,
+      ...(filters.active ? { status: { notIn: ['resolved', 'closed'] } } : {}),
+      ...(filters.major ? { isMajor: true } : {}),
+      ...(filters.problemPublicId ? { linkedProblemPublicId: filters.problemPublicId } : {}),
+      ...(filters.ciId ? { affectedCIIds: { contains: filters.ciId } } : {}),
+    };
     const rows = await prisma.incident.findMany({
-      where: {
-        tenantId,
-        ...(filters.active ? { status: { notIn: ['resolved', 'closed'] } } : {}),
-        ...(filters.major ? { isMajor: true } : {}),
-        ...(filters.problemPublicId ? { linkedProblemPublicId: filters.problemPublicId } : {}),
-      },
+      where,
       orderBy: { updatedAt: 'desc' },
+      take: pagination.limit,
+      skip: pagination.offset,
     });
     const incidents = rows.map(r => parseObj<Incident>(r.data, {} as Incident));
+    // Secondary exact filter for JSON-string contains false positives (small page only)
     if (filters.ciId) {
       return incidents.filter(i => i.affectedCIIds.includes(filters.ciId!) || i.affectedCIPublicIds.includes(filters.ciId!));
     }
@@ -96,17 +105,29 @@ export const incidentsRepo = {
     const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
     return row ? parseObj<Incident>(row.data, {} as Incident) : null;
   },
-  async comments(tenantId: string, incidentId: string) {
+  async comments(
+    tenantId: string,
+    incidentId: string,
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ) {
     const rows = await prisma.incidentComment.findMany({
       where: { tenantId, incidentId },
       orderBy: { createdAt: 'asc' },
+      take: pagination.limit,
+      skip: pagination.offset,
     });
     return rows.map(r => parseObj<IncidentComment>(r.data, {} as IncidentComment));
   },
-  async timeline(tenantId: string, incidentId: string) {
+  async timeline(
+    tenantId: string,
+    incidentId: string,
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ) {
     const rows = await prisma.incidentTimelineEvent.findMany({
       where: { tenantId, incidentId },
       orderBy: { timestamp: 'asc' },
+      take: pagination.limit,
+      skip: pagination.offset,
     });
     return rows.map(r => parseObj<IncidentTimelineEvent>(r.data, {} as IncidentTimelineEvent));
   },
