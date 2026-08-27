@@ -67,21 +67,30 @@ const toAudit = (row: CIAuditRow): CIAuditEntry => ({
 });
 
 export const cmdbRepo = {
-  async listCIs(tenantId: string) {
-    const rows = await prisma.configurationItem.findMany({ where: { tenantId } });
+  async listCIs(tenantId: string, pagination: { limit: number; offset: number } = { limit: 50, offset: 0 }) {
+    const rows = await prisma.configurationItem.findMany({ where: { tenantId }, orderBy: { updatedAt: 'desc' }, take: pagination.limit, skip: pagination.offset });
     return rows.map(toCI);
   },
   async getCI(tenantId: string, publicId: string) {
     const row = await prisma.configurationItem.findFirst({ where: { tenantId, publicId } });
     return row ? toCI(row) : null;
   },
-  async listRelationships(tenantId: string) {
-    const rows = await prisma.cIRelationship.findMany({ where: { tenantId } });
+  async listRelationships(
+    tenantId: string,
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ) {
+    const rows = await prisma.cIRelationship.findMany({ where: { tenantId }, take: pagination.limit, skip: pagination.offset });
     return rows.map(toRel);
   },
-  async listRelationshipsForCI(tenantId: string, ciId: string) {
+  async listRelationshipsForCI(
+    tenantId: string,
+    ciId: string,
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ) {
     const rows = await prisma.cIRelationship.findMany({
       where: { tenantId, OR: [{ fromCiId: ciId }, { toCiId: ciId }] },
+      take: pagination.limit,
+      skip: pagination.offset,
     });
     return rows.map(toRel);
   },
@@ -116,10 +125,16 @@ export const cmdbRepo = {
     return { before, after: toCI(updated), internalId: row.id };
   },
 
-  async listAudit(tenantId: string, ciId?: string) {
+  async listAudit(
+    tenantId: string,
+    ciId?: string,
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ) {
     const rows = await prisma.cIAuditEntry.findMany({
       where: { tenantId, ...(ciId ? { ciId } : {}) },
       orderBy: { timestamp: 'desc' },
+      take: pagination.limit,
+      skip: pagination.offset,
     });
     return rows.map(toAudit);
   },
