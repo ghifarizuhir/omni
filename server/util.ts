@@ -42,3 +42,9 @@ export const qStringArray = (v: unknown): string[] | undefined => {
   if (Array.isArray(v)) return v.map(String);
   return undefined;
 };
+
+export const qInt = (v: unknown, fallback?: number): number | undefined => {
+  if (v == null || v === '') return fallback;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+};
