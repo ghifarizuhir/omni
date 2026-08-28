@@ -146,8 +146,8 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
   const navigate = useNavigate();
   const { user } = useCurrentUser();
   const CURRENT_USER = user?.id ?? 'u-001';
-  const approved = change.approvals.filter((a) => votes[a.id] === 'approve' || (a.decision !== 'pending' && a.decision === 'approve')).length;
-  const total = change.approvals.length;
+  const approved = (change.approvals ?? []).filter((a) => votes[a.id] === 'approve' || (a.decision !== 'pending' && a.decision === 'approve')).length;
+  const total = (change.approvals ?? []).length;
 
   return (
     <div className="space-y-5">
@@ -194,7 +194,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
             <span className="text-sm font-bold text-ois-text">{change.riskScore}/100 — {riskMeta[change.risk].label}</span>
           </div>
           <ul className="space-y-1">
-            {change.riskFactors.map((f, i) => (
+            {(change.riskFactors ?? []).map((f, i) => (
               <li key={i} className="text-xs text-ois-text flex items-start gap-1.5">
                 <span className="text-ois-text-subtle mt-0.5">•</span> {f}
               </li>
@@ -239,16 +239,16 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
           </div>
           <CardBody>
             <dl className="space-y-2 text-xs">
-              {change.linkedProblemIds.length > 0 && (
+              {(change.linkedProblemIds ?? []).length > 0 && (
                 <div className="flex gap-3">
                   <dt className="text-ois-text-muted w-32 shrink-0">Problem fixed:</dt>
-                  <dd className="font-mono text-ois-primary">{change.linkedProblemIds.join(', ')}</dd>
+                  <dd className="font-mono text-ois-primary">{(change.linkedProblemIds ?? []).join(', ')}</dd>
                 </div>
               )}
-              {change.linkedIncidentIds.length > 0 && (
+              {(change.linkedIncidentIds ?? []).length > 0 && (
                 <div className="flex gap-3">
                   <dt className="text-ois-text-muted w-32 shrink-0">Incidents:</dt>
-                  <dd className="font-mono text-ois-text">{change.linkedIncidentIds.join(', ')}</dd>
+                  <dd className="font-mono text-ois-text">{(change.linkedIncidentIds ?? []).join(', ')}</dd>
                 </div>
               )}
               {change.linkedReleasePublicId && (
@@ -277,7 +277,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
               </tr>
             </thead>
             <tbody className="divide-y divide-ois-border">
-              {change.approvals.map((a) => {
+              {(change.approvals ?? []).map((a) => {
                 const currentDecision = votes[a.id] ?? (a.decision !== 'pending' ? a.decision : 'pending');
                 const isMe = a.approverId === CURRENT_USER;
                 const isPending = currentDecision === 'pending';

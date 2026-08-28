@@ -185,9 +185,9 @@ export const ChangeDetail: React.FC = () => {
             {/* Title */}
             <h1 className="text-xl font-bold text-ois-text leading-snug mb-2">{change.title}</h1>
             {/* Tags as rounded-full pills */}
-            {change.tags.length > 0 && (
+            {(change.tags ?? []).length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-2">
-                {change.tags.map((t) => (
+                {(change.tags ?? []).map((t) => (
                   <span key={t} className="text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full">
                     {t}
                   </span>
@@ -232,10 +232,10 @@ export const ChangeDetail: React.FC = () => {
           </SectionCard>
 
           {/* Risk factors */}
-          {change.riskFactors.length > 0 && (
+          {(change.riskFactors ?? []).length > 0 && (
             <SectionCard title="Risk Factors">
               <ul className="space-y-1.5">
-                {change.riskFactors.map((f) => (
+                {(change.riskFactors ?? []).map((f) => (
                   <li key={f} className="text-xs text-ois-text flex items-start gap-1.5">
                     <span className="text-ois-text-subtle mt-0.5">•</span>
                     {f}
@@ -299,7 +299,7 @@ export const ChangeDetail: React.FC = () => {
           {/* Approvals progress */}
           <SectionCard title="Approvals">
             <div className="flex gap-1 mb-2">
-              {change.approvals.map((a, i) => (
+              {(change.approvals ?? []).map((a, i) => (
                 <div
                   key={i}
                   className={cn(
@@ -315,7 +315,7 @@ export const ChangeDetail: React.FC = () => {
               ))}
             </div>
             <p className="text-xs text-ois-text-muted">
-              {approvedCount} of {change.approvals.length} received
+              {approvedCount} of {(change.approvals ?? []).length} received
             </p>
             {change.cabSessionId && (
               <p className="text-[10px] text-ois-text-subtle mt-1 flex items-center gap-1">
@@ -361,12 +361,12 @@ export const ChangeDetail: React.FC = () => {
                 </SectionCard>
                 <SectionCard title="Affected Scope">
                   <div className="flex gap-4 mb-3 text-xs text-ois-text-muted">
-                    <span>{change.affectedCIIds.length} CIs</span>
-                    <span>{change.affectedServiceIds.length} service(s)</span>
+                    <span>{(change.affectedCIIds ?? []).length} CIs</span>
+                    <span>{(change.affectedServiceIds ?? []).length} service(s)</span>
                   </div>
-                  {change.affectedCIPublicIds.length > 0 && (
+                  {(change.affectedCIPublicIds ?? []).length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {change.affectedCIPublicIds.map((ci) => (
+                      {(change.affectedCIPublicIds ?? []).map((ci) => (
                         <Link key={ci} to={`/cmdb/${ci}`} className="font-mono text-xs bg-ois-bg border border-ois-border px-2 py-1 rounded-lg text-ois-primary hover:border-ois-primary transition-colors">
                           {ci}
                         </Link>
@@ -489,7 +489,7 @@ export const ChangeDetail: React.FC = () => {
                   </Button>
                 </div>
                 <ApprovalMatrix
-                  approvals={change.approvals}
+                  approvals={change.approvals ?? []}
                   changeId={change.id}
                   cabSessionDate={change.cabSessionId ? 'Thursday May 9, 10:00 UTC' : undefined}
                 />
@@ -565,10 +565,10 @@ export const ChangeDetail: React.FC = () => {
             {/* Linked */}
             {activeTab === 'linked' && (
               <div className="space-y-3">
-                {change.linkedProblemIds.length > 0 && (
-                  <SectionCard title={`Problems (${change.linkedProblemIds.length})`}>
+                {(change.linkedProblemIds ?? []).length > 0 && (
+                  <SectionCard title={`Problems (${(change.linkedProblemIds ?? []).length})`}>
                     <div className="divide-y divide-ois-border -mx-4 -mb-4">
-                      {change.linkedProblemIds.map((id) => (
+                      {(change.linkedProblemIds ?? []).map((id) => (
                         <Link key={id} to={`/problems/${id}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg transition-colors">
                           <span className="font-mono text-sm font-bold text-ois-primary">{id}</span>
                           <ExternalLink size={13} className="text-ois-text-subtle" />
@@ -577,10 +577,10 @@ export const ChangeDetail: React.FC = () => {
                     </div>
                   </SectionCard>
                 )}
-                {change.linkedIncidentIds.length > 0 && (
-                  <SectionCard title={`Incidents (${change.linkedIncidentIds.length})`}>
+                {(change.linkedIncidentIds ?? []).length > 0 && (
+                  <SectionCard title={`Incidents (${(change.linkedIncidentIds ?? []).length})`}>
                     <div className="divide-y divide-ois-border -mx-4 -mb-4">
-                      {change.linkedIncidentIds.map((id) => (
+                      {(change.linkedIncidentIds ?? []).map((id) => (
                         <Link key={id} to={`/incidents/${id}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg transition-colors">
                           <span className="font-mono text-sm font-bold text-ois-primary">{id}</span>
                           <ExternalLink size={13} className="text-ois-text-subtle" />
@@ -597,10 +597,10 @@ export const ChangeDetail: React.FC = () => {
                     </Link>
                   </SectionCard>
                 )}
-                {change.linkedKBSlugs.length > 0 && (
+                {(change.linkedKBSlugs ?? []).length > 0 && (
                   <SectionCard title="KB Articles">
                     <div className="divide-y divide-ois-border -mx-4 -mb-4">
-                      {change.linkedKBSlugs.map((slug) => (
+                      {(change.linkedKBSlugs ?? []).map((slug) => (
                         <Link key={slug} to={`/kb/${slug}`} className="flex items-center justify-between px-4 py-3 hover:bg-ois-bg transition-colors">
                           <span className="font-mono text-xs text-ois-primary">{slug}</span>
                           <ExternalLink size={13} className="text-ois-text-subtle" />
@@ -686,7 +686,7 @@ export const ChangeDetail: React.FC = () => {
                       detail: change.cabSessionId ? `Session ${change.cabSessionId}` : undefined,
                     });
                   }
-                  change.approvals.forEach(approval => {
+                  (change.approvals ?? []).forEach(approval => {
                     if (!approval.decidedAt || approval.decision === 'pending') return;
                     const isReject = approval.decision === 'reject';
                     entries.push({
@@ -824,7 +824,7 @@ export const ChangeDetail: React.FC = () => {
 
           <SectionCard title="Watchers">
             <div className="space-y-2">
-              {[change.ownerName, ...change.approvals.map((a) => a.approverName)]
+              {[change.ownerName, ...(change.approvals ?? []).map((a) => a.approverName)]
                 .filter((v, i, a) => a.indexOf(v) === i)
                 .slice(0, 5)
                 .map((name) => (

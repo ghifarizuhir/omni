@@ -53,6 +53,25 @@ import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
 import { randomUUID } from 'node:crypto';
 import { HttpError } from '../util';
 
+const normalizeChange = (raw: Change): Change => ({
+  ...raw,
+  riskFactors: raw.riskFactors ?? [],
+  affectedCIIds: raw.affectedCIIds ?? [],
+  affectedCIPublicIds: raw.affectedCIPublicIds ?? [],
+  affectedServiceIds: raw.affectedServiceIds ?? [],
+  linkedProblemIds: raw.linkedProblemIds ?? [],
+  linkedIncidentIds: raw.linkedIncidentIds ?? [],
+  linkedKBSlugs: raw.linkedKBSlugs ?? [],
+  approvals: raw.approvals ?? [],
+  conflicts: (raw.conflicts ?? []).map((c: Change['conflicts'][number]) => ({
+    ...c,
+    conflictsWith: (c as unknown as { conflictsWith?: string[] }).conflictsWith ?? [],
+  })),
+  tags: raw.tags ?? [],
+  commsChannels: raw.commsChannels ?? [],
+  rescheduleHistory: raw.rescheduleHistory ?? [],
+} as unknown as Change);
+
 export const servicesRepo = {
   list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Service>(prisma.service, tenantId, {}, pagination),
   get: (tenantId: string, id: string) => getDocById<Service>(prisma.service, tenantId, id),
@@ -191,8 +210,14 @@ export const problemsRepo = {
 const CLOSED_CHANGE_STATES = new Set(['closed_successful', 'closed_failed', 'rejected', 'cancelled']);
 
 export const changesRepo = {
-  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Change>(prisma.change, tenantId, {}, pagination),
-  get: (tenantId: string, publicId: string) => getDocByPublicId<Change>(prisma.change, tenantId, publicId),
+  list: async (tenantId: string, pagination?: { limit: number; offset: number }): Promise<Change[]> => {
+    const changes = await listDocs<Change>(prisma.change, tenantId, {}, pagination);
+    return changes.map(normalizeChange);
+  },
+  get: async (tenantId: string, publicId: string): Promise<Change | null> => {
+    const change = await getDocByPublicId<Change>(prisma.change, tenantId, publicId);
+    return change ? normalizeChange(change) : null;
+  },
 
   // Allocates a publicId, persists the row, and returns the full Change so the
   // route can echo it back. Drafts only — workflow transitions (submit, CAB,
@@ -274,7 +299,7 @@ export const changesRepo = {
   async cancel(tenantId: string, publicId: string, reason: string): Promise<{ before: Change; after: Change } | null | 'closed'> {
     const row = await prisma.change.findFirst({ where: { tenantId, publicId } });
     if (!row) return null;
-    const before = parse<Change>(row.data, {} as Change);
+    const before = normalizeChange(parse<Change>(row.data, {} as Change));
     if (CLOSED_CHANGE_STATES.has(before.status)) return 'closed';
     const after: Change = { ...before, status: 'cancelled', cancellationReason: reason } as unknown as Change;
     await prisma.change.update({
@@ -301,7 +326,7 @@ export const changesRepo = {
     return prisma.$transaction(async (tx) => {
       const row = await tx.change.findFirst({ where: { tenantId, publicId } });
       if (!row) return { kind: 'not-found' as const };
-      const before = parse<Change>(row.data, {} as Change);
+      const before = normalizeChange(parse<Change>(row.data, {} as Change));
       if (CLOSED_CHANGE_STATES.has(before.status)) return { kind: 'closed' as const };
 
       const rescheduledAt = new Date().toISOString();
@@ -344,7 +369,7 @@ export const changesRepo = {
   ): Promise<{ before: Change; after: Change } | null> {
     const row = await prisma.change.findFirst({ where: { tenantId, publicId } });
     if (!row) return null;
-    const before = parse<Change>(row.data, {} as Change);
+    const before = normalizeChange(parse<Change>(row.data, {} as Change));
     const after: Change = {
       ...before,
       technicalAssessment: {
@@ -368,7 +393,7 @@ export const changesRepo = {
   ): Promise<{ before: Change; after: Change }> {
     const row = await prisma.change.findFirst({ where: { tenantId, publicId } });
     if (!row) throw new Error('Change not found');
-    const before = parse<Change>(row.data, {} as Change);
+    const before = normalizeChange(parse<Change>(row.data, {} as Change));
     if (!['in_review', 'submitted'].includes(before.status)) throw new Error('Not votable');
     const currentApprovals = before.approvals ?? [];
     const existingIdx = currentApprovals.findIndex((a) => a.approverId === input.voterId);
