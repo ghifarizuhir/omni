@@ -98,7 +98,8 @@ export const onCallService = {
 };
 
 export const knowledgeService = {
-  articles: () => apiFetch<KBArticle[]>('/kb/articles'),
+  articles: (params?: { q?: string; page?: number; pageSize?: number }) =>
+    apiFetch<KBArticle[]>('/kb/articles', params ? { query: params as Record<string, string | number | boolean | undefined> } : undefined),
   article: (publicId: string) => apiFetch<KBArticle>(`/kb/articles/${publicId}`),
   categories: () => apiFetch<KBCategory[]>('/kb/categories'),
   feedback: (articleId?: string) => apiFetch<KBFeedback[]>('/kb/feedback', { query: { articleId } }),
@@ -113,6 +114,8 @@ export const knowledgeService = {
     apiFetch<KBArticle>(`/kb/articles/${publicId}`, { method: 'PATCH', body: patch }),
   setStatus: (publicId: string, status: KBStatus) =>
     apiFetch<KBArticle>(`/kb/articles/${publicId}/status`, { method: 'PATCH', body: { status } }),
+  submitFeedback: (publicId: string, helpful: boolean) =>
+    apiFetch<void>(`/kb/articles/${publicId}/feedback`, { method: 'POST', body: { helpful } }),
 };
 
 export const testingService = {

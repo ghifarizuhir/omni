@@ -6,9 +6,18 @@ export type { CreateCIInput, UpdateCIInput } from '../shared/schemas/ci';
 export { createCISchema, updateCISchema } from '../shared/schemas/ci';
 export type { Service } from '../types';
 
+export interface CmdbPaginationParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+  health?: string;
+}
+
 export const cisService = {
   create: (input: CreateCIInput) => apiFetch<ConfigurationItem>('/cis', { method: 'POST', body: input }),
-  list: () => apiFetch<ConfigurationItem[]>('/cis'),
+  list: (params?: CmdbPaginationParams) =>
+    apiFetch<ConfigurationItem[]>('/cis', params ? { query: params as Record<string, string | number | boolean | undefined> } : undefined),
   get: (publicId: string) => apiFetch<ConfigurationItem>(`/cis/${publicId}`),
   relationships: (ciId: string) => apiFetch<CIRelationship[]>(`/cis/${ciId}/relationships`),
   relationshipsAll: () => apiFetch<CIRelationship[]>('/cis/relationships'),
@@ -24,6 +33,7 @@ export const cisService = {
 export const cmdbService = cisService;
 
 export const servicesService = {
-  list: () => apiFetch<Service[]>('/services'),
+  list: (params?: CmdbPaginationParams) =>
+    apiFetch<Service[]>('/services', params ? { query: params as Record<string, string | number | boolean | undefined> } : undefined),
   get: (id: string) => apiFetch<Service>(`/services/${id}`),
 };
