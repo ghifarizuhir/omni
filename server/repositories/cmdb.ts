@@ -2,9 +2,11 @@
 // expects. The route layer should depend only on these functions, never on
 // `prisma` directly, so the storage shape can evolve independently.
 
+import { randomUUID } from 'node:crypto';
 import type { ConfigurationItem, CIRelationship, CIAuditEntry } from '../../src/types';
 import { prisma } from '../db';
-import type { UpdateCIInput } from '../../src/shared/schemas/ci';
+import type { CreateCIInput, UpdateCIInput } from '../../src/shared/schemas/ci';
+import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
 
 const parseTags = (s: string): string[] => {
   try { return JSON.parse(s); } catch { return []; }
@@ -123,6 +125,63 @@ export const cmdbRepo = {
       prisma.configurationItem.update({ where: { id: row.id }, data }),
     ]);
     return { before, after: toCI(updated), internalId: row.id };
+  },
+  async createCI(tenantId: string, input: CreateCIInput & { applicationId?: string | null }): Promise<ConfigurationItem> {
+    // Ensure FK target exists for isolated test tenants (t-<uuid>)
+    await prisma.tenant.upsert({
+      where: { id: tenantId },
+      update: {},
+      create: { id: tenantId, slug: tenantId, name: `Test ${tenantId.slice(0, 20)}` },
+    }).catch(() => undefined);
+    const baseCount = await prisma.configurationItem.count({ where: { tenantId } });
+    let seqNum = baseCount + 1;
+    let publicId = `CI-${String(input.type).toUpperCase().slice(0, 3)}-${String(seqNum).padStart(5, '0')}`;
+    // Ensure global uniqueness (publicId is @unique globally, baseCount is per-tenant)
+    // Probe for collision and bump seq until free — avoids duplicate CI-SER-00001 across tenants.
+    while (await prisma.configurationItem.findUnique({ where: { publicId } })) {
+      seqNum += 1;
+      publicId = `CI-${String(input.type).toUpperCase().slice(0, 3)}-${String(seqNum).padStart(5, '0')}`;
+    }
+    const id = randomUUID();
+    const now = new Date();
+    const row = await prisma.configurationItem.create({
+      data: {
+        id,
+        publicId,
+        tenantId,
+        name: input.name,
+        type: input.type,
+        status: input.status ?? 'active',
+        environment: input.environment ?? 'production',
+        criticality: input.criticality ?? 'medium',
+        health: input.health ?? 'operational',
+        ownerId: input.ownerId ?? null,
+        ownerTeamId: input.ownerTeamId ?? 'team-unassigned',
+        serviceId: input.serviceId ?? null,
+        tags: JSON.stringify(input.tags ?? []),
+        attributes: JSON.stringify(input.attributes ?? {}),
+        primaryApplicationId: input.applicationId ?? (await ensureUnassignedApp(tenantId)),
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+    await prisma.cIAuditEntry.create({
+      data: {
+        id: randomUUID(),
+        tenantId,
+        ciId: id,
+        ciPublicId: publicId,
+        ciName: input.name,
+        action: 'created',
+        actorId: 'system',
+        actorName: 'system',
+        actorType: 'system',
+        source: 'manual',
+        timestamp: now,
+        description: `Created ${publicId}`,
+      },
+    });
+    return toCI(row);
   },
 
   async listAudit(
