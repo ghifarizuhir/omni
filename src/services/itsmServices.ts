@@ -4,7 +4,7 @@ import type {
 } from '../types';
 import { apiFetch } from './core';
 import type { BenefitMeasurement, ROICalculation } from '../types/improvement';
-import type { RescheduleChangeInput } from '../shared/schemas/change';
+import type { RescheduleChangeInput, CastVoteInput } from '../shared/schemas/change';
 import type {
   CancelRequestInput, ReassignRequestStepInput, AddRequestWatcherInput, CreateRequestInput,
 } from '../shared/schemas/request';
@@ -51,6 +51,9 @@ export const changesService = {
   // rescheduleHistory. 409 if the change is already closed.
   reschedule: (publicId: string, input: RescheduleChangeInput) =>
     apiFetch<Change>(`/changes/${publicId}/reschedule`, { method: 'PATCH', body: input }),
+
+  castVote: (publicId: string, input: CastVoteInput) =>
+    apiFetch<Change>(`/changes/${publicId}/votes`, { method: 'POST', body: input }),
 };
 
 export const releasesService = {

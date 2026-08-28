@@ -15,7 +15,7 @@ import { cabVoteMeta, changeTypeMeta, riskMeta } from '../../lib/constants';
 import { RiskBadge } from '../../components/changes/RiskBadge';
 import { ChangeTypeChip } from '../../components/changes/ChangeTypeChip';
 import { formatDate } from '../../lib/format';
-import { Can, changeResource } from '../../lib/rbac';
+import { Can, changeResource, useCurrentUser } from '../../lib/rbac';
 
 // ─── SectionCard ──────────────────────────────────────────────────────────────
 
@@ -31,8 +31,6 @@ const SectionCard: React.FC<{ title?: string; children: React.ReactNode; classNa
     <div className="p-4">{children}</div>
   </div>
 );
-
-const CURRENT_USER = 'u-001'; // Sarah Chen
 
 const SESSION = {
   date: 'Thursday May 9, 10:00 UTC',
@@ -51,15 +49,16 @@ interface CastVoteModalProps {
   change: Change;
   approval: ChangeApproval;
   onClose: () => void;
-  onSubmit: (decision: CABVote, rationale: string) => void;
+  onSubmit: (decision: CABVote, rationale: string, conditions?: string) => void;
 }
 
 const CastVoteModal: React.FC<CastVoteModalProps> = ({ change, approval, onClose, onSubmit }) => {
   const [decision, setDecision] = useState<CABVote>('approve');
   const [rationale, setRationale] = useState('');
+  const [conditions, setConditions] = useState('');
   const [locked, setLocked] = useState(false);
 
-  const disabled = (decision === 'reject' || decision === 'approve_with_conditions') && !rationale.trim();
+  const disabled = (decision === 'reject' && !rationale.trim()) || (decision === 'approve_with_conditions' && !conditions.trim());
 
   return (
     <Modal isOpen onClose={onClose} title={`Cast vote — ${change.publicId}`} size="md">
@@ -102,6 +101,21 @@ const CastVoteModal: React.FC<CastVoteModalProps> = ({ change, approval, onClose
           />
         </div>
 
+        {decision === 'approve_with_conditions' && (
+          <div>
+            <p className="text-xs font-bold text-ois-text-muted uppercase tracking-widest mb-1.5">
+              Conditions <span className="text-ois-danger ml-1">*</span>
+            </p>
+            <textarea
+              value={conditions}
+              onChange={(e) => setConditions(e.target.value)}
+              rows={2}
+              placeholder="Required — describe conditions"
+              className="w-full rounded-lg border border-ois-border-strong bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary resize-none"
+            />
+          </div>
+        )}
+
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={locked} onChange={(e) => setLocked(e.target.checked)} className="rounded border-ois-border" />
           <span className="text-xs text-ois-text-muted">Lock my vote (cannot change after submission)</span>
@@ -109,7 +123,7 @@ const CastVoteModal: React.FC<CastVoteModalProps> = ({ change, approval, onClose
 
         <div className="flex justify-end gap-2 pt-2 border-t border-ois-border">
           <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" disabled={disabled} onClick={() => onSubmit(decision, rationale)}>
+          <Button size="sm" disabled={disabled} onClick={() => onSubmit(decision, rationale, conditions)}>
             Submit vote
           </Button>
         </div>
@@ -130,6 +144,8 @@ interface VotingCardProps {
 
 const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, notes, onNotesChange }) => {
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
+  const CURRENT_USER = user?.id ?? 'u-001';
   const approved = change.approvals.filter((a) => votes[a.id] === 'approve' || (a.decision !== 'pending' && a.decision === 'approve')).length;
   const total = change.approvals.length;
 
@@ -411,10 +427,15 @@ const ScheduleSessionModal: React.FC<{
 
 export const CABWorkspace: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
+  const CURRENT_USER = user?.id ?? 'u-001';
+  void CURRENT_USER;
   const { data: allChanges } = useResource(() => changesService.list(), []);
+  const [changes, setChanges] = useState<Change[]>([]);
+  useEffect(() => { if (allChanges) setChanges(allChanges); }, [allChanges]);
   const AGENDA = useMemo(
-    () => (allChanges ?? []).filter((c) => c.status === 'in_review'),
-    [allChanges],
+    () => changes.filter((c) => c.status === 'in_review'),
+    [changes],
   );
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -427,6 +448,8 @@ export const CABWorkspace: React.FC = () => {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleAttendees, setScheduleAttendees] = useState<string[]>(SESSION.members.map(m => m.id));
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   const showToast = (message: string, variant: ToastProps['variant'] = 'success') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -447,6 +470,22 @@ export const CABWorkspace: React.FC = () => {
     showToast(`Session scheduled for ${formatted}`);
     setScheduleOpen(false);
     setScheduleDate('');
+  };
+
+  const handleCastVote = async (changeId: string, decision: CABVote, rationale?: string, conditions?: string) => {
+    setSavingId(changeId);
+    setVoteError(null);
+    try {
+      const updated = await changesService.castVote(changeId, { decision, rationale, conditions } as any);
+      setChanges((prev) => prev.map((c) => c.publicId === changeId ? updated : c));
+      setVotes((prev) => { const next = { ...prev }; delete next[changeId]; return next; });
+      showToast('Vote recorded');
+      setVotingFor(null);
+    } catch (e) {
+      setVoteError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingId(null);
+    }
   };
 
   const selected = AGENDA[selectedIdx];
@@ -602,6 +641,15 @@ export const CABWorkspace: React.FC = () => {
           </div>
         </div>
 
+        {voteError && (
+          <div className="mb-4 p-3 rounded-lg bg-ois-danger-pale border border-red-200 text-sm text-ois-danger">
+            {voteError}
+          </div>
+        )}
+        {savingId && (
+          <div className="mb-2 text-xs text-ois-text-subtle">Saving vote for {savingId}...</div>
+        )}
+
         {selected && (
           <>
             <VotingCard
@@ -702,14 +750,7 @@ export const CABWorkspace: React.FC = () => {
           change={selected}
           approval={votingFor}
           onClose={() => setVotingFor(null)}
-          onSubmit={(decision, rationale) => {
-            setVotes((v) => ({
-              ...v,
-              [selected.id]: { ...(v[selected.id] ?? {}), [votingFor.id]: decision },
-            }));
-            setVotingFor(null);
-            showToast('Vote recorded');
-          }}
+          onSubmit={(decision, rationale, conditions) => handleCastVote(selected.publicId, decision, rationale, conditions)}
         />
       )}
 
