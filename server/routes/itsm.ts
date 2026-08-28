@@ -14,7 +14,7 @@ import type { ImprovementInitiative } from '../../src/types';
 import {
   createKBArticleSchema, updateKBArticleSchema, setKBArticleStatusSchema,
 } from '../../src/shared/schemas/kbArticle';
-import { rescheduleChangeSchema } from '../../src/shared/schemas/change';
+import { rescheduleChangeSchema, castVoteSchema } from '../../src/shared/schemas/change';
 import {
   cancelRequestSchema, reassignRequestStepSchema, addRequestWatcherSchema, createRequestSchema,
 } from '../../src/shared/schemas/request';
@@ -136,6 +136,16 @@ itsmRouter.patch('/changes/:publicId/tech-assessment', requirePermission('change
     scopeMode: wrapped.scopeMode,
   });
   res.json(wrapped.result.after);
+}));
+
+itsmRouter.post('/changes/:publicId/votes', requirePermission('change.write'), asyncHandler(async (req, res) => {
+  const body = castVoteSchema.parse(req.body);
+  const actor = await getActor(req);
+  const voterId = (body as any).voterId ?? actor.id;
+  const voterName = (body as any).voterName ?? actor.name;
+  const wrapped = await scoped(req).changes.castVote(req.params.publicId, { ...body, voterId, voterName } as any);
+  await audit(req, { action: 'cab_vote', resourceKind: 'Change', resourceId: wrapped.after.id, before: { approvals: wrapped.before.approvals }, after: { approvals: wrapped.after.approvals, status: wrapped.after.status }, scopeMode: wrapped.scopeMode });
+  res.status(201).json(wrapped.after);
 }));
 
 itsmRouter.get('/releases', requirePermission('release.read'), asyncHandler(async (req, res) => {
