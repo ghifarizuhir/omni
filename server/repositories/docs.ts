@@ -43,11 +43,12 @@ export const getDocById = async <T,>(delegate: Delegate, tenantId: string, id: s
 // (e.g. extracting columns from `data`) is a localized change.
 
 import type {
-  Problem, Change, Release, Deployment, DeploymentLogEntry, ServiceRequest,
+  Problem, Change, ChangeApproval, Release, Deployment, DeploymentLogEntry, ServiceRequest,
   RequestComment, CatalogItem, Integration, KBArticle, Service,
 } from '../../src/types';
 import type { CreateProblemInput } from '../../src/shared/schemas/problem';
 import type { CreateRequestInput } from '../../src/shared/schemas/request';
+import type { CastVoteInput } from '../../src/shared/schemas/change';
 import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
 import { randomUUID } from 'node:crypto';
 import { HttpError } from '../util';
@@ -277,6 +278,47 @@ export const changesRepo = {
     await prisma.change.update({
       where: { id: row.id },
       data: { data: JSON.stringify(after) },
+    });
+    return { before, after };
+  },
+
+  async castVote(
+    tenantId: string,
+    publicId: string,
+    input: CastVoteInput & { voterId: string; voterName: string },
+  ): Promise<{ before: Change; after: Change }> {
+    const row = await prisma.change.findFirst({ where: { tenantId, publicId } });
+    if (!row) throw new Error('Change not found');
+    const before = parse<Change>(row.data, {} as Change);
+    if (!['in_review', 'submitted'].includes(before.status)) throw new Error('Not votable');
+    const currentApprovals = before.approvals ?? [];
+    const existingIdx = currentApprovals.findIndex((a) => a.approverId === input.voterId);
+    const now = new Date().toISOString();
+    const approval: ChangeApproval = {
+      id: randomUUID(),
+      changeId: row.id,
+      approverId: input.voterId,
+      approverName: input.voterName ?? input.voterId,
+      approverRole: 'Change Manager',
+      decision: input.decision as ChangeApproval['decision'],
+      conditions: input.conditions,
+      rationale: input.rationale,
+      decidedAt: now,
+      weight: 1,
+    };
+    const approvals =
+      existingIdx >= 0
+        ? currentApprovals.map((a, i) => (i === existingIdx ? approval : a))
+        : [...currentApprovals, approval];
+    const hasReject = approvals.some((a) => a.decision === 'reject');
+    const allDecided = approvals.length > 0 && approvals.every((a) => a.decision !== 'pending');
+    let newStatus = before.status;
+    if (hasReject) newStatus = 'rejected';
+    else if (allDecided && approvals.every((a) => a.decision === 'approve' || a.decision === 'approve_with_conditions')) newStatus = 'approved';
+    const after: Change = { ...before, approvals, status: newStatus as Change['status'], updatedAt: now, cabReviewedAt: now } as unknown as Change;
+    await prisma.change.update({
+      where: { id: row.id },
+      data: { status: newStatus, data: JSON.stringify(after) },
     });
     return { before, after };
   },
