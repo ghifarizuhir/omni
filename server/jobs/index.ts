@@ -11,27 +11,38 @@ defineJob({
   name: 'sla-breach-detector',
   intervalMs: 60_000,
   fn: async () => {
-    const rows = await prisma.incident.findMany({
-      where: { status: { notIn: ['resolved', 'closed'] } },
-    });
-    for (const row of rows) {
-      try {
-        const inc = JSON.parse(row.data) as {
-          createdAt: string; slaResolveTarget?: number; slaResolveStatus?: string;
-        };
-        if (!inc.slaResolveTarget || inc.slaResolveStatus === 'breached') continue;
-        const created = new Date(inc.createdAt).getTime();
-        const breachAt = created + inc.slaResolveTarget * 60_000;
-        if (Date.now() > breachAt) {
-          const next = { ...inc, slaResolveStatus: 'breached' };
-          await prisma.incident.update({
-            where: { id: row.id },
-            data: { data: JSON.stringify(next) },
-          });
+    const BATCH = 100;
+    let offset = 0;
+    while (true) {
+      const rows = await prisma.incident.findMany({
+        where: { status: { notIn: ['resolved', 'closed'] } },
+        select: { id: true, data: true },
+        take: BATCH,
+        skip: offset,
+        orderBy: { updatedAt: 'asc' },
+      });
+      if (rows.length === 0) break;
+      for (const row of rows) {
+        try {
+          const inc = JSON.parse(row.data) as {
+            createdAt: string; slaResolveTarget?: number; slaResolveStatus?: string;
+          };
+          if (!inc.slaResolveTarget || inc.slaResolveStatus === 'breached') continue;
+          const created = new Date(inc.createdAt).getTime();
+          const breachAt = created + inc.slaResolveTarget * 60_000;
+          if (Date.now() > breachAt) {
+            const next = { ...inc, slaResolveStatus: 'breached' };
+            await prisma.incident.update({
+              where: { id: row.id },
+              data: { data: JSON.stringify(next) },
+            });
+          }
+        } catch {
+          // skip malformed row
         }
-      } catch {
-        // skip malformed row
       }
+      if (rows.length < BATCH) break;
+      offset += BATCH;
     }
   },
 });
