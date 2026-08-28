@@ -82,8 +82,11 @@ Set `DISABLE_HMR=true` in `.env.local` to disable HMR.
 | `server/__tests__/` | Vitest suites |
 | `prisma/` | Schema, migrations, seeds (`seed.ts`, `seedDocuments.ts`) |
 | `docs/` | Product specs, ITIL 4 mapping, milestone tracker, DR runbook |
+| `docs/design/` | Lifedoc — ERD, API contract, architecture, realtime (update each iteration) |
+| `docs/features/` | Lifedoc — spec per halaman + shared concerns (template di `features/README.md`) |
+| `docs/ui/` | Lifedoc — shell & component specs + audit (source of truth `design-tokens.md`) |
 
-Architecture details and module specs live in [`CLAUDE.md`](./CLAUDE.md) and [`docs/`](./docs/).
+Architecture details and module specs live in [`CLAUDE.md`](./CLAUDE.md) and [`docs/`](./docs/). Lifedocs: [`docs/design/`](./docs/design/), [`docs/features/`](./docs/features/), [`docs/ui/`](./docs/ui/) — diadaptasi dari `terra-service-management`.
 
 ## Operations
 
