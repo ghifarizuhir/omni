@@ -18,6 +18,7 @@ import { rescheduleChangeSchema } from '../../src/shared/schemas/change';
 import {
   cancelRequestSchema, reassignRequestStepSchema, addRequestWatcherSchema,
 } from '../../src/shared/schemas/request';
+import { createProblemSchema } from '../../src/shared/schemas/problem';
 
 export const itsmRouter = Router();
 
@@ -33,6 +34,13 @@ itsmRouter.get('/problems', requirePermission('problem.read'), asyncHandler(asyn
 }));
 itsmRouter.get('/problems/:publicId', requirePermission('problem.read'), asyncHandler(async (req, res) => {
   res.json(required(await scoped(req).problems.get(req.params.publicId), 'Problem'));
+}));
+itsmRouter.post('/problems', requirePermission('problem.create'), asyncHandler(async (req, res) => {
+  const body = createProblemSchema.parse(req.body);
+  const actor = await getActor(req);
+  const wrapped = await scoped(req).problems.create(body, actor);
+  await audit(req, { action: 'create', resourceKind: 'Problem', resourceId: wrapped.result.id, after: wrapped.result, scopeMode: wrapped.scopeMode });
+  res.status(201).json(wrapped.result);
 }));
 
 itsmRouter.get('/changes', requirePermission('change.read'), asyncHandler(async (req, res) => {

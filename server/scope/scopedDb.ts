@@ -5,6 +5,7 @@ import { POLICY } from './policy';
 import { cmdbRepo } from '../repositories/cmdb';
 import type { ConfigurationItem } from '../../src/types';
 import type { CreateCIInput } from '../../src/shared/schemas/ci';
+import type { CreateProblemInput } from '../../src/shared/schemas/problem';
 import { eventsRepo, monitoringRepo } from '../repositories/events';
 import { incidentsRepo } from '../repositories/incidents';
 import { problemsRepo, changesRepo, releasesRepo, requestsRepo } from '../repositories/docs';
@@ -119,6 +120,7 @@ export interface MonitoringScope {
 export interface ProblemsScope {
   list(pagination?: Parameters<typeof problemsRepo.list>[1]): Promise<Awaited<ReturnType<typeof problemsRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof problemsRepo.get>>>;
+  create(input: CreateProblemInput, actor: { id: string; name: string }): Promise<{ result: Awaited<ReturnType<typeof problemsRepo.create>>; scopeMode: ScopeMode }>;
 }
 
 export interface ChangesScope {
@@ -513,11 +515,32 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     },
   };
 
-  // ── Problems scope (read=global, write=scoped — no write endpoints yet) ──────
+  function problemCanWrite(appId: string | null): boolean {
+    if (isPlatformAdmin) return true;
+    if (appId === null) return false;
+    if (POLICY.problem.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
+    return writableApps.has(appId);
+  }
+
+  function problemScopeMode(appId: string | null): ScopeMode {
+    if (isPlatformAdmin) return 'admin';
+    if (POLICY.problem.writeBypass.some((r) => ctx.functionalRoles.includes(r) && r !== 'PLATFORM_ADMIN')) return 'noc';
+    if (appId && ownerApps.has(appId)) return 'owner';
+    return 'member';
+  }
 
   const problems: ProblemsScope = {
     list: (pagination) => problemsRepo.list(ctx.tenantId, pagination),
     get: (publicId) => problemsRepo.get(ctx.tenantId, publicId),
+    async create(input, actor) {
+      const appId = (input as any).applicationId ?? null;
+      const effectiveAppId = appId ?? await ensureUnassignedApp(ctx.tenantId);
+      if (!problemCanWrite(effectiveAppId)) {
+        throw new ScopeViolationError({ module: 'problem', action: 'create', applicationId: effectiveAppId });
+      }
+      const result = await problemsRepo.create(ctx.tenantId, { ...input, applicationId: effectiveAppId }, actor);
+      return { result, scopeMode: problemScopeMode(effectiveAppId) ?? 'admin' };
+    },
   };
 
   // ── Changes scope (read=global, write=scoped) ──────────────────────────────

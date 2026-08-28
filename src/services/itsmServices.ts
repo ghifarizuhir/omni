@@ -8,10 +8,12 @@ import type { RescheduleChangeInput } from '../shared/schemas/change';
 import type {
   CancelRequestInput, ReassignRequestStepInput, AddRequestWatcherInput,
 } from '../shared/schemas/request';
+import type { CreateProblemInput } from '../shared/schemas/problem';
 
 export const problemsService = {
   list: () => apiFetch<Problem[]>('/problems'),
   get: (publicId: string) => apiFetch<Problem>(`/problems/${publicId}`),
+  create: (input: CreateProblemInput) => apiFetch<Problem>('/problems', { method: 'POST', body: input }),
 };
 
 export interface CreateChangeInput {

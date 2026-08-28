@@ -141,9 +141,10 @@ export const ProblemList: React.FC = () => {
   const [sortKey, setSortKey] = useState<SortKey>('lastIncidentDate');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [createOpen, setCreateOpen] = useState(false);
-  const [extraProblems, setExtraProblems] = useState<Problem[]>([]);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const { user, applications, teams, departments } = useCurrentUser();
-  const { data: loadedProblems } = useResource(() => problemsService.list(), []);
+  const { data: loadedProblems, refresh: refreshProblems } = useResource(() => problemsService.list(), []);
   const mockProblems = loadedProblems ?? [];
   const { data: loadedUsers } = useResource(() => usersService.list(), []);
   const mockUsers = loadedUsers ?? [];
@@ -156,36 +157,22 @@ export const ProblemList: React.FC = () => {
     () => filterReadable(
       user,
       'problem',
-      [...extraProblems, ...mockProblems].map(p => ({ ...p, ...problemResource(p) })),
+      [...mockProblems].map(p => ({ ...p, ...problemResource(p) })),
     ) as Problem[],
-    [extraProblems, mockProblems, user, applications, teams, departments],
+    [mockProblems, user, applications, teams, departments],
   );
 
-  const handleCreateProblem = ({ title, description }: { title: string; description: string }) => {
-    const now = new Date().toISOString();
-    const seq = (mockProblems.length + extraProblems.length + 1).toString().padStart(5, '0');
-    const newProblem: Problem = {
-      id: `prb-${Date.now()}`,
-      publicId: `PRB-${new Date().getFullYear()}-${seq}`,
-      title,
-      description,
-      status: 'identified',
-      severity: 'P3',
-      source: 'user_reported',
-      ownerId: mockUsers[0]?.id ?? 'user-current',
-      ownerTeamId: 'team-current',
-      affectedCIIds: [],
-      affectedCIPublicIds: [],
-      affectedServiceIds: [],
-      relatedIncidentIds: [],
-      relatedIncidentCount: 0,
-      linkedChangeIds: [],
-      linkedKBArticleIds: [],
-      tags: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-    setExtraProblems(prev => [newProblem, ...prev]);
+  const handleCreateProblem = async ({ title, description }: { title: string; description: string }) => {
+    setSaving(true);
+    setCreateError(null);
+    try {
+      await problemsService.create({ title, description, severity: 'P3', source: 'user_reported', affectedCIIds: [], affectedServiceIds: [], tags: [] });
+      refreshProblems();
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Stats

@@ -46,6 +46,8 @@ import type {
   Problem, Change, Release, Deployment, DeploymentLogEntry, ServiceRequest,
   RequestComment, CatalogItem, Integration, KBArticle, Service,
 } from '../../src/types';
+import type { CreateProblemInput } from '../../src/shared/schemas/problem';
+import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
 import { randomUUID } from 'node:crypto';
 
 export const servicesRepo = {
@@ -56,6 +58,62 @@ export const servicesRepo = {
 export const problemsRepo = {
   list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Problem>(prisma.problem, tenantId, {}, pagination),
   get: (tenantId: string, publicId: string) => getDocByPublicId<Problem>(prisma.problem, tenantId, publicId),
+
+  async create(
+    tenantId: string,
+    input: CreateProblemInput,
+    actor: { id: string; name: string },
+  ): Promise<Problem> {
+    // Ensure FK target exists for isolated test tenants
+    await prisma.tenant.upsert({
+      where: { id: tenantId },
+      update: {},
+      create: { id: tenantId, slug: tenantId, name: `Test ${tenantId.slice(0, 20)}` },
+    }).catch(() => undefined);
+    const count = await prisma.problem.count({ where: { tenantId } });
+    const seq = String(count + 1).padStart(5, '0');
+    const year = new Date().getFullYear();
+    const publicId = `PRB-${year}-${seq}`;
+    const id = `prb-${Date.now()}-${seq}`;
+    const now = new Date();
+    const applicationId = input.applicationId ?? await ensureUnassignedApp(tenantId);
+    const problem: Problem = {
+      id,
+      publicId,
+      title: input.title,
+      description: input.description ?? '',
+      status: 'identified',
+      severity: input.severity as Problem['severity'],
+      source: input.source as Problem['source'],
+      ownerId: input.ownerId ?? actor.id,
+      ownerTeamId: 'team-current',
+      affectedCIIds: input.affectedCIIds ?? [],
+      affectedCIPublicIds: [],
+      affectedServiceIds: input.affectedServiceIds ?? [],
+      relatedIncidentIds: [],
+      relatedIncidentCount: 0,
+      linkedChangeIds: [],
+      linkedKBArticleIds: [],
+      tags: input.tags ?? [],
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    } as unknown as Problem & { applicationId: string; tenantId: string };
+    // stash tenant/application for audit parity without polluting Problem type
+    (problem as unknown as Record<string, unknown>).applicationId = applicationId;
+    (problem as unknown as Record<string, unknown>).tenantId = tenantId;
+    await prisma.problem.create({
+      data: {
+        id,
+        publicId,
+        tenantId,
+        status: 'identified',
+        data: JSON.stringify(problem),
+        applicationId,
+        createdAt: now,
+      },
+    });
+    return problem as Problem;
+  },
 };
 
 // Closed states for a Change — `cancel` refuses to transition from these.
