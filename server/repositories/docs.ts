@@ -15,8 +15,17 @@ const parse = <T>(s: string, fb: T): T => { try { return JSON.parse(s) as T; } c
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Delegate = any;
 
-export const listDocs = async <T,>(delegate: Delegate, tenantId: string, where: Record<string, unknown> = {}): Promise<T[]> => {
-  const rows: Array<{ data: string }> = await delegate.findMany({ where: { tenantId, ...where } });
+export const listDocs = async <T,>(
+  delegate: Delegate,
+  tenantId: string,
+  where: Record<string, unknown> = {},
+  pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+): Promise<T[]> => {
+  const rows: Array<{ data: string }> = await delegate.findMany({
+    where: { tenantId, ...where },
+    take: pagination.limit,
+    skip: pagination.offset,
+  });
   return rows.map(r => parse<T>(r.data, {} as T));
 };
 
@@ -40,12 +49,12 @@ import type {
 import { randomUUID } from 'node:crypto';
 
 export const servicesRepo = {
-  list: (tenantId: string) => listDocs<Service>(prisma.service, tenantId),
+  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Service>(prisma.service, tenantId, {}, pagination),
   get: (tenantId: string, id: string) => getDocById<Service>(prisma.service, tenantId, id),
 };
 
 export const problemsRepo = {
-  list: (tenantId: string) => listDocs<Problem>(prisma.problem, tenantId),
+  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Problem>(prisma.problem, tenantId, {}, pagination),
   get: (tenantId: string, publicId: string) => getDocByPublicId<Problem>(prisma.problem, tenantId, publicId),
 };
 
@@ -53,7 +62,7 @@ export const problemsRepo = {
 const CLOSED_CHANGE_STATES = new Set(['closed_successful', 'closed_failed', 'rejected', 'cancelled']);
 
 export const changesRepo = {
-  list: (tenantId: string) => listDocs<Change>(prisma.change, tenantId),
+  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Change>(prisma.change, tenantId, {}, pagination),
   get: (tenantId: string, publicId: string) => getDocByPublicId<Change>(prisma.change, tenantId, publicId),
 
   // Allocates a publicId, persists the row, and returns the full Change so the
@@ -214,18 +223,18 @@ export const changesRepo = {
 };
 
 export const releasesRepo = {
-  list: (tenantId: string) => listDocs<Release>(prisma.release, tenantId),
+  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Release>(prisma.release, tenantId, {}, pagination),
   get: (tenantId: string, publicId: string) => getDocByPublicId<Release>(prisma.release, tenantId, publicId),
 };
 
 export const deploymentsRepo = {
-  list: (tenantId: string) => listDocs<Deployment>(prisma.deployment, tenantId),
-  active: async (tenantId: string) =>
-    (await listDocs<Deployment>(prisma.deployment, tenantId))
+  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Deployment>(prisma.deployment, tenantId, {}, pagination),
+  active: async (tenantId: string, pagination?: { limit: number; offset: number }) =>
+    (await listDocs<Deployment>(prisma.deployment, tenantId, {}, pagination))
       .filter(d => d.status === 'running' || d.status === 'pending'),
   get: (tenantId: string, publicId: string) => getDocByPublicId<Deployment>(prisma.deployment, tenantId, publicId),
-  logs: (tenantId: string, deploymentId: string) =>
-    listDocs<DeploymentLogEntry>(prisma.deploymentLog, tenantId, { deploymentId }),
+  logs: (tenantId: string, deploymentId: string, pagination?: { limit: number; offset: number }) =>
+    listDocs<DeploymentLogEntry>(prisma.deploymentLog, tenantId, { deploymentId }, pagination),
 };
 
 // Sentinel return values for workflow mutations — let the route map them to
@@ -241,7 +250,7 @@ type StepDecideResult =
 const CLOSED_REQUEST_STATES = new Set(['fulfilled', 'closed', 'cancelled', 'rejected']);
 
 export const requestsRepo = {
-  list: (tenantId: string) => listDocs<ServiceRequest>(prisma.serviceRequest, tenantId),
+  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<ServiceRequest>(prisma.serviceRequest, tenantId, {}, pagination),
   get: (tenantId: string, publicId: string) => getDocByPublicId<ServiceRequest>(prisma.serviceRequest, tenantId, publicId),
 
   async decideStep(
@@ -499,7 +508,11 @@ export const requestsRepo = {
     });
   },
 
-  async listComments(tenantId: string, publicId: string) {
+  async listComments(
+    tenantId: string,
+    publicId: string,
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ) {
     const sr = await getDocByPublicId<ServiceRequest>(prisma.serviceRequest, tenantId, publicId);
     if (!sr) return [];
     const row = await prisma.serviceRequest.findFirst({ where: { tenantId, publicId }, select: { id: true } });
@@ -507,16 +520,18 @@ export const requestsRepo = {
     return prisma.requestComment.findMany({
       where: { tenantId, requestId: row.id },
       orderBy: { createdAt: 'asc' },
+      take: pagination.limit,
+      skip: pagination.offset,
     });
   },
 };
 
 export const catalogRepo = {
-  list: (tenantId: string) => listDocs<CatalogItem>(prisma.catalogItem, tenantId),
+  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<CatalogItem>(prisma.catalogItem, tenantId, {}, pagination),
 };
 
 export const integrationsRepo = {
-  list: (tenantId: string) => listDocs<Integration>(prisma.integration, tenantId),
+  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Integration>(prisma.integration, tenantId, {}, pagination),
   get: (tenantId: string, id: string) => getDocById<Integration>(prisma.integration, tenantId, id),
 };
 
@@ -524,7 +539,7 @@ export const integrationsRepo = {
 const TERMINAL_KB_STATES = new Set(['archived']);
 
 export const kbRepo = {
-  list: (tenantId: string) => listDocs<KBArticle>(prisma.kBArticle, tenantId),
+  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<KBArticle>(prisma.kBArticle, tenantId, {}, pagination),
   get: (tenantId: string, publicId: string) => getDocByPublicId<KBArticle>(prisma.kBArticle, tenantId, publicId),
 
   // M6.11 (B1.5) — Create a new KB article in `draft` status. Allocates a

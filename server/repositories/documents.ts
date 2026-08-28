@@ -6,10 +6,16 @@ import { prisma } from '../db';
 
 const parse = <T>(s: string): T => JSON.parse(s) as T;
 
-export const listByKind = async <T>(tenantId: string, kind: string): Promise<T[]> => {
+export const listByKind = async <T>(
+  tenantId: string,
+  kind: string,
+  pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+): Promise<T[]> => {
   const rows = await prisma.document.findMany({
     where: { tenantId, kind },
     orderBy: { position: 'asc' },
+    take: pagination.limit,
+    skip: pagination.offset,
   });
   return rows.map(r => parse<T>(r.data));
 };
