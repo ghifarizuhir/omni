@@ -69,6 +69,7 @@ All tenant-scoped. Detail routes resolve `publicId → id` internally; write pat
 | GET | `/api/v1/cis/:publicId` | `cmdb.read` | — | `getCI(publicId):30` → `required 404` |
 | GET | `/api/v1/cis/:ciId/relationships` | `cmdb.read` | — | `listRelationshipsForCI(ciId):35` |
 | PATCH | `/api/v1/cis/:publicId` | `cmdb.write` | `updateCISchema src/shared/schemas/ci:6` | `updateCI:42` + `audit update:44` → audit `before/after` |
+| POST | `/api/v1/cis` | `cmdb.write` | `createCISchema src/shared/schemas/ci:41` | `req.scoped.cmdb.createCI:62` + `audit create` → `201` `CI-SER-#####` (Batch 1 ABCDE) |
 | GET | `/api/v1/services` | `service.read` | — | `servicesRepo.list(tenantId):57` (Document-backed, not scoped repo) |
 | GET | `/api/v1/services/:id` | `service.read` | — | `servicesRepo.get(tenantId,id):61` |
 
@@ -87,6 +88,7 @@ All tenant-scoped. Detail routes resolve `publicId → id` internally; write pat
 | Method | Path | Permission | Zod schema | Notes |
 |--------|------|------------|------------|-------|
 | GET | `/api/v1/incidents` | `incident.read` | `qBool(active,major) qString(ciId,problemPublicId):32` | `scoped.incidents.list(filters,pagination):30` |
+| POST | `/api/v1/incidents` | `incident.create` | `createIncidentSchema src/shared/schemas/incident:121` | `req.scoped.incidents.create:337` + `audit create` → `201` `INC-YYYY-NNNNN` (Batch 1) |
 | GET | `/api/v1/incidents/:publicId` | `incident.read` | — | `get(publicId):43` |
 | GET | `/api/v1/incidents/:incidentId/comments` | `incident.read` | — | `comments(incidentId,pagination):48` |
 | GET | `/api/v1/incidents/:incidentId/timeline` | `incident.read` | — | `timeline(incidentId,pagination):52` |
@@ -122,6 +124,7 @@ All tenant-scoped. Detail routes resolve `publicId → id` internally; write pat
 | Method | Path | Permission | Zod schema | Notes |
 |--------|------|------------|------------|-------|
 | GET | `/api/v1/problems` | `problem.read` | — | `scoped.problems.list(pagination):32` |
+| POST | `/api/v1/problems` | `problem.create` | `createProblemSchema src/shared/schemas/problem:1` | `req.scoped.problems.create:30` + `audit create` → `201` `PRB-YYYY-NNNNN` (Batch 1) |
 | GET | `/api/v1/problems/:publicId` | `problem.read` | — | `scoped.problems.get(publicId):35` |
 | GET | `/api/v1/changes` | `change.read` | — | `scoped.changes.list(pagination):39` |
 | GET | `/api/v1/changes/:publicId` | `change.read` | — | `scoped.changes.get(publicId):42` |
@@ -136,6 +139,7 @@ All tenant-scoped. Detail routes resolve `publicId → id` internally; write pat
 | GET | `/api/v1/deployments/:deploymentId/logs` | `deployment.read` | — | `deploymentsRepo.logs(tenantId,deploymentId):152` |
 | GET | `/api/v1/environments` | `deployment.read` | — | `listByKind('environment'):156` Document |
 | GET | `/api/v1/requests` | `request.read` | — | `scoped.serviceRequests.list(pagination):160` |
+| POST | `/api/v1/requests` | `request.create` | `createRequestSchema src/shared/schemas/request:31` | `req.scoped.serviceRequests.create:185` + `audit create` → `201` `REQ-YYYY-NNNNN` + `WorkflowInstance` (Batch 1) |
 | GET | `/api/v1/requests/:publicId` | `request.read` | — | `scoped.serviceRequests.get(publicId):163` |
 | GET | `/api/v1/requests/:publicId/comments` | `request.read` | — | `listComments(publicId,pagination):170` (verifies existence first) |
 | GET | `/api/v1/catalog` | `request.read` | — | `catalogRepo.list(tenantId):173` |
@@ -254,7 +258,7 @@ Path-prefix guards `platformRouter.use('/users', requirePermission('user.read'))
 ---
 
 ## Conventions
-- **Validation:** `schema.parse(req.body)` throw `ZodError.issues` → `server/app.ts:153` `400 { message:'Validation failed', issues }`. Shared schemas under `src/shared/schemas/` (`ci:6`, `event:9`, `incident:9`, `monitoringRule:9`, `alertRoute:7`, `change:17`, `request:19`, `kbArticle:15`) single-source client/server.
+- **Validation:** `schema.parse(req.body)` throw `ZodError.issues` → `server/app.ts:153` `400 { message:'Validation failed', issues }`. Shared schemas under `src/shared/schemas/` (`ci:6` + `createCISchema:41`, `event:9`, `incident:9` + `createIncidentSchema:121`, `monitoringRule:9`, `alertRoute:7`, `change:17`, `request:19` + `createRequestSchema:31`, `problem:1` `createProblemSchema`, `kbArticle:15`) single-source client/server — Batch 1 added 4 `create*` strict schemas.
 - **Errors:** `HttpError(status,message,body)` (`server/util.ts:3`) → `server/app.ts:149` `{ message, body }`; `NotFoundError→404:10`, `required(value,resource):27` helper. `ScopeViolationError:9` → `403 { error:'scope_violation', module, action, applicationId }:22` via `toJSON:22`. Unknown → `500 { message:'Internal server error' } + logger.error:157`.
 - **ID vs publicId:** `prisma/schema.prisma:278` `ConfigurationItem publicId @unique`, `350 Event`, `410 Incident`, `469 Problem`, `482 Change`, `497 Release`, `509 Deployment`, `532 ServiceRequest`, `573 KBArticle`, `385 MonitoringRule`, `397 AlertRoute` — detail routes take `publicId` (`GET /cis/:publicId:29`, `GET /incidents/:publicId:42`) and map internally. `Document` uses `(tenantId,kind,key):598` + optional `publicId:593`.
 - **Pagination:** `server/lib/pagination.ts:6` `parsePagination({ limit/take, offset/skip })` — `limit 1..MAX 200:9`, `offset≥0:10`, `hasMore = offset+limit < total:18`. Callers pass `?limit=&offset=` (aliased `take/skip/page*` legacy). Document repos `listByKind(tenantId,kind,pagination)` forward same.
@@ -316,5 +320,6 @@ Operational routes **must** use `req.scoped.cmdb/events/incidents/monitoring/pro
 
 | Date | Change | Ref |
 |------|--------|-----|
+| 2026-08-28 | Batch 1 ABCDE — add 4 `POST` creates: `/incidents` `INC-*` `createIncidentSchema:121`, `/cis` `CI-*` `createCISchema:41`, `/problems` `PRB-*` `createProblemSchema`, `/requests` `REQ-*` `createRequestSchema:31` (all `req.scoped.*.create` + `ScopeViolationError 403` + `audit create`) + fix `ciHealthValues` → `operational/degraded/partial_outage/major_outage/maintenance` | — |
 | 2026-08-28 | Deepen API contract — `/api/v1`, cookie session+scope, health/auth/monitoring/itsm/platform/admin tables, per-router Method/Path/Permission/Zod refs, pagination & id conventions, exemptions, open items vs `server/app.ts:33,126,144`, `server/middleware/auth.ts:43,48`, `server/middleware/scopedDb.ts:19`, `eslint.config.js:36` | — |
 | 2026-08-28 | Init API contract — `/api/v1`, session+scope, rate limits | — |
