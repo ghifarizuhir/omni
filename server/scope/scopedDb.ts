@@ -3,14 +3,16 @@ import type { ScopeContext } from './context';
 import { ScopeViolationError } from './errors';
 import { POLICY } from './policy';
 import { cmdbRepo } from '../repositories/cmdb';
-import type { ConfigurationItem } from '../../src/types';
+import type { ConfigurationItem, Change } from '../../src/types';
 import type { CreateCIInput } from '../../src/shared/schemas/ci';
 import type { CreateProblemInput } from '../../src/shared/schemas/problem';
 import type { CreateRequestInput } from '../../src/shared/schemas/request';
+import type { CastVoteInput } from '../../src/shared/schemas/change';
 import { eventsRepo, monitoringRepo } from '../repositories/events';
 import { incidentsRepo } from '../repositories/incidents';
 import { problemsRepo, changesRepo, releasesRepo, requestsRepo } from '../repositories/docs';
 import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
+import { HttpError } from '../util';
 
 export type ScopeMode = 'member' | 'noc' | 'owner' | 'admin';
 
@@ -142,6 +144,7 @@ export interface ChangesScope {
     reviewer: { id: string; name: string },
     assessment: Parameters<typeof changesRepo.setTechnicalAssessment>[2],
   ): Promise<{ result: Awaited<ReturnType<typeof changesRepo.setTechnicalAssessment>>; scopeMode: ScopeMode } | null>;
+  castVote(publicId: string, input: CastVoteInput & { voterId: string; voterName: string }): Promise<{ before: Change; after: Change; scopeMode: ScopeMode }>;
 }
 
 export interface ReleasesScope {
@@ -613,6 +616,14 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
       }
       const result = await changesRepo.setTechnicalAssessment(ctx.tenantId, publicId, assessment, reviewer);
       return { result, scopeMode: changeScopeMode(appId) };
+    },
+
+    async castVote(publicId, input) {
+      const appId = await loadChangeAppId(publicId);
+      if (appId === undefined) throw new HttpError(404, 'Change not found');
+      if (appId !== null && !changeCanWrite(appId)) throw new ScopeViolationError({ module: 'change', action: 'update', applicationId: appId });
+      const result = await changesRepo.castVote(ctx.tenantId, publicId, input);
+      return { ...result, scopeMode: changeScopeMode(appId) };
     },
   };
 
