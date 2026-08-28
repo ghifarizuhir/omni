@@ -15,6 +15,7 @@ export type {
   UpdateIncidentInput,
   StandDownIncidentInput,
   PostCommsInput,
+  CreateIncidentInput,
 } from '../shared/schemas/incident';
 export {
   resolveIncidentSchema,
@@ -27,6 +28,7 @@ export {
   updateIncidentSchema,
   standDownIncidentSchema,
   postCommsSchema,
+  createIncidentSchema,
 } from '../shared/schemas/incident';
 
 import type {
@@ -39,9 +41,11 @@ import type {
   UpdateIncidentInput,
   StandDownIncidentInput,
   PostCommsInput,
+  CreateIncidentInput,
 } from '../shared/schemas/incident';
 
 export const incidentsService = {
+  create: (input: CreateIncidentInput) => apiFetch<Incident>('/incidents', { method: 'POST', body: input }),
   list: () => apiFetch<Incident[]>('/incidents'),
   get: (publicId: string) => apiFetch<Incident>(`/incidents/${publicId}`),
   comments: (incidentId: string) => apiFetch<IncidentComment[]>(`/incidents/${incidentId}/comments`),

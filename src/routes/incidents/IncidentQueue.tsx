@@ -613,7 +613,7 @@ export const IncidentQueue: React.FC = () => {
       <CreateIncidentModal
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreated={id => navigate(`/incidents/${id}`)}
+        onCreated={id => { refreshIncidents(); navigate(`/incidents/${id}`); }}
       />
 
       <UserPickerModal

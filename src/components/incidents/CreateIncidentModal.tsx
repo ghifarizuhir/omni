@@ -5,7 +5,7 @@ import { Input } from '@/src/components/ui/Input';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { cn } from '@/src/lib/utils';
 import { IncidentPriority } from '@/src/types/incident';
-import { usersService, useResource } from '@/src/services';
+import { incidentsService, usersService, useResource } from '@/src/services';
 
 interface Props {
   isOpen: boolean;
@@ -42,6 +42,8 @@ export const CreateIncidentModal: React.FC<Props> = ({ isOpen, onClose, onCreate
   const [priority, setPriority] = useState<IncidentPriority>('P2');
   const [channel, setChannel] = useState<string>('phone');
   const [assigneeId, setAssigneeId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const priorityColors: Record<IncidentPriority, string> = {
     P1: 'border-red-400 bg-red-50 text-red-700',
@@ -50,21 +52,42 @@ export const CreateIncidentModal: React.FC<Props> = ({ isOpen, onClose, onCreate
     P4: 'border-green-400 bg-green-50 text-green-700',
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!title.trim()) return;
-    const newId = `INC-2026-${String(Math.floor(Math.random() * 99) + 185).padStart(5, '0')}`;
-    onCreated(newId);
-    setTitle('');
-    setDescription('');
-    setPriority('P2');
-    setChannel('phone');
-    setAssigneeId('');
-    onClose();
+    setSaving(true);
+    setError(null);
+    try {
+      const created = await incidentsService.create({
+        title: title.trim(),
+        description,
+        priority,
+        channel: channel as 'phone' | 'email' | 'user_report' | 'self_service' | 'monitoring' | 'integration',
+        assigneeId: assigneeId || null,
+        affectedCIIds: [],
+        tags: [],
+      });
+      onCreated(created.publicId);
+      setTitle('');
+      setDescription('');
+      setPriority('P2');
+      setChannel('phone');
+      setAssigneeId('');
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create Incident" size="md">
       <div className="py-4 space-y-5">
+        {error && (
+          <div className="bg-ois-danger-pale border border-ois-danger/20 text-ois-danger text-sm px-3 py-2 rounded-lg">
+            {error}
+          </div>
+        )}
         {/* Title */}
         <div>
           <label className="block text-sm font-medium text-ois-text mb-1">
@@ -147,9 +170,9 @@ export const CreateIncidentModal: React.FC<Props> = ({ isOpen, onClose, onCreate
 
         {/* Actions */}
         <div className="flex justify-end gap-2 pt-2 border-t border-ois-border">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={!title.trim()}>
-            Create
+          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={handleCreate} disabled={saving || !title.trim()}>
+            {saving ? 'Saving…' : 'Create'}
           </Button>
         </div>
       </div>
