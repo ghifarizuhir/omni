@@ -53,24 +53,36 @@ import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
 import { randomUUID } from 'node:crypto';
 import { HttpError } from '../util';
 
-const normalizeChange = (raw: Change): Change => ({
-  ...raw,
-  riskFactors: raw.riskFactors ?? [],
-  affectedCIIds: raw.affectedCIIds ?? [],
-  affectedCIPublicIds: raw.affectedCIPublicIds ?? [],
-  affectedServiceIds: raw.affectedServiceIds ?? [],
-  linkedProblemIds: raw.linkedProblemIds ?? [],
-  linkedIncidentIds: raw.linkedIncidentIds ?? [],
-  linkedKBSlugs: raw.linkedKBSlugs ?? [],
-  approvals: raw.approvals ?? [],
-  conflicts: (raw.conflicts ?? []).map((c: Change['conflicts'][number]) => ({
-    ...c,
-    conflictsWith: (c as unknown as { conflictsWith?: string[] }).conflictsWith ?? [],
-  })),
-  tags: raw.tags ?? [],
-  commsChannels: raw.commsChannels ?? [],
-  rescheduleHistory: raw.rescheduleHistory ?? [],
-} as unknown as Change);
+const normalizeChange = (raw: Change): Change => {
+  const fallbackAt = (raw as unknown as { createdAt?: string; plannedStart?: string }).createdAt
+    ?? (raw as unknown as { plannedStart?: string }).plannedStart
+    ?? new Date().toISOString();
+  return {
+    ...raw,
+    riskFactors: raw.riskFactors ?? [],
+    affectedCIIds: raw.affectedCIIds ?? [],
+    affectedCIPublicIds: raw.affectedCIPublicIds ?? [],
+    affectedServiceIds: raw.affectedServiceIds ?? [],
+    linkedProblemIds: raw.linkedProblemIds ?? [],
+    linkedIncidentIds: raw.linkedIncidentIds ?? [],
+    linkedKBSlugs: raw.linkedKBSlugs ?? [],
+    approvals: raw.approvals ?? [],
+    conflicts: (raw.conflicts ?? []).map((c: Change['conflicts'][number]) => ({
+      ...c,
+      conflictsWith: (c as unknown as { conflictsWith?: string[] }).conflictsWith ?? [],
+      detectedAt: (c as unknown as { detectedAt?: string }).detectedAt ?? fallbackAt,
+    })),
+    tags: raw.tags ?? [],
+    commsChannels: raw.commsChannels ?? [],
+    rescheduleHistory: raw.rescheduleHistory ?? [],
+    testPlan: (raw as unknown as { testPlan?: string }).testPlan ?? '',
+    implementationWindow:
+      (raw as unknown as { implementationWindow?: string }).implementationWindow
+      ?? `${(raw as unknown as { plannedStart?: string }).plannedStart ?? ''} → ${(raw as unknown as { plannedEnd?: string }).plannedEnd ?? ''}`,
+    createdAt: (raw as unknown as { createdAt?: string }).createdAt ?? fallbackAt,
+    updatedAt: (raw as unknown as { updatedAt?: string }).updatedAt ?? (raw as unknown as { createdAt?: string }).createdAt ?? fallbackAt,
+  } as unknown as Change;
+};
 
 export const servicesRepo = {
   list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Service>(prisma.service, tenantId, {}, pagination),

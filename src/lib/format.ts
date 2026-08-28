@@ -1,11 +1,17 @@
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, isValid } from 'date-fns';
 
-export function formatDate(date: string | Date, pattern: string = 'MMM d, yyyy HH:mm') {
-  return format(new Date(date), pattern);
+export function formatDate(date: string | Date | undefined | null, pattern: string = 'MMM d, yyyy HH:mm') {
+  if (!date) return '—';
+  const d = new Date(date as string);
+  if (!isValid(d)) return String(date);
+  return format(d, pattern);
 }
 
-export function formatRelative(date: string | Date) {
-  return formatDistanceToNow(new Date(date), { addSuffix: true });
+export function formatRelative(date: string | Date | undefined | null) {
+  if (!date) return '—';
+  const d = new Date(date as string);
+  if (!isValid(d)) return String(date);
+  return formatDistanceToNow(d, { addSuffix: true });
 }
 
 export function formatPercent(value: number) {
