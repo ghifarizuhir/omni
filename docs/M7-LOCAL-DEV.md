@@ -135,6 +135,15 @@ If it still races, bump the postgres `healthcheck.retries`.
 Almost always a host-side leftover from a prior bind-mount. `docker
 compose down -v` + a fresh `docker compose up -d postgres` clears it.
 
+## Pagination
+
+All list endpoints (`/cis`, `/incidents`, `/events`, `/monitoring/*`, `/problems`, `/changes`, `/releases`, `/requests`, `/kb/articles`, etc.) support `?limit=&offset=` (aliases `take`/`skip`). Defaults: `limit=50`, `offset=0`, `max=200`. Capped at the repo layer (`server/lib/pagination.ts:1`) so `bringup` no longer `findMany`-scans full tables into memory.
+
+```bash
+curl -H "Cookie: ois_session=..." "http://localhost:3001/api/v1/incidents?limit=10&offset=20"
+curl "http://localhost:3001/api/v1/cis?limit=2"  # paginated array (backward compat)
+```
+
 ## Verification
 
 `docker compose config` is the canonical validator — run it after editing
