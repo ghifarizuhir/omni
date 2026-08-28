@@ -46,7 +46,7 @@ import type {
   Problem, Change, ChangeApproval, Release, Deployment, DeploymentLogEntry, ServiceRequest,
   RequestComment, CatalogItem, Integration, KBArticle, Service,
 } from '../../src/types';
-import type { CreateProblemInput } from '../../src/shared/schemas/problem';
+import type { CreateProblemInput, PromoteKnownErrorInput } from '../../src/shared/schemas/problem';
 import type { CreateRequestInput } from '../../src/shared/schemas/request';
 import type { CastVoteInput } from '../../src/shared/schemas/change';
 import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
@@ -116,6 +116,74 @@ export const problemsRepo = {
       },
     });
     return problem as Problem;
+  },
+
+  async setStatus(tenantId: string, publicId: string, status: string): Promise<{ before: Problem; after: Problem }> {
+    const row = await prisma.problem.findFirst({ where: { tenantId, publicId } });
+    if (!row) throw new Error('Problem not found');
+    const before = JSON.parse(row.data) as Problem;
+    const after = {
+      ...before,
+      status: status as Problem['status'],
+      updatedAt: new Date().toISOString(),
+      ...(status === 'closed' ? { closedAt: new Date().toISOString() } : {}),
+    } as Problem;
+    await prisma.problem.update({ where: { id: row.id }, data: { status, data: JSON.stringify(after) } });
+    return { before, after };
+  },
+
+  async promoteKnownError(
+    tenantId: string,
+    publicId: string,
+    input: PromoteKnownErrorInput,
+    actor: { id: string; name: string },
+  ): Promise<{ before: Problem; after: Problem }> {
+    const row = await prisma.problem.findFirst({ where: { tenantId, publicId } });
+    if (!row) throw new Error('Problem not found');
+    const before = JSON.parse(row.data) as Problem;
+    const after = {
+      ...before,
+      status: 'known_error' as const,
+      knownError: {
+        publishedAt: new Date().toISOString(),
+        publishedBy: actor.id,
+        publishedByName: actor.name,
+        rootCause: input.rootCause,
+        workaround: input.workaround,
+        workaroundEffectiveness: input.workaroundEffectiveness,
+        affectedVersions: input.affectedVersions,
+        permanentFixPlan: input.permanentFixPlan,
+      },
+      updatedAt: new Date().toISOString(),
+    } as unknown as Problem;
+    await prisma.problem.update({ where: { id: row.id }, data: { status: 'known_error', data: JSON.stringify(after) } });
+    return { before, after };
+  },
+
+  async timeline(
+    tenantId: string,
+    publicId: string,
+    pagination?: { limit: number; offset: number },
+  ): Promise<Array<{ id: string; kind: string; timestamp: string; actorId: string | null; details: unknown }> | null> {
+    const prob = await prisma.problem.findFirst({ where: { tenantId, publicId } });
+    if (!prob) return null;
+    const rows = await prisma.auditLog.findMany({
+      where: { tenantId, resourceKind: 'Problem', resourceId: prob.id },
+      orderBy: { createdAt: 'asc' },
+      take: pagination?.limit ?? 50,
+      skip: pagination?.offset ?? 0,
+    });
+    return rows.map((r) => {
+      let details: unknown = null;
+      if (r.after) {
+        try {
+          details = JSON.parse(r.after);
+        } catch {
+          details = r.after;
+        }
+      }
+      return { id: r.id, kind: r.action, timestamp: r.createdAt.toISOString(), actorId: r.actorId, details };
+    });
   },
 };
 
