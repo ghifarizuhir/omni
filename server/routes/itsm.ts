@@ -16,7 +16,7 @@ import {
 } from '../../src/shared/schemas/kbArticle';
 import { rescheduleChangeSchema } from '../../src/shared/schemas/change';
 import {
-  cancelRequestSchema, reassignRequestStepSchema, addRequestWatcherSchema,
+  cancelRequestSchema, reassignRequestStepSchema, addRequestWatcherSchema, createRequestSchema,
 } from '../../src/shared/schemas/request';
 import { createProblemSchema } from '../../src/shared/schemas/problem';
 
@@ -180,6 +180,14 @@ itsmRouter.get('/requests/:publicId/comments', requirePermission('request.read')
 itsmRouter.get('/catalog', requirePermission('request.read'), asyncHandler(async (req, res) => {
   const pagination = parsePagination(req.query as Record<string, unknown>);
   res.json(await catalogRepo.list(req.tenantId, pagination));
+}));
+
+itsmRouter.post('/requests', requirePermission('request.create'), asyncHandler(async (req, res) => {
+  const body = createRequestSchema.parse(req.body);
+  const actor = await getActor(req);
+  const wrapped = await scoped(req).serviceRequests.create(body, actor);
+  await audit(req, { action: 'create', resourceKind: 'ServiceRequest', resourceId: wrapped.result.id, after: wrapped.result, scopeMode: wrapped.scopeMode });
+  res.status(201).json(wrapped.result);
 }));
 
 // ── Request workflow writes (M6.11) ──────────────────────────────────────────

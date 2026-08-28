@@ -29,3 +29,12 @@ export const addRequestWatcherSchema = z
   })
   .strict();
 export type AddRequestWatcherInput = z.infer<typeof addRequestWatcherSchema>;
+
+export const createRequestSchema = z.object({
+  catalogItemId: z.string().min(1),
+  title: z.string().min(1).max(200).optional(),
+  formData: z.record(z.string(), z.unknown()).optional().default({}),
+  tags: z.array(z.string()).max(20).optional().default([]),
+  applicationId: z.string().nullable().optional(),
+}).strict();
+export type CreateRequestInput = z.infer<typeof createRequestSchema>;

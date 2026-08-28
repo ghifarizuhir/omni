@@ -471,6 +471,7 @@ export const CatalogItemDetail: React.FC = () => {
   const [errors,     setErrors]     = useState<FormErrors>({});
   const [submitted,  setSubmitted]  = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [newReqId,   setNewReqId]   = useState('');
 
   // Reset form when item changes
@@ -521,23 +522,21 @@ export const CatalogItemDetail: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSubmit = () => {
-    setSubmitting(true);
-    // Simulate async submission
-    setTimeout(() => {
-      const year = 2026;
-      const n = Math.floor(Math.random() * 500) + 343;
-      setNewReqId(`REQ-${year}-${String(n).padStart(5, '0')}`);
-      setSubmitting(false);
+  const handleSubmit = async () => {
+    setSubmitting(true); setSubmitError(null);
+    try {
+      const created = await requestsService.create({ catalogItemId: itemId!, formData: values as Record<string, unknown>, tags: [] });
+      setNewReqId(created.publicId);
       setSubmitted(true);
       setStep(3);
-    }, 900);
+    } catch (e) { setSubmitError(e instanceof Error ? e.message : String(e)); } finally { setSubmitting(false); }
   };
 
   const handleReset = () => {
     setStep(0);
     setValues(initValues(item.formFields));
     setErrors({});
+    setSubmitError(null);
     setSubmitted(false);
     setNewReqId('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -794,6 +793,12 @@ export const CatalogItemDetail: React.FC = () => {
             </div>
           </div>
 
+          {submitError && (
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" /> {submitError}
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <button
               onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -823,7 +828,7 @@ export const CatalogItemDetail: React.FC = () => {
             </Can>
           </div>
         </div>
-      )}
+       )}
 
       {/* ── SUCCESS STATE ─────────────────────────────────────────────── */}
       {step === 3 && submitted && (

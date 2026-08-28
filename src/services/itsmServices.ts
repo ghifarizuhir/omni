@@ -6,7 +6,7 @@ import { apiFetch } from './core';
 import type { BenefitMeasurement, ROICalculation } from '../types/improvement';
 import type { RescheduleChangeInput } from '../shared/schemas/change';
 import type {
-  CancelRequestInput, ReassignRequestStepInput, AddRequestWatcherInput,
+  CancelRequestInput, ReassignRequestStepInput, AddRequestWatcherInput, CreateRequestInput,
 } from '../shared/schemas/request';
 import type { CreateProblemInput } from '../shared/schemas/problem';
 
@@ -70,6 +70,7 @@ export const requestsService = {
   list: () => apiFetch<ServiceRequest[]>('/requests'),
   get: (publicId: string) => apiFetch<ServiceRequest>(`/requests/${publicId}`),
   catalog: () => apiFetch<CatalogItem[]>('/catalog'),
+  create: (input: CreateRequestInput) => apiFetch<ServiceRequest>('/requests', { method: 'POST', body: input }),
 
   // M6.11 — workflow approve/reject + comments. Server enforces that the step
   // is the active approval step (409 otherwise) and returns the full updated

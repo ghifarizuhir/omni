@@ -6,6 +6,7 @@ import { cmdbRepo } from '../repositories/cmdb';
 import type { ConfigurationItem } from '../../src/types';
 import type { CreateCIInput } from '../../src/shared/schemas/ci';
 import type { CreateProblemInput } from '../../src/shared/schemas/problem';
+import type { CreateRequestInput } from '../../src/shared/schemas/request';
 import { eventsRepo, monitoringRepo } from '../repositories/events';
 import { incidentsRepo } from '../repositories/incidents';
 import { problemsRepo, changesRepo, releasesRepo, requestsRepo } from '../repositories/docs';
@@ -152,6 +153,7 @@ export interface ServiceRequestsScope {
   list(pagination?: Parameters<typeof requestsRepo.list>[1]): Promise<Awaited<ReturnType<typeof requestsRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof requestsRepo.get>>>;
   listComments(publicId: string, pagination?: Parameters<typeof requestsRepo.listComments>[2]): Promise<Awaited<ReturnType<typeof requestsRepo.listComments>>>;
+  create(input: CreateRequestInput, actor: { id: string; name: string }): Promise<{ result: Awaited<ReturnType<typeof requestsRepo.create>>; scopeMode: ScopeMode }>;
   decideStep(
     publicId: string,
     stepId: string,
@@ -658,6 +660,14 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     },
     get: (publicId) => requestsRepo.get(ctx.tenantId, publicId),
     listComments: (publicId, pagination) => requestsRepo.listComments(ctx.tenantId, publicId, pagination),
+
+    async create(input, actor) {
+      const appId = (input as unknown as { applicationId?: string | null }).applicationId ?? null;
+      const effectiveAppId = appId ?? await ensureUnassignedApp(ctx.tenantId);
+      if (!srCanWrite(effectiveAppId)) throw new ScopeViolationError({ module: 'service_request', action: 'create', applicationId: effectiveAppId });
+      const result = await requestsRepo.create(ctx.tenantId, actor, { ...input, applicationId: effectiveAppId });
+      return { result, scopeMode: srScopeMode(effectiveAppId) };
+    },
 
     async decideStep(publicId, stepId, actor, decision, note) {
       const appId = await loadSrAppId(publicId);

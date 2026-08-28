@@ -47,8 +47,10 @@ import type {
   RequestComment, CatalogItem, Integration, KBArticle, Service,
 } from '../../src/types';
 import type { CreateProblemInput } from '../../src/shared/schemas/problem';
+import type { CreateRequestInput } from '../../src/shared/schemas/request';
 import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
 import { randomUUID } from 'node:crypto';
+import { HttpError } from '../util';
 
 export const servicesRepo = {
   list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Service>(prisma.service, tenantId, {}, pagination),
@@ -564,6 +566,113 @@ export const requestsRepo = {
       });
       return { kind: 'ok' as const, before, after, internalId: row.id, wasPresent };
     });
+  },
+
+  async create(
+    tenantId: string,
+    actor: { id: string; name: string },
+    input: CreateRequestInput,
+  ): Promise<ServiceRequest> {
+    // Ensure FK target exists for isolated test tenants
+    await prisma.tenant.upsert({
+      where: { id: tenantId },
+      update: {},
+      create: { id: tenantId, slug: tenantId, name: `Test ${tenantId.slice(0, 20)}` },
+    }).catch(() => undefined);
+
+    const catalogRow = await prisma.catalogItem.findFirst({ where: { tenantId, id: input.catalogItemId } });
+    if (!catalogRow) throw new HttpError(404, 'Catalog item not found');
+    const catalogItem = parse<CatalogItem>(catalogRow.data, {} as CatalogItem);
+    const count = await prisma.serviceRequest.count({ where: { tenantId } });
+    const seq = String(count + 1).padStart(5, '0');
+    const year = new Date().getFullYear();
+    const publicId = `REQ-${year}-${seq}`;
+    const id = randomUUID();
+    const now = new Date();
+
+    // Resolve applicationId
+    let applicationId: string | null = (input.applicationId as string | null | undefined) ?? null;
+    if (!applicationId) {
+      // Try to map via ownerTeamId → ApplicationTeam
+      if (catalogItem.ownerTeamId) {
+        const teamApp = await prisma.applicationTeam.findFirst({
+          where: { teamId: catalogItem.ownerTeamId },
+          select: { applicationId: true },
+        });
+        if (teamApp?.applicationId) applicationId = teamApp.applicationId;
+      }
+      if (!applicationId) applicationId = await ensureUnassignedApp(tenantId);
+    }
+
+    const workflowTemplate = catalogItem.workflowTemplate ?? [];
+    const totalSlaHours = workflowTemplate.reduce((sum, s) => sum + (s.slaHours ?? 0), 0);
+    const workflowSteps = workflowTemplate.map((tpl, idx) => ({
+      id: tpl.id,
+      templateId: tpl.id,
+      name: tpl.name,
+      type: tpl.type,
+      description: tpl.description,
+      status: idx === 0 ? ('active' as const) : ('pending' as const),
+      startedAt: idx === 0 ? now.toISOString() : undefined,
+      slaHours: tpl.slaHours,
+      slaStatus: 'healthy' as const,
+      assigneeId: tpl.assigneeId,
+      assigneeName: undefined,
+    }));
+
+    const workflow = {
+      id: `wfi-${id}`,
+      currentStepIndex: 0,
+      steps: workflowSteps,
+    };
+
+    const title = input.title ?? catalogItem.name ?? `Request for ${catalogItem.publicId}`;
+    const formData = (input.formData ?? {}) as Record<string, unknown>;
+    const tags = (input.tags ?? []) as string[];
+
+    const requestData: ServiceRequest = {
+      id,
+      publicId,
+      catalogItemId: catalogItem.id,
+      catalogItemPublicId: catalogItem.publicId,
+      catalogItemName: catalogItem.name,
+      catalogCategory: catalogItem.category,
+      title,
+      status: 'submitted',
+      priority: 'normal',
+      requesterId: actor.id,
+      requesterName: actor.name,
+      formData: formData as unknown as ServiceRequest['formData'],
+      workflow: workflow as unknown as ServiceRequest['workflow'],
+      approvals: [],
+      totalSlaHours,
+      slaBreached: false,
+      estimatedCompletion: new Date(now.getTime() + totalSlaHours * 3600 * 1000).toISOString(),
+      submittedAt: now.toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      linkedKBSlugs: (catalogItem.linkedKBSlugs ?? []) as string[],
+      commentCount: 0,
+      tags,
+      comments: [],
+      watchers: [],
+    } as unknown as ServiceRequest;
+
+    // stash application/tenant for audit parity
+    (requestData as unknown as Record<string, unknown>).applicationId = applicationId;
+    (requestData as unknown as Record<string, unknown>).tenantId = tenantId;
+
+    await prisma.serviceRequest.create({
+      data: {
+        id,
+        publicId,
+        tenantId,
+        status: 'submitted',
+        data: JSON.stringify(requestData),
+        applicationId: applicationId!,
+      },
+    });
+    return requestData;
   },
 
   async listComments(
