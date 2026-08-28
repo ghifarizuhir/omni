@@ -38,6 +38,25 @@ export const ciHealthValues = [
   'maintenance',
 ] as const;
 
+export const ciTypeValues = ['server','application','database','load_balancer','service','network','storage','endpoint'] as const;
+
+export const createCISchema = z.object({
+  name: z.string().min(1).max(200),
+  type: z.enum(ciTypeValues),
+  status: z.enum(ciStatusValues).default('active'),
+  environment: z.enum(ciEnvironmentValues).default('production'),
+  criticality: z.enum(ciCriticalityValues).default('medium'),
+  health: z.enum(ciHealthValues).default('operational'),
+  ownerId: z.string().nullable().optional(),
+  ownerTeamId: z.string().optional(),
+  serviceId: z.string().nullable().optional(),
+  tags: z.array(z.string()).max(20).optional().default([]),
+  attributes: z.record(z.string(), z.unknown()).optional().default({}),
+  applicationId: z.string().nullable().optional(),
+  description: z.string().max(2000).optional(),
+}).strict();
+export type CreateCIInput = z.infer<typeof createCISchema>;
+
 export const updateCISchema = z
   .object({
     name: z.string().min(1).max(200).optional(),
