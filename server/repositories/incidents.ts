@@ -650,6 +650,76 @@ export const incidentsRepo = {
     return { before, after, internalId: row.id };
   },
 
+  async create(
+    tenantId: string,
+    input: { title: string; priority?: string; description?: string; applicationId?: string | null; assigneeId?: string | null; affectedCIIds?: string[]; tags?: string[] },
+    actor: { id: string; name: string },
+  ) {
+    // Ensure FK target exists for isolated test tenants (plan's tenant-test- randomUUID)
+    await prisma.tenant.upsert({
+      where: { id: tenantId },
+      update: {},
+      create: { id: tenantId, slug: tenantId, name: `Test ${tenantId.slice(0, 20)}` },
+    }).catch(() => undefined);
+    const count = await prisma.incident.count();
+    const seq = String(count + 1).padStart(5, '0');
+    const year = new Date().getFullYear();
+    const publicId = `INC-${year}-${seq}`;
+    const id = randomUUID();
+    const now = new Date();
+    const incident: Incident = {
+      id,
+      publicId,
+      title: input.title,
+      description: input.description ?? '',
+      status: 'new',
+      priority: (input.priority ?? 'P3') as Incident['priority'],
+      severity: (input.priority ?? 'P3') as Incident['severity'],
+      isMajor: false,
+      assigneeId: input.assigneeId ?? undefined,
+      affectedCIIds: input.affectedCIIds ?? [],
+      affectedCIPublicIds: [],
+      affectedServiceIds: [],
+      reporterId: actor.id,
+      reporterChannel: 'user_report',
+      slaResponseTarget: 60,
+      slaResolveTarget: 240,
+      slaResponseStatus: 'healthy',
+      slaResolveStatus: 'healthy',
+      reopenCount: 0,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      tags: input.tags ?? [],
+    } as unknown as Incident;
+    // keep extras on snapshot for audit parity (not part of Incident type but useful)
+    (incident as unknown as Record<string, unknown>).tenantId = tenantId;
+    (incident as unknown as Record<string, unknown>).applicationId = input.applicationId ?? null;
+    const prismaApplicationId = input.applicationId ?? 'unassigned';
+    await prisma.incident.create({
+      data: {
+        id,
+        publicId,
+        tenantId,
+        status: 'new',
+        priority: incident.priority,
+        severity: incident.severity,
+        isMajor: false,
+        affectedCIIds: JSON.stringify(incident.affectedCIIds),
+        affectedCIPublicIds: JSON.stringify(incident.affectedCIPublicIds),
+        applicationId: prismaApplicationId,
+        data: JSON.stringify(incident),
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+    const eventId = randomUUID();
+    const evt = { id: eventId, kind: 'created' as const, timestamp: now.toISOString(), actorId: actor.id, details: { title: input.title } };
+    await prisma.incidentTimelineEvent.create({
+      data: { id: eventId, tenantId, incidentId: id, kind: 'created', timestamp: now, data: JSON.stringify(evt) },
+    });
+    return incident as unknown as Incident & { applicationId: string | null; tenantId: string };
+  },
+
   // M6.11 B5.1 — append a `comms_posted` timeline event. Does not change the
   // incident snapshot; the route still bumps `updatedAt` so list views resort.
   async postComms(tenantId: string, publicId: string, input: PostCommsRepoInput): Promise<{
