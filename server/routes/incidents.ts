@@ -15,6 +15,7 @@ import {
   updateIncidentSchema,
   standDownIncidentSchema,
   postCommsSchema,
+  createIncidentSchema,
 } from '../../src/shared/schemas/incident';
 
 export const incidentsRouter = Router();
@@ -333,5 +334,35 @@ incidentsRouter.delete(
       scopeMode: wrapped.scopeMode,
     });
     res.status(204).end();
+  }),
+);
+
+incidentsRouter.post(
+  '/incidents',
+  requirePermission('incident.create'),
+  asyncHandler(async (req, res) => {
+    const body = createIncidentSchema.parse(req.body);
+    if (!req.session) throw new HttpError(401, 'Authentication required');
+    const actor = await getActor(req);
+    const wrapped = await (scoped(req).incidents.create as any)(
+      {
+        title: body.title,
+        description: body.description,
+        priority: body.priority,
+        assigneeId: body.assigneeId ?? null,
+        affectedCIIds: body.affectedCIIds,
+        tags: body.tags,
+        applicationId: body.applicationId ?? null,
+      },
+      actor,
+    );
+    await audit(req, {
+      action: 'create',
+      resourceKind: 'Incident',
+      resourceId: wrapped.result.id,
+      after: wrapped.result,
+      scopeMode: wrapped.scopeMode,
+    });
+    res.status(201).json(wrapped.result);
   }),
 );
