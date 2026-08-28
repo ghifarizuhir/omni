@@ -117,3 +117,17 @@ export const postCommsSchema = z
   .strict();
 
 export type PostCommsInput = z.infer<typeof postCommsSchema>;
+
+export const createIncidentSchema = z
+  .object({
+    title: z.string().min(1, 'Title is required').max(200),
+    description: z.string().max(5000).optional().default(''),
+    priority: z.enum(['P1', 'P2', 'P3', 'P4']).default('P3'),
+    channel: z.enum(['phone', 'email', 'user_report', 'self_service', 'monitoring', 'integration']).optional().default('user_report'),
+    assigneeId: z.string().min(1).nullable().optional(),
+    affectedCIIds: z.array(z.string()).max(100).optional().default([]),
+    applicationId: z.string().nullable().optional(),
+    tags: z.array(z.string().min(1).max(50)).max(20).optional().default([]),
+  })
+  .strict();
+export type CreateIncidentInput = z.infer<typeof createIncidentSchema>;
