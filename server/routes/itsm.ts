@@ -18,7 +18,7 @@ import { rescheduleChangeSchema, castVoteSchema } from '../../src/shared/schemas
 import {
   cancelRequestSchema, reassignRequestStepSchema, addRequestWatcherSchema, createRequestSchema,
 } from '../../src/shared/schemas/request';
-import { createProblemSchema } from '../../src/shared/schemas/problem';
+import { createProblemSchema, updateProblemStatusSchema, promoteKnownErrorSchema } from '../../src/shared/schemas/problem';
 
 export const itsmRouter = Router();
 
@@ -41,6 +41,31 @@ itsmRouter.post('/problems', requirePermission('problem.create'), asyncHandler(a
   const wrapped = await scoped(req).problems.create(body, actor);
   await audit(req, { action: 'create', resourceKind: 'Problem', resourceId: wrapped.result.id, after: wrapped.result, scopeMode: wrapped.scopeMode });
   res.status(201).json(wrapped.result);
+}));
+
+itsmRouter.patch('/problems/:publicId/status', requirePermission('problem.update'), asyncHandler(async (req, res) => {
+  const body = updateProblemStatusSchema.parse(req.body);
+  const wrapped = await scoped(req).problems.setStatus(req.params.publicId, body.status);
+  if (!wrapped) throw new HttpError(404, 'Problem not found');
+  await audit(req, { action: 'status_change', resourceKind: 'Problem', resourceId: wrapped.after.id, before: { status: wrapped.before.status }, after: { status: wrapped.after.status }, scopeMode: wrapped.scopeMode });
+  res.json(wrapped.after);
+}));
+
+itsmRouter.post('/problems/:publicId/known-error', requirePermission('problem.update'), asyncHandler(async (req, res) => {
+  const body = promoteKnownErrorSchema.parse(req.body);
+  const user = await getActor(req);
+  const actor = { id: user.id, name: user.name };
+  const wrapped = await scoped(req).problems.promoteKnownError(req.params.publicId, body, actor);
+  if (!wrapped) throw new HttpError(404, 'Problem not found');
+  await audit(req, { action: 'promote_known_error', resourceKind: 'Problem', resourceId: wrapped.after.id, before: { status: wrapped.before.status }, after: { status: wrapped.after.status, knownError: (wrapped.after as unknown as { knownError: unknown }).knownError }, scopeMode: wrapped.scopeMode });
+  res.status(201).json(wrapped.after);
+}));
+
+itsmRouter.get('/problems/:publicId/timeline', requirePermission('problem.read'), asyncHandler(async (req, res) => {
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  const data = await scoped(req).problems.timeline(req.params.publicId, pagination);
+  if (data === null) throw new HttpError(404, 'Problem not found');
+  res.json(data);
 }));
 
 itsmRouter.get('/changes', requirePermission('change.read'), asyncHandler(async (req, res) => {

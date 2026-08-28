@@ -5,7 +5,8 @@ import { POLICY } from './policy';
 import { cmdbRepo } from '../repositories/cmdb';
 import type { ConfigurationItem, Change } from '../../src/types';
 import type { CreateCIInput } from '../../src/shared/schemas/ci';
-import type { CreateProblemInput } from '../../src/shared/schemas/problem';
+import type { CreateProblemInput, PromoteKnownErrorInput } from '../../src/shared/schemas/problem';
+import type { Problem } from '../../src/types';
 import type { CreateRequestInput } from '../../src/shared/schemas/request';
 import type { CastVoteInput } from '../../src/shared/schemas/change';
 import { eventsRepo, monitoringRepo } from '../repositories/events';
@@ -124,6 +125,9 @@ export interface ProblemsScope {
   list(pagination?: Parameters<typeof problemsRepo.list>[1]): Promise<Awaited<ReturnType<typeof problemsRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof problemsRepo.get>>>;
   create(input: CreateProblemInput, actor: { id: string; name: string }): Promise<{ result: Awaited<ReturnType<typeof problemsRepo.create>>; scopeMode: ScopeMode }>;
+  setStatus(publicId: string, status: string): Promise<{ before: Problem; after: Problem; scopeMode: ScopeMode } | null>;
+  promoteKnownError(publicId: string, input: PromoteKnownErrorInput, actor: { id: string; name: string }): Promise<{ before: Problem; after: Problem; scopeMode: ScopeMode } | null>;
+  timeline(publicId: string, pagination?: { limit: number; offset: number }): Promise<Awaited<ReturnType<typeof problemsRepo.timeline>> | null>;
 }
 
 export interface ChangesScope {
@@ -534,6 +538,14 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     return 'member';
   }
 
+  async function loadProblemAppId(publicId: string): Promise<string | null | undefined> {
+    const raw = await prisma.problem.findFirst({
+      where: { tenantId: ctx.tenantId, publicId },
+      select: { applicationId: true },
+    });
+    return raw ? (raw.applicationId ?? null) : undefined;
+  }
+
   const problems: ProblemsScope = {
     list: (pagination) => problemsRepo.list(ctx.tenantId, pagination),
     get: (publicId) => problemsRepo.get(ctx.tenantId, publicId),
@@ -545,6 +557,26 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
       }
       const result = await problemsRepo.create(ctx.tenantId, { ...input, applicationId: effectiveAppId }, actor);
       return { result, scopeMode: problemScopeMode(effectiveAppId) ?? 'admin' };
+    },
+    async setStatus(publicId, status) {
+      const appId = await loadProblemAppId(publicId);
+      if (appId === undefined) return null;
+      if (!problemCanWrite(appId)) throw new ScopeViolationError({ module: 'problem', action: 'update', applicationId: appId ?? undefined });
+      const result = await problemsRepo.setStatus(ctx.tenantId, publicId, status);
+      return { ...result, scopeMode: problemScopeMode(appId) };
+    },
+    async promoteKnownError(publicId, input, actor) {
+      const appId = await loadProblemAppId(publicId);
+      if (appId === undefined) return null;
+      if (!problemCanWrite(appId)) throw new ScopeViolationError({ module: 'problem', action: 'update', applicationId: appId ?? undefined });
+      const result = await problemsRepo.promoteKnownError(ctx.tenantId, publicId, input, actor);
+      return { ...result, scopeMode: problemScopeMode(appId) };
+    },
+    async timeline(publicId, pagination) {
+      const appId = await loadProblemAppId(publicId);
+      if (appId === undefined) return null;
+      const result = await problemsRepo.timeline(ctx.tenantId, publicId, pagination);
+      return result;
     },
   };
 
