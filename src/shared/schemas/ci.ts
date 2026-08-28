@@ -31,10 +31,11 @@ export const ciCriticalityValues = [
 ] as const;
 
 export const ciHealthValues = [
-  'healthy',
+  'operational',
   'degraded',
-  'down',
-  'unknown',
+  'partial_outage',
+  'major_outage',
+  'maintenance',
 ] as const;
 
 export const updateCISchema = z
