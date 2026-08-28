@@ -81,6 +81,7 @@ Ringkasan untuk `design/`:
 
 | Date | Change | Ref |
 |------|--------|-----|
+| 2026-08-28 | Batch 2 — `02-api-contract` tambah `POST /changes/:publicId/votes` + `PATCH /problems/:publicId/status`, `POST /known-error`, `GET /timeline` (scoped CAB+Problems workflow) | — |
 | 2026-08-28 | Batch 1 ABCDE — `02-api-contract` tambah 4 `POST` creates + `ciHealthValues` fix (tenant-scoped `POST /incidents`/`/cis`/`/problems`/`/requests`) | — |
 | 2026-08-28 | Tambah 04,05,06,07,10,13 (sebelumnya TBD) → semua Draft | — |
 | 2026-08-28 | Init dari terra-service-management, diadaptasi untuk OIS — Postgres/Prisma/Socket.IO, tanpa CLI/MCP | — |

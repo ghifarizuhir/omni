@@ -125,6 +125,9 @@ All tenant-scoped. Detail routes resolve `publicId → id` internally; write pat
 |--------|------|------------|------------|-------|
 | GET | `/api/v1/problems` | `problem.read` | — | `scoped.problems.list(pagination):32` |
 | POST | `/api/v1/problems` | `problem.create` | `createProblemSchema src/shared/schemas/problem:1` | `req.scoped.problems.create:30` + `audit create` → `201` `PRB-YYYY-NNNNN` (Batch 1) |
+| PATCH | `/api/v1/problems/:publicId/status` | `problem.update` | `updateProblemStatusSchema src/shared/schemas/problem:30` | `req.scoped.problems.setStatus:38` + `audit status_change` (Batch 2) |
+| POST | `/api/v1/problems/:publicId/known-error` | `problem.update` | `promoteKnownErrorSchema src/shared/schemas/problem:30` | `req.scoped.problems.promoteKnownError:38` + `audit promote_known_error` → `201` `known_error` (Batch 2) |
+| GET | `/api/v1/problems/:publicId/timeline` | `problem.read` | `pagination` | `req.scoped.problems.timeline:38` from `auditLog where resourceKind Problem` (Batch 2) |
 | GET | `/api/v1/problems/:publicId` | `problem.read` | — | `scoped.problems.get(publicId):35` |
 | GET | `/api/v1/changes` | `change.read` | — | `scoped.changes.list(pagination):39` |
 | GET | `/api/v1/changes/:publicId` | `change.read` | — | `scoped.changes.get(publicId):42` |
@@ -132,6 +135,7 @@ All tenant-scoped. Detail routes resolve `publicId → id` internally; write pat
 | PATCH | `/api/v1/changes/:publicId/cancel` | `change.write` | `cancelChangeSchema {reason}:71` | `cancel:75` → `409` if closed |
 | PATCH | `/api/v1/changes/:publicId/reschedule` | `change.write` | `rescheduleChangeSchema src/shared/schemas/change:17` | `reschedule(body,actor):90` → `409` if closed |
 | PATCH | `/api/v1/changes/:publicId/tech-assessment` | `change.write` | `techAssessmentSchema {status,objective,risks…}.passthrough():106` | `setTechnicalAssessment:121` + audit `update:124` |
+| POST | `/api/v1/changes/:publicId/votes` | `change.write` | `castVoteSchema src/shared/schemas/change:32` | `req.scoped.changes.castVote:141` + `audit cab_vote` → `201` quorum `approved/rejected` (Batch 2) |
 | GET | `/api/v1/releases` | `release.read` | — | `scoped.releases.list(pagination):134` |
 | GET | `/api/v1/releases/:publicId` | `release.read` | — | `scoped.releases.get(publicId):138` |
 | GET | `/api/v1/deployments` | `deployment.read` | `qBool(active):143` | `deploymentsRepo.list vs active(tenantId):144` |
@@ -258,7 +262,7 @@ Path-prefix guards `platformRouter.use('/users', requirePermission('user.read'))
 ---
 
 ## Conventions
-- **Validation:** `schema.parse(req.body)` throw `ZodError.issues` → `server/app.ts:153` `400 { message:'Validation failed', issues }`. Shared schemas under `src/shared/schemas/` (`ci:6` + `createCISchema:41`, `event:9`, `incident:9` + `createIncidentSchema:121`, `monitoringRule:9`, `alertRoute:7`, `change:17`, `request:19` + `createRequestSchema:31`, `problem:1` `createProblemSchema`, `kbArticle:15`) single-source client/server — Batch 1 added 4 `create*` strict schemas.
+- **Validation:** `schema.parse(req.body)` throw `ZodError.issues` → `server/app.ts:153` `400 { message:'Validation failed', issues }`. Shared schemas under `src/shared/schemas/` (`ci:6` + `createCISchema:41`, `event:9`, `incident:9` + `createIncidentSchema:121`, `monitoringRule:9`, `alertRoute:7`, `change:17` + `castVoteSchema:32`, `request:19` + `createRequestSchema:31`, `problem:1` `createProblemSchema` + `updateProblemStatusSchema/promoteKnownErrorSchema:30`, `kbArticle:15`) single-source client/server — Batch 1 added 4 `create*`, Batch 2 added `castVote`, `updateStatus`, `promoteKnownError`.
 - **Errors:** `HttpError(status,message,body)` (`server/util.ts:3`) → `server/app.ts:149` `{ message, body }`; `NotFoundError→404:10`, `required(value,resource):27` helper. `ScopeViolationError:9` → `403 { error:'scope_violation', module, action, applicationId }:22` via `toJSON:22`. Unknown → `500 { message:'Internal server error' } + logger.error:157`.
 - **ID vs publicId:** `prisma/schema.prisma:278` `ConfigurationItem publicId @unique`, `350 Event`, `410 Incident`, `469 Problem`, `482 Change`, `497 Release`, `509 Deployment`, `532 ServiceRequest`, `573 KBArticle`, `385 MonitoringRule`, `397 AlertRoute` — detail routes take `publicId` (`GET /cis/:publicId:29`, `GET /incidents/:publicId:42`) and map internally. `Document` uses `(tenantId,kind,key):598` + optional `publicId:593`.
 - **Pagination:** `server/lib/pagination.ts:6` `parsePagination({ limit/take, offset/skip })` — `limit 1..MAX 200:9`, `offset≥0:10`, `hasMore = offset+limit < total:18`. Callers pass `?limit=&offset=` (aliased `take/skip/page*` legacy). Document repos `listByKind(tenantId,kind,pagination)` forward same.
@@ -320,6 +324,7 @@ Operational routes **must** use `req.scoped.cmdb/events/incidents/monitoring/pro
 
 | Date | Change | Ref |
 |------|--------|-----|
+| 2026-08-28 | Batch 2 — add `POST /changes/:publicId/votes` `castVoteSchema:32` quorum + `PATCH /problems/:publicId/status`, `POST /problems/:publicId/known-error`, `GET /problems/:publicId/timeline` (all scoped + audit, remove hardcode `u-001/Sarah Chen` → `getActor`) | — |
 | 2026-08-28 | Batch 1 ABCDE — add 4 `POST` creates: `/incidents` `INC-*` `createIncidentSchema:121`, `/cis` `CI-*` `createCISchema:41`, `/problems` `PRB-*` `createProblemSchema`, `/requests` `REQ-*` `createRequestSchema:31` (all `req.scoped.*.create` + `ScopeViolationError 403` + `audit create`) + fix `ciHealthValues` → `operational/degraded/partial_outage/major_outage/maintenance` | — |
 | 2026-08-28 | Deepen API contract — `/api/v1`, cookie session+scope, health/auth/monitoring/itsm/platform/admin tables, per-router Method/Path/Permission/Zod refs, pagination & id conventions, exemptions, open items vs `server/app.ts:33,126,144`, `server/middleware/auth.ts:43,48`, `server/middleware/scopedDb.ts:19`, `eslint.config.js:36` | — |
 | 2026-08-28 | Init API contract — `/api/v1`, session+scope, rate limits | — |
