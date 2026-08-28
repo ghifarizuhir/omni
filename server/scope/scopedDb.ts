@@ -95,6 +95,7 @@ export interface IncidentsScope {
     publicId: string,
     input: Parameters<typeof incidentsRepo.postComms>[2],
   ): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.postComms>>; scopeMode: ScopeMode } | null>;
+  create(input: Parameters<typeof incidentsRepo.create>[1], actor: Parameters<typeof incidentsRepo.create>[2]): Promise<{ result: Awaited<ReturnType<typeof incidentsRepo.create>>; scopeMode: ScopeMode }>;
 }
 
 export interface MonitoringScope {
@@ -445,6 +446,14 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
         throw new ScopeViolationError({ module: 'incident', action: 'update', applicationId: appId });
       }
       const result = await incidentsRepo.postComms(ctx.tenantId, publicId, input);
+      return { result, scopeMode: incidentScopeMode(appId) };
+    },
+
+    async create(input, actor) {
+      const appId = (input as any).applicationId ?? null;
+      if (appId !== null && !incidentCanWrite(appId)) throw new ScopeViolationError({ module: 'incident', action: 'create', applicationId: appId });
+      const resolvedAppId = appId ?? await ensureUnassignedApp(ctx.tenantId);
+      const result = await incidentsRepo.create(ctx.tenantId, { ...input, applicationId: resolvedAppId }, actor);
       return { result, scopeMode: incidentScopeMode(appId) };
     },
   };
