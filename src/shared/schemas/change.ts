@@ -5,6 +5,7 @@
 // is enforced in `superRefine` so the error attaches to the `plannedEnd` field.
 
 import { z } from 'zod';
+import type { CABVote } from '../../types/change';
 
 export const rescheduleChangeSchema = z
   .object({
@@ -27,3 +28,24 @@ export const rescheduleChangeSchema = z
   });
 
 export type RescheduleChangeInput = z.infer<typeof rescheduleChangeSchema>;
+
+export const cabVoteValues = ['approve','approve_with_conditions','reject','abstain'] as const;
+
+export const castVoteSchema = z.object({
+  decision: z.enum(cabVoteValues),
+  voterId: z.string().min(1).optional(),
+  voterName: z.string().min(1).optional(),
+  rationale: z.string().max(2000).optional(),
+  conditions: z.string().max(2000).optional(),
+  isLocked: z.boolean().optional().default(false),
+})
+.strict()
+.superRefine((val, ctx) => {
+  if (val.decision === 'reject' && !val.rationale?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['rationale'], message: 'rationale required when reject' });
+  }
+  if (val.decision === 'approve_with_conditions' && !val.conditions?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['conditions'], message: 'conditions required when approve_with_conditions' });
+  }
+});
+export type CastVoteInput = z.infer<typeof castVoteSchema>;
