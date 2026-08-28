@@ -11,11 +11,11 @@ import { ensureUnassignedApp } from '../../prisma/preflightScopeNotNull';
 export type ScopeMode = 'member' | 'noc' | 'owner' | 'admin';
 
 export interface CmdbScope {
-  listCIs(): Promise<Awaited<ReturnType<typeof cmdbRepo.listCIs>>>;
+  listCIs(pagination?: { limit: number; offset: number }): Promise<Awaited<ReturnType<typeof cmdbRepo.listCIs>>>;
   getCI(publicId: string): Promise<Awaited<ReturnType<typeof cmdbRepo.getCI>>>;
-  listRelationships(): Promise<Awaited<ReturnType<typeof cmdbRepo.listRelationships>>>;
-  listRelationshipsForCI(ciId: string): Promise<Awaited<ReturnType<typeof cmdbRepo.listRelationshipsForCI>>>;
-  listAudit(ciId?: string): Promise<Awaited<ReturnType<typeof cmdbRepo.listAudit>>>;
+  listRelationships(pagination?: { limit: number; offset: number }): Promise<Awaited<ReturnType<typeof cmdbRepo.listRelationships>>>;
+  listRelationshipsForCI(ciId: string, pagination?: { limit: number; offset: number }): Promise<Awaited<ReturnType<typeof cmdbRepo.listRelationshipsForCI>>>;
+  listAudit(ciId?: string, pagination?: { limit: number; offset: number }): Promise<Awaited<ReturnType<typeof cmdbRepo.listAudit>>>;
   /**
    * Update a CI. Throws ScopeViolationError if the caller cannot write
    * the CI's primaryApplicationId. Returns null when the CI does not exist
@@ -27,7 +27,10 @@ export interface CmdbScope {
 }
 
 export interface EventsScope {
-  list(filter: Parameters<typeof eventsRepo.list>[1]): Promise<Awaited<ReturnType<typeof eventsRepo.list>>>;
+  list(
+    filter: Parameters<typeof eventsRepo.list>[1],
+    pagination?: Parameters<typeof eventsRepo.list>[2],
+  ): Promise<Awaited<ReturnType<typeof eventsRepo.list>>>;
   dashboardStats(): Promise<Awaited<ReturnType<typeof eventsRepo.dashboardStats>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof eventsRepo.get>>>;
   setStatus(
@@ -40,10 +43,13 @@ export interface EventsScope {
 }
 
 export interface IncidentsScope {
-  list(filters: Parameters<typeof incidentsRepo.list>[1]): Promise<Awaited<ReturnType<typeof incidentsRepo.list>>>;
+  list(
+    filters: Parameters<typeof incidentsRepo.list>[1],
+    pagination?: Parameters<typeof incidentsRepo.list>[2],
+  ): Promise<Awaited<ReturnType<typeof incidentsRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof incidentsRepo.get>>>;
-  comments(incidentId: string): Promise<Awaited<ReturnType<typeof incidentsRepo.comments>>>;
-  timeline(incidentId: string): Promise<Awaited<ReturnType<typeof incidentsRepo.timeline>>>;
+  comments(incidentId: string, pagination?: Parameters<typeof incidentsRepo.comments>[2]): Promise<Awaited<ReturnType<typeof incidentsRepo.comments>>>;
+  timeline(incidentId: string, pagination?: Parameters<typeof incidentsRepo.timeline>[2]): Promise<Awaited<ReturnType<typeof incidentsRepo.timeline>>>;
   addComment(
     incidentId: string,
     input: Parameters<typeof incidentsRepo.addComment>[2],
@@ -93,13 +99,13 @@ export interface IncidentsScope {
 
 export interface MonitoringScope {
   // rules
-  listRules(): Promise<Awaited<ReturnType<typeof monitoringRepo.listRules>>>;
+  listRules(pagination?: Parameters<typeof monitoringRepo.listRules>[1]): Promise<Awaited<ReturnType<typeof monitoringRepo.listRules>>>;
   getRule(publicId: string): Promise<Awaited<ReturnType<typeof monitoringRepo.getRule>>>;
   createRule(input: Parameters<typeof monitoringRepo.createRule>[1], actor: Parameters<typeof monitoringRepo.createRule>[2]): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.createRule>>; scopeMode: ScopeMode }>;
   updateRule(publicId: string, input: Parameters<typeof monitoringRepo.updateRule>[2]): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.updateRule>>; scopeMode: ScopeMode } | null>;
   deleteRule(publicId: string): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.deleteRule>>; scopeMode: ScopeMode } | null>;
   // routes
-  listRoutes(): Promise<Awaited<ReturnType<typeof monitoringRepo.listRoutes>>>;
+  listRoutes(pagination?: Parameters<typeof monitoringRepo.listRoutes>[1]): Promise<Awaited<ReturnType<typeof monitoringRepo.listRoutes>>>;
   getRoute(publicId: string): Promise<Awaited<ReturnType<typeof monitoringRepo.getRoute>>>;
   createRoute(input: Parameters<typeof monitoringRepo.createRoute>[1]): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.createRoute>>; scopeMode: ScopeMode }>;
   updateRoute(publicId: string, input: Parameters<typeof monitoringRepo.updateRoute>[2]): Promise<{ result: Awaited<ReturnType<typeof monitoringRepo.updateRoute>>; scopeMode: ScopeMode } | null>;
@@ -107,12 +113,12 @@ export interface MonitoringScope {
 }
 
 export interface ProblemsScope {
-  list(): Promise<Awaited<ReturnType<typeof problemsRepo.list>>>;
+  list(pagination?: Parameters<typeof problemsRepo.list>[1]): Promise<Awaited<ReturnType<typeof problemsRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof problemsRepo.get>>>;
 }
 
 export interface ChangesScope {
-  list(): Promise<Awaited<ReturnType<typeof changesRepo.list>>>;
+  list(pagination?: Parameters<typeof changesRepo.list>[1]): Promise<Awaited<ReturnType<typeof changesRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof changesRepo.get>>>;
   create(
     requester: { id: string; name: string },
@@ -132,14 +138,14 @@ export interface ChangesScope {
 }
 
 export interface ReleasesScope {
-  list(): Promise<Awaited<ReturnType<typeof releasesRepo.list>>>;
+  list(pagination?: Parameters<typeof releasesRepo.list>[1]): Promise<Awaited<ReturnType<typeof releasesRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof releasesRepo.get>>>;
 }
 
 export interface ServiceRequestsScope {
-  list(): Promise<Awaited<ReturnType<typeof requestsRepo.list>>>;
+  list(pagination?: Parameters<typeof requestsRepo.list>[1]): Promise<Awaited<ReturnType<typeof requestsRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof requestsRepo.get>>>;
-  listComments(publicId: string): Promise<Awaited<ReturnType<typeof requestsRepo.listComments>>>;
+  listComments(publicId: string, pagination?: Parameters<typeof requestsRepo.listComments>[2]): Promise<Awaited<ReturnType<typeof requestsRepo.listComments>>>;
   decideStep(
     publicId: string,
     stepId: string,
@@ -213,11 +219,11 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   }
 
   const cmdb: CmdbScope = {
-    listCIs: () => cmdbRepo.listCIs(ctx.tenantId),
+    listCIs: (pagination) => cmdbRepo.listCIs(ctx.tenantId, pagination),
     getCI: (publicId) => cmdbRepo.getCI(ctx.tenantId, publicId),
-    listRelationships: () => cmdbRepo.listRelationships(ctx.tenantId),
-    listRelationshipsForCI: (ciId) => cmdbRepo.listRelationshipsForCI(ctx.tenantId, ciId),
-    listAudit: (ciId) => cmdbRepo.listAudit(ctx.tenantId, ciId),
+    listRelationships: (pagination) => cmdbRepo.listRelationships(ctx.tenantId, pagination),
+    listRelationshipsForCI: (ciId, pagination) => cmdbRepo.listRelationshipsForCI(ctx.tenantId, ciId, pagination),
+    listAudit: (ciId, pagination) => cmdbRepo.listAudit(ctx.tenantId, ciId, pagination),
     async updateCI(publicId, patch) {
       // Fetch the raw row to get primaryApplicationId (not mapped by cmdbRepo.getCI).
       const raw = await prisma.configurationItem.findFirst({
@@ -253,8 +259,8 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   }
 
   const events: EventsScope = {
-    async list(filter) {
-      const rows = await eventsRepo.list(ctx.tenantId, filter);
+    async list(filter, pagination) {
+      const rows = await eventsRepo.list(ctx.tenantId, filter, pagination);
       if (isEventReadBypass) return rows;
       // Post-filter: keep writable/owned apps.
       return rows.filter((e) => {
@@ -320,8 +326,8 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   }
 
   const incidents: IncidentsScope = {
-    async list(filters) {
-      const rows = await incidentsRepo.list(ctx.tenantId, filters);
+    async list(filters, pagination) {
+      const rows = await incidentsRepo.list(ctx.tenantId, filters, pagination);
       if (isIncidentReadBypass) return rows;
       const readable = new Set([...writableApps, ...ownerApps]);
       return (rows as { applicationId?: string | null }[]).filter(
@@ -329,8 +335,8 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
       ) as typeof rows;
     },
     get: (publicId) => incidentsRepo.get(ctx.tenantId, publicId),
-    comments: (incidentId) => incidentsRepo.comments(ctx.tenantId, incidentId),
-    timeline: (incidentId) => incidentsRepo.timeline(ctx.tenantId, incidentId),
+    comments: (incidentId, pagination) => incidentsRepo.comments(ctx.tenantId, incidentId, pagination),
+    timeline: (incidentId, pagination) => incidentsRepo.timeline(ctx.tenantId, incidentId, pagination),
 
     async addComment(incidentId, input) {
       const appId = await loadIncidentAppIdById(incidentId);
@@ -452,9 +458,9 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   }
 
   const monitoring: MonitoringScope = {
-    listRules: () => monitoringRepo.listRules(ctx.tenantId),
+    listRules: (pagination) => monitoringRepo.listRules(ctx.tenantId, pagination),
     getRule: (id) => monitoringRepo.getRule(ctx.tenantId, id),
-    listRoutes: () => monitoringRepo.listRoutes(ctx.tenantId),
+    listRoutes: (pagination) => monitoringRepo.listRoutes(ctx.tenantId, pagination),
     getRoute: (id) => monitoringRepo.getRoute(ctx.tenantId, id),
     async createRule(input, actor) {
       requireAdminFor('monitoring_rule', 'create');
@@ -491,7 +497,7 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   // ── Problems scope (read=global, write=scoped — no write endpoints yet) ──────
 
   const problems: ProblemsScope = {
-    list: () => problemsRepo.list(ctx.tenantId),
+    list: (pagination) => problemsRepo.list(ctx.tenantId, pagination),
     get: (publicId) => problemsRepo.get(ctx.tenantId, publicId),
   };
 
@@ -520,7 +526,7 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   }
 
   const changes: ChangesScope = {
-    list: () => changesRepo.list(ctx.tenantId),
+    list: (pagination) => changesRepo.list(ctx.tenantId, pagination),
     get: (publicId) => changesRepo.get(ctx.tenantId, publicId),
 
     async create(requester, input) {
@@ -569,7 +575,7 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   // ── Releases scope (read=global, write=admin_only — no write endpoints) ──────
 
   const releases: ReleasesScope = {
-    list: () => releasesRepo.list(ctx.tenantId),
+    list: (pagination) => releasesRepo.list(ctx.tenantId, pagination),
     get: (publicId) => releasesRepo.get(ctx.tenantId, publicId),
   };
 
@@ -601,15 +607,15 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   }
 
   const serviceRequests: ServiceRequestsScope = {
-    async list() {
-      const rows = await requestsRepo.list(ctx.tenantId);
+    async list(pagination) {
+      const rows = await requestsRepo.list(ctx.tenantId, pagination);
       if (isSrReadBypass) return rows;
       return (rows as { applicationId?: string | null }[]).filter(
         (r) => r.applicationId == null || readableApps.has(r.applicationId!),
       ) as typeof rows;
     },
     get: (publicId) => requestsRepo.get(ctx.tenantId, publicId),
-    listComments: (publicId) => requestsRepo.listComments(ctx.tenantId, publicId),
+    listComments: (publicId, pagination) => requestsRepo.listComments(ctx.tenantId, publicId, pagination),
 
     async decideStep(publicId, stepId, actor, decision, note) {
       const appId = await loadSrAppId(publicId);

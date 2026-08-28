@@ -4,6 +4,7 @@ import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qString, required } from '../util';
 import { audit } from '../audit';
 import { updateCISchema } from '../../src/shared/schemas/ci';
+import { parsePagination } from '../lib/pagination';
 
 export const cmdbRouter = Router();
 
@@ -11,15 +12,18 @@ export const cmdbRouter = Router();
 const scoped = (req: Request) => req.scoped;
 
 cmdbRouter.get('/cis', requirePermission('cmdb.read'), asyncHandler(async (req, res) => {
-  res.json(await scoped(req).cmdb.listCIs());
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).cmdb.listCIs(pagination));
 }));
 
 cmdbRouter.get('/cis/relationships', requirePermission('cmdb.read'), asyncHandler(async (req, res) => {
-  res.json(await scoped(req).cmdb.listRelationships());
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).cmdb.listRelationships(pagination));
 }));
 
 cmdbRouter.get('/cis/audit', requirePermission('cmdb.audit.read'), asyncHandler(async (req, res) => {
-  res.json(await scoped(req).cmdb.listAudit(qString(req.query.ciId)));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).cmdb.listAudit(qString(req.query.ciId), pagination));
 }));
 
 cmdbRouter.get('/cis/:publicId', requirePermission('cmdb.read'), asyncHandler(async (req, res) => {
@@ -27,7 +31,8 @@ cmdbRouter.get('/cis/:publicId', requirePermission('cmdb.read'), asyncHandler(as
 }));
 
 cmdbRouter.get('/cis/:ciId/relationships', requirePermission('cmdb.read'), asyncHandler(async (req, res) => {
-  res.json(await scoped(req).cmdb.listRelationshipsForCI(req.params.ciId));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).cmdb.listRelationshipsForCI(req.params.ciId, pagination));
 }));
 
 // M6.11 (B1.3) — PATCH /cis/:publicId. Partial update guarded by `cmdb.write`.
@@ -48,7 +53,8 @@ cmdbRouter.patch('/cis/:publicId', requirePermission('cmdb.write'), asyncHandler
 }));
 
 cmdbRouter.get('/services', requirePermission('service.read'), asyncHandler(async (req, res) => {
-  res.json(await servicesRepo.list(req.tenantId));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await servicesRepo.list(req.tenantId, pagination));
 }));
 
 cmdbRouter.get('/services/:id', requirePermission('service.read'), asyncHandler(async (req, res) => {

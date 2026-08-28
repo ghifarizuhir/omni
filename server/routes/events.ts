@@ -5,6 +5,7 @@ import { audit } from '../audit';
 import { emitEventCreated } from '../realtime';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qStringArray, required } from '../util';
+import { parsePagination } from '../lib/pagination';
 import { setEventStatusSchema } from '../../src/shared/schemas/event';
 
 const SEVERITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
@@ -18,11 +19,15 @@ function scoped(req: Request) {
 }
 
 eventsRouter.get('/events', requirePermission('event.read'), asyncHandler(async (req, res) => {
-  const events = await scoped(req).events.list({
-    status: qStringArray(req.query.status) as EventStatus[] | undefined,
-    severities: qStringArray(req.query.severities) as Severity[] | undefined,
-    ruleId: typeof req.query.ruleId === 'string' ? req.query.ruleId : undefined,
-  });
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  const events = await scoped(req).events.list(
+    {
+      status: qStringArray(req.query.status) as EventStatus[] | undefined,
+      severities: qStringArray(req.query.severities) as Severity[] | undefined,
+      ruleId: typeof req.query.ruleId === 'string' ? req.query.ruleId : undefined,
+    },
+    pagination,
+  );
   const sorted = [...events].sort(
     (a, b) =>
       (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9) ||

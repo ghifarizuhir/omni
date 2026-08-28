@@ -9,6 +9,7 @@ import { audit } from '../audit';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qBool, required } from '../util';
 import { getActor } from '../auth/session';
+import { parsePagination } from '../lib/pagination';
 import type { ImprovementInitiative } from '../../src/types';
 import {
   createKBArticleSchema, updateKBArticleSchema, setKBArticleStatusSchema,
@@ -26,12 +27,18 @@ function scoped(req: Request) {
   return req.scoped;
 }
 
-itsmRouter.get('/problems', requirePermission('problem.read'), asyncHandler(async (req, res) => res.json(await scoped(req).problems.list())));
+itsmRouter.get('/problems', requirePermission('problem.read'), asyncHandler(async (req, res) => {
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).problems.list(pagination));
+}));
 itsmRouter.get('/problems/:publicId', requirePermission('problem.read'), asyncHandler(async (req, res) => {
   res.json(required(await scoped(req).problems.get(req.params.publicId), 'Problem'));
 }));
 
-itsmRouter.get('/changes', requirePermission('change.read'), asyncHandler(async (req, res) => res.json(await scoped(req).changes.list())));
+itsmRouter.get('/changes', requirePermission('change.read'), asyncHandler(async (req, res) => {
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).changes.list(pagination));
+}));
 itsmRouter.get('/changes/:publicId', requirePermission('change.read'), asyncHandler(async (req, res) => {
   res.json(required(await scoped(req).changes.get(req.params.publicId), 'Change'));
 }));
@@ -123,36 +130,49 @@ itsmRouter.patch('/changes/:publicId/tech-assessment', requirePermission('change
   res.json(wrapped.result.after);
 }));
 
-itsmRouter.get('/releases', requirePermission('release.read'), asyncHandler(async (req, res) => res.json(await scoped(req).releases.list())));
+itsmRouter.get('/releases', requirePermission('release.read'), asyncHandler(async (req, res) => {
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).releases.list(pagination));
+}));
 itsmRouter.get('/releases/:publicId', requirePermission('release.read'), asyncHandler(async (req, res) => {
   res.json(required(await scoped(req).releases.get(req.params.publicId), 'Release'));
 }));
 
 itsmRouter.get('/deployments', requirePermission('deployment.read'), asyncHandler(async (req, res) => {
+  const pagination = parsePagination(req.query as Record<string, unknown>);
   res.json(qBool(req.query.active)
-    ? await deploymentsRepo.active(req.tenantId)
-    : await deploymentsRepo.list(req.tenantId));
+    ? await deploymentsRepo.active(req.tenantId, pagination)
+    : await deploymentsRepo.list(req.tenantId, pagination));
 }));
 itsmRouter.get('/deployments/:publicId', requirePermission('deployment.read'), asyncHandler(async (req, res) => {
   res.json(required(await deploymentsRepo.get(req.tenantId, req.params.publicId), 'Deployment'));
 }));
 itsmRouter.get('/deployments/:deploymentId/logs', requirePermission('deployment.read'), asyncHandler(async (req, res) => {
-  res.json(await deploymentsRepo.logs(req.tenantId, req.params.deploymentId));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await deploymentsRepo.logs(req.tenantId, req.params.deploymentId, pagination));
 }));
 itsmRouter.get('/environments', requirePermission('deployment.read'), asyncHandler(async (req, res) => {
-  res.json(await listByKind(req.tenantId, 'environment'));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await listByKind(req.tenantId, 'environment', pagination));
 }));
 
-itsmRouter.get('/requests', requirePermission('request.read'), asyncHandler(async (req, res) => res.json(await scoped(req).serviceRequests.list())));
+itsmRouter.get('/requests', requirePermission('request.read'), asyncHandler(async (req, res) => {
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).serviceRequests.list(pagination));
+}));
 itsmRouter.get('/requests/:publicId', requirePermission('request.read'), asyncHandler(async (req, res) => {
   res.json(required(await scoped(req).serviceRequests.get(req.params.publicId), 'ServiceRequest'));
 }));
 itsmRouter.get('/requests/:publicId/comments', requirePermission('request.read'), asyncHandler(async (req, res) => {
   // Verify the request exists first (maps 404 consistently).
   required(await scoped(req).serviceRequests.get(req.params.publicId), 'ServiceRequest');
-  res.json(await scoped(req).serviceRequests.listComments(req.params.publicId));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).serviceRequests.listComments(req.params.publicId, pagination));
 }));
-itsmRouter.get('/catalog', requirePermission('request.read'), asyncHandler(async (req, res) => res.json(await catalogRepo.list(req.tenantId))));
+itsmRouter.get('/catalog', requirePermission('request.read'), asyncHandler(async (req, res) => {
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await catalogRepo.list(req.tenantId, pagination));
+}));
 
 // ── Request workflow writes (M6.11) ──────────────────────────────────────────
 
@@ -322,7 +342,8 @@ itsmRouter.delete(
 
 // Improvements — DB-backed via documents. Totals/ROI computed inline.
 itsmRouter.get('/improvements', requirePermission('improvement.read'), asyncHandler(async (req, res) => {
-  res.json(await listByKind<ImprovementInitiative>(req.tenantId, 'improvement'));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await listByKind<ImprovementInitiative>(req.tenantId, 'improvement', pagination));
 }));
 itsmRouter.get('/improvements/totals/estimated', requirePermission('improvement.read'), asyncHandler(async (req, res) => {
   const items = await listByKind<ImprovementInitiative>(req.tenantId, 'improvement');
@@ -333,7 +354,8 @@ itsmRouter.get('/improvements/totals/actual', requirePermission('improvement.rea
   res.json(items.reduce((sum, i) => sum + ((i as { actualBenefit?: { annualValueUSD?: number } }).actualBenefit?.annualValueUSD ?? 0), 0));
 }));
 itsmRouter.get('/improvements/benefit-measurements', requirePermission('improvement.read'), asyncHandler(async (req, res) => {
-  res.json(await listByKind(req.tenantId, 'benefit-measurement'));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await listByKind(req.tenantId, 'benefit-measurement', pagination));
 }));
 itsmRouter.post('/improvements/benefit-measurements', requirePermission('improvement.write'), asyncHandler(async (req, res) => {
   const schema = z.object({
@@ -354,7 +376,8 @@ itsmRouter.post('/improvements/benefit-measurements', requirePermission('improve
   res.status(201).json(measurement);
 }));
 itsmRouter.get('/improvements/roi', requirePermission('improvement.read'), asyncHandler(async (req, res) => {
-  res.json(await listByKind(req.tenantId, 'roi-calc'));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await listByKind(req.tenantId, 'roi-calc', pagination));
 }));
 itsmRouter.get('/improvements/:initiativeId/roi', requirePermission('improvement.read'), asyncHandler(async (req, res) => {
   const all = await listByKind<{ initiativeId: string }>(req.tenantId, 'roi-calc');
@@ -369,7 +392,10 @@ itsmRouter.get('/improvements/:publicId', requirePermission('improvement.read'),
 }));
 
 // KB articles
-itsmRouter.get('/kb/articles', requirePermission('kb.read'), asyncHandler(async (req, res) => res.json(await kbRepo.list(req.tenantId))));
+itsmRouter.get('/kb/articles', requirePermission('kb.read'), asyncHandler(async (req, res) => {
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await kbRepo.list(req.tenantId, pagination));
+}));
 itsmRouter.get('/kb/articles/:publicId', requirePermission('kb.read'), asyncHandler(async (req, res) => {
   res.json(required(await kbRepo.get(req.tenantId, req.params.publicId), 'KBArticle'));
 }));

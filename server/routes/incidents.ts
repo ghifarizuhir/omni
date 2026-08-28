@@ -3,6 +3,7 @@ import { audit } from '../audit';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qBool, qString, required } from '../util';
 import { getActor } from '../auth/session';
+import { parsePagination } from '../lib/pagination';
 import {
   resolveIncidentSchema,
   addIncidentCommentSchema,
@@ -25,12 +26,16 @@ function scoped(req: Request) {
 }
 
 incidentsRouter.get('/incidents', requirePermission('incident.read'), asyncHandler(async (req, res) => {
-  const list = await scoped(req).incidents.list({
-    active: qBool(req.query.active),
-    major: qBool(req.query.major),
-    ciId: qString(req.query.ciId),
-    problemPublicId: qString(req.query.problemPublicId),
-  });
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  const list = await scoped(req).incidents.list(
+    {
+      active: qBool(req.query.active),
+      major: qBool(req.query.major),
+      ciId: qString(req.query.ciId),
+      problemPublicId: qString(req.query.problemPublicId),
+    },
+    pagination,
+  );
   res.json(list);
 }));
 
@@ -39,11 +44,13 @@ incidentsRouter.get('/incidents/:publicId', requirePermission('incident.read'), 
 }));
 
 incidentsRouter.get('/incidents/:incidentId/comments', requirePermission('incident.read'), asyncHandler(async (req, res) => {
-  res.json(await scoped(req).incidents.comments(req.params.incidentId));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).incidents.comments(req.params.incidentId, pagination));
 }));
 
 incidentsRouter.get('/incidents/:incidentId/timeline', requirePermission('incident.read'), asyncHandler(async (req, res) => {
-  res.json(await scoped(req).incidents.timeline(req.params.incidentId));
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).incidents.timeline(req.params.incidentId, pagination));
 }));
 
 // POST /incidents/:incidentId/comments — appends a comment and a

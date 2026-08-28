@@ -3,6 +3,7 @@ import { monitoringRepo } from '../repositories/events';
 import { audit } from '../audit';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, required } from '../util';
+import { parsePagination } from '../lib/pagination';
 import { createAlertRouteSchema, updateAlertRouteSchema } from '../../src/shared/schemas/alertRoute';
 import {
   createMonitoringRuleSchema,
@@ -18,13 +19,15 @@ function scoped(req: Request) {
 }
 
 monitoringRouter.get('/monitoring/rules', requirePermission('rule.read'), asyncHandler(async (req, res) => {
-  res.json(await scoped(req).monitoring.listRules());
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).monitoring.listRules(pagination));
 }));
 monitoringRouter.get('/monitoring/rules/:publicId', requirePermission('rule.read'), asyncHandler(async (req, res) => {
   res.json(required(await scoped(req).monitoring.getRule(req.params.publicId), 'MonitoringRule'));
 }));
 monitoringRouter.get('/monitoring/routes', requirePermission('rule.read'), asyncHandler(async (req, res) => {
-  res.json(await scoped(req).monitoring.listRoutes());
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  res.json(await scoped(req).monitoring.listRoutes(pagination));
 }));
 monitoringRouter.get('/monitoring/routes/:publicId', requirePermission('rule.read'), asyncHandler(async (req, res) => {
   res.json(required(await scoped(req).monitoring.getRoute(req.params.publicId), 'AlertRoute'));
