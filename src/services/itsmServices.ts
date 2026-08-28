@@ -15,8 +15,16 @@ import type {
 } from '../shared/schemas/problem';
 import type { ProblemStatus } from '../types/problem';
 
+export interface PaginationParams {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  search?: string;
+  q?: string;
+}
+
 export const problemsService = {
-  list: () => apiFetch<Problem[]>('/problems'),
+  list: (params?: PaginationParams) => apiFetch<Problem[]>('/problems', params ? { query: params as Record<string, string | number> } : undefined),
   get: (publicId: string) => apiFetch<Problem>(`/problems/${publicId}`),
   create: (input: CreateProblemInput) => apiFetch<Problem>('/problems', { method: 'POST', body: input }),
   setStatus: (publicId: string, status: ProblemStatus) =>
@@ -45,7 +53,7 @@ export interface CreateChangeInput {
 }
 
 export const changesService = {
-  list: () => apiFetch<Change[]>('/changes'),
+  list: (params?: PaginationParams) => apiFetch<Change[]>('/changes', params ? { query: params as Record<string, string | number> } : undefined),
   get: (publicId: string) => apiFetch<Change>(`/changes/${publicId}`),
 
   // M6.11 — create a change in draft status. Returns the persisted Change.
@@ -83,7 +91,7 @@ export const deploymentsService = {
 };
 
 export const requestsService = {
-  list: () => apiFetch<ServiceRequest[]>('/requests'),
+  list: (params?: PaginationParams) => apiFetch<ServiceRequest[]>('/requests', params ? { query: params as Record<string, string | number> } : undefined),
   get: (publicId: string) => apiFetch<ServiceRequest>(`/requests/${publicId}`),
   catalog: () => apiFetch<CatalogItem[]>('/catalog'),
   create: (input: CreateRequestInput) => apiFetch<ServiceRequest>('/requests', { method: 'POST', body: input }),
