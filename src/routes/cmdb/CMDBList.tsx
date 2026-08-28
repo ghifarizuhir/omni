@@ -47,10 +47,9 @@ export const CMDBList: React.FC = () => {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [extraCIs, setExtraCIs] = useState<ConfigurationItem[]>([]);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data: cisData } = useResource(() => cisService.list(), []);
+  const { data: cisData, refresh: refreshCIs } = useResource(() => cisService.list(), []);
   const mockCIs = cisData ?? [];
   const { data: relsData } = useResource(() => cisService.relationshipsAll(), []);
   const mockCIRelationships = relsData ?? [];
@@ -84,7 +83,7 @@ export const CMDBList: React.FC = () => {
   const scopeEnabled = useScopeUiEnabled();
   const { scope, scopedAppIds } = useScope();
 
-  const allCIs = useMemo(() => [...extraCIs, ...mockCIs], [extraCIs, mockCIs]);
+  const allCIs = useMemo(() => mockCIs, [mockCIs]);
 
   const scopeFilteredCIs = useMemo(() => {
     if (!scopeEnabled || scope === 'all') return allCIs;
@@ -363,7 +362,7 @@ export const CMDBList: React.FC = () => {
         onClose={() => setCreateOpen(false)}
         services={mockServices.map(s => ({ id: s.id, name: s.name }))}
         onCreate={(ci) => {
-          setExtraCIs(prev => [ci, ...prev]);
+          refreshCIs();
           showToast(`Added ${ci.publicId}`);
         }}
       />
@@ -372,7 +371,7 @@ export const CMDBList: React.FC = () => {
         isOpen={importOpen}
         onClose={() => setImportOpen(false)}
         onImport={(cis) => {
-          setExtraCIs(prev => [...cis, ...prev]);
+          refreshCIs();
           showToast(`Imported ${cis.length} CI${cis.length === 1 ? '' : 's'}`);
         }}
       />

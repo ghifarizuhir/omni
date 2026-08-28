@@ -6,6 +6,7 @@ import {
   CIType, Criticality, Environment, CIAttributes, ConfigurationItem,
 } from '../../../types/ci';
 import { ciTypeMeta } from '../../../lib/constants';
+import { cmdbService } from '@/src/services/cmdbService';
 
 interface CreateCIModalProps {
   isOpen: boolean;
@@ -49,38 +50,39 @@ export const CreateCIModal: React.FC<CreateCIModalProps> = ({
   const [criticality, setCriticality] = useState<Criticality>('medium');
   const [serviceId, setServiceId] = useState('');
   const [tagsInput, setTagsInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const reset = () => {
     setName(''); setPublicId(''); setType('application');
     setEnvironment('production'); setCriticality('medium');
-    setServiceId(''); setTagsInput('');
+    setServiceId(''); setTagsInput(''); setError(null); setSaving(false);
   };
 
-  const handleCreate = () => {
-    const now = new Date().toISOString();
-    const ts = Date.now();
-    const ci: ConfigurationItem = {
-      id: `ci-${ts}`,
-      publicId: publicId.trim() || `CI-${type.slice(0, 3).toUpperCase()}-${ts.toString().slice(-5)}`,
-      name: name.trim(),
-      type,
-      status: 'active',
-      environment,
-      criticality,
-      ownerTeamId: 'team-current',
-      serviceId: serviceId || undefined,
-      health: 'operational',
-      attributes: defaultAttributes(type),
-      tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean),
-      createdAt: now,
-      updatedAt: now,
-      openIncidentCount: 0,
-      recentChangeCount: 0,
-      monitoringRuleCount: 0,
-    };
-    onCreate(ci);
-    reset();
-    onClose();
+  const handleCreate = async () => {
+    setError(null);
+    setSaving(true);
+    try {
+      const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+      const created = await cmdbService.create({
+        name: name.trim(),
+        type,
+        status: 'active',
+        environment,
+        criticality,
+        health: 'operational',
+        tags,
+        attributes: defaultAttributes(type) as unknown as Record<string, unknown>,
+        serviceId: serviceId || undefined,
+      });
+      onCreate(created);
+      reset();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create CI');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -162,10 +164,16 @@ export const CreateCIModal: React.FC<CreateCIModalProps> = ({
           />
         </div>
 
+        {error && (
+          <div className="rounded-md bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2">
+            {error}
+          </div>
+        )}
+
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-ois-border">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" disabled={!name.trim()} onClick={handleCreate}>
-            Add CI
+          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="primary" disabled={!name.trim() || saving} onClick={handleCreate}>
+            {saving ? 'Saving…' : 'Add CI'}
           </Button>
         </div>
       </div>

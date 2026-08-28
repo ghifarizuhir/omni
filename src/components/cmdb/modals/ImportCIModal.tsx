@@ -5,6 +5,7 @@ import { Button } from '../../ui/Button';
 import {
   CIType, Criticality, Environment, ConfigurationItem, CIAttributes,
 } from '../../../types/ci';
+import { cmdbService } from '@/src/services/cmdbService';
 
 interface ImportCIModalProps {
   isOpen: boolean;
@@ -89,8 +90,9 @@ export const ImportCIModal: React.FC<ImportCIModalProps> = ({ isOpen, onClose, o
   const [filename, setFilename] = useState('');
   const [parsed, setParsed] = useState<ParsedRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const reset = () => { setFilename(''); setParsed([]); setError(null); };
+  const reset = () => { setFilename(''); setParsed([]); setError(null); setSaving(false); };
 
   const handleFile = async (file: File) => {
     setError(null);
@@ -111,11 +113,54 @@ export const ImportCIModal: React.FC<ImportCIModalProps> = ({ isOpen, onClose, o
     }
   };
 
-  const handleImport = () => {
-    const cis = parsed.map((row, i) => rowToCI(row, i));
-    onImport(cis);
-    reset();
-    onClose();
+  const handleImport = async () => {
+    setError(null);
+    setSaving(true);
+    try {
+      const results = await Promise.allSettled(
+        parsed.map((row) => {
+          const tags = row.tags?.split(/[,;]/).map(t => t.trim()).filter(Boolean) ?? [];
+          const attributes: Record<string, unknown> =
+            row.type === 'database'
+              ? { kind: 'database', engine: 'postgresql', version: '15', port: 5432, storageGb: 100, replicas: 1, backupSchedule: 'daily 02:00 UTC' }
+              : row.type === 'server'
+                ? { kind: 'server', os: 'Ubuntu 22.04 LTS', cpuCores: 4, memoryGb: 16, diskGb: 200, ipAddress: '10.0.0.1', hostname: row.name, region: 'us-east-1', provider: 'aws' }
+                : { kind: 'application', version: '1.0.0', language: 'Node.js 20', port: 8080, healthCheckPath: '/health', repoUrl: '' };
+          return cmdbService.create({
+            name: row.name,
+            type: row.type,
+            status: 'active',
+            environment: row.environment,
+            criticality: row.criticality,
+            health: 'operational',
+            tags,
+            attributes,
+            serviceId: row.serviceId || undefined,
+          });
+        })
+      );
+      const created = results
+        .filter((r): r is PromiseFulfilledResult<ConfigurationItem> => r.status === 'fulfilled')
+        .map(r => r.value);
+      const failed = results.filter(r => r.status === 'rejected').length;
+      if (failed > 0 && created.length === 0) {
+        const firstErr = (results.find(r => r.status === 'rejected') as PromiseRejectedResult | undefined)?.reason;
+        setError(firstErr instanceof Error ? firstErr.message : `Failed to import ${failed} CI(s)`);
+        return;
+      }
+      if (failed > 0) {
+        setError(`${failed} CI(s) failed to import; ${created.length} succeeded`);
+      }
+      onImport(created);
+      if (created.length > 0) {
+        reset();
+        onClose();
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to import');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -184,9 +229,9 @@ export const ImportCIModal: React.FC<ImportCIModalProps> = ({ isOpen, onClose, o
         )}
 
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-ois-border">
-          <Button variant="ghost" onClick={() => { reset(); onClose(); }}>Cancel</Button>
-          <Button variant="primary" disabled={parsed.length === 0} onClick={handleImport}>
-            Import {parsed.length > 0 && `${parsed.length} CI${parsed.length === 1 ? '' : 's'}`}
+          <Button variant="ghost" onClick={() => { reset(); onClose(); }} disabled={saving}>Cancel</Button>
+          <Button variant="primary" disabled={parsed.length === 0 || saving} onClick={handleImport}>
+            {saving ? 'Importing…' : `Import ${parsed.length > 0 ? `${parsed.length} CI${parsed.length === 1 ? '' : 's'}` : ''}`}
           </Button>
         </div>
       </div>
