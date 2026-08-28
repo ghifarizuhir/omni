@@ -38,14 +38,29 @@ ITIL 4: Service Request Management — standard request (pre-approved, templated
 - `filterReadable(user,'request', requestResource)` + `requestResource` registry (`RequestQueue.tsx:218-224`).
 - `useResource(() => requestsService.list())` + `catalog()` + `knowledgeService.articles()` + `usersService.list()` — `refreshRequests()` after writes, `requestsService.comments(publicId)` lazy by `reqPublicId` (`RequestDetail.tsx:579-592`).
 
-**Stub / Partial:**
+## CRUD Wiring (audited 2026-08-28 — see `docs/audits/crud-audit.md`)
+
+| Op | FE → Service → Route → Scoped → Repo → Prisma | Status |
+|----|-----------------------------------------------|--------|
+| **C** create via catalog | `CatalogItemDetail.tsx:527 setTimeout REQ-2026-rand` → no `requestsService.create` `itsmServices:67` → no Zod `createRequestSchema` `request.ts 9` → **no `POST /requests`** `itsm.ts 159-341` → no `ServiceRequestsScope.create` `scopedDb 145` → `ServiceRequest 531` exists | 🔴 NOT WIRED |
+| **R list** | `Queue 214 useResource(list)` → `list 68 GET /requests` → `GET 159 parsePagination` → `scoped 610 isSrReadBypass AUDITOR/PLATFORM_ADMIN` → `docs.ts:253 prisma.serviceRequest` | 🟢 |
+| **R get** | `Detail find by list 594` not `get:69 GET /:publicId 163` (service defined unused) | 🟡 indirect |
+| **R comments/catalog** | `Detail 589 comments 85 GET 166`, `catalog 172 GET catalog 530` | 🟢 |
+| **U approve/reject** | `ApproveModal 241 note ≤2000` `281 RejectModal ≥20` → `POST approve 205 / reject 211 approveSchema 179 local` → `scoped decideStep 620 srCanWrite` → `docs.ts:256 approved 289 / rejected 300` | 🟢 |
+| **U comment/cancel/reassign/watchers** | `775 addComment body ≤10k 88 POST 219`, `456 CancelModal ≥10 → PATCH cancel 242 cancelSchema 9 → scoped 640 → docs.ts:376 CLOSED→409`, `411 ReassignModal → PATCH reassign 265 schema 16` `AddWatcher 501 POST 293 strict` `DELETE 320` | 🟢 |
+| **D** | hard DELETE none — `cancel` is soft-D 409 if closed `CLOSED 250` | 🟡 soft only |
+
+*Full evidence §5 `docs/audits/crud-audit.md`.*
+
+**Stub / Partial (2026-08-28 audit):**
+- **CREATE missing 🔴** — `portal/catalog/:itemId` submission masih `setTimeout 900` simulated `REQ-2026-* 528` + belum wire `POST /requests` (lihat `docs/pages/portal.md:175`). No shared `createRequestSchema`, no repo `create`.
 - `isMyTeam` always `false` (`RequestQueue.tsx:80-82`) — backend `User.team` tidak ada; comment "legacy mock User had team string; track in M6.4".
 - `NOW = Date.now()` captured at module load (`RequestQueue.tsx:38`, `RequestDetail.tsx:24`) — SLA elapsed tidak tick realtime; perlu interval/derived.
 - `RequestInfoModal` `onConfirm` hanya `jumpToComments()` — tidak hit endpoint, request tidak benar-benar `pending_user` paused (`RequestDetail.tsx:1189-1193`).
 - `approveStep` set local `approved=true` (`RequestDetail.tsx:1152-1153`) — tidak recompute dari `workflow.steps`; stale setelah refresh.
 - RowActions `Approve/Assign/Cancel` buttons `onOpen=false` — hanya close dropdown, belum wire ke modal/stepId (`RequestQueue.tsx:175-192`).
 - `requestsService.list()` tanpa pagination query — `server/routes/itsm.ts:159-161` pakai `parsePagination` tapi client tidak kirim `page/pageSize`.
-- `portal/catalog/:itemId` submission masih client-side simulated + belum wire `POST /requests` (lihat `docs/pages/portal.md:175`).
+- `catalog/:itemId` loads full catalog `mockCatalogItems.find 464` no `GET /catalog/:publicId`.
 
 **Missing (vs spec):**
 - Saved filter views, multi-sort URL persist (`?status=&category=&sla=` belum sync URL — `useState` only `RequestQueue.tsx:204-209`).
@@ -316,6 +331,7 @@ Socket: belum subscribe — incidents pattern `tenant:{tenantId}` + `incident:{p
 
 ## Open Items
 
+- [ ] **CRUD P0 — wire `POST /requests` create** — add shared `createRequestSchema` (`catalogItemId + formData` validated `CatalogItem.formFields 51`), repo `create` (`workflowTemplate→ WorkflowInstance currentStep 0 pending→active, slaHours→totalSlaHours`), `ServiceRequestsScope.create`, route `POST /requests requirePermission('request.create')` audit — remove `setTimeout` sim `CatalogItemDetail 527`.
 - [ ] Wire `RowActions` Approve/Assign/Cancel → step modals (currently `setOpen(false)` only — `RequestQueue.tsx:175-192`).
 - [ ] Implement `isMyTeam` via real team membership from `/auth/me` or `/users/me/teams` — `RequestQueue.tsx:80-82` returns false always.
 - [ ] Fix SLA ticker: `NOW = Date.now()` snapshot (`RequestQueue.tsx:38`, `RequestDetail.tsx:24`) → derived + interval tick + pause when `pending_user`.
@@ -326,6 +342,7 @@ Socket: belum subscribe — incidents pattern `tenant:{tenantId}` + `incident:{p
 - [ ] Wire realtime `tenant:{tenantId}` / `request:{publicId}` for queue/detail auto-refresh.
 - [ ] Verify `approved` local state vs derived from workflow — `setApproved(true)` may desync after `refreshRequests()` (`RequestDetail.tsx:1152-1153`).
 - [ ] Confirm cancel `closed→409` vs `cancelled`/`rejected` mapping — service returns `closed` sentinel for any closed (`itsm.ts:252`).
+- [ ] Extract `approveSchema/rejectSchema 179` local `itsm.ts` → shared `src/shared/schemas/request.ts` strict (like `cancel`).
 
 ---
 
@@ -334,3 +351,4 @@ Socket: belum subscribe — incidents pattern `tenant:{tenantId}` + `incident:{p
 | Date | Change | Ref |
 |------|--------|-----|
 | 2026-08-28 | Deep init — migrate `docs/pages/requests.md` + `src/routes/requests/*` + `src/types/request.ts` + `server/routes/itsm.ts` + `src/shared/schemas/request.ts` ke template features (Queue/Stepper/5 tabs/6 modals/Lifecycle/RBAC) | — |
+| 2026-08-28 | CRUD audit ITSM core — add wiring matrix Create 🔴 (portal sim) / R-U 🟢 (approve/reject/cancel/reassign/watchers) — full evidence in `docs/audits/crud-audit.md` | — |

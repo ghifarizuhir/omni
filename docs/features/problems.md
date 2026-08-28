@@ -53,16 +53,32 @@ ITIL 4: Incident = symptom/service disruption, Problem = root-cause investigatio
 - Modals: `PromoteToKnownErrorModal` requires rootCause+workaround (validates, amber `bg-amber-50 border-amber-200` info `ShieldAlert amber`) + radio `full|partial|none` + optional affectedVersions/permanentFixPlan (`src/components/problems/PromoteToKnownErrorModal.tsx:31-99`), `LinkIncidentsModal` checkbox list searchable with `SeverityBadge+IncidentStatusPill+formatRelative` (`src/components/problems/LinkIncidentsModal.tsx:18-99`), `CloseProblemModal` confirm-patch (`ProblemDetail.tsx:333-349`), `PromoteToKnownErrorModal` publish sets `status='known_error'` + `knownError { publishedAt publishedBy rootCause workaround workaroundEffectiveness }` (`ProblemDetail.tsx:493-499`).
 - RBAC in ProblemList: `filterReadable(user,'problem', ...problemResource(p))` (`ProblemList.tsx:155-162`), KEDB header gated `Can problem.update` for Add known error (`KEDB.tsx:73-80`).
 
-**Stub / Partial:**
-- All mutations are client-side state (`extraProblems` + `setProblem` local) — no `POST/PATCH /problems` write endpoints yet (only `GET` exists in `server/routes/itsm.ts:30-36`). `handleCreateProblem`, `handlePromote`, `handleStatusChange`, link-incident/change state, RCA save/publish are in-memory.
-- RCA: `fault_tree` and `timeline` editors are placeholder only (`PlaceholderEditor`).
-- KEDB Apply Workaround just navigates to incident detail — no server link of workaround execution/audit.
+## CRUD Wiring (audited 2026-08-28 — see `docs/audits/crud-audit.md`)
+
+| Op | FE → Service → Route → Scoped → Repo → Prisma | Status |
+|----|-----------------------------------------------|--------|
+| **C** create | `ProblemList.tsx:164 handleCreateProblem PRB-YYYY-##### 166 ownerId mockUsers[0] 175 → setExtraProblems 188` → no `problemsService.create` `itsmServices.ts:12 list/get only` → no Zod `problem.ts` → **no `POST /problems`** `itsm.ts:30 2 GETs` → `ProblemsScope list/get only 115` → `problemsRepo list/get 56` | 🔴 NOT WIRED |
+| **R list** | `ProblemList 146 useResource(list) 155 filterReadable problemResource` · `GET /problems 30 parsePagination` wired but FE no `?page` → `docs.ts:22 take/skip` | 🟡 pagination dead, client filter |
+| **R get** | `ProblemDetail 446 get(publicId)` → `GET /problems/:publicId 34 required 404` → `docs.ts:58 findFirst {tenantId,publicId}` | 🟢 only wired op |
+| **R history** | `HistoryTab 353 synthesized ts sorted asc icons Plus→CheckCircle2 368` no fetch | 🔴 no `GET /problems/:publicId/timeline` |
+| **U status / close** | `StatusDropdown 392→501 setProblem({status:newStatus})` gated `Can problem.update 542` → no `PATCH /status` | 🔴 local `CloseProblemModal 333→941 set to closed` no `closedAt`/audit |
+| **U knownError** | `PromoteModal 31→99 validate` → `Detail 493 knownError:{publishedBy:'u-001' 497}` hardcode | 🔴 |
+| **U RCA** | `DEFAULT_RCA author u-001 Sarah Chen 374` `handleSave/handlePublish setRca 405` `PlaceholderEditor 192 fault_tree/timeline` | 🔴 |
+| **U links** | `LinkIncidentsModal 18→ Detail 951 relatedIncidentIds [...new Set]` local, `967 linkedChangeIds` local, `Suggest article /kb/editor` nav | 🔴 |
+| **D** | — (via status `closed` only, no hard DELETE) | 🔴 |
+
+*Full file:line evidence in `docs/audits/crud-audit.md` §3.*
+
+**Stub / Partial (2026-08-28 audit):**
+- All mutations are client-side state (`extraProblems` + `setProblem` local) — **no `POST/PATCH /problems` write endpoints** (only `GET` exists in `server/routes/itsm.ts:30-36`). `handleCreateProblem` (`ProblemList.tsx:164-189`), `handlePromote` (`ProblemDetail.tsx:493-499` hardcode `publishedBy:'u-001'`), `handleStatusChange` (`ProblemDetail.tsx:501-503`), link-incident/change (`ProblemDetail.tsx:951-978` local arrays), RCA save/publish (`RCAWorkspace.tsx:405-415` `author u-001/Sarah Chen 374`) are in-memory.
+- RCA: `fault_tree` and `timeline` editors are placeholder only (`PlaceholderEditor.tsx:192-198` + `543-545`).
+- KEDB Apply Workaround (`KEDB.tsx:225-279`) just `navigate(/incidents/:id)` — no server audit.
 - Recommended actions `linkedChangeId` inline text only; creating/linking a Change from RCA action is manual.
 - `user u-001 Sarah Chen` hardcoded as default `authorId/Name` (`RCAWorkspace.tsx:374-375`, `ProblemDetail.tsx:497`).
-- Pattern auto-detection job not implemented — incident linking is manual via `LinkIncidentsModal`.
+- Pattern auto-detection job not implemented — incident linking is manual via `LinkIncidentsModal`. Pagination via `parsePagination` `itsm.ts:31` + `take/skip docs.ts:22` wired but FE `problemsService.list()` `itsmServices.ts:13` never sends `query` → dead.
 
 **Missing (vs ITIL + legacy spec):**
-- Server write endpoints `POST /problems`, `PATCH /problems/:id/status`, `POST .../promote-known-error`, `POST .../rca`, `POST .../linked-incidents`.
+- Server write endpoints `POST /problems`, `PATCH /problems/:id/status`, `POST .../promote-known-error`, `POST .../rca`, `POST .../linked-incidents` (pattern in `server/repositories/docs.ts:71 changesRepo.create` reusable).
 - Saved view / multi-sort URL persist (`?status=known_error&source=...`), column customization.
 - Full-text search with `source:` / `severity:` qualifiers.
 - Fault Tree visual editor (nodes/edges) and Timeline chronological editor.
@@ -283,6 +299,9 @@ Mutations currently client-only — write endpoints `POST/PATCH /problems`, `/pr
 
 ## Open Items
 
+- [ ] **CRUD P0 — wire `POST /problems`** — add `src/shared/schemas/problem.ts` (`createProblemSchema`), `problemsRepo.create` (`prisma.problem count→PRB-YYYY-NNNNN` `docs.ts:71` pattern), `ProblemsScope.create` `canWriteApp/ScopeViolationError`, `POST /problems` `requirePermission('problem.create')` + audit — remove `extraProblems` `ProblemList.tsx:144,188`.
+- [ ] **CRUD P0 — wire `PATCH /problems/:publicId/status` + close** — `StatusDropdown 392` + `CloseProblemModal 333` → `problemsService.setStatus` + Zod `problemStatus enum` + repo `closedAt` stamp + audit — was 🔴 stub.
+- [ ] **CRUD P0 — wire Known Error + RCA + links** — `POST /promote-known-error` (remove hardcode `u-001` `ProblemDetail 497`/`RCA 374` → `getActor`), `POST /rca` `fault_tree/timeline` real editors (replace `PlaceholderEditor 192`), `POST /linked-incidents/changes` — currently local arrays `951,971`.
 - [ ] Formalize write endpoints in `server/routes/itsm.ts` and `server/scope/scopedDb.ts` problems repo (`create/status/promote/link`) + `audit` + `ScopeViolationError` → 403 — remove `extraProblems` local state.
 - [ ] Verify `problemsService.list()` pagination default `pageSize` vs client showing all filtered — add server filter `?status=&source=&owner=` if needed.
 - [ ] Implement `fault_tree` + `timeline` real editors (canvas + draggable); define `timelineEntries` persistence (`src/types/problem.ts:39-43` already typed).
@@ -290,6 +309,7 @@ Mutations currently client-only — write endpoints `POST/PATCH /problems`, `/pr
 - [ ] `RCAWorkspace.tsx:374` hardcodes `authorId u-001 / authorName Sarah Chen` — must be `getActor` / `useCurrentUser`.
 - [ ] KEDB `Apply workaround` should `POST /incidents/:id/workaround` audit trail, not just navigate.
 - [ ] Close guard: only allow `closed` if `known_error` or `fix_in_progress` with linked change `closed_successful`? Spec intentionally permissive — needs product decision.
+- [ ] Replace pagination dead FE→BE `itsmServices.ts:13 list()` → `apiFetch('/problems',{query:{page,pageSize}})` + pager UI.
 
 ---
 
@@ -298,3 +318,4 @@ Mutations currently client-only — write endpoints `POST/PATCH /problems`, `/pr
 | Date | Change | Ref |
 |------|--------|-----|
 | 2026-08-28 | Deep init — migrate `docs/pages/problems.md` + `src/routes/problems/*` + `src/types/problem.ts` + `server/routes/itsm.ts` ke template features (list/detail/rca/kedb + lifecycle + permissions + ois tokens) | — |
+| 2026-08-28 | CRUD audit ITSM core — add wiring matrix C 🔴/R 🟡/U 🔴/D 🔴 + Stub/Partial with file:line (Create/RCA/links local, Pagination dead) — full evidence in `docs/audits/crud-audit.md` | — |

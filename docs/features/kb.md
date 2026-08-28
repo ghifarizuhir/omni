@@ -34,12 +34,28 @@ ITIL 4: Knowledge Management — capture, structure, share, reuse knowledge. Ter
 - `KBAnalytics` KPI row 4 (`Total views / Searches / Helpful rate / Active authors`) + `KpiCard` with `TrendingUp/Down` delta vs prior 30d + content gaps hero `bg-amber-50 border-amber-200` with per-gap `searchTerm "quoted" + count badge + suggestedAction + Create article →` + `Views over time` 30d `ViewsChart` SVG `W 760 H 140` with `linearGradient #1F4FD4 0.15→0`, grid 3 lines, area fill, peak dots, x labels every 7d + `Top viewed` + `Most helpful` (min 5 votes, color ≥95% emerald / ≥80% amber / else red) + `Top search terms` (gap rows `bg-amber-50` with `CONTENT GAP` / match `KB-` link) + `Reviews overdue or upcoming` (`Overdue red Clock / Due in Nd amber / Upcoming emerald` + `Review →` to editor) (`KBAnalytics.tsx:167-562`).
 - Persistence: `create` allocates `KB-NNNNN` sequential `count+1` + slug `lowercase alphanumeric+hyphens max 80` + initial `status draft version 1` (`docs.ts:565-573`). `update` bumps `version` + `updatedAt` (`docs.ts:632-637`). `setStatus` stamps `publishedAt/By/Name` on `published`, guards `same-status 400` + `terminal archived 400` (`docs.ts:650-683`). All writes audited `resourceKind KBArticle` (`itsm.ts:412,420-423,434-436`).
 
-**Stub / Partial:**
+## CRUD Wiring (audited 2026-08-28 — see `docs/audits/crud-audit.md`)
+
+| Op | FE → Service → Route → Repo → Prisma | Status |
+|----|--------------------------------------|--------|
+| **C** create | `KBEditor 728 saveArticle → knowledgeService.create 110 POST` → `POST 408 kb.write createKBArticleSchema 38` → `kbRepo.create 549 KB-NNNNN slug 565 draft v1 201` | 🟢 |
+| **R browse/list** | `KBBrowse 255 KBLayout 14 articles() 101` → `GET 395 parsePagination 396 list 542` | 🟢 (FE loads all, server pagination unused) |
+| **R search/filter/sort** | `KBBrowse 291 substring + Category/Status/Tags client` | 🔴 BE no `?q=` FTS, client-only |
+| **R get** | `platformServices 102 article(publicId) GET :publicId 399` wired but `ArticleView 453 find by slug` bypass | 🟡 |
+| **R categories/feedback/analytics** | `kB categories 103` `feedback 104` `analytics 105` → `platform 237 Document kb-*` seeded | 🟢/🟡 seeded analytics |
+| **U patch** | `Editor 711 update 112 PATCH 416 updateKBArticleSchema 58 strict partial` → `kbRepo.update 621 version+` | 🟢 |
+| **U setStatus** | `756 PublishMenu→783 handleConfirmPublish 114 PATCH status 427 Zod 76 draft↔published→archived guards 538 terminal 400 stamps publishedAt/By 672` | 🟢 |
+| **D** | `archived` terminal `archived` via `PATCH status` BE 🟢 FE menu missing `378`, hard `DELETE` 🔴 by design | 🟡 |
+
+**Stub / Partial (2026-08-28 audit):**
+- **GET bypass** — `ArticleView 453` + `KBEditor 552` do `articles().find(slug)` over full list; direct `GET /kb/articles/:publicId 399` wired but unused.
+- **No scopedDb** — `server/scope/scopedDb.ts:1-682` no `kb` binding; KB uses direct `req.tenantId` `itsm.ts:408` `tenantId`-scoped only (acceptable, global KB).
+- **Search FTS missing** — `field:value` parser `KBBrowse 291` deferred; server `GET 395` no `?q=` .
 - Public visibility (`public`) not yet enforced — currently only `internal/team` effective (same stored value).
-- Helpfulness `Suggest an edit` link navigates to `/kb/editor/:slug?source=feedback` but feedback wiring to editor prefill is placeholder (`ArticleView.tsx:349-354`).
-- Editor is markdown-only — no WYSIWYG (intentional design choice, matches `docs/pages/kb.md:228`).
-- Analytics `search query tracking` + `content gap detection` uses seeded `kb-analytics` document via `firstByKind` — not yet live aggregated from search events (`platform.ts:245-247`).
-- Review expiry job (scan `reviewDueAt` overdue → `expired`) planned but not yet scheduled (`docs/pages/kb.md:219`).
+- Helpfulness `Yes/No 504` increments local `helpfulCount` only, no `POST /kb/feedback` persisted; `Suggest an edit` `349` placeholder.
+- Editor is markdown-only — no WYSIWYG (intentional).
+- Analytics `search query tracking` + `content gap detection` uses seeded `kb-analytics` `firstByKind` — not yet live `platform.ts:245`.
+- Review expiry job (scan `reviewDueAt` overdue → `expired`) planned but not yet scheduled.
 
 **Missing (vs spec):**
 - Multi-tenant analytics isolation per tenant (partial — documents are tenant-scoped but cross-tenant rollup not isolated).
@@ -399,9 +415,13 @@ Schemas share `src/shared/schemas/kbArticle.ts` — `kbStatusValues / kbVisibili
 
 ## Open Items
 
+- [ ] **CRUD — wire `ArticleView/KBEditor` to `GET /kb/articles/:publicId 399`** wired but bypassed `articles().find(slug) 453` — switch to `knowledgeService.article(publicId)` or add `GET /kb/slug/:slug` to avoid full list.
+- [ ] **CRUD — kb has no `scopedDb` binding** `scopedDb.ts` — consider wrapping `kbRepo` or document tenant-only scoping intentional.
+- [ ] **CRUD — archive affordance** `archived` terminal `archived 538,665` via `PATCH status` BE 🟢 but `PublishMenu 378` omits `archived`; add Archive action.
+- [ ] **CRUD — helpfulness** `ArticleView 504 Yes/No` local only — wire `POST /kb/feedback` persisted.
 - [ ] Verify analytics range control — `KBAnalytics.tsx:245` hardcodes `Last 30d` label; spec calls 7d/30d/90d.
 - [ ] Confirm `kbRepo.create` sequential publicId under concurrency — `count+1` can collide `P2002` (best-effort); consider `tenant` counter or retry.
-- [ ] Wire `ReviewReminderModal` days to `reviewDueAt` persistence (`update` with `reviewDueAt`) — currently optimistic UI only.
+- [ ] Wire `ReviewReminderModal` days to `reviewDueAt` persistence (`update` with `reviewDueAt`) — currently optimistic UI only (`KBEditor 405` discarded).
 - [ ] `browse` pagination: `KBBrowse.tsx` loads all via `useResource` — verify threshold for switching to server `?page&pageSize` (>100 rows).
 - [ ] Public visibility flag `visibility: public` not enforced server-side — confirm Phase 2 guard.
 
@@ -412,3 +432,4 @@ Schemas share `src/shared/schemas/kbArticle.ts` — `kbStatusValues / kbVisibili
 | Date | Change | Ref |
 |------|--------|-----|
 | 2026-08-28 | Deep exemplar init — migrate `docs/pages/kb.md` + `src/routes/kb/*` (KBLayout/KBBrowse/ArticleView/KBEditor/KBAnalytics) + `server/routes/itsm.ts` + `server/routes/platform.ts` + `server/repositories/docs.ts:kbRepo` + `src/types/knowledge.ts` + `src/shared/schemas/kbArticle.ts` ke template features (Intent/Current State/Primary View/Actions/Lifecycle) | — |
+| 2026-08-28 | CRUD audit ITSM core — add wiring matrix C 🟢/R 🟡 (bypass/bulk not wired) / U 🟢 — full evidence `docs/audits/crud-audit.md` | — |

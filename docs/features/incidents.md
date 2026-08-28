@@ -34,13 +34,29 @@ ITIL 4: Incident = symptom/service disruption (quick recovery), terpisah dari Pr
 - War Room 3-col (Activity Stream / Comms Log+Composer / Status Panel) + `StandDownModal` reason ≥10 chars → `P2` default.
 - RBAC `filterReadable` + `incidentResource` — `watchers` ikut di JSON snapshot.
 
-**Stub / Partial:**
+## CRUD Wiring (audited 2026-08-28 — see `docs/audits/crud-audit.md`)
+
+| Op | FE → Service → Route → Repo → Prisma | Status |
+|----|--------------------------------------|--------|
+| **C** create | `CreateIncidentModal 53 handleCreate INC-2026-rand 55→onCreated 616 navigate` → no `incidentsService.create` `itsmServices:69` → **no `POST /incidents`** `incidents.ts 28-337` → no `incidentsRepo.create` `repositories/incidents.ts 78` | 🔴 NOT WIRED (fake ID, refresh 404) |
+| **R list** | `Queue 88 useResource(list) 99 filterReadable incidentResource` → `list 45 GET /incidents` no `?page` (server `parsePagination 29` + `take/skip 94` wired) | 🟡 pagination dead |
+| **R get/detail** | `Detail 165 get 186 timeline 190 comments` → `GET :publicId 42` · `GET .../comments 46` `GET .../timeline 51` | 🟢 |
+| **U status/resolve/promote/standDown** | `Detail 307 setStatus 322 resolve 347 promoteMajor` `WarRoom standDown` → `PATCH status 84 reject resolved400 89` `POST resolve 110 Zod14` `POST promote-major 136` `POST stand-down 161 reason min10 102` audit | 🟢 |
+| **U assign/update/links** | `bulkAssign 308 assign 73` `bulkPriority 325 update priority 90` `setLinks 76` → `PATCH assign 237` `PATCH /:publicId priority/tags 212` `PATCH links 261` | 🟢 |
+| **U comment/comms/watchers** | `addComment 65 isInternal+mentions 22` `postComms 99 audience 111` `addWatcher 74` → `POST comments 58` `POST comms 187` `POST/DELETE watchers 287,316` tx+timeline | 🟢 |
+| **D** | `close` via `status=closed` `bulkClose 300 setStatus closed` | 🟡 soft only |
+
+**Stub / Partial (2026-08-28 audit):**
+- **CREATE 🔴** — `CreateIncidentModal.tsx:53-62` fake `INC-2026-${random}` `onCreated` navigate tanpa `apiFetch`; no `incidentsService.create` `services/incidentsService.ts:44`, no `POST /incidents` `server/routes/incidents.ts`, no Zod `createIncidentSchema` `shared/schemas/incident.ts:14`, no repo `create`. Pola sama dengan `problems`/`requests`/`CMDB`.
+- `applyQuickFilter my_open 63` + `myOpenCount 241` hardcode `u-001` (Open Item #1).
 - SLA scheduler job (`server/jobs/`) masih emit `sla_warning|breached` tapi delivery belum ke Status Page.
-- `commenters` tracker di War Room masih TODO.
-- Mention `mentions[]` disimpan tapi notification delivery belum end-to-end.
+- `commenters` tracker di War Room masih TODO (`MajorIncidentWarRoom:507`).
+- Mention `mentions[]` `addIncidentCommentSchema 25` disimpan tapi notification delivery belum end-to-end.
 - Mobile war room fallback message (bukan layout real).
+- Stripe color bug `IncidentRow 694 stripeColor incident.severity→priority` fallback `#1F4FD4` always.
 
 **Missing (vs spec):**
+- Server `POST /incidents` create endpoint + shared Zod + repo + audit (template `changes POST /changes 63` / `kb POST /kb/articles 408` reusable).
 - Column customization / resize / reorder (terra punya — OIS belum).
 - Saved filter views, multi-sort persistence di URL.
 - Full-text `priority:urgent app:payment` search.
@@ -220,9 +236,11 @@ Socket: `tenant:{tenantId}` + `incident:{publicId}` — queue & detail subscribe
 
 ## Open Items
 
+- [ ] **CRUD P0 — wire `POST /incidents` create** — add `createIncidentSchema` `shared/schemas/incident.ts` (`title min1 max200 desc prio channel assignee`), `incidentsRepo.create` `prisma.incident count→INC-YYYY-NNNNN` `tenantId/actor`, `POST /incidents requirePermission('incident.create')` zod→scoped→repo→audit 201 → wire `CreateIncidentModal handleCreate 53` async + error + `refreshIncidents()` (remove fake `Math.random` + `onCreated` fake).
 - [ ] Verify `GET /incidents/export` endpoint exists (legacy docs claim, router belum punya).
 - [ ] `IncidentQueue.tsx:applyQuickFilter` hardcode `u-001` — harus `user.id`.
 - [ ] Mobile war room real layout vs fallback.
+- [ ] Fix pagination `incidentsService.list()` → `apiFetch('/incidents',{query:{page,pageSize}})` + BE `parsePagination` already wired `incidents.ts:29`.
 
 ---
 
@@ -231,3 +249,4 @@ Socket: `tenant:{tenantId}` + `incident:{publicId}` — queue & detail subscribe
 | Date | Change | Ref |
 |------|--------|-----|
 | 2026-08-28 | Deep exemplar init — migrate `docs/pages/incidents.md` + `src/routes/incidents/*` + `server/routes/incidents.ts` ke template features (Intent/Current State/Primary View/Actions/Lifecycle) | — |
+| 2026-08-28 | CRUD audit ITSM core — add wiring matrix Create 🔴 (fake ID `CreateIncidentModal 53` no POST) / R-U 🟢 — full evidence `docs/audits/crud-audit.md` | — |

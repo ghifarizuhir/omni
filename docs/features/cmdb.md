@@ -30,14 +30,29 @@ ITIL 4: Service Configuration Management — CMDB bukan asset inventory biasa, t
 - Detail: pinned header `bg-white border-b` nav `← CMDB` + color stripe by type + `publicId badge font-mono + CITypeIcon + CIStatusBadge`, Name editable inline `Edit` gated `cmdb.update` (optimistic `setChange` + `updateCISchema` validate + `zod` → revert on error), metadata `type|env|service|criticality`, Edit button, more menu. Body `flex flex-1 min-h-0` 3-col: left `w-[280px] border-r` `CIQuickFactsCard` (Asset ID, Environment, Owner, Support Team, Region, Last Update, Relationships count), center `flex-1 flex-col` tabs 9 `py-4 px-1 border-b-2` active `border-ois-primary`, content `flex-1 overflow-y-auto px-6 py-5` per tab, right `w-[280px] border-l` monitoring summary + View JSON toggle.
 - Audit: gate `useCan('cmdb','audit_read')` → `ShieldAlert Denied` if not Dept Head+; search `CI name|publicId|actor|field`, action filter 8 (`created/updated/deleted/status_changed/relationship_added/removed/discovered`), source 4 (`manual/discovery/api/deployment`), date range cyclic `7d→30d→90d→all`; timeline grouped by date desc, per entry icon+actor+action+CI link+timestamp+field diff `before→after arrow` + source tags; export `ExportAuditModal` CSV/JSON.
 
-**Stub / Partial:**
+## CRUD Wiring (audited 2026-08-28 — see `docs/audits/crud-audit.md`)
+
+| Op | FE → Service → Route → Scoped → Repo → Prisma | Status |
+|----|-----------------------------------------------|--------|
+| **C create** | `CreateCIModal 59 onCreate→setExtraCIs 365` `Import 88→374 local` → no `cmdbService.create` `cmdbService:9` → no `createCISchema` `ci.ts:40 only update` → **no `POST /cis` 62** → no `CmdbScope.createCI 13` → `ConfigurationItem 277` exists | 🔴 NOT WIRED (local ephemeral `id ci-Date.now health operational`) |
+| **R list/graph/detail/rels/audit** | `CMDBList 53 list 97 search` `Graph 29 relationshipsAll` `Detail 74 list.find 89 (not get)` `Audit 80 audit 83 search` → `GET 14/19/24/29/33/55 cmdb.read/audit.read` → `scoped 222 global read` → `cmdbRepo 70 findMany tenantId` | 🟢 BE wired, 🟡 FE ignores `GET :publicId` & `GET :ciId/relationships` (filters `all` locally) |
+| **U patch** | `Detail 105 editDraft 113→127 update PATCH 40 updateCISchema strict 41→scoped 227 canWriteApp 235→audit 44→cmdbRepo 101 tx` | 🟡 only 4/10 fields UI, `health` enum drift `healthy/degraded/down/unknown 33` vs `operational/.../maintenance common.ts:63` 400, no `emitCmdbChange 09-realtime:147` |
+| **U relationships/D** | no `POST/DELETE /relationships` `DELETE /cis` | 🔴 relationship tab read-only, `retired` via PATCH only |
+
+**Stub / Partial (2026-08-28 audit):**
+- **CREATE local-only 🔴** — `CreateCIModal.tsx:59 onCreate → CMDBList 365 setExtraCIs([ci,...])` & `ImportCIModal 114→374` generate `id:ci-${Date.now()} health:'operational' 72` ephemeral, no `tenantId/primaryApplicationId 286`, no audit, gated `Can cmdb.update 199` false affordance. Documented `POST /cis` `cmdb.md:190` need route.
+- Detail resolves via `list.find 89` not `getCI` → miss beyond page 1 (`limit 50`).
+- Relationships fetched twice then filtered locally `relationshipsAll 55→115` ignoring paginated `GET :ciId/relationships 33`.
+- `PATCH` `Detail 113` only `name/status/environment/criticality 118`, `health/tags/attributes` allowed by Zod but not UI.
 - Graph edge labels (`depends_on` etc.) colored but not yet interactive edit.
 - Relationship CRUD endpoint not formally exposed (still via `CIRelationship` direct).
 - Bulk operation mass-edit/delete not yet.
 
-**Missing:**
+**Missing (2026-08-28):**
+- `POST /cis` `DELETE /cis/:publicId` `POST/DELETE /cis/:id/relationships` (see `docs/audits/crud-audit.md` §8 P0).
 - Auto-discovery agent native (cloud/k8s sync).
 - CMDB sync to external ITSM (ServiceNow/Jira).
+- `PATCH health` Zod drift `ciHealthValues 33` fix to `operational/degraded/partial_outage/major_outage/maintenance`.
 
 ## Primary View — Per View
 
@@ -186,9 +201,12 @@ Socket: `tenant:{tenantId}` for list/graph auto-refresh on CI update (future).
 
 ## Open Items
 
+- [ ] **CRUD P0 — fix `ci.ts:33` `ciHealthValues`** `healthy/degraded/down/unknown` → `operational/degraded/partial_outage/major_outage/maintenance` `common.ts:63` else `PATCH health 33` 400.
+- [ ] **CRUD P0 — implement `POST /cis`** `createCISchema` → `cmdbRepo.createCI` (`prisma.configurationItem` `publicId CI-${type}-seq` `tenantId/primaryApplicationId ensureUnassignedApp`) → `CmdbScope.createCI canWriteApp` → `POST /cis cmdb.write` audit — wire `Create/ImportCIModal 59/114` off `extraCIs 50`.
+- [ ] **CRUD P1 — wire Detail to `cisService.get(publicId)` not `list.find 89`** + wire Relationships tab to `cisService.relationships(ciId) 12` not local filter.
 - [ ] Verify `PATCH /cis/:publicId` `attributes` union validation — `updateCISchema` currently partial, need type-specific strict schema.
-- [ ] Add `POST /cis` create endpoint formal spec (CreateCIModal currently posts — need route doc).
 - [ ] Graph `ForceGraph` performance >500 nodes — need canvas or virtualization.
+- [ ] Add `POST/DELETE /cis/:ciId/relationships` + `DELETE /cis/:publicId` + `CIAuditEntry relationship_added/removed` guard.
 
 ---
 
@@ -197,3 +215,4 @@ Socket: `tenant:{tenantId}` for list/graph auto-refresh on CI update (future).
 | Date | Change | Ref |
 |------|--------|-----|
 | 2026-08-28 | Deep init — migrate `docs/pages/cmdb.md` + `CmdbShell/CMDBList/Graph/Detail/Audit` + `ci.ts` + `cmdb.ts` ke template features (Foundation, 4 views + 9-tab detail) | — |
+| 2026-08-28 | CRUD audit ITSM core — add wiring matrix C 🔴 (local) / R 🟢 / U 🟡 (health drift) — full evidence `docs/audits/crud-audit.md` | — |

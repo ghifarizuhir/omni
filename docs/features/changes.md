@@ -32,10 +32,22 @@ ITIL 4: Change Enablement balance risk vs value. Standard (pre-approved, low-ris
 - Tech Assessment gate: `techAssessment.status approved` required before CAB; `AlertTriangle amber` warning in Approvals tab.
 - Cancel/Reschedule modals optimistic update with revert on failure.
 
-**Stub / Partial:**
-- CABWorkspace voting table still client-state-ish (no formal vote endpoint yet — deferred).
-- Conflict detection only `time_overlap` (freeze hardcoded May 9-11) + `freeze_window` — `ci_overlap/service_overlap/dependency` partial.
-- Assessment `risks[]` passthrough `z.array(z.unknown())` — not validated strongly.
+## CRUD Wiring (audited 2026-08-28 — see `docs/audits/crud-audit.md`)
+
+| Op | FE → Service → Route → Scoped → Repo → Prisma | Status |
+|----|-----------------------------------------------|--------|
+| **C** create | `NewChange 233 form→866 doSubmit→create 871 {applicationId scopedAppId}` → `POST /changes 63 createChangeSchema:48` → `scoped create 532 ScopeViolationError` → `docs.ts:71 CHG-YYYY-NNNNN 83` | 🟢 |
+| **R list/detail** | `Calendar 55 list 58 filterReadable` `Detail 51 get` → `GET 38 global read 28` → `scoped 529` → `docs.ts:65 listDocs` | 🟢 |
+| **U techAssessment** | `Detail 432 Panel 919 Modal 928 setTechnicalAssessment 45` → `PATCH tech-assessment 118 .passthrough 115 risks unknown[]` → `scoped 564` → `docs.ts:199` | 🟡 weak Zod |
+| **U reschedule** | `789 RescheduleModal 952 optimistic →962 reschedule 50` → `PATCH reschedule 87 rescheduleChangeSchema:9 strict 88` → `scoped 554` → `docs.ts:151 tx history 182` | 🟢 |
+| **U cancel** | `815 CancelModal 898 cancel 41` → `PATCH cancel 73 cancelSchema:{reason 1..2000}71` → `scoped 544` → `docs.ts:134 CLOSED:62 409` | 🟢 soft D |
+| **U approve/vote** | **CABWorkspace 35 CURRENT_USER u-001 57 CastVoteModal 705 setVotes toast** → no `changesService castVote` → no `POST /changes/:id/votes` `itsm.ts:38-131` → no `ChangesScope` | 🔴 NOT WIRED (loss on refresh) |
+| **D/lifecycle** | no `DELETE`, no `close_successful/failed` transition | 🔴 |
+
+**Stub / Partial (2026-08-28 audit):**
+- **CAB vote 🔴** — `CABWorkspace.tsx:57 CastVoteModal` + `705:setVotes` local — no `changesService.castVote`, no `POST /changes/:id/votes`, no `ChangesScope`/`changesRepo` mutation. Refresh loses votes; `status` never leaves `in_review`.
+- Conflict detection only `time_overlap` (freeze hardcoded May 9-11 `ConflictBanner 172`) + `freeze_window` — `ci_overlap/service_overlap/dependency` partial.
+- Assessment `risks[]` `itsm.ts:115` `z.array(z.unknown())` `116 .passthrough` — not validated strongly.
 - `PIR` only for `implemented|closed_*`; creation flow not wired from detail.
 
 **Missing:**
@@ -226,10 +238,12 @@ Scoped via `req.scoped.changes.*` + `audit` (create/cancel/reschedule/tech-asses
 
 ## Open Items
 
-- [ ] Wire `CABWorkspace` vote to server `POST /changes/:id/votes` (define `castVoteSchema`).
+- [ ] **CRUD P0 — wire CAB vote** `CABWorkspace 35/705` `POST /changes/:publicId/votes` `castVoteSchema strict decision approve/approve_with_conditions/reject/abstain+rationale` `changesRepo.castVote` append `approvals[] 72` status `in_review→approved|rejected` `scoped.castVote change.approve` — remove hardcode `CURRENT_USER='u-001'`.
+- [ ] **CRUD P1 — shared Zod** extract `createChangeSchema:48` + `cancelChangeSchema:71` + `techAssessmentSchema:106` inline `itsm.ts` → `src/shared/schemas/change.ts:9` strict (align `cancel min1 vs 10`, validate `TechnicalRisk 109` vs `unknown[]`).
 - [ ] Implement full conflict engine (`ci_overlap`, `service_overlap`, `dependency` via CMDB graph).
 - [ ] `NewChange.tsx` hardcode `u-001` for awaiting-approval filter — must be real `user.id`.
 - [ ] Verify `implementationWindow` generation (derived from plannedStart/End — not stored?).
+- [ ] Fix `list()` client pagination dead `itsmServices:33` → `apiFetch({query:{page,pageSize}})`.
 
 ---
 
@@ -238,3 +252,4 @@ Scoped via `req.scoped.changes.*` + `audit` (create/cancel/reschedule/tech-asses
 | Date | Change | Ref |
 |------|--------|-----|
 | 2026-08-28 | Deep init — migrate `docs/pages/changes.md` + `src/routes/changes/*` + `server/routes/itsm.ts` + `src/types/change.ts` ke template features (Calendar/Wizard/CAB/Detail) | — |
+| 2026-08-28 | CRUD audit ITSM core — add wiring matrix C 🟢/U vote 🔴 / lifecycle — full evidence `docs/audits/crud-audit.md` | — |
