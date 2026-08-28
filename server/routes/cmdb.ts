@@ -3,7 +3,8 @@ import { servicesRepo } from '../repositories/docs';
 import { requirePermission } from '../middleware/auth';
 import { asyncHandler, HttpError, qString, required } from '../util';
 import { audit } from '../audit';
-import { updateCISchema } from '../../src/shared/schemas/ci';
+import { createCISchema, updateCISchema } from '../../src/shared/schemas/ci';
+import { getActor } from '../auth/session';
 import { parsePagination } from '../lib/pagination';
 
 export const cmdbRouter = Router();
@@ -50,6 +51,15 @@ cmdbRouter.patch('/cis/:publicId', requirePermission('cmdb.write'), asyncHandler
     scopeMode: wrapped.scopeMode,
   });
   res.json(wrapped.result!.after);
+}));
+
+cmdbRouter.post('/cis', requirePermission('cmdb.write'), asyncHandler(async (req, res) => {
+  const body = createCISchema.parse(req.body);
+  const actor = await getActor(req);
+  void actor;
+  const wrapped = await (req as any).scoped.cmdb.createCI({ ...body, applicationId: (body as any).applicationId ?? null });
+  await audit(req, { action: 'create', resourceKind: 'ConfigurationItem', resourceId: wrapped.result.id, after: wrapped.result, scopeMode: wrapped.scopeMode });
+  res.status(201).json(wrapped.result);
 }));
 
 cmdbRouter.get('/services', requirePermission('service.read'), asyncHandler(async (req, res) => {

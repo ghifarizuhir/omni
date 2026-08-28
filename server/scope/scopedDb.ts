@@ -3,6 +3,8 @@ import type { ScopeContext } from './context';
 import { ScopeViolationError } from './errors';
 import { POLICY } from './policy';
 import { cmdbRepo } from '../repositories/cmdb';
+import type { ConfigurationItem } from '../../src/types';
+import type { CreateCIInput } from '../../src/shared/schemas/ci';
 import { eventsRepo, monitoringRepo } from '../repositories/events';
 import { incidentsRepo } from '../repositories/incidents';
 import { problemsRepo, changesRepo, releasesRepo, requestsRepo } from '../repositories/docs';
@@ -22,6 +24,7 @@ export interface CmdbScope {
    * (mirrors cmdbRepo.updateCI behaviour).
    */
   updateCI(publicId: string, patch: Parameters<typeof cmdbRepo.updateCI>[2]): Promise<{ result: Awaited<ReturnType<typeof cmdbRepo.updateCI>>; scopeMode: ScopeMode } | null>;
+  createCI(input: CreateCIInput & { applicationId?: string | null }): Promise<{ result: ConfigurationItem; scopeMode: ScopeMode }>;
   canWriteApp(appId: string): boolean;
   resolveScopeMode(appId: string): ScopeMode | null;
 }
@@ -239,6 +242,13 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
       const mode: ScopeMode = resolveScopeMode(appId) ?? 'admin';
       const result = await cmdbRepo.updateCI(ctx.tenantId, publicId, patch);
       return { result, scopeMode: mode };
+    },
+    async createCI(input) {
+      const appId = (input as any).applicationId ?? null;
+      const effectiveAppId = appId ?? await ensureUnassignedApp(ctx.tenantId);
+      if (!canWriteApp(effectiveAppId)) throw new ScopeViolationError({ module: 'cmdb', action: 'create', applicationId: effectiveAppId });
+      const result = await cmdbRepo.createCI(ctx.tenantId, { ...input, applicationId: effectiveAppId });
+      return { result, scopeMode: resolveScopeMode(effectiveAppId) ?? 'admin' };
     },
     canWriteApp,
     resolveScopeMode,
