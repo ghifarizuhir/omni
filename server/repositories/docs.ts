@@ -241,6 +241,17 @@ export const changesRepo = {
       affectedServiceIds: [],
       implementationPlan: input.implementationPlan,
       rollbackPlan: input.rollbackPlan,
+      testPlan: '',
+      linkedProblemIds: [],
+      linkedIncidentIds: [],
+      linkedKBSlugs: [],
+      approvals: [],
+      conflicts: [],
+      tags: [],
+      commsRequired: false,
+      commsChannels: [],
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
       // Optional sections — leave undefined until the workflow fills them in.
     } as unknown as Change;
     await prisma.change.create({
@@ -383,7 +394,7 @@ export const changesRepo = {
     let newStatus = before.status;
     if (hasReject) newStatus = 'rejected';
     else if (allDecided && approvals.every((a) => a.decision === 'approve' || a.decision === 'approve_with_conditions')) newStatus = 'approved';
-    const after: Change = { ...before, approvals, status: newStatus as Change['status'], updatedAt: now, cabReviewedAt: now } as unknown as Change;
+    const after: Change = { ...before, approvals, conflicts: before.conflicts ?? [], status: newStatus as Change['status'], updatedAt: now, cabReviewedAt: now } as unknown as Change;
     await prisma.change.update({
       where: { id: row.id },
       data: { status: newStatus, data: JSON.stringify(after) },

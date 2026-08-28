@@ -209,7 +209,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
           <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Conflict Analysis</h3>
         </div>
         <CardBody>
-          {change.conflicts.length === 0 ? (
+          {(change.conflicts ?? []).length === 0 ? (
             <div className="space-y-1 text-xs">
               {['FSC validation: No time conflicts', 'CI overlap check: No overlapping CI changes in window', 'Freeze window: Outside active freeze window'].map((line) => (
                 <p key={line} className="flex items-center gap-2 text-ois-success font-medium">
@@ -219,7 +219,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
             </div>
           ) : (
             <div className="space-y-2">
-              {change.conflicts.map((cf) => (
+              {(change.conflicts ?? []).map((cf) => (
                 <div key={cf.id} className="flex items-start gap-2 text-xs text-ois-warning">
                   <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                   <span>{cf.description}</span>
@@ -232,7 +232,7 @@ const VotingCard: React.FC<VotingCardProps> = ({ change, votes, onCastVote, note
       </Card>
 
       {/* Linked context */}
-      {(change.linkedProblemIds.length > 0 || change.linkedIncidentIds.length > 0 || change.linkedReleasePublicId) && (
+      {((change.linkedProblemIds ?? []).length > 0 || (change.linkedIncidentIds ?? []).length > 0 || change.linkedReleasePublicId) && (
         <Card>
           <div className="px-4 py-2.5 border-b border-ois-border bg-ois-surface-muted">
             <h3 className="text-xs font-bold text-ois-text-muted uppercase tracking-widest">Linked Context</h3>

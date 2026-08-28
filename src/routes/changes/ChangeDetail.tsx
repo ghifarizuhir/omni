@@ -95,8 +95,8 @@ export const ChangeDetail: React.FC = () => {
     );
   }
 
-  const approvedCount = change.approvals.filter((a) => a.decision === 'approve').length;
-  const activeConflicts = change.conflicts.filter((c) => !c.resolvedAt);
+  const approvedCount = (change.approvals ?? []).filter((a) => a.decision === 'approve').length;
+  const activeConflicts = (change.conflicts ?? []).filter((c) => !c.resolvedAt);
   const isImplemented = ['implemented', 'closed_successful', 'closed_failed'].includes(changeStatus);
 
   const techAssessmentReady = change.technicalAssessment?.status === 'approved';
@@ -110,9 +110,9 @@ export const ChangeDetail: React.FC = () => {
     { id: 'overview', label: 'Overview' },
     { id: 'plans', label: 'Plans' },
     { id: 'assessment', label: techAssessmentLabel },
-    { id: 'approvals', label: `Approvals (${change.approvals.length})` },
-    { id: 'conflicts', label: `Conflicts (${change.conflicts.length})` },
-    { id: 'linked', label: `Linked (${change.linkedProblemIds.length + change.linkedIncidentIds.length + (change.linkedReleaseId ? 1 : 0) + change.linkedKBSlugs.length})` },
+    { id: 'approvals', label: `Approvals (${(change.approvals ?? []).length})` },
+    { id: 'conflicts', label: `Conflicts (${(change.conflicts ?? []).length})` },
+    { id: 'linked', label: `Linked (${(change.linkedProblemIds ?? []).length + (change.linkedIncidentIds ?? []).length + (change.linkedReleaseId ? 1 : 0) + (change.linkedKBSlugs ?? []).length})` },
     { id: 'pir', label: 'PIR' },
     { id: 'history', label: 'History' },
   ];
@@ -499,7 +499,7 @@ export const ChangeDetail: React.FC = () => {
             {/* Conflicts */}
             {activeTab === 'conflicts' && (
               <div className="space-y-3">
-                {change.conflicts.length === 0 ? (
+                {(change.conflicts ?? []).length === 0 ? (
                   <SectionCard>
                     <div className="py-10 text-center">
                       <CheckCircle2 size={32} className="mx-auto text-ois-success mb-3" />
@@ -517,7 +517,7 @@ export const ChangeDetail: React.FC = () => {
                         <AlertTriangle size={14} /> {activeConflicts.length} active conflict(s)
                       </p>
                     )}
-                    {change.conflicts.map((cf) => (
+                    {(change.conflicts ?? []).map((cf) => (
                       <div
                         key={cf.id}
                         className={cn(
@@ -540,7 +540,7 @@ export const ChangeDetail: React.FC = () => {
                         </div>
                         <div className="p-4">
                           <p className="text-sm text-ois-text mb-3">{cf.description}</p>
-                          {cf.conflictsWith.length > 0 && (
+                          {(cf.conflictsWith ?? []).length > 0 && (
                             <p className="text-xs text-ois-text-muted mb-2">
                               Conflicts with: {cf.conflictsWith.map((id) => (
                                 <Link key={id} to={`/changes/${id}`} className="text-ois-primary hover:underline font-mono ml-1">{id}</Link>

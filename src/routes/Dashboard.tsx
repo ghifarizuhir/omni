@@ -509,10 +509,10 @@ export const Dashboard: React.FC = () => {
                               {change.type}
                             </Badge>
                           </div>
-                          {change.conflicts.length > 0 && (
+                          {(change.conflicts ?? []).length > 0 && (
                             <div className="flex items-center gap-1.5 text-xs text-ois-warning font-semibold mt-1">
                               <AlertTriangle size={12} />
-                              {change.conflicts.length} conflict{change.conflicts.length > 1 ? 's' : ''} detected
+                              {(change.conflicts ?? []).length} conflict{(change.conflicts ?? []).length > 1 ? 's' : ''} detected
                             </div>
                           )}
                         </div>

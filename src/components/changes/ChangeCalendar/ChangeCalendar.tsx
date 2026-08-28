@@ -84,7 +84,7 @@ export const ChangeCalendar: React.FC<ChangeCalendarProps> = ({ changes }) => {
         {days.map((day) => {
           const key = format(day, 'yyyy-MM-dd');
           const dayChanges = changesByDay[key] ?? [];
-          const hasConflict = dayChanges.some((c) => c.conflicts.length > 0);
+          const hasConflict = dayChanges.some((c) => (c.conflicts ?? []).length > 0);
           return (
             <CalendarCell
               key={key}
