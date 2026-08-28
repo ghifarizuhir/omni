@@ -12,7 +12,7 @@ import { Button } from '@/src/components/ui/Button';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { formatDate, formatRelative } from '@/src/lib/format';
-import { Can, problemResource } from '@/src/lib/rbac';
+import { Can, problemResource, useCurrentUser } from '@/src/lib/rbac';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -361,6 +361,7 @@ export const RCAWorkspace: React.FC = () => {
   );
   const { data: usersData } = useResource(() => usersService.list(), []);
   const users = usersData ?? [];
+  const { user: currentUser } = useCurrentUser();
 
   const DEFAULT_RCA: RCAAnalysis = {
     id: `rca-new-${Date.now()}`,
@@ -371,8 +372,8 @@ export const RCAWorkspace: React.FC = () => {
     rootCauses: [''],
     contributingFactors: [''],
     recommendedActions: [],
-    authorId: 'u-001',
-    authorName: 'Sarah Chen',
+    authorId: currentUser?.id ?? 'u-001',
+    authorName: currentUser?.name ?? 'Unknown',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

@@ -351,6 +351,38 @@ const CloseProblemModal: React.FC<{
 // ── History tab ───────────────────────────────────────────────────────────────
 
 const HistoryTab: React.FC<{ problem: Problem }> = ({ problem }) => {
+  const { data: timeline } = useResource(
+    () => problemsService.timeline(problem.publicId).catch(() => [] as unknown as never[]),
+    [problem.publicId],
+  );
+  const hasTimeline = timeline && timeline.length > 0;
+  if (hasTimeline) {
+    return (
+      <div className="space-y-0">
+        {timeline.map((ev: { id: string; kind: string; timestamp: string; actorId: string }, idx: number) => {
+          const isLast = idx === timeline.length - 1;
+          const label = ev.kind.replace(/_/g, ' ');
+          return (
+            <div key={ev.id} className="flex gap-3">
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-7 h-7 rounded-full border-2 bg-white flex items-center justify-center shrink-0" style={{ borderColor: '#6941C6' }}>
+                  <RefreshCw size={13} style={{ color: '#6941C6' }} />
+                </div>
+                {!isLast && <div className="w-px flex-1 bg-ois-border mt-1" />}
+              </div>
+              <div className={cn('pb-5 flex-1 min-w-0', isLast && 'pb-0')}>
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-medium text-ois-text capitalize">{label}</span>
+                  <span className="text-xs text-ois-text-subtle shrink-0">{formatRelative(ev.timestamp)}</span>
+                </div>
+                <p className="text-xs text-ois-text-muted mt-0.5">{formatDate(ev.timestamp)} · {ev.actorId}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
   const events = [
     { ts: problem.createdAt, label: 'Problem created', icon: Plus, color: '#475467' },
     ...(problem.rca ? [{ ts: problem.rca.createdAt, label: `RCA started (${problem.rca.technique.replace('_', ' ')})`, icon: Activity, color: '#0BA5EC' }] : []),
@@ -469,6 +501,10 @@ export const ProblemDetail: React.FC = () => {
   const [linkChangeOpen, setLinkChangeOpen] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState('');
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [promoteSaving, setPromoteSaving] = useState(false);
+  const [promoteError, setPromoteError] = useState<string | null>(null);
 
   if (problemLoading && !problem) {
     return <div className="flex items-center justify-center py-24 text-sm text-ois-text-muted">Loading…</div>;
@@ -490,16 +526,39 @@ export const ProblemDetail: React.FC = () => {
   );
 
   type PromoteData = { rootCause: string; workaround: string; effectiveness: 'full' | 'partial' | 'none'; affectedVersions?: string; permanentFixPlan?: string };
-  const handlePromote = (data: PromoteData) => {
-    setProblem(prev => prev ? {
-      ...prev,
-      status: 'known_error',
-      knownError: { publishedAt: new Date().toISOString(), publishedBy: 'u-001', ...data },
-    } : prev);
+  const handlePromote = async (data: PromoteData) => {
+    if (!problem) return;
+    setPromoteSaving(true);
+    setPromoteError(null);
+    try {
+      const updated = await problemsService.promoteKnownError(problem.publicId, {
+        rootCause: data.rootCause,
+        workaround: data.workaround,
+        workaroundEffectiveness: data.effectiveness,
+        affectedVersions: data.affectedVersions ? [data.affectedVersions] : [],
+        permanentFixPlan: data.permanentFixPlan,
+      });
+      setProblem(updated);
+      setPromoteOpen(false);
+    } catch (e) {
+      setPromoteError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPromoteSaving(false);
+    }
   };
 
-  const handleStatusChange = (newStatus: ProblemStatus) => {
-    setProblem(prev => prev ? { ...prev, status: newStatus } : prev);
+  const handleStatusChange = async (newStatus: ProblemStatus) => {
+    if (!problem) return;
+    setSavingStatus(true);
+    setStatusError(null);
+    try {
+      const updated = await problemsService.setStatus(problem.publicId, newStatus);
+      setProblem(updated);
+    } catch (e) {
+      setStatusError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingStatus(false);
+    }
   };
 
   const stripeColor = PRIORITY_STRIPE[problem.severity] ?? '#475467';
@@ -539,6 +598,7 @@ export const ProblemDetail: React.FC = () => {
             Problems
           </button>
           <div className="flex items-center gap-2">
+            {savingStatus && <span className="text-xs text-ois-text-subtle">Saving…</span>}
             <Can
               module="problem" action="update"
               resource={problemResource(problem)}
@@ -548,7 +608,9 @@ export const ProblemDetail: React.FC = () => {
                 </span>
               }
             >
-              <StatusDropdown status={problem.status} onChange={handleStatusChange} />
+              <div className={savingStatus ? 'opacity-50 pointer-events-none' : ''}>
+                <StatusDropdown status={problem.status} onChange={handleStatusChange} />
+              </div>
             </Can>
             <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-ois-border bg-white text-sm text-ois-text-muted hover:bg-ois-surface-muted transition-colors">
               <MoreVertical size={16} />
@@ -581,6 +643,22 @@ export const ProblemDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {statusError && (
+        <div className="px-6 py-2 bg-ois-danger-pale border-b border-ois-danger/20 flex items-center gap-2 text-xs text-ois-danger">
+          <span className="flex-1">{statusError}</span>
+          <button onClick={() => setStatusError(null)} className="underline">Dismiss</button>
+        </div>
+      )}
+      {promoteError && (
+        <div className="px-6 py-2 bg-ois-danger-pale border-b border-ois-danger/20 flex items-center gap-2 text-xs text-ois-danger">
+          <span className="flex-1">{promoteError}</span>
+          <button onClick={() => setPromoteError(null)} className="underline">Dismiss</button>
+        </div>
+      )}
+      {promoteSaving && (
+        <div className="px-6 py-1 bg-ois-info-pale border-b border-ois-info/20 text-xs text-ois-info">Publishing Known Error…</div>
+      )}
 
       {/* Body — three independent scroll columns */}
       <div className="flex flex-1 min-h-0">

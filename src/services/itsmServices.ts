@@ -8,12 +8,25 @@ import type { RescheduleChangeInput, CastVoteInput } from '../shared/schemas/cha
 import type {
   CancelRequestInput, ReassignRequestStepInput, AddRequestWatcherInput, CreateRequestInput,
 } from '../shared/schemas/request';
-import type { CreateProblemInput } from '../shared/schemas/problem';
+import type {
+  CreateProblemInput,
+  UpdateProblemStatusInput,
+  PromoteKnownErrorInput,
+} from '../shared/schemas/problem';
+import type { ProblemStatus } from '../types/problem';
 
 export const problemsService = {
   list: () => apiFetch<Problem[]>('/problems'),
   get: (publicId: string) => apiFetch<Problem>(`/problems/${publicId}`),
   create: (input: CreateProblemInput) => apiFetch<Problem>('/problems', { method: 'POST', body: input }),
+  setStatus: (publicId: string, status: ProblemStatus) =>
+    apiFetch<Problem>(`/problems/${publicId}/status`, { method: 'PATCH', body: { status } as UpdateProblemStatusInput }),
+  promoteKnownError: (publicId: string, input: PromoteKnownErrorInput) =>
+    apiFetch<Problem>(`/problems/${publicId}/known-error`, { method: 'POST', body: input }),
+  timeline: (publicId: string) =>
+    apiFetch<Array<{ id: string; kind: string; timestamp: string; actorId: string; details: unknown }>>(
+      `/problems/${publicId}/timeline`,
+    ),
 };
 
 export interface CreateChangeInput {

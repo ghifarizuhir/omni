@@ -14,7 +14,7 @@ interface Props {
     effectiveness: 'full' | 'partial' | 'none';
     affectedVersions?: string;
     permanentFixPlan?: string;
-  }) => void;
+  }) => void | Promise<void>;
 }
 
 const inputClass =
@@ -35,17 +35,16 @@ export const PromoteToKnownErrorModal: React.FC<Props> = ({ problem, isOpen, onC
     return e;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    onPromote({
+    await onPromote({
       rootCause: rootCause.trim(),
       workaround: workaround.trim(),
       effectiveness,
       affectedVersions: affectedVersions.trim() || undefined,
       permanentFixPlan: permanentFixPlan.trim() || undefined,
     });
-    onClose();
   };
 
   return (
