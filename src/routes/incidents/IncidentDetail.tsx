@@ -232,6 +232,7 @@ export const IncidentDetail: React.FC = () => {
   const [linkProblemOpen, setLinkProblemOpen] = useState(false);
   const [linkChangeOpen, setLinkChangeOpen] = useState(false);
   const [addWatcherOpen, setAddWatcherOpen] = useState(false);
+  const [assignIncidentOpen, setAssignIncidentOpen] = useState(false);
 
   const [comments, setComments] = useState<IncidentComment[]>([]);
   React.useEffect(() => { if (commentsData) setComments(commentsData); }, [commentsData]);
@@ -441,6 +442,37 @@ export const IncidentDetail: React.FC = () => {
     }
   };
 
+  const handleAssignIncident = async (userId: string) => {
+    if (!inc) return;
+    const picked = mockUsers.find(u => u.id === userId);
+    const prev = inc;
+    setInc(curr => curr ? { ...curr, assigneeId: userId, assigneeName: picked?.name } : curr);
+    try {
+      await incidentsService.assign(prev.publicId, { assigneeId: userId, assigneeName: picked?.name });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to assign incident:', err);
+      setInc(prev);
+    } finally {
+      refreshIncident();
+    }
+  };
+
+  const handleUnassignIncident = async () => {
+    if (!inc) return;
+    const prev = inc;
+    setInc(curr => curr ? { ...curr, assigneeId: undefined, assigneeName: undefined } : curr);
+    try {
+      await incidentsService.assign(prev.publicId, { assigneeId: null });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to unassign incident:', err);
+      setInc(prev);
+    } finally {
+      refreshIncident();
+    }
+  };
+
   // ── Loading / Not found ──────────────────────────────────────────────────────
   if (incidentLoading) {
     return <div className="p-8 text-sm text-ois-text-subtle">Loading incident…</div>;
@@ -524,6 +556,22 @@ export const IncidentDetail: React.FC = () => {
                   }
                 >
                   <StatusDropdown status={status} onChange={handleStatusChange} />
+                </Can>
+                <Can module="incident" action="assign" resource={inc ? incidentResource(inc) : undefined} fallback={null}>
+                  <div className="flex items-center gap-1.5">
+                    <Button variant="outline" size="sm" onClick={() => setAssignIncidentOpen(true)}>
+                      {assignee ? assignee.name : 'Assign…'}
+                    </Button>
+                    {assignee && (
+                      <button
+                        onClick={() => void handleUnassignIncident()}
+                        className="text-xs text-ois-text-subtle hover:text-ois-danger"
+                        title="Unassign"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </Can>
                 <div className="relative">
                   <button
@@ -974,6 +1022,7 @@ export const IncidentDetail: React.FC = () => {
       <LinkProblemModal isOpen={linkProblemOpen} onClose={() => setLinkProblemOpen(false)} currentProblemId={inc?.linkedProblemId} onLink={(id, publicId) => handleSetLinks({ linkedProblemId: id, linkedProblemPublicId: publicId })} />
       <LinkChangeModal isOpen={linkChangeOpen} onClose={() => setLinkChangeOpen(false)} currentChangeIds={inc?.linkedChangeIds ?? []} onLink={newIds => handleSetLinks({ linkedChangeIds: [...(inc.linkedChangeIds ?? []), ...newIds] })} />
       <UserPickerModal isOpen={addWatcherOpen} onClose={() => setAddWatcherOpen(false)} title="Add Watcher" excludeIds={watchers.map(w => w.id)} onSelect={userId => handleAddWatcher(userId)} />
+      <UserPickerModal isOpen={assignIncidentOpen} onClose={() => setAssignIncidentOpen(false)} title="Assign incident" onSelect={userId => void handleAssignIncident(userId)} />
       {/* keep promoteMajor reachable for major-incident flows */}
       {!inc.isMajor && (
         <button
