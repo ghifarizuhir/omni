@@ -4,7 +4,7 @@ import { ArrowLeft, MoreVertical, ArrowRight } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { formatDate } from '@/src/lib/format';
 import { improvementsService, useResource } from '@/src/services';
-import { Can, improvementResource } from '@/src/lib/rbac';
+import { Can, useCurrentUser, improvementResource } from '@/src/lib/rbac';
 import {
   improvementStatusMeta,
   improvementCategoryMeta,
@@ -49,6 +49,7 @@ const SectionCard: React.FC<{ title?: string; children: React.ReactNode; classNa
 export const ImprovementDetail: React.FC = () => {
   const { initiativeId } = useParams<{ initiativeId: string }>();
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState('overview');
   const { data: loadedInitiative } = useResource(
     () => initiativeId ? improvementsService.getByAnyId(initiativeId) : Promise.resolve(undefined),
@@ -83,8 +84,8 @@ export const ImprovementDetail: React.FC = () => {
     const newUpdate: ImprovementUpdate = {
       id: `upd-local-${Date.now()}`,
       initiativeId: initiative.id,
-      authorId: 'u-001',
-      authorName: 'Sarah Chen',
+      authorId: user?.id ?? 'u-001',
+      authorName: user?.name ?? 'Unknown',
       timestamp: new Date().toISOString(),
       type: 'progress_update',
       body,

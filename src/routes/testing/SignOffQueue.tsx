@@ -8,9 +8,9 @@ import { SignOffRejectModal } from '../../components/testing/SignOffRejectModal'
 import { Button } from '../../components/ui/Button';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import { cn } from '../../lib/utils';
-import { useCan } from '@/src/lib/rbac';
+import { useCan, useCurrentUser } from '@/src/lib/rbac';
 
-const CURRENT_USER_ID = 'u-001';
+const CURRENT_USER_FALLBACK = 'u-001';
 
 type SlaFilter = 'all' | 'today' | 'week' | 'breached';
 
@@ -35,6 +35,8 @@ const isToday = (dueAt: string) => {
 };
 
 export const SignOffQueue: React.FC = () => {
+  const { user } = useCurrentUser();
+  const currentUserId = user?.id ?? CURRENT_USER_FALLBACK;
   const { data: signOffsData } = useResource(() => testingService.signOffs(), []);
   const mockSignOffs = useMemo(() => signOffsData ?? [], [signOffsData]);
 
@@ -51,7 +53,7 @@ export const SignOffQueue: React.FC = () => {
 
   // Quick filter counts
   const myPendingCount = mockSignOffs.filter(
-    s => s.approverId === CURRENT_USER_ID && s.status === 'pending'
+    s => s.approverId === currentUserId && s.status === 'pending'
   ).length;
   const slaAtRiskCount = mockSignOffs.filter(
     s => s.status === 'pending' && isWithin24h(s.dueAt)
@@ -73,7 +75,7 @@ export const SignOffQueue: React.FC = () => {
     // Quick filter takes precedence over individual filters
     if (quickFilter === 'myPending') {
       results = results.filter(
-        s => s.approverId === CURRENT_USER_ID && s.status === 'pending'
+        s => s.approverId === currentUserId && s.status === 'pending'
       );
     } else if (quickFilter === 'slaAtRisk') {
       results = results.filter(
@@ -270,7 +272,7 @@ export const SignOffQueue: React.FC = () => {
             <SignOffCard
               key={signOff.id}
               signOff={signOff}
-              currentUserId={canApprove ? CURRENT_USER_ID : '__no_user__'}
+              currentUserId={canApprove ? currentUserId : '__no_user__'}
               onApprove={() => handleApprove(signOff)}
               onReject={() => handleReject(signOff)}
             />

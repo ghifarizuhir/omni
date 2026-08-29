@@ -35,8 +35,6 @@ const CATEGORY_LABELS: Record<CatalogCategory, string> = {
   communication: 'Communication', personnel: 'Personnel', general: 'General',
 };
 
-const NOW = Date.now();
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getActiveStep(req: ServiceRequest): WorkflowStepInstance | null {
@@ -48,9 +46,9 @@ function getAssigneeName(step: WorkflowStepInstance | null): string {
   return step.assigneeName ?? (step.type === 'automated' ? 'Auto' : '—');
 }
 
-function slaRemaining(step: WorkflowStepInstance | null): { label: string; color: string; dot: string } | null {
+function slaRemaining(step: WorkflowStepInstance | null, now: number): { label: string; color: string; dot: string } | null {
   if (!step || !step.startedAt) return null;
-  const elapsed = (NOW - new Date(step.startedAt).getTime()) / 3_600_000; // hours
+  const elapsed = (now - new Date(step.startedAt).getTime()) / 3_600_000; // hours
   const remaining = step.slaHours - elapsed;
 
   if (step.slaStatus === 'breached' || remaining <= 0) {
@@ -81,9 +79,9 @@ function isMyTeam(_req: ServiceRequest, _users: { id: string; team?: string }[])
   return false;
 }
 
-function isLast24h(req: ServiceRequest): boolean {
+function isLast24h(req: ServiceRequest, now: number): boolean {
   if (!req.submittedAt) return false;
-  return NOW - new Date(req.submittedAt).getTime() < 86_400_000;
+  return now - new Date(req.submittedAt).getTime() < 86_400_000;
 }
 
 type QuickFilter = 'my_approval' | 'sla_risk' | 'my_team' | 'last_24h' | null;
@@ -93,12 +91,13 @@ function applyQuick(
   qf: QuickFilter,
   users: { id: string; team?: string }[],
   userId: string | undefined,
+  now: number,
 ): ServiceRequest[] {
   if (!qf) return reqs;
   if (qf === 'my_approval') return reqs.filter(r => isMyApproval(r, userId));
   if (qf === 'sla_risk')    return reqs.filter(r => r.slaBreached || r.workflow.steps.some(s => s.slaStatus === 'warning' || s.slaStatus === 'breached'));
   if (qf === 'my_team')     return reqs.filter(r => isMyTeam(r, users));
-  if (qf === 'last_24h')    return reqs.filter(isLast24h);
+  if (qf === 'last_24h')    return reqs.filter(r => isLast24h(r, now));
   return reqs;
 }
 
@@ -208,6 +207,13 @@ export const RequestQueue: React.FC = () => {
   const [slaFlt,     setSlaFlt]     = useState('');
   const [quickFlt,   setQuickFlt]   = useState<QuickFilter>(null);
 
+  // live clock for SLA calculations (updates every 60s)
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const session = useAuthSession();
   const userId = session?.user.id;
   const { user, applications, teams, departments } = useCurrentUser();
@@ -232,14 +238,14 @@ export const RequestQueue: React.FC = () => {
     myApproval: all.filter(r => isMyApproval(r, userId)).length,
     slaRisk:    all.filter(r => r.slaBreached || r.workflow.steps.some(s => s.slaStatus === 'warning' || s.slaStatus === 'breached')).length,
     myTeam:     all.filter(r => isMyTeam(r, mockUsers)).length,
-    last24h:    all.filter(isLast24h).length,
+    last24h:    all.filter(r => isLast24h(r, now)).length,
     active:     all.filter(r => ['submitted', 'approved', 'in_fulfillment', 'pending_user'].includes(r.status)).length,
     breached:   all.filter(r => r.slaBreached).length,
-  }), [all, mockUsers, userId]);
+  }), [all, mockUsers, userId, now]);
 
   // ── Filtered + sorted results ──────────────────────────────────────────────
   const results = useMemo(() => {
-    let r = applyQuick(all, quickFlt, mockUsers, userId);
+    let r = applyQuick(all, quickFlt, mockUsers, userId, now);
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -272,7 +278,7 @@ export const RequestQueue: React.FC = () => {
       if (aApproval !== bApproval) return aApproval - bApproval;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [all, mockUsers, userId, search, statusFlt, catFlt, stepFlt, slaFlt, quickFlt]);
+  }, [all, mockUsers, userId, now, search, statusFlt, catFlt, stepFlt, slaFlt, quickFlt]);
 
   const hasFilters = !!(search || statusFlt || catFlt || stepFlt || slaFlt || quickFlt);
 
@@ -472,7 +478,7 @@ export const RequestQueue: React.FC = () => {
               {results.map(req => {
                 const activeStep  = getActiveStep(req);
                 const assigneeName = getAssigneeName(activeStep);
-                const sla         = slaRemaining(activeStep);
+                const sla         = slaRemaining(activeStep, now);
                 const myApproval  = isMyApproval(req, userId);
 
                 return (

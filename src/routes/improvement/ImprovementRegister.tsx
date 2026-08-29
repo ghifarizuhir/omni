@@ -18,7 +18,7 @@ import { Button } from '@/src/components/ui/Button';
 import { Can, useCurrentUser, filterReadable, improvementResource } from '@/src/lib/rbac';
 import type { ImprovementInitiative } from '@/src/types/improvement';
 
-const LOGGED_IN_USER = 'u-001';
+const LOGGED_IN_USER_FALLBACK = 'u-001';
 
 const ALL_STATUSES: ImprovementStatus[] = [
   'identified', 'evaluating', 'approved', 'in_progress', 'validating', 'completed', 'on_hold', 'cancelled',
@@ -69,7 +69,7 @@ export const ImprovementRegister: React.FC = () => {
   const overdueCount = visibleImprovements.filter(i =>
     i.targetCompletionDate && i.targetCompletionDate < TODAY && !['completed', 'cancelled'].includes(i.status)
   ).length;
-  const myInitiativesCount = visibleImprovements.filter(i => i.ownerId === LOGGED_IN_USER).length;
+  const myInitiativesCount = visibleImprovements.filter(i => i.ownerId === (user?.id ?? LOGGED_IN_USER_FALLBACK)).length;
   const highROICount = visibleImprovements.filter(i => i.estimatedROIPercent > 1000).length;
 
   // Owner options
@@ -95,7 +95,7 @@ export const ImprovementRegister: React.FC = () => {
         i.targetCompletionDate && i.targetCompletionDate < TODAY && !['completed', 'cancelled'].includes(i.status)
       );
     } else if (quickFilter === 'my') {
-      result = result.filter(i => i.ownerId === LOGGED_IN_USER);
+      result = result.filter(i => i.ownerId === (user?.id ?? LOGGED_IN_USER_FALLBACK));
     } else if (quickFilter === 'high-roi') {
       result = result.filter(i => i.estimatedROIPercent > 1000);
     }
@@ -129,7 +129,7 @@ export const ImprovementRegister: React.FC = () => {
     });
 
     return result;
-  }, [search, statusFilter, categoryFilter, priorityFilter, ownerFilter, quickFilter, activeStatusTab]);
+  }, [user, search, statusFilter, categoryFilter, priorityFilter, ownerFilter, quickFilter, activeStatusTab]);
 
   const handleReset = () => {
     setSearch('');

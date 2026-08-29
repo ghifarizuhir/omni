@@ -27,6 +27,7 @@ import {
   useResource,
 } from '../../services';
 import { cn } from '../../lib/utils';
+import { useCurrentUser } from '@/src/lib/rbac';
 import { EventStatus } from '../../types/monitoring';
 import { CreateIncidentModal } from '../../components/incidents/CreateIncidentModal';
 
@@ -67,6 +68,7 @@ const ResolveEventModal: React.FC<ResolveEventModalProps> = ({
 export const EventDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
 
   // Load data from service layer
   const { data: allEvents, loading: eventsLoading, refresh: refreshEvents } = useResource(() => eventsService.list(), []);
@@ -223,7 +225,7 @@ export const EventDetail: React.FC = () => {
     setComments([
       {
         id: Math.random().toString(36).substr(2, 9),
-        user: 'Sarah Chen',
+        user: user?.name ?? 'Unknown',
         text: newComment,
         date: new Date().toISOString()
       },
