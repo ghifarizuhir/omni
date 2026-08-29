@@ -329,3 +329,17 @@ describe('DELETE /api/v1/incidents/:incidentId/watchers/:userId — watcher not 
     expect(res.body).toMatchObject({ message: 'Watcher not found' });
   });
 });
+
+// ── description update ─────────────────────────────────────────────────────
+describe('PATCH /api/v1/incidents/:publicId — description', () => {
+  it('persists a description update', async () => {
+    const { publicId } = await cloneIncident('desc-' + rand());
+    const res = await auth(request(app).patch(`/api/v1/incidents/${publicId}`).send({
+      description: 'persisted description body',
+    }));
+    expect(res.status).toBe(200);
+    expect(res.body.description).toBe('persisted description body');
+    const read = await auth(request(app).get(`/api/v1/incidents/${publicId}`));
+    expect(read.body.description).toBe('persisted description body');
+  });
+});

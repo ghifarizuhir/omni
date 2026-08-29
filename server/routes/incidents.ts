@@ -221,6 +221,7 @@ incidentsRouter.patch(
       actorId: req.session.userId,
       priority: body.priority,
       tags: body.tags,
+      description: body.description,
     });
     if (!wrapped) throw new HttpError(404, 'Incident not found');
     await audit(req, {

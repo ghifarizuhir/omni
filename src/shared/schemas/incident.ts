@@ -88,10 +88,11 @@ export const updateIncidentSchema = z
   .object({
     priority: z.enum(['P1', 'P2', 'P3', 'P4']).optional(),
     tags: z.array(z.string().min(1).max(50)).max(20).optional(),
+    description: z.string().max(5000).optional(),
   })
   .strict()
-  .refine(o => o.priority !== undefined || o.tags !== undefined, {
-    message: 'At least one of priority or tags is required',
+  .refine(o => o.priority !== undefined || o.tags !== undefined || o.description !== undefined, {
+    message: 'At least one of priority, tags, or description is required',
   });
 
 export type UpdateIncidentInput = z.infer<typeof updateIncidentSchema>;

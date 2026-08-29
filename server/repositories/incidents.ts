@@ -54,6 +54,7 @@ export interface UpdateRepoInput {
   actorId: string;
   priority?: 'P1' | 'P2' | 'P3' | 'P4';
   tags?: string[];
+  description?: string;
 }
 
 export interface StandDownRepoInput {
@@ -552,6 +553,7 @@ export const incidentsRepo = {
       ...before,
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
       ...(input.tags !== undefined ? { tags: input.tags } : {}),
+      ...(input.description !== undefined ? { description: input.description } : {}),
     };
     const priorityChanged = input.priority !== undefined && before.priority !== input.priority;
     const timelineId = priorityChanged ? randomUUID() : undefined;
