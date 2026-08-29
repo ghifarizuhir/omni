@@ -62,4 +62,15 @@ describe('POST /incidents', () => {
     const res = await request(app).post('/api/v1/incidents').send({ title: 'noauth', priority: 'P1' });
     expect(res.status).toBe(401);
   });
+
+  it('honors the reporter channel on create', async () => {
+    const res = await request(app)
+      .post('/api/v1/incidents')
+      .set('Cookie', cookie)
+      .send({ title: 'channel test', channel: 'email' });
+    expect(res.status).toBe(201);
+    expect(res.body.reporterChannel).toBe('email');
+    createdPublicId = res.body.publicId;
+    createdId = res.body.id;
+  });
 });

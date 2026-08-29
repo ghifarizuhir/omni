@@ -354,6 +354,7 @@ incidentsRouter.post(
         affectedCIIds: body.affectedCIIds,
         tags: body.tags,
         applicationId: body.applicationId ?? null,
+        channel: body.channel,
       },
       actor,
     );

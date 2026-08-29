@@ -655,7 +655,7 @@ export const incidentsRepo = {
 
   async create(
     tenantId: string,
-    input: { title: string; priority?: string; description?: string; applicationId?: string | null; assigneeId?: string | null; affectedCIIds?: string[]; tags?: string[] },
+    input: { title: string; priority?: string; description?: string; applicationId?: string | null; assigneeId?: string | null; affectedCIIds?: string[]; tags?: string[]; channel?: Incident['reporterChannel'] },
     actor: { id: string; name: string },
   ) {
     // Ensure FK target exists for isolated test tenants (plan's tenant-test- randomUUID)
@@ -684,7 +684,7 @@ export const incidentsRepo = {
       affectedCIPublicIds: [],
       affectedServiceIds: [],
       reporterId: actor.id,
-      reporterChannel: 'user_report',
+      reporterChannel: (input.channel ?? 'user_report') as Incident['reporterChannel'],
       slaResponseTarget: 60,
       slaResolveTarget: 240,
       slaResponseStatus: 'healthy',
