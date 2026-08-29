@@ -347,7 +347,7 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
 
   function incidentCanWrite(appId: string | null, opts: { allowNoc?: boolean } = { allowNoc: true }): boolean {
     if (isPlatformAdmin) return true;
-    if (appId === unassignedAppId) return true;
+    if (appId === unassignedAppId && opts.allowNoc) return true;
     if (opts.allowNoc && POLICY.incident.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
     if (appId === null) return false;
     return writableApps.has(appId);

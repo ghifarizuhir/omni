@@ -186,4 +186,14 @@ describe('Incidents scope — unassigned staging pool', () => {
       .send({ status: 'triaging' });
     expect(res.status).toBe(200);
   });
+
+  it('NOC cannot resolve an unassigned incident (allowNoc guard respected)', async () => {
+    const cookie = await loginAs('noc');
+    const res = await request(app)
+      .post(`/api/v1/incidents/${unassignedPublicId}/resolve`)
+      .set('Cookie', cookie)
+      .send({ summary: 'attempted resolve by NOC', rootCause: 'n/a' });
+    expect(res.status).toBe(403);
+    expect(res.body).toMatchObject({ error: 'scope_violation', module: 'incident', action: 'update' });
+  });
 });
