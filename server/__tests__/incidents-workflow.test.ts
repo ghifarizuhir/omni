@@ -330,6 +330,17 @@ describe('DELETE /api/v1/incidents/:incidentId/watchers/:userId — watcher not 
   });
 });
 
+describe('GET /api/v1/incidents/:incidentId/comments — missing incident', () => {
+  it('returns 404 on comments for an unknown incident id', async () => {
+    const res = await auth(request(app).get(`/api/v1/incidents/missing-${rand()}/comments`));
+    expect(res.status).toBe(404);
+  });
+  it('returns 404 on timeline for an unknown incident id', async () => {
+    const res = await auth(request(app).get(`/api/v1/incidents/missing-${rand()}/timeline`));
+    expect(res.status).toBe(404);
+  });
+});
+
 // ── description update ─────────────────────────────────────────────────────
 describe('PATCH /api/v1/incidents/:publicId — description', () => {
   it('persists a description update', async () => {

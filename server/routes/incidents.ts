@@ -46,12 +46,12 @@ incidentsRouter.get('/incidents/:publicId', requirePermission('incident.read'), 
 
 incidentsRouter.get('/incidents/:incidentId/comments', requirePermission('incident.read'), asyncHandler(async (req, res) => {
   const pagination = parsePagination(req.query as Record<string, unknown>);
-  res.json(await scoped(req).incidents.comments(req.params.incidentId, pagination));
+  res.json(required(await scoped(req).incidents.comments(req.params.incidentId, pagination), 'Incident'));
 }));
 
 incidentsRouter.get('/incidents/:incidentId/timeline', requirePermission('incident.read'), asyncHandler(async (req, res) => {
   const pagination = parsePagination(req.query as Record<string, unknown>);
-  res.json(await scoped(req).incidents.timeline(req.params.incidentId, pagination));
+  res.json(required(await scoped(req).incidents.timeline(req.params.incidentId, pagination), 'Incident'));
 }));
 
 // POST /incidents/:incidentId/comments — appends a comment and a

@@ -57,8 +57,8 @@ export interface IncidentsScope {
     pagination?: Parameters<typeof incidentsRepo.list>[2],
   ): Promise<Awaited<ReturnType<typeof incidentsRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof incidentsRepo.get>>>;
-  comments(incidentId: string, pagination?: Parameters<typeof incidentsRepo.comments>[2]): Promise<Awaited<ReturnType<typeof incidentsRepo.comments>>>;
-  timeline(incidentId: string, pagination?: Parameters<typeof incidentsRepo.timeline>[2]): Promise<Awaited<ReturnType<typeof incidentsRepo.timeline>>>;
+  comments(incidentId: string, pagination?: Parameters<typeof incidentsRepo.comments>[2]): Promise<Awaited<ReturnType<typeof incidentsRepo.comments>> | null>;
+  timeline(incidentId: string, pagination?: Parameters<typeof incidentsRepo.timeline>[2]): Promise<Awaited<ReturnType<typeof incidentsRepo.timeline>> | null>;
   addComment(
     incidentId: string,
     input: Parameters<typeof incidentsRepo.addComment>[2],
@@ -392,6 +392,7 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     },
     async comments(incidentId, pagination) {
       const appId = await loadIncidentAppIdById(incidentId);
+      if (appId === undefined) return null;
       if (appId != null && !isIncidentReadable(appId)) {
         throw new ScopeViolationError({ module: 'incident', action: 'read', applicationId: appId });
       }
@@ -399,6 +400,7 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     },
     async timeline(incidentId, pagination) {
       const appId = await loadIncidentAppIdById(incidentId);
+      if (appId === undefined) return null;
       if (appId != null && !isIncidentReadable(appId)) {
         throw new ScopeViolationError({ module: 'incident', action: 'read', applicationId: appId });
       }
