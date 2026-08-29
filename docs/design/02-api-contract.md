@@ -63,7 +63,7 @@ All tenant-scoped. Detail routes resolve `publicId → id` internally; write pat
 
 | Method | Path | Permission | Zod schema | Notes |
 |--------|------|------------|------------|-------|
-| GET | `/api/v1/cis` | `cmdb.read` | — | `req.scoped.cmdb.listCIs(pagination):15` |
+| GET | `/api/v1/cis` | `cmdb.read` | — | `req.scoped.cmdb.listCIs(pagination):15`; supports `?search&status&health&page&pageSize` |
 | GET | `/api/v1/cis/relationships` | `cmdb.read` | — | `listRelationships(pagination):20` |
 | GET | `/api/v1/cis/audit` | `cmdb.audit.read` | `qString(ciId):26` | `listAudit(ciId, pagination)` |
 | GET | `/api/v1/cis/:publicId` | `cmdb.read` | — | `getCI(publicId):30` → `required 404` |
@@ -123,7 +123,7 @@ All tenant-scoped. Detail routes resolve `publicId → id` internally; write pat
 
 | Method | Path | Permission | Zod schema | Notes |
 |--------|------|------------|------------|-------|
-| GET | `/api/v1/problems` | `problem.read` | — | `scoped.problems.list(pagination):32` |
+| GET | `/api/v1/problems` | `problem.read` | — | `scoped.problems.list(pagination):32`; supports `?status&search&page&pageSize` |
 | POST | `/api/v1/problems` | `problem.create` | `createProblemSchema src/shared/schemas/problem:1` | `req.scoped.problems.create:30` + `audit create` → `201` `PRB-YYYY-NNNNN` (Batch 1) |
 | PATCH | `/api/v1/problems/:publicId/status` | `problem.update` | `updateProblemStatusSchema src/shared/schemas/problem:30` | `req.scoped.problems.setStatus:38` + `audit status_change` (Batch 2) |
 | POST | `/api/v1/problems/:publicId/known-error` | `problem.update` | `promoteKnownErrorSchema src/shared/schemas/problem:30` | `req.scoped.problems.promoteKnownError:38` + `audit promote_known_error` → `201` `known_error` (Batch 2) |
@@ -162,11 +162,12 @@ All tenant-scoped. Detail routes resolve `publicId → id` internally; write pat
 | GET | `/api/v1/improvements/roi` | `improvement.read` | — | `listByKind('roi-calc'):380` |
 | GET | `/api/v1/improvements/:initiativeId/roi` | `improvement.read` | — | find by `initiativeId:383` |
 | GET | `/api/v1/improvements/:publicId` | `improvement.read` | — | `findByPublicId else findByKey:388` |
-| GET | `/api/v1/kb/articles` | `kb.read` | — | `kbRepo.list(tenantId,pagination):396` |
+| GET | `/api/v1/kb/articles` | `kb.read` | — | `kbRepo.list(tenantId,pagination):396`; supports `?q` server-side search |
 | GET | `/api/v1/kb/articles/:publicId` | `kb.read` | — | `kbRepo.get(tenantId,publicId):399` |
 | POST | `/api/v1/kb/articles` | `kb.write` | `createKBArticleSchema:15` | `kbRepo.create(tenantId,author,body):411` + audit `create:412`; `201` |
 | PATCH | `/api/v1/kb/articles/:publicId` | `kb.write` | `updateKBArticleSchema:15` | `kbRepo.update:418` |
 | PATCH | `/api/v1/kb/articles/:publicId/status` | `kb.write` | `setKBArticleStatusSchema:15` | `kbRepo.setStatus:430` → `400` same/terminal |
+| POST | `/api/v1/kb/articles/:publicId/feedback` | `kb.read` | `feedbackSchema {helpful:boolean}:402` | `kbRepo.upsertFeedback + auditLog:402`; `201` |
 
 ### availability + capacity — `server/routes/availability.ts:10`, `server/routes/capacity.ts:10` (Document-backed)
 

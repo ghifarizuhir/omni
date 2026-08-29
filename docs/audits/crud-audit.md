@@ -167,3 +167,4 @@ Inline inline patch proposals captured in `docs/features/problems.md` section 6 
 | Date | Change | Ref |
 |------|--------|-----|
 | 2026-08-28 | CRUD audit ITSM core 6 pages — consolidated matrix + file:line evidence + P0 fix table — following `docs/ui/audit/known-issues-sidebar/topbar` pattern | — |
+| 2026-08-28 | Batch 3 complete — server pagination pushdown (problems/cmdb/kb), Pager component wired into 4 list pages, hardcode sweep (u-001/Sarah Chen → useCurrentUser), detail pages use direct `get()` | — |
