@@ -18,7 +18,8 @@ import { HttpError } from '../util';
 export type ScopeMode = 'member' | 'noc' | 'owner' | 'admin';
 
 export interface CmdbScope {
-  listCIs(pagination?: { limit: number; offset: number }): Promise<Awaited<ReturnType<typeof cmdbRepo.listCIs>>>;
+  listCIs(where?: Record<string, unknown>, pagination?: { limit: number; offset: number }): Promise<Awaited<ReturnType<typeof cmdbRepo.listCIs>>>;
+  list(where?: Record<string, unknown>, pagination?: { limit: number; offset: number }): Promise<Awaited<ReturnType<typeof cmdbRepo.listCIs>>>;
   getCI(publicId: string): Promise<Awaited<ReturnType<typeof cmdbRepo.getCI>>>;
   listRelationships(pagination?: { limit: number; offset: number }): Promise<Awaited<ReturnType<typeof cmdbRepo.listRelationships>>>;
   listRelationshipsForCI(ciId: string, pagination?: { limit: number; offset: number }): Promise<Awaited<ReturnType<typeof cmdbRepo.listRelationshipsForCI>>>;
@@ -122,7 +123,10 @@ export interface MonitoringScope {
 }
 
 export interface ProblemsScope {
-  list(pagination?: Parameters<typeof problemsRepo.list>[1]): Promise<Awaited<ReturnType<typeof problemsRepo.list>>>;
+  list(
+    where?: Record<string, unknown>,
+    pagination?: { limit: number; offset: number },
+  ): Promise<Awaited<ReturnType<typeof problemsRepo.list>>>;
   get(publicId: string): Promise<Awaited<ReturnType<typeof problemsRepo.get>>>;
   create(input: CreateProblemInput, actor: { id: string; name: string }): Promise<{ result: Awaited<ReturnType<typeof problemsRepo.create>>; scopeMode: ScopeMode }>;
   setStatus(publicId: string, status: string): Promise<{ before: Problem; after: Problem; scopeMode: ScopeMode } | null>;
@@ -234,7 +238,22 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   }
 
   const cmdb: CmdbScope = {
-    listCIs: (pagination) => cmdbRepo.listCIs(ctx.tenantId, pagination),
+    listCIs: (whereOrPagination?: Record<string, unknown> | { limit: number; offset: number }, pagination?: { limit: number; offset: number }) => {
+      // Overload: listCIs(pagination) vs listCIs(where,pagination)
+      if (
+        whereOrPagination &&
+        (typeof (whereOrPagination as any).limit === 'number' || typeof (whereOrPagination as any).offset === 'number') &&
+        !('search' in (whereOrPagination as any)) &&
+        !('status' in (whereOrPagination as any)) &&
+        !('health' in (whereOrPagination as any)) &&
+        !pagination
+      ) {
+        return cmdbRepo.listCIs(ctx.tenantId, {}, whereOrPagination as { limit: number; offset: number });
+      }
+      const where = (whereOrPagination as Record<string, unknown>) ?? {};
+      return cmdbRepo.listCIs(ctx.tenantId, where, pagination);
+    },
+    list: (where?: Record<string, unknown>, pagination?: { limit: number; offset: number }) => cmdbRepo.listCIs(ctx.tenantId, where ?? {}, pagination),
     getCI: (publicId) => cmdbRepo.getCI(ctx.tenantId, publicId),
     listRelationships: (pagination) => cmdbRepo.listRelationships(ctx.tenantId, pagination),
     listRelationshipsForCI: (ciId, pagination) => cmdbRepo.listRelationshipsForCI(ctx.tenantId, ciId, pagination),
@@ -547,7 +566,20 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   }
 
   const problems: ProblemsScope = {
-    list: (pagination) => problemsRepo.list(ctx.tenantId, pagination),
+    list: (whereOrPagination?: Record<string, unknown> | { limit: number; offset: number }, pagination?: { limit: number; offset: number }) => {
+      // Overload: list(pagination) vs list(where,pagination)
+      if (
+        whereOrPagination &&
+        (typeof (whereOrPagination as any).limit === 'number' || typeof (whereOrPagination as any).offset === 'number') &&
+        !('status' in (whereOrPagination as any)) &&
+        !('search' in (whereOrPagination as any)) &&
+        !pagination
+      ) {
+        return problemsRepo.list(ctx.tenantId, {}, whereOrPagination as { limit: number; offset: number });
+      }
+      const where = (whereOrPagination as Record<string, unknown>) ?? {};
+      return problemsRepo.list(ctx.tenantId, where, pagination);
+    },
     get: (publicId) => problemsRepo.get(ctx.tenantId, publicId),
     async create(input, actor) {
       const appId = (input as any).applicationId ?? null;

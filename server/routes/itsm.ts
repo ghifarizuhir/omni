@@ -30,7 +30,11 @@ function scoped(req: Request) {
 
 itsmRouter.get('/problems', requirePermission('problem.read'), asyncHandler(async (req, res) => {
   const pagination = parsePagination(req.query as Record<string, unknown>);
-  res.json(await scoped(req).problems.list(pagination));
+  const where: Record<string, unknown> = {};
+  if (req.query.status) where.status = req.query.status;
+  if (req.query.search) where.search = req.query.search;
+  const data = await scoped(req).problems.list(where, pagination);
+  res.json(data);
 }));
 itsmRouter.get('/problems/:publicId', requirePermission('problem.read'), asyncHandler(async (req, res) => {
   res.json(required(await scoped(req).problems.get(req.params.publicId), 'Problem'));

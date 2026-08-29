@@ -89,8 +89,66 @@ export const servicesRepo = {
   get: (tenantId: string, id: string) => getDocById<Service>(prisma.service, tenantId, id),
 };
 
+const normalizeProblem = (raw: Problem): Problem => {
+  const fallbackAt = (raw as unknown as { createdAt?: string }).createdAt ?? new Date().toISOString();
+  return {
+    ...raw,
+    tags: (raw as unknown as { tags?: string[] }).tags ?? [],
+    affectedCIIds: (raw as unknown as { affectedCIIds?: string[] }).affectedCIIds ?? [],
+    affectedCIPublicIds: (raw as unknown as { affectedCIPublicIds?: string[] }).affectedCIPublicIds ?? [],
+    affectedServiceIds: (raw as unknown as { affectedServiceIds?: string[] }).affectedServiceIds ?? [],
+    relatedIncidentIds: (raw as unknown as { relatedIncidentIds?: string[] }).relatedIncidentIds ?? [],
+    relatedIncidentCount: (raw as unknown as { relatedIncidentCount?: number }).relatedIncidentCount ?? 0,
+    linkedChangeIds: (raw as unknown as { linkedChangeIds?: string[] }).linkedChangeIds ?? [],
+    linkedKBArticleIds: (raw as unknown as { linkedKBArticleIds?: string[] }).linkedKBArticleIds ?? [],
+    createdAt: (raw as unknown as { createdAt?: string }).createdAt ?? fallbackAt,
+    updatedAt: (raw as unknown as { updatedAt?: string }).updatedAt ?? (raw as unknown as { createdAt?: string }).createdAt ?? fallbackAt,
+    description: (raw as unknown as { description?: string }).description ?? '',
+    ownerTeamId: (raw as unknown as { ownerTeamId?: string }).ownerTeamId ?? 'team-current',
+  } as unknown as Problem;
+};
+
 export const problemsRepo = {
-  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<Problem>(prisma.problem, tenantId, {}, pagination),
+  list: async (
+    tenantId: string,
+    where: Record<string, unknown> = {},
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ): Promise<Problem[]> => {
+    // Backwards compat: list(tenantId, pagination) where first arg is {limit,offset}
+    if (
+      where &&
+      (typeof (where as any).limit === 'number' || typeof (where as any).offset === 'number') &&
+      !('status' in where) &&
+      !('search' in where) &&
+      pagination.limit === 50 &&
+      pagination.offset === 0
+    ) {
+      pagination = where as unknown as { limit: number; offset: number };
+      where = {};
+    }
+    const dbWhere: Record<string, unknown> = { tenantId };
+    if (where.status) dbWhere.status = where.status;
+    // If no search, we can paginate at DB level for efficiency
+    if (!where.search) {
+      const rows: Array<{ data: string }> = await prisma.problem.findMany({
+        where: dbWhere as any,
+        take: pagination.limit,
+        skip: pagination.offset,
+        orderBy: { createdAt: 'desc' },
+      });
+      const items = rows.map((r) => normalizeProblem(parse<Problem>(r.data, {} as Problem)));
+      return items;
+    }
+    // With search, fetch all matching status then filter + paginate in JS
+    const rows: Array<{ data: string }> = await prisma.problem.findMany({
+      where: dbWhere as any,
+      orderBy: { createdAt: 'desc' },
+    });
+    let items = rows.map((r) => normalizeProblem(parse<Problem>(r.data, {} as Problem)));
+    const q = String(where.search).toLowerCase();
+    items = items.filter((p) => p.title.toLowerCase().includes(q) || (p.description ?? '').toLowerCase().includes(q));
+    return items.slice(pagination.offset, pagination.offset + pagination.limit);
+  },
   get: (tenantId: string, publicId: string) => getDocByPublicId<Problem>(prisma.problem, tenantId, publicId),
 
   async create(

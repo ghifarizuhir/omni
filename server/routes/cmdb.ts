@@ -14,7 +14,12 @@ const scoped = (req: Request) => req.scoped;
 
 cmdbRouter.get('/cis', requirePermission('cmdb.read'), asyncHandler(async (req, res) => {
   const pagination = parsePagination(req.query as Record<string, unknown>);
-  res.json(await scoped(req).cmdb.listCIs(pagination));
+  const where: Record<string, unknown> = {};
+  if (req.query.search) where.search = req.query.search;
+  if (req.query.status) where.status = req.query.status;
+  if (req.query.health) where.health = req.query.health;
+  const data = await scoped(req).cmdb.list(where, pagination);
+  res.json(data);
 }));
 
 cmdbRouter.get('/cis/relationships', requirePermission('cmdb.read'), asyncHandler(async (req, res) => {

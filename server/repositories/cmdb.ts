@@ -69,9 +69,54 @@ const toAudit = (row: CIAuditRow): CIAuditEntry => ({
 });
 
 export const cmdbRepo = {
-  async listCIs(tenantId: string, pagination: { limit: number; offset: number } = { limit: 50, offset: 0 }) {
-    const rows = await prisma.configurationItem.findMany({ where: { tenantId }, orderBy: { updatedAt: 'desc' }, take: pagination.limit, skip: pagination.offset });
-    return rows.map(toCI);
+  async listCIs(
+    tenantId: string,
+    where: Record<string, unknown> = {},
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ): Promise<ConfigurationItem[]> {
+    // Backwards compat: listCIs(tenantId, pagination) with no where
+    if (
+      where &&
+      (typeof (where as any).limit === 'number' || typeof (where as any).offset === 'number') &&
+      !('search' in where) &&
+      !('status' in where) &&
+      !('health' in where) &&
+      pagination.limit === 50 &&
+      pagination.offset === 0
+    ) {
+      pagination = where as unknown as { limit: number; offset: number };
+      where = {};
+    }
+    const dbWhere: Record<string, unknown> = { tenantId };
+    if (where.status) dbWhere.status = where.status;
+    if (where.health) dbWhere.health = where.health;
+    const rows = await prisma.configurationItem.findMany({
+      where: dbWhere as any,
+      orderBy: { updatedAt: 'desc' },
+    });
+    let items = rows.map(toCI);
+    if (where.search) {
+      const q = String(where.search).toLowerCase();
+      items = items.filter(
+        (ci) =>
+          ci.name.toLowerCase().includes(q) ||
+          ci.publicId.toLowerCase().includes(q) ||
+          ci.type.toLowerCase().includes(q) ||
+          ci.status.toLowerCase().includes(q) ||
+          ci.health.toLowerCase().includes(q) ||
+          (ci.tags ?? []).some((t) => t.toLowerCase().includes(q)) ||
+          JSON.stringify(ci.attributes ?? {}).toLowerCase().includes(q),
+      );
+    }
+    return items.slice(pagination.offset, pagination.offset + pagination.limit);
+  },
+  // Alias for docs plan: `cmdbRepo.list` → `listCIs`
+  async list(
+    tenantId: string,
+    where: Record<string, unknown> = {},
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ): Promise<ConfigurationItem[]> {
+    return cmdbRepo.listCIs(tenantId, where, pagination);
   },
   async getCI(tenantId: string, publicId: string) {
     const row = await prisma.configurationItem.findFirst({ where: { tenantId, publicId } });
