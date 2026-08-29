@@ -453,6 +453,11 @@ model IncidentTimelineEvent {
   @@index([tenantId, incidentId])
 }
 
+model IncidentCounter {
+  year Int  @id
+  seq  Int  @default(0)
+}
+
 // ── M3 domains (document-style: publicId + tenantId + JSON snapshot) ─────────
 // Where the UI filters on a field (status/severity/etc.) we promote that
 // column out of the JSON for indexed access. Everything else stays in `data`.

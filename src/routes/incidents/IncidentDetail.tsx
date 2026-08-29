@@ -34,7 +34,7 @@ import { IncidentClock } from '@/src/components/incidents/IncidentClock';
 import { BlastRadiusBackdrop } from '@/src/components/incidents/BlastRadiusBackdrop';
 import { IncidentComposer } from '@/src/components/incidents/IncidentComposer';
 import { AboutRail } from '@/src/components/incidents/AboutRail';
-import { Can, incidentResource } from '@/src/lib/rbac';
+import { Can, incidentResource, useCurrentUser } from '@/src/lib/rbac';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -160,6 +160,8 @@ const CollapsibleSection: React.FC<{ title: string; defaultOpen?: boolean; child
 export const IncidentDetail: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
+
+  const { user } = useCurrentUser();
 
   const { data: incidentData, loading: incidentLoading, refresh: refreshIncident } = useResource(
     () => (incidentId ? incidentsService.get(incidentId) : Promise.resolve(null)),
@@ -296,11 +298,10 @@ export const IncidentDetail: React.FC = () => {
 
   const handleStatusChange = async (s: IncidentStatus) => {
     if (!inc) return;
-    if (s === 'resolved' && !resolvedData) {
+    if (s === 'resolved') {
       setResolveOpen(true);
       return;
     }
-    if (s === 'resolved') return;
     const prev = inc.status;
     setStatus(s);
     try {
@@ -332,6 +333,23 @@ export const IncidentDetail: React.FC = () => {
     }
   };
 
+  const handleSaveDescription = async () => {
+    if (!inc) return;
+    const prev = inc;
+    setInc(curr => curr ? { ...curr, description: descDraft } : curr);
+    setEditingDesc(false);
+    try {
+      await incidentsService.update(inc.publicId, { description: descDraft });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to persist description:', err);
+      setInc(prev); // restore the pre-edit snapshot on failure
+      setEditingDesc(true);
+    } finally {
+      refreshIncident();
+    }
+  };
+
   const handlePromoteMajor = async (commanderId: string) => {
     if (!inc) return;
     const prev = inc;
@@ -341,7 +359,7 @@ export const IncidentDetail: React.FC = () => {
       isMajor: true,
       incidentCommander: commanderId,
       majorDeclaredAt: new Date().toISOString(),
-      majorDeclaredBy: 'u-001',
+      majorDeclaredBy: user?.id ?? 'system',
     } : curr);
     try {
       await incidentsService.promoteMajor(prev.publicId, {
@@ -580,7 +598,7 @@ export const IncidentDetail: React.FC = () => {
                     className="w-full text-sm text-ois-text border border-ois-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ois-primary/20 focus:border-ois-primary resize-none"
                   />
                   <div className="flex gap-2 mt-2">
-                    <Button variant="primary" size="sm" onClick={() => { setInc(prev => prev ? { ...prev, description: descDraft } : prev); setEditingDesc(false); }}>Save</Button>
+                    <Button variant="primary" size="sm" onClick={() => void handleSaveDescription()}>Save</Button>
                     <Button variant="ghost" size="sm" onClick={() => setEditingDesc(false)}>Cancel</Button>
                   </div>
                 </>

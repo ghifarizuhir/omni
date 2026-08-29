@@ -1,6 +1,7 @@
 import type { Incident, IncidentComment, IncidentTimelineEvent } from '../../src/types';
 import { prisma } from '../db';
 import { randomUUID } from 'node:crypto';
+import { HttpError } from '../util';
 
 const parseObj = <T,>(s: string, fb: T): T => { try { return JSON.parse(s); } catch { return fb; } };
 
@@ -53,6 +54,7 @@ export interface UpdateRepoInput {
   actorId: string;
   priority?: 'P1' | 'P2' | 'P3' | 'P4';
   tags?: string[];
+  description?: string;
 }
 
 export interface StandDownRepoInput {
@@ -486,8 +488,8 @@ export const incidentsRepo = {
   },
 
   // Remove a watcher. Throws if the parent incident is missing; the route
-  // maps that to 404. Throws `WATCHER_NOT_FOUND` if the user isn't on the
-  // list (route maps to 404 as well, per task spec).
+  // maps that to 404. Throws `HttpError(404, 'Watcher not found')` if the
+  // user isn't on the list, which the global error handler returns as 404.
   async removeWatcher(tenantId: string, incidentId: string, userId: string, actorId: string): Promise<{
     before: Incident;
     after: Incident;
@@ -498,7 +500,7 @@ export const incidentsRepo = {
     const before = parseObj<Incident>(row.data, {} as Incident);
     const existing = before.watchers ?? [];
     if (!existing.some(w => w.userId === userId)) {
-      throw new Error('WATCHER_NOT_FOUND');
+      throw new HttpError(404, 'Watcher not found');
     }
     const after: Incident = {
       ...before,
@@ -551,6 +553,7 @@ export const incidentsRepo = {
       ...before,
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
       ...(input.tags !== undefined ? { tags: input.tags } : {}),
+      ...(input.description !== undefined ? { description: input.description } : {}),
     };
     const priorityChanged = input.priority !== undefined && before.priority !== input.priority;
     const timelineId = priorityChanged ? randomUUID() : undefined;
@@ -652,7 +655,7 @@ export const incidentsRepo = {
 
   async create(
     tenantId: string,
-    input: { title: string; priority?: string; description?: string; applicationId?: string | null; assigneeId?: string | null; affectedCIIds?: string[]; tags?: string[] },
+    input: { title: string; priority?: string; description?: string; applicationId?: string | null; assigneeId?: string | null; affectedCIIds?: string[]; tags?: string[]; channel?: Incident['reporterChannel'] },
     actor: { id: string; name: string },
   ) {
     // Ensure FK target exists for isolated test tenants (plan's tenant-test- randomUUID)
@@ -661,27 +664,26 @@ export const incidentsRepo = {
       update: {},
       create: { id: tenantId, slug: tenantId, name: `Test ${tenantId.slice(0, 20)}` },
     }).catch(() => undefined);
-    const count = await prisma.incident.count();
-    const seq = String(count + 1).padStart(5, '0');
-    const year = new Date().getFullYear();
-    const publicId = `INC-${year}-${seq}`;
-    const id = randomUUID();
+
     const now = new Date();
-    const incident: Incident = {
+    const year = now.getFullYear();
+    const id = randomUUID();
+    const priority = (input.priority ?? 'P3') as Incident['priority'];
+    const incident = {
       id,
-      publicId,
+      publicId: '',
       title: input.title,
       description: input.description ?? '',
       status: 'new',
-      priority: (input.priority ?? 'P3') as Incident['priority'],
-      severity: (input.priority ?? 'P3') as Incident['severity'],
+      priority,
+      severity: priority,
       isMajor: false,
       assigneeId: input.assigneeId ?? undefined,
       affectedCIIds: input.affectedCIIds ?? [],
       affectedCIPublicIds: [],
       affectedServiceIds: [],
       reporterId: actor.id,
-      reporterChannel: 'user_report',
+      reporterChannel: (input.channel ?? 'user_report') as Incident['reporterChannel'],
       slaResponseTarget: 60,
       slaResolveTarget: 240,
       slaResponseStatus: 'healthy',
@@ -690,33 +692,52 @@ export const incidentsRepo = {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
       tags: input.tags ?? [],
-    } as unknown as Incident;
-    // keep extras on snapshot for audit parity (not part of Incident type but useful)
-    (incident as unknown as Record<string, unknown>).tenantId = tenantId;
-    (incident as unknown as Record<string, unknown>).applicationId = input.applicationId ?? null;
+      tenantId,
+      applicationId: input.applicationId ?? null,
+    } as unknown as Incident & { tenantId: string; applicationId: string | null };
+
     const prismaApplicationId = input.applicationId ?? 'unassigned';
-    await prisma.incident.create({
-      data: {
-        id,
-        publicId,
-        tenantId,
-        status: 'new',
-        priority: incident.priority,
-        severity: incident.severity,
-        isMajor: false,
-        affectedCIIds: JSON.stringify(incident.affectedCIIds),
-        affectedCIPublicIds: JSON.stringify(incident.affectedCIPublicIds),
-        applicationId: prismaApplicationId,
-        data: JSON.stringify(incident),
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
     const eventId = randomUUID();
     const evt = { id: eventId, kind: 'created' as const, timestamp: now.toISOString(), actorId: actor.id, details: { title: input.title } };
-    await prisma.incidentTimelineEvent.create({
-      data: { id: eventId, tenantId, incidentId: id, kind: 'created', timestamp: now, data: JSON.stringify(evt) },
+
+    await prisma.$transaction(async (tx) => {
+      const counter = await tx.incidentCounter.upsert({
+        where: { year },
+        update: { seq: { increment: 1 } },
+        create: { year, seq: 1 },
+        select: { seq: true },
+      });
+      const seq = String(counter.seq).padStart(5, '0');
+      incident.publicId = `INC-${year}-${seq}`;
+      await tx.incident.create({
+        data: {
+          id,
+          publicId: incident.publicId,
+          tenantId,
+          status: 'new',
+          priority,
+          severity: priority,
+          isMajor: false,
+          affectedCIIds: JSON.stringify(incident.affectedCIIds),
+          affectedCIPublicIds: JSON.stringify(incident.affectedCIPublicIds),
+          applicationId: prismaApplicationId,
+          data: JSON.stringify(incident),
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+      await tx.incidentTimelineEvent.create({
+        data: {
+          id: eventId,
+          tenantId,
+          incidentId: id,
+          kind: 'created',
+          timestamp: now,
+          data: JSON.stringify(evt),
+        },
+      });
     });
+
     return incident as unknown as Incident & { applicationId: string | null; tenantId: string };
   },
 
