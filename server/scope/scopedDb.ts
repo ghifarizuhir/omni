@@ -347,6 +347,7 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
 
   function incidentCanWrite(appId: string | null, opts: { allowNoc?: boolean } = { allowNoc: true }): boolean {
     if (isPlatformAdmin) return true;
+    if (appId === unassignedAppId) return true;
     if (opts.allowNoc && POLICY.incident.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
     if (appId === null) return false;
     return writableApps.has(appId);
@@ -379,9 +380,8 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
     async list(filters, pagination) {
       const rows = await incidentsRepo.list(ctx.tenantId, filters, pagination);
       if (isIncidentReadBypass) return rows;
-      const readable = new Set([...writableApps, ...ownerApps]);
       return (rows as { applicationId?: string | null }[]).filter(
-        (i) => i.applicationId == null || readable.has(i.applicationId!),
+        (i) => i.applicationId == null || i.applicationId === unassignedAppId || readableApps.has(i.applicationId!),
       ) as typeof rows;
     },
     async get(publicId) {
