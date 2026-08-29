@@ -427,6 +427,20 @@ export const IncidentDetail: React.FC = () => {
     }
   };
 
+  const handleRemoveWatcher = async (userId: string) => {
+    if (!inc) return;
+    const snapshot = inc;
+    setInc(prev => prev ? { ...prev, watchers: (prev.watchers ?? []).filter(w => w.userId !== userId) } : prev);
+    try {
+      await incidentsService.removeWatcher(inc.id, userId);
+      await refreshIncident();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to remove watcher:', err);
+      setInc(snapshot);
+    }
+  };
+
   // ── Loading / Not found ──────────────────────────────────────────────────────
   if (incidentLoading) {
     return <div className="p-8 text-sm text-ois-text-subtle">Loading incident…</div>;
@@ -896,21 +910,34 @@ export const IncidentDetail: React.FC = () => {
               </CollapsibleSection>
             )}
 
-            {watchers.length > 0 && (
-              <CollapsibleSection title={`Watchers (${watchers.length})`}>
+            <CollapsibleSection title={`Watchers (${watchers.length})`} defaultOpen>
+              {watchers.length === 0 ? (
+                <p className="text-sm text-ois-text-subtle text-center py-4">No watchers yet.</p>
+              ) : (
                 <ul className="space-y-2">
                   {watchers.map(w => (
                     <li key={w.id} className="flex items-center gap-2">
                       <Avatar name={w.name} size="xs" />
-                      <span className="text-xs text-ois-text">{w.name}</span>
+                      <span className="text-xs text-ois-text flex-1">{w.name}</span>
+                      <Can module="incident" action="update" resource={inc ? incidentResource(inc) : undefined}>
+                        <button
+                          onClick={() => void handleRemoveWatcher(w.id)}
+                          className="text-xs text-ois-text-subtle hover:text-ois-danger"
+                          title="Remove watcher"
+                        >
+                          Remove
+                        </button>
+                      </Can>
                     </li>
                   ))}
                 </ul>
-                <button onClick={() => setAddWatcherOpen(true)} className="mt-2 text-xs text-ois-primary hover:underline flex items-center gap-1">
+              )}
+              <Can module="incident" action="update" resource={inc ? incidentResource(inc) : undefined}>
+                <button onClick={() => setAddWatcherOpen(true)} className="mt-3 text-xs text-ois-primary hover:underline flex items-center gap-1">
                   <Plus size={12} /> Add watcher
                 </button>
-              </CollapsibleSection>
-            )}
+              </Can>
+            </CollapsibleSection>
 
             {/* Hidden ref target so the composer can be focused programmatically if needed */}
             <textarea ref={commentTextareaRef} className="hidden" readOnly />
