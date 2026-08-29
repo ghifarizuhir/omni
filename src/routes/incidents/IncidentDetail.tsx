@@ -119,8 +119,14 @@ const TIMELINE_FILTERS: { value: IncidentEventKind | 'all'; label: string }[] = 
   { value: 'comms_posted',   label: 'Comms' },
 ];
 
-const SYSTEM_KINDS: IncidentEventKind[] = ['created', 'assigned', 'ci_linked', 'ci_unlinked', 'sla_warning', 'sla_breached'];
-const CI_LINKAGE_KINDS: IncidentEventKind[] = ['ci_linked', 'ci_unlinked', 'event_linked', 'problem_linked'];
+const SYSTEM_KINDS: IncidentEventKind[] = [
+  'created', 'assigned', 'priority_changed', 'promoted_major', 'major_stood_down',
+  'sla_warning', 'sla_breached', 'escalated', 'major_declared', 'resolution_added',
+  'reopened', 'closed', 'resolved', 'watcher_added', 'watcher_removed',
+];
+const CI_LINKAGE_KINDS: IncidentEventKind[] = [
+  'ci_linked', 'ci_unlinked', 'event_linked', 'problem_linked', 'linked',
+];
 
 interface TimelineEvent {
   id: string;
