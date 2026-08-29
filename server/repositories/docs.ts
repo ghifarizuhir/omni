@@ -922,7 +922,38 @@ export const integrationsRepo = {
 const TERMINAL_KB_STATES = new Set(['archived']);
 
 export const kbRepo = {
-  list: (tenantId: string, pagination?: { limit: number; offset: number }) => listDocs<KBArticle>(prisma.kBArticle, tenantId, {}, pagination),
+  list: async (
+    tenantId: string,
+    where: { q?: string } | { limit: number; offset: number } = {},
+    pagination: { limit: number; offset: number } = { limit: 50, offset: 0 },
+  ): Promise<KBArticle[]> => {
+    // Backwards compat: list(tenantId, pagination) where second arg is pagination object
+    let actualWhere: { q?: string } = {};
+    let actualPagination = pagination;
+    if (where && (typeof (where as any).limit === 'number' || typeof (where as any).offset === 'number')) {
+      actualPagination = where as unknown as { limit: number; offset: number };
+      actualWhere = {};
+    } else {
+      actualWhere = where as { q?: string };
+    }
+    // If no q filter, paginate at DB level
+    if (!actualWhere.q) {
+      return listDocs<KBArticle>(prisma.kBArticle, tenantId, {}, actualPagination);
+    }
+    // With q, fetch filtered subset then apply pagination in JS (data is JSON blob)
+    const ql = actualWhere.q.toLowerCase();
+    const rows: Array<{ data: string }> = await prisma.kBArticle.findMany({
+      where: { tenantId },
+    });
+    let items = rows.map((r) => parse<KBArticle>(r.data, {} as KBArticle));
+    items = items.filter((a) => {
+      const hay = `${a.title ?? ''} ${a.summary ?? ''} ${(a.tags ?? []).join(' ')}`.toLowerCase();
+      // also check body for completeness
+      const bodyHay = (a.body ?? '').toLowerCase();
+      return hay.includes(ql) || bodyHay.includes(ql);
+    });
+    return items.slice(actualPagination.offset, actualPagination.offset + actualPagination.limit);
+  },
   get: (tenantId: string, publicId: string) => getDocByPublicId<KBArticle>(prisma.kBArticle, tenantId, publicId),
 
   // M6.11 (B1.5) — Create a new KB article in `draft` status. Allocates a

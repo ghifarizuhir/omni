@@ -464,6 +464,7 @@ export const ArticleView: React.FC = () => {
   const [helpfulCount,  setHelpfulCount]  = useState(article?.helpfulCount ?? 0);
   const [unhelpfulCount, setUnhelpfulCount] = useState(article?.unhelpfulCount ?? 0);
   const [showUnhelpful, setShowUnhelpful] = useState(false);
+  const [savingFeedback, setSavingFeedback] = useState(false);
   const [toast,         setToast]         = useState('');
   const [activeId,      setActiveId]      = useState('');
   const [copied,        setCopied]        = useState(false);
@@ -501,15 +502,24 @@ export const ArticleView: React.FC = () => {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const handleHelpful = (val: boolean) => {
-    if (helpful !== null) return;
-    setHelpful(val);
-    if (val) {
-      setHelpfulCount(n => n + 1);
-      setToast('Thanks for your feedback!');
-    } else {
-      setUnhelpfulCount(n => n + 1);
-      setShowUnhelpful(true);
+  const handleHelpful = async (val: boolean) => {
+    if (helpful !== null || savingFeedback) return;
+    if (!article) return;
+    setSavingFeedback(true);
+    try {
+      await knowledgeService.submitFeedback(article.publicId, val);
+      setHelpful(val);
+      if (val) {
+        setHelpfulCount(n => n + 1);
+        setToast('Thanks for your feedback!');
+      } else {
+        setUnhelpfulCount(n => n + 1);
+        setShowUnhelpful(true);
+      }
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingFeedback(false);
     }
   };
 
@@ -668,7 +678,7 @@ export const ArticleView: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleHelpful(true)}
-                  disabled={helpful !== null}
+                  disabled={helpful !== null || savingFeedback}
                   className={cn(
                     'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-semibold transition-all',
                     helpful === true
@@ -682,7 +692,7 @@ export const ArticleView: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleHelpful(false)}
-                  disabled={helpful !== null}
+                  disabled={helpful !== null || savingFeedback}
                   className={cn(
                     'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-semibold transition-all',
                     helpful === false
@@ -695,6 +705,9 @@ export const ArticleView: React.FC = () => {
                   <ThumbsDown size={13} /> No
                 </button>
               </div>
+              {helpful !== null && (
+                <p className="text-xs text-ois-success text-center font-medium">Thanks for your feedback!</p>
+              )}
               {helpfulPct !== null && totalVotes >= 3 && (
                 <p className="text-[11px] text-ois-text-muted text-center">
                   <span className="font-semibold text-ois-text">{helpfulPct}%</span> found this helpful

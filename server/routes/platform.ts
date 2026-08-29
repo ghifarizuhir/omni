@@ -1,9 +1,13 @@
 import { Router } from 'express';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
+import { z } from 'zod';
 import { prisma } from '../db';
 import { listByKind, findByKey, firstByKind } from '../repositories/documents';
+import { kbRepo } from '../repositories/docs';
 import { requirePermission } from '../middleware/auth';
-import { asyncHandler, qBool, qString, required } from '../util';
+import { asyncHandler, HttpError, qBool, qString, required } from '../util';
+import { parsePagination } from '../lib/pagination';
+import { getActor } from '../auth/session';
 import {
   listDivisions, listDepartments, listTeams,
   listApplications, listFunctionalRoles, listRbacUsers,
@@ -236,6 +240,34 @@ platformRouter.get('/on-call/overrides', asyncHandler(async (req, res) => {
 // knowledge base (categories/feedback/analytics — articles are in itsm router)
 platformRouter.get('/kb/categories', asyncHandler(async (req, res) => {
   res.json(await listByKind<KBCategory>(req.tenantId, 'kb-category'));
+}));
+platformRouter.get('/kb/articles', requirePermission('kb.read'), asyncHandler(async (req, res) => {
+  const pagination = parsePagination(req.query as Record<string, unknown>);
+  const q = qString(req.query.q);
+  const where = q ? { q } : {};
+  res.json(await kbRepo.list(req.tenantId, where, pagination));
+}));
+platformRouter.post('/kb/articles/:publicId/feedback', requirePermission('kb.write'), asyncHandler(async (req, res) => {
+  const { helpful } = z.object({ helpful: z.boolean() }).parse(req.body);
+  const tenantId = req.tenantId;
+  const article = await kbRepo.get(tenantId, req.params.publicId);
+  if (!article) throw new HttpError(404, 'KB article not found');
+  const actor = await getActor(req).catch(() => ({ id: req.session?.userId ?? 'system', name: 'System' }));
+  await prisma.auditLog.create({
+    data: {
+      id: randomUUID(),
+      tenantId,
+      actorId: (actor as { id: string }).id,
+      action: helpful ? 'kb_helpful' : 'kb_not_helpful',
+      resourceKind: 'KBArticle',
+      resourceId: article.id,
+      before: null,
+      after: JSON.stringify({ helpful }),
+      scopeMode: 'member',
+      createdAt: new Date(),
+    },
+  });
+  res.status(201).json({ ok: true });
 }));
 platformRouter.get('/kb/feedback', asyncHandler(async (req, res) => {
   const all = await listByKind<{ articleId: string }>(req.tenantId, 'kb-feedback');
