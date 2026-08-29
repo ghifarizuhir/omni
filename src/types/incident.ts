@@ -83,6 +83,8 @@ export interface Incident {
     workaround?: string;
     resolvedAt: string;
     resolvedBy: string;
+    suggestKB?: boolean;
+    schedulePIR?: boolean;
   };
   reopenCount: number;
 

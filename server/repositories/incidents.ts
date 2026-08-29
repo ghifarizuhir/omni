@@ -10,6 +10,8 @@ export interface ResolveInput {
   rootCause?: string;
   workaround?: string;
   resolvedBy: string;
+  suggestKB?: boolean;
+  schedulePIR?: boolean;
 }
 
 export interface AddCommentInput {
@@ -157,6 +159,8 @@ export const incidentsRepo = {
         workaround: input.workaround,
         resolvedAt: now.toISOString(),
         resolvedBy: input.resolvedBy,
+        suggestKB: input.suggestKB ?? false,
+        schedulePIR: input.schedulePIR ?? false,
       },
     };
     const timelineId = randomUUID();

@@ -15,6 +15,8 @@ export const resolveIncidentSchema = z.object({
   summary: z.string().min(1, 'Summary is required').max(2000),
   rootCause: z.string().max(2000).optional(),
   workaround: z.string().max(2000).optional(),
+  suggestKB: z.boolean().optional(),
+  schedulePIR: z.boolean().optional(),
 });
 
 export type ResolveIncidentInput = z.infer<typeof resolveIncidentSchema>;

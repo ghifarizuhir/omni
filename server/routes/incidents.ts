@@ -119,6 +119,8 @@ incidentsRouter.post(
       rootCause: body.rootCause,
       workaround: body.workaround,
       resolvedBy: req.session.userId,
+      suggestKB: body.suggestKB,
+      schedulePIR: body.schedulePIR,
     });
     if (!wrapped) throw new HttpError(404, 'Incident not found');
     await audit(req, {

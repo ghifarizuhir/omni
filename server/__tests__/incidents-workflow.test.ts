@@ -359,6 +359,23 @@ describe('PATCH /api/v1/incidents/:publicId/links — linkedProblemPublicId', ()
   });
 });
 
+describe('POST /api/v1/incidents/:publicId/resolve — flags', () => {
+  it('persists suggestKB and schedulePIR in the resolution block', async () => {
+    const { publicId } = await cloneIncident('rfl-' + rand());
+    const res = await auth(request(app).post(`/api/v1/incidents/${publicId}/resolve`).send({
+      summary: 'resolved for flags test',
+      suggestKB: true,
+      schedulePIR: true,
+    }));
+    expect(res.status).toBe(200);
+    expect(res.body.resolution.suggestKB).toBe(true);
+    expect(res.body.resolution.schedulePIR).toBe(true);
+    const read = await auth(request(app).get(`/api/v1/incidents/${publicId}`));
+    expect(read.body.resolution.suggestKB).toBe(true);
+    expect(read.body.resolution.schedulePIR).toBe(true);
+  });
+});
+
 describe('GET /api/v1/incidents/:incidentId/comments — missing incident', () => {
   it('returns 404 on comments for an unknown incident id', async () => {
     const res = await auth(request(app).get(`/api/v1/incidents/missing-${rand()}/comments`));

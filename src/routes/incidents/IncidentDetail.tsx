@@ -324,6 +324,8 @@ export const IncidentDetail: React.FC = () => {
 
   const handleResolve = async (data: ResolveData) => {
     if (!inc) return;
+    const prev = inc;
+    const prevResolvedData = resolvedData;
     setResolvedData(data);
     setStatus('resolved');
     try {
@@ -331,10 +333,15 @@ export const IncidentDetail: React.FC = () => {
         summary: data.summary,
         rootCause: data.rootCause,
         workaround: data.workaround,
-      });
+        suggestKB: data.suggestKB,
+        schedulePIR: data.schedulePIR,
+      } as any);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to persist incident resolution:', err);
+      setInc(prev);
+      setResolvedData(prevResolvedData);
+      if (prev.status !== 'resolved') setStatus(prev.status as IncidentStatus);
     } finally {
       refreshIncident();
     }
