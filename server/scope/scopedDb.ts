@@ -222,6 +222,8 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   const ownerApps = new Set(
     ctx.appMemberships.filter((m) => m.role === 'OWNER').map((m) => m.appId),
   );
+  const readableApps = new Set([...writableApps, ...ownerApps]);
+  const unassignedAppId = `app-unassigned-${ctx.tenantId}`;
 
   function canWriteApp(appId: string): boolean {
     if (isPlatformAdmin) return true;
@@ -336,6 +338,13 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
 
   const isIncidentReadBypass = POLICY.incident.readBypass.some((r) => ctx.functionalRoles.includes(r));
 
+  function isIncidentReadable(appId: string | null | undefined): boolean {
+    if (isIncidentReadBypass) return true;
+    if (appId == null) return true;
+    if (appId === unassignedAppId) return true;
+    return readableApps.has(appId);
+  }
+
   function incidentCanWrite(appId: string | null, opts: { allowNoc?: boolean } = { allowNoc: true }): boolean {
     if (isPlatformAdmin) return true;
     if (opts.allowNoc && POLICY.incident.writeBypass.some((r) => ctx.functionalRoles.includes(r))) return true;
@@ -375,9 +384,26 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
         (i) => i.applicationId == null || readable.has(i.applicationId!),
       ) as typeof rows;
     },
-    get: (publicId) => incidentsRepo.get(ctx.tenantId, publicId),
-    comments: (incidentId, pagination) => incidentsRepo.comments(ctx.tenantId, incidentId, pagination),
-    timeline: (incidentId, pagination) => incidentsRepo.timeline(ctx.tenantId, incidentId, pagination),
+    async get(publicId) {
+      const appId = await loadIncidentAppId(publicId);
+      if (appId === undefined) return null;
+      if (!isIncidentReadable(appId)) return null;
+      return incidentsRepo.get(ctx.tenantId, publicId);
+    },
+    async comments(incidentId, pagination) {
+      const appId = await loadIncidentAppIdById(incidentId);
+      if (appId != null && !isIncidentReadable(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'read', applicationId: appId });
+      }
+      return incidentsRepo.comments(ctx.tenantId, incidentId, pagination);
+    },
+    async timeline(incidentId, pagination) {
+      const appId = await loadIncidentAppIdById(incidentId);
+      if (appId != null && !isIncidentReadable(appId)) {
+        throw new ScopeViolationError({ module: 'incident', action: 'read', applicationId: appId });
+      }
+      return incidentsRepo.timeline(ctx.tenantId, incidentId, pagination);
+    },
 
     async addComment(incidentId, input) {
       const appId = await loadIncidentAppIdById(incidentId);
@@ -701,7 +727,6 @@ export function buildScopedDb(prisma: PrismaClient, ctx: ScopeContext): ScopedDb
   // ── ServiceRequests scope (read=scoped, write=scoped) ─────────────────────
 
   const isSrReadBypass = POLICY.service_request.readBypass.some((r) => ctx.functionalRoles.includes(r));
-  const readableApps = new Set([...writableApps, ...ownerApps]);
 
   function srCanWrite(appId: string | null): boolean {
     if (isPlatformAdmin) return true;

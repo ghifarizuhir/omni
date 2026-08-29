@@ -111,3 +111,24 @@ describe('Incidents scope — POST /resolve (no NOC bypass)', () => {
     expect(res.body).toMatchObject({ error: 'scope_violation', module: 'incident', action: 'update' });
   });
 });
+
+describe('Incidents scope — read endpoints', () => {
+  it('memberA (contributor) can read the scoped incident', async () => {
+    const cookie = await loginAs('member-a');
+    const res = await request(app).get(`/api/v1/incidents/${publicId}`).set('Cookie', cookie);
+    expect(res.status).toBe(200);
+  });
+
+  it('memberB (outsider) gets 404 on get', async () => {
+    const cookie = await loginAs('member-b');
+    const res = await request(app).get(`/api/v1/incidents/${publicId}`).set('Cookie', cookie);
+    expect(res.status).toBe(404);
+  });
+
+  it('memberB (outsider) gets 403 on comments', async () => {
+    const cookie = await loginAs('member-b');
+    const res = await request(app).get(`/api/v1/incidents/${internalId}/comments`).set('Cookie', cookie);
+    expect(res.status).toBe(403);
+    expect(res.body).toMatchObject({ error: 'scope_violation', module: 'incident', action: 'read' });
+  });
+});
