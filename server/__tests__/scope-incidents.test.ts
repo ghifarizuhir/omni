@@ -61,7 +61,7 @@ afterAll(async () => {
   delete process.env.SCOPE_ENFORCEMENT_MODE;
   await prisma.incidentTimelineEvent.deleteMany({ where: { incidentId: internalId } }).catch(() => undefined);
   await prisma.incidentComment.deleteMany({ where: { incidentId: internalId } }).catch(() => undefined);
-  await prisma.incident.delete({ where: { publicId } }).catch(() => undefined);
+  await prisma.incident.deleteMany({ where: { publicId } }).catch(() => undefined);
   await fx.cleanup();
   await prisma.$disconnect();
 });
@@ -163,7 +163,7 @@ describe('Incidents scope — unassigned staging pool', () => {
   });
 
   afterAll(async () => {
-    await prisma.incident.delete({ where: { publicId: unassignedPublicId } }).catch(() => undefined);
+    await prisma.incident.deleteMany({ where: { publicId: unassignedPublicId } }).catch(() => undefined);
   });
 
   it('memberA can read an unassigned incident', async () => {

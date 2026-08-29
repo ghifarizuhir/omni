@@ -407,7 +407,7 @@ model AlertRoute {
 
 model Incident {
   id                    String                  @id
-  publicId              String                  @unique
+  publicId              String
   tenantId              String
   data                  String // JSON — full incident snapshot
   status                String
@@ -424,6 +424,7 @@ model Incident {
   comments              IncidentComment[]
   timeline              IncidentTimelineEvent[]
 
+  @@unique([tenantId, publicId])
   @@index([tenantId, status])
   @@index([tenantId, isMajor])
   @@index([tenantId, linkedProblemPublicId])
@@ -454,8 +455,10 @@ model IncidentTimelineEvent {
 }
 
 model IncidentCounter {
-  year Int  @id
-  seq  Int  @default(0)
+  tenantId String
+  year     Int
+  seq      Int      @default(0)
+  @@id([tenantId, year])
 }
 
 // ── M3 domains (document-style: publicId + tenantId + JSON snapshot) ─────────

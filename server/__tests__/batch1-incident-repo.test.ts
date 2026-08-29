@@ -27,4 +27,22 @@ describe('incidentsRepo.create B', () => {
     await prisma.incidentTimelineEvent.deleteMany({ where: { tenantId } });
     await prisma.incident.deleteMany({ where: { tenantId } });
   });
+
+  it('starts each tenant at INC-YYYY-00001 (per-tenant isolation)', async () => {
+    const tenantA = `tenant-iso-a-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const tenantB = `tenant-iso-b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const year = new Date().getFullYear();
+    const [a, b] = await Promise.all([
+      incidentsRepo.create(tenantA, { title: 'iso a' }, { id: 'u-a', name: 'A' }),
+      incidentsRepo.create(tenantB, { title: 'iso b' }, { id: 'u-b', name: 'B' }),
+    ]);
+    expect(a.publicId).toBe(`INC-${year}-00001`);
+    expect(b.publicId).toBe(`INC-${year}-00001`);
+    const rowA = await prisma.incident.findFirst({ where: { tenantId: tenantA, publicId: a.publicId } });
+    const rowB = await prisma.incident.findFirst({ where: { tenantId: tenantB, publicId: b.publicId } });
+    expect(rowA).toBeTruthy();
+    expect(rowB).toBeTruthy();
+    await prisma.incidentCounter.deleteMany({ where: { tenantId: { in: [tenantA, tenantB] } } });
+    await prisma.incident.deleteMany({ where: { tenantId: { in: [tenantA, tenantB] } } });
+  });
 });

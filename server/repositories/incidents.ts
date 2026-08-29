@@ -702,9 +702,9 @@ export const incidentsRepo = {
 
     await prisma.$transaction(async (tx) => {
       const counter = await tx.incidentCounter.upsert({
-        where: { year },
+        where: { tenantId_year: { tenantId, year } },
         update: { seq: { increment: 1 } },
-        create: { year, seq: 1 },
+        create: { tenantId, year, seq: 1 },
         select: { seq: true },
       });
       const seq = String(counter.seq).padStart(5, '0');
