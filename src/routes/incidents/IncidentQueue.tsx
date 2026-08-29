@@ -60,7 +60,7 @@ function applyQuickFilter(incidents: Incident[], qf: QuickFilter, currentUserId?
   const now = Date.now();
   switch (qf) {
     case 'my_open':
-      return incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === (currentUserId ?? 'u-001'));
+      return incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === currentUserId);
     case 'sla_risk':
       return incidents.filter(i =>
         i.slaResponseStatus === 'warning' || i.slaResponseStatus === 'breached' ||
@@ -236,7 +236,7 @@ export const IncidentQueue: React.FC = () => {
 
   // quick filter counts
   const now = Date.now();
-  const myOpenCount = incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === (user?.id ?? 'u-001')).length;
+  const myOpenCount = incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === user?.id).length;
   const slaRiskCount = incidents.filter(i =>
     i.slaResponseStatus === 'warning' || i.slaResponseStatus === 'breached' ||
     i.slaResolveStatus === 'warning' || i.slaResolveStatus === 'breached'

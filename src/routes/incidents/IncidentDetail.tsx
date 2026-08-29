@@ -34,7 +34,7 @@ import { IncidentClock } from '@/src/components/incidents/IncidentClock';
 import { BlastRadiusBackdrop } from '@/src/components/incidents/BlastRadiusBackdrop';
 import { IncidentComposer } from '@/src/components/incidents/IncidentComposer';
 import { AboutRail } from '@/src/components/incidents/AboutRail';
-import { Can, incidentResource } from '@/src/lib/rbac';
+import { Can, incidentResource, useCurrentUser } from '@/src/lib/rbac';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -160,6 +160,8 @@ const CollapsibleSection: React.FC<{ title: string; defaultOpen?: boolean; child
 export const IncidentDetail: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
+
+  const { user } = useCurrentUser();
 
   const { data: incidentData, loading: incidentLoading, refresh: refreshIncident } = useResource(
     () => (incidentId ? incidentsService.get(incidentId) : Promise.resolve(null)),
@@ -296,11 +298,10 @@ export const IncidentDetail: React.FC = () => {
 
   const handleStatusChange = async (s: IncidentStatus) => {
     if (!inc) return;
-    if (s === 'resolved' && !resolvedData) {
+    if (s === 'resolved') {
       setResolveOpen(true);
       return;
     }
-    if (s === 'resolved') return;
     const prev = inc.status;
     setStatus(s);
     try {
@@ -358,7 +359,7 @@ export const IncidentDetail: React.FC = () => {
       isMajor: true,
       incidentCommander: commanderId,
       majorDeclaredAt: new Date().toISOString(),
-      majorDeclaredBy: 'u-001',
+      majorDeclaredBy: user?.id ?? 'system',
     } : curr);
     try {
       await incidentsService.promoteMajor(prev.publicId, {
