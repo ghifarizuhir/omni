@@ -12,6 +12,7 @@ import { formatRelative } from '@/src/lib/format';
 import { knowledgeService, useResource } from '@/src/services';
 import { KBArticle, KBStatus, KBContentType, KBCategory } from '@/src/types/knowledge';
 import { Can } from '@/src/lib/rbac';
+import { Pager } from '@/src/components/ui/Pager';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -251,6 +252,8 @@ export const KBBrowse: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<Set<KBStatus>>(new Set());
   const [tagFilter,   setTagFilter]   = useState<string | null>(null);
   const [sort,        setSort]        = useState<SortKey>('recent');
+  const [page,        setPage]        = useState(1);
+  const [pageSize,    setPageSize]    = useState(20);
 
   const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
   const { data: categoriesData } = useResource(() => knowledgeService.categories(), []);
@@ -302,6 +305,14 @@ export const KBBrowse: React.FC = () => {
 
     return sortArticles(r, sort);
   }, [allArticles, query, catFilter, statusFilter, tagFilter, sort]);
+
+  // Reset page when filters change
+  React.useEffect(() => { setPage(1); }, [query, catFilter, statusFilter, tagFilter, sort]);
+
+  const pagedResults = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return results.slice(start, start + pageSize);
+  }, [results, page, pageSize]);
 
   const isFiltering = query.trim() !== '' || catFilter !== 'all' || statusFilter.size > 0 || tagFilter !== null;
 
@@ -537,16 +548,21 @@ export const KBBrowse: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
-              {results.map(article => (
-                <ArticleCard
-                  key={article.id}
-                  article={article}
-                  query={query}
-                  showSnippet={!!query.trim()}
-                />
-              ))}
-            </div>
+            <>
+              <div className="space-y-3">
+                {pagedResults.map(article => (
+                  <ArticleCard
+                    key={article.id}
+                    article={article}
+                    query={query}
+                    showSnippet={!!query.trim()}
+                  />
+                ))}
+              </div>
+              {results.length > pageSize && (
+                <Pager page={page} pageSize={pageSize} total={results.length} onPageChange={setPage} onPageSizeChange={setPageSize} className="mt-4" />
+              )}
+            </>
           )}
         </div>
       </div>

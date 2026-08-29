@@ -23,6 +23,7 @@ import { Can } from '@/src/lib/rbac';
 import { useScope } from '@/src/lib/scope/ScopeContext';
 import { useScopeUiEnabled } from '@/src/lib/scope/featureFlag';
 import { PageScopeChip } from '../../components/scope/PageScopeChip';
+import { Pager } from '@/src/components/ui/Pager';
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 interface ToastState { message: string }
@@ -47,6 +48,8 @@ export const CMDBList: React.FC = () => {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [listPage, setListPage] = useState(1);
+  const [listPageSize, setListPageSize] = useState(20);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: cisData, refresh: refreshCIs } = useResource(() => cisService.list(), []);
@@ -104,6 +107,14 @@ export const CMDBList: React.FC = () => {
       return matchesSearch && matchesType && matchesCrit && matchesHealth;
     });
   }, [scopeFilteredCIs, search, typeFilter, critFilter, healthFilter]);
+
+  // Reset list page when filters change
+  React.useEffect(() => { setListPage(1); }, [search, typeFilter, critFilter, healthFilter]);
+
+  const pagedCIs = useMemo(() => {
+    const start = (listPage - 1) * listPageSize;
+    return filteredCIs.slice(start, start + listPageSize);
+  }, [filteredCIs, listPage, listPageSize]);
 
   const toggleService = (id: string) => {
     setExpandedServices(prev => ({ ...prev, [id]: !prev[id] }));
@@ -350,10 +361,13 @@ export const CMDBList: React.FC = () => {
         </div>
       ) : (
         <Card className="overflow-hidden bg-white">
-          <DataTable columns={listColumns} data={filteredCIs} onRowClick={(ci) => navigate(`/cmdb/${ci.id}`)} />
+          <DataTable columns={listColumns} data={pagedCIs} onRowClick={(ci) => navigate(`/cmdb/${ci.id}`)} />
           <div className="p-4 border-t border-ois-border flex items-center justify-between text-xs text-ois-text-subtle bg-ois-bg/50">
-            <span>Showing {filteredCIs.length} of {allCIs.length} items</span>
+            <span>Showing {pagedCIs.length} of {filteredCIs.length} items</span>
           </div>
+          {filteredCIs.length > listPageSize && (
+            <Pager page={listPage} pageSize={listPageSize} total={filteredCIs.length} onPageChange={setListPage} onPageSizeChange={setListPageSize} />
+          )}
         </Card>
       )}
 

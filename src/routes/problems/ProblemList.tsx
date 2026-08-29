@@ -20,6 +20,7 @@ import { Problem, ProblemStatus, ProblemSource } from '@/src/types/problem';
 import { cn } from '@/src/lib/utils';
 import { IDCell } from '@/src/components/ui/IDCell';
 import { StatusRing, type RingState } from '@/src/components/ui/StatusRing';
+import { Pager } from '@/src/components/ui/Pager';
 
 type SortKey = 'lastIncidentDate' | 'createdAt' | 'relatedIncidentCount' | 'severity';
 type SortDir = 'asc' | 'desc';
@@ -143,6 +144,8 @@ export const ProblemList: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const { user, applications, teams, departments } = useCurrentUser();
   const { data: loadedProblems, refresh: refreshProblems } = useResource(() => problemsService.list(), []);
   const mockProblems = loadedProblems ?? [];
@@ -220,6 +223,14 @@ export const ProblemList: React.FC = () => {
     });
     return result;
   }, [problems, search, statusFilter, sourceFilter, ownerFilter, sortKey, sortDir]);
+
+  // Reset page when filters change
+  React.useEffect(() => { setPage(1); }, [search, statusFilter, sourceFilter, ownerFilter, sortKey, sortDir]);
+
+  const pagedProblems = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -407,7 +418,7 @@ export const ProblemList: React.FC = () => {
           </thead>
 
           <tbody className="divide-y divide-ois-border">
-            {filtered.length === 0 ? (
+            {pagedProblems.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-4 py-16 text-center">
                   <Bug size={32} className="text-ois-text-subtle mx-auto mb-3" />
@@ -418,7 +429,7 @@ export const ProblemList: React.FC = () => {
                 </td>
               </tr>
             ) : (
-              filtered.map(problem => {
+              pagedProblems.map(problem => {
                 const owner = USER_MAP[problem.ownerId];
                 const stripeColor = SEVERITY_STRIPE[problem.severity] ?? '#1F4FD4';
                 return (
@@ -526,6 +537,9 @@ export const ProblemList: React.FC = () => {
             )}
           </tbody>
         </table>
+        {filtered.length > pageSize && (
+          <Pager page={page} pageSize={pageSize} total={filtered.length} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        )}
       </div>
 
       {/* Create Problem Modal */}

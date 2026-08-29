@@ -15,6 +15,7 @@ import {
 } from '@/src/types/request';
 import { FilterDropdown } from '@/src/components/ui/FilterDropdown';
 import { useCurrentUser, filterReadable, requestResource } from '@/src/lib/rbac';
+import { Pager } from '@/src/components/ui/Pager';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -206,6 +207,8 @@ export const RequestQueue: React.FC = () => {
   const [stepFlt,    setStepFlt]    = useState('');
   const [slaFlt,     setSlaFlt]     = useState('');
   const [quickFlt,   setQuickFlt]   = useState<QuickFilter>(null);
+  const [page,       setPage]       = useState(1);
+  const [pageSize,   setPageSize]   = useState(20);
 
   // live clock for SLA calculations (updates every 60s)
   const [now, setNow] = useState(Date.now());
@@ -279,6 +282,14 @@ export const RequestQueue: React.FC = () => {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [all, mockUsers, userId, now, search, statusFlt, catFlt, stepFlt, slaFlt, quickFlt]);
+
+  // Reset page when filters change
+  React.useEffect(() => { setPage(1); }, [search, statusFlt, catFlt, stepFlt, slaFlt, quickFlt]);
+
+  const pagedResults = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return results.slice(start, start + pageSize);
+  }, [results, page, pageSize]);
 
   const hasFilters = !!(search || statusFlt || catFlt || stepFlt || slaFlt || quickFlt);
 
@@ -464,6 +475,7 @@ export const RequestQueue: React.FC = () => {
             )}
           </div>
         ) : (
+          <>
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead className="bg-ois-surface border-b border-ois-border sticky top-0 z-10">
               <tr>
@@ -475,7 +487,7 @@ export const RequestQueue: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-ois-border">
-              {results.map(req => {
+              {pagedResults.map(req => {
                 const activeStep  = getActiveStep(req);
                 const assigneeName = getAssigneeName(activeStep);
                 const sla         = slaRemaining(activeStep, now);
@@ -588,6 +600,10 @@ export const RequestQueue: React.FC = () => {
               })}
             </tbody>
           </table>
+          {results.length > pageSize && (
+            <Pager page={page} pageSize={pageSize} total={results.length} onPageChange={setPage} onPageSizeChange={setPageSize} />
+          )}
+          </>
         )}
       </div>
 
