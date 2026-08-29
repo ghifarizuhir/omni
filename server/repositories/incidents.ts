@@ -1,6 +1,7 @@
 import type { Incident, IncidentComment, IncidentTimelineEvent } from '../../src/types';
 import { prisma } from '../db';
 import { randomUUID } from 'node:crypto';
+import { HttpError } from '../util';
 
 const parseObj = <T,>(s: string, fb: T): T => { try { return JSON.parse(s); } catch { return fb; } };
 
@@ -486,8 +487,8 @@ export const incidentsRepo = {
   },
 
   // Remove a watcher. Throws if the parent incident is missing; the route
-  // maps that to 404. Throws `WATCHER_NOT_FOUND` if the user isn't on the
-  // list (route maps to 404 as well, per task spec).
+  // maps that to 404. Throws `HttpError(404, 'Watcher not found')` if the
+  // user isn't on the list, which the global error handler returns as 404.
   async removeWatcher(tenantId: string, incidentId: string, userId: string, actorId: string): Promise<{
     before: Incident;
     after: Incident;
@@ -498,7 +499,7 @@ export const incidentsRepo = {
     const before = parseObj<Incident>(row.data, {} as Incident);
     const existing = before.watchers ?? [];
     if (!existing.some(w => w.userId === userId)) {
-      throw new Error('WATCHER_NOT_FOUND');
+      throw new HttpError(404, 'Watcher not found');
     }
     const after: Incident = {
       ...before,
