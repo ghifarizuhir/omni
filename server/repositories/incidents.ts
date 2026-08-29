@@ -664,20 +664,19 @@ export const incidentsRepo = {
       update: {},
       create: { id: tenantId, slug: tenantId, name: `Test ${tenantId.slice(0, 20)}` },
     }).catch(() => undefined);
-    const count = await prisma.incident.count();
-    const seq = String(count + 1).padStart(5, '0');
-    const year = new Date().getFullYear();
-    const publicId = `INC-${year}-${seq}`;
-    const id = randomUUID();
+
     const now = new Date();
-    const incident: Incident = {
+    const year = now.getFullYear();
+    const id = randomUUID();
+    const priority = (input.priority ?? 'P3') as Incident['priority'];
+    const incident = {
       id,
-      publicId,
+      publicId: '',
       title: input.title,
       description: input.description ?? '',
       status: 'new',
-      priority: (input.priority ?? 'P3') as Incident['priority'],
-      severity: (input.priority ?? 'P3') as Incident['severity'],
+      priority,
+      severity: priority,
       isMajor: false,
       assigneeId: input.assigneeId ?? undefined,
       affectedCIIds: input.affectedCIIds ?? [],
@@ -693,33 +692,52 @@ export const incidentsRepo = {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
       tags: input.tags ?? [],
-    } as unknown as Incident;
-    // keep extras on snapshot for audit parity (not part of Incident type but useful)
-    (incident as unknown as Record<string, unknown>).tenantId = tenantId;
-    (incident as unknown as Record<string, unknown>).applicationId = input.applicationId ?? null;
+      tenantId,
+      applicationId: input.applicationId ?? null,
+    } as unknown as Incident & { tenantId: string; applicationId: string | null };
+
     const prismaApplicationId = input.applicationId ?? 'unassigned';
-    await prisma.incident.create({
-      data: {
-        id,
-        publicId,
-        tenantId,
-        status: 'new',
-        priority: incident.priority,
-        severity: incident.severity,
-        isMajor: false,
-        affectedCIIds: JSON.stringify(incident.affectedCIIds),
-        affectedCIPublicIds: JSON.stringify(incident.affectedCIPublicIds),
-        applicationId: prismaApplicationId,
-        data: JSON.stringify(incident),
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
     const eventId = randomUUID();
     const evt = { id: eventId, kind: 'created' as const, timestamp: now.toISOString(), actorId: actor.id, details: { title: input.title } };
-    await prisma.incidentTimelineEvent.create({
-      data: { id: eventId, tenantId, incidentId: id, kind: 'created', timestamp: now, data: JSON.stringify(evt) },
+
+    await prisma.$transaction(async (tx) => {
+      const counter = await tx.incidentCounter.upsert({
+        where: { year },
+        update: { seq: { increment: 1 } },
+        create: { year, seq: 1 },
+        select: { seq: true },
+      });
+      const seq = String(counter.seq).padStart(5, '0');
+      incident.publicId = `INC-${year}-${seq}`;
+      await tx.incident.create({
+        data: {
+          id,
+          publicId: incident.publicId,
+          tenantId,
+          status: 'new',
+          priority,
+          severity: priority,
+          isMajor: false,
+          affectedCIIds: JSON.stringify(incident.affectedCIIds),
+          affectedCIPublicIds: JSON.stringify(incident.affectedCIPublicIds),
+          applicationId: prismaApplicationId,
+          data: JSON.stringify(incident),
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+      await tx.incidentTimelineEvent.create({
+        data: {
+          id: eventId,
+          tenantId,
+          incidentId: id,
+          kind: 'created',
+          timestamp: now,
+          data: JSON.stringify(evt),
+        },
+      });
     });
+
     return incident as unknown as Incident & { applicationId: string | null; tenantId: string };
   },
 
