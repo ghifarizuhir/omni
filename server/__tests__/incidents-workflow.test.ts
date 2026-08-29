@@ -330,6 +330,35 @@ describe('DELETE /api/v1/incidents/:incidentId/watchers/:userId — watcher not 
   });
 });
 
+describe('PATCH /api/v1/incidents/:publicId/links — linkedProblemPublicId', () => {
+  it('stores linkedProblemPublicId and makes ?problemPublicId filter match', async () => {
+    const { publicId } = await cloneIncident('lpp-' + rand());
+    const problemId = `prb-fx-${rand()}`;
+    const problemPublicId = `PRB-FX-${rand().toUpperCase()}`;
+    await prisma.problem.create({
+      data: {
+        id: problemId,
+        publicId: problemPublicId,
+        tenantId: 'tenant-demo',
+        status: 'open',
+        applicationId: 'app-demo-1',
+        data: JSON.stringify({ id: problemId, publicId: problemPublicId, status: 'open' }),
+      },
+    });
+    const res = await auth(request(app).patch(`/api/v1/incidents/${publicId}/links`).send({
+      linkedProblemId: problemId,
+      linkedProblemPublicId: problemPublicId,
+    }));
+    expect(res.status).toBe(200);
+    expect(res.body.linkedProblemPublicId).toBe(problemPublicId);
+    const read = await auth(request(app).get(`/api/v1/incidents/${publicId}`));
+    expect(read.body.linkedProblemPublicId).toBe(problemPublicId);
+    const listed = await auth(request(app).get(`/api/v1/incidents?problemPublicId=${problemPublicId}`));
+    expect((listed.body as any[]).map((i: any) => i.publicId)).toContain(publicId);
+    await prisma.problem.deleteMany({ where: { id: problemId } }).catch(() => undefined);
+  });
+});
+
 describe('GET /api/v1/incidents/:incidentId/comments — missing incident', () => {
   it('returns 404 on comments for an unknown incident id', async () => {
     const res = await auth(request(app).get(`/api/v1/incidents/missing-${rand()}/comments`));

@@ -270,6 +270,7 @@ incidentsRouter.patch(
       actorId: req.session.userId,
       affectedCIIds: body.affectedCIIds,
       linkedProblemId: body.linkedProblemId,
+      linkedProblemPublicId: body.linkedProblemPublicId,
       linkedChangeIds: body.linkedChangeIds,
     });
     if (!wrapped) throw new HttpError(404, 'Incident not found');

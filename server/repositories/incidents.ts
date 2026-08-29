@@ -41,6 +41,7 @@ export interface SetLinksRepoInput {
   actorId: string;
   affectedCIIds?: string[];
   linkedProblemId?: string | null;
+  linkedProblemPublicId?: string | null;
   linkedChangeIds?: string[];
 }
 
@@ -388,6 +389,9 @@ export const incidentsRepo = {
       ...(input.linkedProblemId !== undefined
         ? { linkedProblemId: input.linkedProblemId ?? undefined }
         : {}),
+      ...(input.linkedProblemPublicId !== undefined
+        ? { linkedProblemPublicId: input.linkedProblemPublicId ?? undefined }
+        : {}),
       ...(input.linkedChangeIds !== undefined ? { linkedChangeIds: input.linkedChangeIds } : {}),
     };
     const dataPatch: Record<string, unknown> = {};
@@ -396,6 +400,9 @@ export const incidentsRepo = {
     }
     if (input.linkedProblemId !== undefined) {
       dataPatch.problem = { from: before.linkedProblemId, to: after.linkedProblemId };
+    }
+    if (input.linkedProblemPublicId !== undefined) {
+      (dataPatch as any).problemPublicId = { from: (before as any).linkedProblemPublicId, to: (after as any).linkedProblemPublicId };
     }
     if (input.linkedChangeIds !== undefined) {
       dataPatch.change = diffArr(before.linkedChangeIds ?? [], after.linkedChangeIds ?? []);
@@ -414,9 +421,11 @@ export const incidentsRepo = {
         data: {
           data: JSON.stringify(after),
           updatedAt: now,
-          ...(input.linkedProblemId !== undefined
-            ? { linkedProblemPublicId: input.linkedProblemId ?? null }
-            : {}),
+          ...(input.linkedProblemPublicId !== undefined
+            ? { linkedProblemPublicId: input.linkedProblemPublicId ?? null }
+            : input.linkedProblemId !== undefined
+              ? { linkedProblemPublicId: null }
+              : {}),
           ...(input.affectedCIIds !== undefined
             ? { affectedCIIds: JSON.stringify(input.affectedCIIds) }
             : {}),

@@ -65,6 +65,7 @@ export const updateIncidentLinksSchema = z
   .object({
     affectedCIIds: z.array(z.string()).max(100).optional(),
     linkedProblemId: z.string().nullable().optional(),
+    linkedProblemPublicId: z.string().nullable().optional(),
     linkedChangeIds: z.array(z.string()).max(100).optional(),
   })
   .strict();

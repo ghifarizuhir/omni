@@ -383,6 +383,7 @@ export const IncidentDetail: React.FC = () => {
   const handleSetLinks = async (patch: {
     affectedCIIds?: string[];
     linkedProblemId?: string | null;
+    linkedProblemPublicId?: string | null;
     linkedChangeIds?: string[];
   }) => {
     if (!inc) return;
@@ -391,6 +392,7 @@ export const IncidentDetail: React.FC = () => {
       ...curr,
       ...(patch.affectedCIIds !== undefined ? { affectedCIIds: patch.affectedCIIds } : {}),
       ...(patch.linkedProblemId !== undefined ? { linkedProblemId: patch.linkedProblemId ?? undefined } : {}),
+      ...(patch.linkedProblemPublicId !== undefined ? { linkedProblemPublicId: patch.linkedProblemPublicId ?? undefined } : {}),
       ...(patch.linkedChangeIds !== undefined ? { linkedChangeIds: patch.linkedChangeIds } : {}),
     } : curr);
     try {
@@ -931,7 +933,7 @@ export const IncidentDetail: React.FC = () => {
       />
       <PromoteMajorModal incident={inc} isOpen={promoteMajorOpen} onClose={() => setPromoteMajorOpen(false)} onConfirm={handlePromoteMajor} />
       <LinkCIModal isOpen={linkCIOpen} onClose={() => setLinkCIOpen(false)} currentCIIds={inc.affectedCIIds} onLink={newIds => handleSetLinks({ affectedCIIds: [...inc.affectedCIIds, ...newIds] })} />
-      <LinkProblemModal isOpen={linkProblemOpen} onClose={() => setLinkProblemOpen(false)} currentProblemId={inc?.linkedProblemId} onLink={(id) => handleSetLinks({ linkedProblemId: id })} />
+      <LinkProblemModal isOpen={linkProblemOpen} onClose={() => setLinkProblemOpen(false)} currentProblemId={inc?.linkedProblemId} onLink={(id, publicId) => handleSetLinks({ linkedProblemId: id, linkedProblemPublicId: publicId })} />
       <LinkChangeModal isOpen={linkChangeOpen} onClose={() => setLinkChangeOpen(false)} currentChangeIds={inc?.linkedChangeIds ?? []} onLink={newIds => handleSetLinks({ linkedChangeIds: [...(inc.linkedChangeIds ?? []), ...newIds] })} />
       <UserPickerModal isOpen={addWatcherOpen} onClose={() => setAddWatcherOpen(false)} title="Add Watcher" excludeIds={watchers.map(w => w.id)} onSelect={userId => handleAddWatcher(userId)} />
       {/* keep promoteMajor reachable for major-incident flows */}
