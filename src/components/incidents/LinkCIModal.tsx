@@ -28,8 +28,12 @@ function healthBadge(health: string) {
 
 export const LinkCIModal: React.FC<Props> = ({ isOpen, onClose, currentCIIds, onLink }) => {
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [working, setWorking] = useState<Set<string>>(new Set());
   const { data: cis } = useResource(() => cisService.list(), []);
+
+  React.useEffect(() => {
+    if (isOpen) setWorking(new Set(currentCIIds));
+  }, [currentCIIds, isOpen]);
 
   const allCIs = (cis ?? []).filter(ci => {
     if (!search.trim()) return true;
@@ -38,8 +42,7 @@ export const LinkCIModal: React.FC<Props> = ({ isOpen, onClose, currentCIIds, on
   });
 
   const toggle = (id: string) => {
-    if (currentCIIds.includes(id)) return;
-    setSelected(prev => {
+    setWorking(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
@@ -47,20 +50,22 @@ export const LinkCIModal: React.FC<Props> = ({ isOpen, onClose, currentCIIds, on
   };
 
   const handleConfirm = () => {
-    onLink([...selected]);
-    setSelected(new Set());
+    onLink([...working]);
     setSearch('');
     onClose();
   };
 
   const handleClose = () => {
-    setSelected(new Set());
     setSearch('');
     onClose();
   };
 
+  const changed =
+    working.size !== currentCIIds.length ||
+    [...working].some(id => !currentCIIds.includes(id));
+
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Link Configuration Item" size="md">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Link Configuration Items" size="md">
       <div className="py-4 space-y-4">
         <div className="relative">
           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ois-text-subtle pointer-events-none" />
@@ -78,20 +83,17 @@ export const LinkCIModal: React.FC<Props> = ({ isOpen, onClose, currentCIIds, on
             <p className="text-xs text-ois-text-subtle text-center py-8">No CIs found</p>
           ) : (
             allCIs.map(ci => {
-              const linked = currentCIIds.includes(ci.id);
-              const checked = linked || selected.has(ci.id);
+              const checked = working.has(ci.id);
               return (
                 <label
                   key={ci.id}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3 border-b border-ois-border last:border-0',
-                    linked ? 'opacity-60 cursor-not-allowed' : 'hover:bg-ois-surface-muted cursor-pointer',
+                    'flex items-center gap-3 px-4 py-3 border-b border-ois-border last:border-0 hover:bg-ois-surface-muted cursor-pointer',
                   )}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
-                    disabled={linked}
                     onChange={() => toggle(ci.id)}
                     className="w-4 h-4 rounded text-ois-primary"
                   />
@@ -107,8 +109,8 @@ export const LinkCIModal: React.FC<Props> = ({ isOpen, onClose, currentCIIds, on
 
         <div className="flex justify-end gap-2 pt-3 border-t border-ois-border mt-4">
           <Button variant="ghost" onClick={handleClose}>Cancel</Button>
-          <Button variant="primary" onClick={handleConfirm} disabled={selected.size === 0}>
-            Link {selected.size > 0 ? selected.size : ''} CI{selected.size !== 1 ? 's' : ''}
+          <Button variant="primary" onClick={handleConfirm} disabled={!changed}>
+            {working.size === 0 ? 'Clear all' : `Save (${working.size})`}
           </Button>
         </div>
       </div>

@@ -687,10 +687,10 @@ export const IncidentDetail: React.FC = () => {
 
                 <SectionCard title={linkedProblem ? 'Linked problem (1)' : 'Linked problem (0)'}>
                   {linkedProblem ? (
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <p className="font-mono text-sm font-semibold text-purple-700">{linkedProblem.publicId}</p>
-                        <p className="text-sm text-ois-text mt-0.5">{linkedProblem.title}</p>
+                        <p className="text-sm text-ois-text mt-0.5 truncate">{linkedProblem.title}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-ois-text-muted capitalize">{linkedProblem.status.replace('_', ' ')}</span>
                           <span className="text-ois-text-subtle">·</span>
@@ -699,9 +699,12 @@ export const IncidentDetail: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/problems/${linkedProblem.publicId}`)}>
-                        Open
-                      </Button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button variant="ghost" size="sm" onClick={() => handleSetLinks({ linkedProblemId: null, linkedProblemPublicId: null })}>Unlink</Button>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/problems/${linkedProblem.publicId}`)}>
+                          Open
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <button onClick={() => setLinkProblemOpen(true)} className="flex items-center gap-2 text-xs text-ois-primary hover:underline">
@@ -721,11 +724,19 @@ export const IncidentDetail: React.FC = () => {
                         const chg = (changesData ?? []).find(c => c.id === id || c.publicId === id);
                         return (
                           <div key={id} className="p-2 rounded-lg bg-ois-bg border border-ois-border">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-mono text-xs font-bold text-ois-primary">{id}</span>
-                              <Link to={`/changes/${id}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
-                                <ExternalLink size={10} /> View
-                              </Link>
+                            <div className="flex items-center justify-between mb-1 gap-2">
+                              <span className="font-mono text-xs font-bold text-ois-primary truncate">{id}</span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  onClick={() => handleSetLinks({ linkedChangeIds: (inc.linkedChangeIds ?? []).filter(x => x !== id) })}
+                                  className="text-xs text-ois-text-subtle hover:text-ois-danger"
+                                >
+                                  Unlink
+                                </button>
+                                <Link to={`/changes/${id}`} className="text-xs text-ois-primary hover:underline flex items-center gap-1">
+                                  <ExternalLink size={10} /> View
+                                </Link>
+                              </div>
                             </div>
                             {chg && (
                               <>
@@ -932,7 +943,7 @@ export const IncidentDetail: React.FC = () => {
         onResolve={handleResolve}
       />
       <PromoteMajorModal incident={inc} isOpen={promoteMajorOpen} onClose={() => setPromoteMajorOpen(false)} onConfirm={handlePromoteMajor} />
-      <LinkCIModal isOpen={linkCIOpen} onClose={() => setLinkCIOpen(false)} currentCIIds={inc.affectedCIIds} onLink={newIds => handleSetLinks({ affectedCIIds: [...inc.affectedCIIds, ...newIds] })} />
+      <LinkCIModal isOpen={linkCIOpen} onClose={() => setLinkCIOpen(false)} currentCIIds={inc.affectedCIIds} onLink={ids => handleSetLinks({ affectedCIIds: ids })} />
       <LinkProblemModal isOpen={linkProblemOpen} onClose={() => setLinkProblemOpen(false)} currentProblemId={inc?.linkedProblemId} onLink={(id, publicId) => handleSetLinks({ linkedProblemId: id, linkedProblemPublicId: publicId })} />
       <LinkChangeModal isOpen={linkChangeOpen} onClose={() => setLinkChangeOpen(false)} currentChangeIds={inc?.linkedChangeIds ?? []} onLink={newIds => handleSetLinks({ linkedChangeIds: [...(inc.linkedChangeIds ?? []), ...newIds] })} />
       <UserPickerModal isOpen={addWatcherOpen} onClose={() => setAddWatcherOpen(false)} title="Add Watcher" excludeIds={watchers.map(w => w.id)} onSelect={userId => handleAddWatcher(userId)} />
