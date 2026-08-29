@@ -56,11 +56,11 @@ function getServiceName(services: { id: string; name: string }[], ids: string[])
 
 type QuickFilter = 'my_open' | 'sla_risk' | 'p1p2' | 'last_24h' | 'customer_facing' | null;
 
-function applyQuickFilter(incidents: Incident[], qf: QuickFilter): Incident[] {
+function applyQuickFilter(incidents: Incident[], qf: QuickFilter, currentUserId?: string): Incident[] {
   const now = Date.now();
   switch (qf) {
     case 'my_open':
-      return incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === 'u-001');
+      return incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === (currentUserId ?? 'u-001'));
     case 'sla_risk':
       return incidents.filter(i =>
         i.slaResponseStatus === 'warning' || i.slaResponseStatus === 'breached' ||
@@ -111,8 +111,6 @@ export const IncidentQueue: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<IncidentStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<IncidentPriority | 'all'>('all');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>(null);
-
-  // selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // row overflow menu
@@ -183,7 +181,7 @@ export const IncidentQueue: React.FC = () => {
     let list = [...incidents];
 
     // quick filter
-    list = applyQuickFilter(list, quickFilter);
+    list = applyQuickFilter(list, quickFilter, user?.id);
 
     // status
     if (statusFilter !== 'all') list = list.filter(i => i.status === statusFilter);
@@ -238,7 +236,7 @@ export const IncidentQueue: React.FC = () => {
 
   // quick filter counts
   const now = Date.now();
-  const myOpenCount = incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === 'u-001').length;
+  const myOpenCount = incidents.filter(i => ACTIVE_STATUSES.includes(i.status) && i.assigneeId === (user?.id ?? 'u-001')).length;
   const slaRiskCount = incidents.filter(i =>
     i.slaResponseStatus === 'warning' || i.slaResponseStatus === 'breached' ||
     i.slaResolveStatus === 'warning' || i.slaResolveStatus === 'breached'

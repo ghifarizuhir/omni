@@ -71,13 +71,17 @@ export const CMDBDetail: React.FC = () => {
   const [showJson, setShowJson] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
-  const { data: cisData, loading: cisLoading, refresh: refreshCIs } = useResource(() => cisService.list(), []);
-  const mockCIs = cisData ?? [];
-  const { data: relsData } = useResource(() => cisService.relationshipsAll(), []);
+  const { data: ciData, loading: cisLoading, error: ciError, refresh: refreshCIs } = useResource(() => cisService.get(ciId!), [ciId]);
+  const [ci, setCi] = useState<ConfigurationItem | null>(null);
+  React.useEffect(() => {
+    if (ciData) setCi(ciData);
+  }, [ciData?.id]);
+  // Keep optimistic local ci; sync from server when ciData changes
+  const { data: relsData } = useResource(() => ci ? cisService.relationships(ci.id) : Promise.resolve([] as any), [ci?.id]);
   const mockCIRelationships = relsData ?? [];
   const { data: servicesData } = useResource(() => servicesService.list(), []);
   const mockServices = servicesData ?? [];
-  const { data: auditData } = useResource(() => cisService.audit(), []);
+  const { data: auditData } = useResource(() => ci ? cisService.audit(ci.id) : Promise.resolve([] as any), [ci?.id]);
   const mockCIAuditEntries = auditData ?? [];
   const { data: incidentsData } = useResource(() => incidentsService.list(), []);
   const { data: changesData } = useResource(() => changesService.list(), []);
@@ -86,12 +90,10 @@ export const CMDBDetail: React.FC = () => {
   const { data: kbArticlesData } = useResource(() => knowledgeService.articles(), []);
   const { data: allMetricsData } = useResource(() => capacityService.metrics(), []);
 
-  const rawCI = useMemo(() => mockCIs.find(c => c.id === ciId || c.publicId === ciId), [mockCIs, ciId]);
-  const [ci, setCi] = useState<ConfigurationItem | null>(null);
-  React.useEffect(() => {
-    setCi(rawCI ?? null);
-  }, [rawCI?.id]);
   const service = useMemo(() => mockServices.find(s => s.id === ci?.serviceId), [mockServices, ci]);
+  // Lightweight cache for relationship target/source resolution (not for main CI)
+  const { data: allCIsData } = useResource(() => cisService.list({ page: 1, pageSize: 100 }), []);
+  const mockCIs = allCIsData ?? [];
 
   const allMonitoringRules = allRulesData ?? [];
   const allKBArticles = kbArticlesData ?? [];
@@ -139,7 +141,16 @@ export const CMDBDetail: React.FC = () => {
   if (cisLoading && !ci) {
     return <div className="flex items-center justify-center py-20 text-sm text-ois-text-muted">Loading…</div>;
   }
-  if (!rawCI || !ci) {
+  if (ciError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <h2 className="text-xl font-bold text-ois-text">CI Not Found</h2>
+        <p className="text-sm text-ois-text-muted mt-1">{String((ciError as Error).message ?? 'Not found')}</p>
+        <Button onClick={() => navigate('/cmdb')} variant="primary" className="mt-4">Back to CMDB</Button>
+      </div>
+    );
+  }
+  if (!ci) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <h2 className="text-xl font-bold text-ois-text">CI Not Found</h2>

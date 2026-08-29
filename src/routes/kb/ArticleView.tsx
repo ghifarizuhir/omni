@@ -445,15 +445,20 @@ export const ArticleView: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
 
+  const { data: articleData } = useResource(() => knowledgeService.article(slug!).catch(async () => {
+    try {
+      const list = await knowledgeService.articles({ q: slug });
+      return list.find(a => a.slug === slug) ?? list[0] ?? null;
+    } catch {
+      return null;
+    }
+  }) as any, [slug]);
+  const article = (articleData as unknown as KBArticle) ?? null;
   const { data: articlesData } = useResource(() => knowledgeService.articles(), []);
   const { data: categoriesData } = useResource(() => knowledgeService.categories(), []);
   const allArticles = articlesData ?? [];
   const categories = categoriesData ?? [];
 
-  const article = useMemo(
-    () => allArticles.find(a => a.slug === (slug ?? '')),
-    [allArticles, slug]
-  );
   const articleByPublicId = useMemo<ArticleLookup>(
     () => (id: string) => allArticles.find(a => a.publicId === id),
     [allArticles]
