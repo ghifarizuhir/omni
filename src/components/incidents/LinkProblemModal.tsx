@@ -69,7 +69,12 @@ export const LinkProblemModal: React.FC<Props> = ({ isOpen, onClose, currentProb
             filtered.map(prb => {
               const isLinked = prb.id === currentProblemId;
               const isSelected = prb.id === selectedId;
-              const meta = problemStatusMeta[prb.status as ProblemStatus];
+              const meta = (problemStatusMeta[prb.status as ProblemStatus] ?? {
+                label: prb.status ? String(prb.status).replace(/_/g, ' ') : 'Unknown',
+                color: '#475467',
+                bg: '#F1F3F7',
+                dot: '#98A2B3',
+              }) as { label: string; color: string; bg: string; dot: string };
               return (
                 <div
                   key={prb.id}

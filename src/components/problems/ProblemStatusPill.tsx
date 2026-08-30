@@ -9,7 +9,12 @@ interface Props {
 }
 
 export const ProblemStatusPill: React.FC<Props> = ({ status, className }) => {
-  const meta = problemStatusMeta[status];
+  const meta = (problemStatusMeta[status as ProblemStatus] ?? {
+    label: status ? String(status).replace(/_/g, ' ') : 'Unknown',
+    color: '#475467',
+    bg: '#F1F3F7',
+    dot: '#98A2B3',
+  }) as { label: string; color: string; bg: string; dot: string };
   return (
     <span
       className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap', className)}

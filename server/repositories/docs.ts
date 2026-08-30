@@ -91,8 +91,12 @@ export const servicesRepo = {
 
 const normalizeProblem = (raw: Problem): Problem => {
   const fallbackAt = (raw as unknown as { createdAt?: string }).createdAt ?? new Date().toISOString();
+  const validStatuses = new Set(['identified', 'investigating', 'known_error', 'fix_in_progress', 'closed']);
+  const rawStatus = (raw as unknown as { status?: string }).status;
+  const status = validStatuses.has(rawStatus as string) ? rawStatus : 'identified';
   return {
     ...raw,
+    status: status as Problem['status'],
     tags: (raw as unknown as { tags?: string[] }).tags ?? [],
     affectedCIIds: (raw as unknown as { affectedCIIds?: string[] }).affectedCIIds ?? [],
     affectedCIPublicIds: (raw as unknown as { affectedCIPublicIds?: string[] }).affectedCIPublicIds ?? [],
