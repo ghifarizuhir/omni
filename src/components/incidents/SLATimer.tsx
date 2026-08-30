@@ -32,9 +32,10 @@ export const SLATimer: React.FC<SLATimerProps> = ({
     return () => clearInterval(id);
   }, [status]);
 
-  const meta = slaStatusMeta[status];
+  const meta = (slaStatusMeta as Record<string, { label: string; dot: string; color: string }>)[status] ?? slaStatusMeta.healthy;
+  const safeTargetMinutes = Number.isFinite(targetMinutes) ? targetMinutes : 60;
   const startMs = new Date(createdAt).getTime();
-  const targetMs = targetMinutes * 60_000;
+  const targetMs = safeTargetMinutes * 60_000;
 
   if (resolvedAt) {
     const elapsedMin = (new Date(resolvedAt).getTime() - startMs) / 60_000;
@@ -43,7 +44,7 @@ export const SLATimer: React.FC<SLATimerProps> = ({
         <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest">{label}</p>
         <div className="flex items-center gap-1.5 text-sm text-ois-success">
           <CheckCircle2 size={13} />
-          <span>Met in {formatMinutes(elapsedMin)} <span className="text-ois-text-subtle">(target {formatMinutes(targetMinutes)})</span></span>
+          <span>Met in {formatMinutes(elapsedMin)} <span className="text-ois-text-subtle">(target {formatMinutes(safeTargetMinutes)})</span></span>
         </div>
       </div>
     );
@@ -55,7 +56,7 @@ export const SLATimer: React.FC<SLATimerProps> = ({
         <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest">{label}</p>
         <div className="flex items-center gap-1.5 text-sm text-ois-success">
           <CheckCircle2 size={13} />
-          <span>Met <span className="text-ois-text-subtle">(target {formatMinutes(targetMinutes)})</span></span>
+          <span>Met <span className="text-ois-text-subtle">(target {formatMinutes(safeTargetMinutes)})</span></span>
         </div>
       </div>
     );
@@ -67,7 +68,7 @@ export const SLATimer: React.FC<SLATimerProps> = ({
         <p className="text-[10px] font-semibold text-ois-text-subtle uppercase tracking-widest">{label}</p>
         <div className="flex items-center gap-1.5 text-sm text-ois-text-subtle">
           <Pause size={13} />
-          <span>Paused <span className="opacity-70">(target {formatMinutes(targetMinutes)})</span></span>
+          <span>Paused <span className="opacity-70">(target {formatMinutes(safeTargetMinutes)})</span></span>
         </div>
       </div>
     );
@@ -91,8 +92,8 @@ export const SLATimer: React.FC<SLATimerProps> = ({
 
   // Active: healthy or warning
   const elapsedMin = (now - startMs) / 60_000;
-  const remainingMin = Math.max(0, targetMinutes - elapsedMin);
-  const pct = Math.min(elapsedMin / targetMinutes, 1) * 100;
+  const remainingMin = Math.max(0, safeTargetMinutes - elapsedMin);
+  const pct = Math.min(elapsedMin / safeTargetMinutes, 1) * 100;
   const barColor = status === 'warning' ? '#F79009' : '#12B76A';
 
   return (
@@ -108,7 +109,7 @@ export const SLATimer: React.FC<SLATimerProps> = ({
           style={{ width: `${pct}%`, backgroundColor: barColor }}
         />
       </div>
-      <p className="text-[11px] text-ois-text-subtle">Target: {formatMinutes(targetMinutes)}</p>
+      <p className="text-[11px] text-ois-text-subtle">Target: {formatMinutes(safeTargetMinutes)}</p>
     </div>
   );
 };

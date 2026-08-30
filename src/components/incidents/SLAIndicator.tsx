@@ -18,13 +18,15 @@ export const SLAIndicator: React.FC<Props> = ({
   firstResponseAt,
   className
 }) => {
-  const respMeta = slaStatusMeta[responseStatus];
-  const resMeta = slaStatusMeta[resolveStatus];
+  const respMeta = (slaStatusMeta as Record<string, { label: string; dot: string; color: string }>)[responseStatus] ?? slaStatusMeta.healthy;
+  const resMeta = (slaStatusMeta as Record<string, { label: string; dot: string; color: string }>)[resolveStatus] ?? slaStatusMeta.healthy;
 
+  const safeResponseTarget = Number.isFinite(responseTarget) ? responseTarget : 60;
+  const safeResolveTarget = Number.isFinite(resolveTarget) ? resolveTarget : 240;
   const responseTooltip = firstResponseAt
-    ? `Response: ${respMeta.label} (target ${responseTarget}m)`
-    : `Response: ${respMeta.label} (target ${responseTarget}m, not yet responded)`;
-  const resolveTooltip = `Resolve: ${resMeta.label} (target ${resolveTarget}m)`;
+    ? `Response: ${respMeta.label} (target ${safeResponseTarget}m)`
+    : `Response: ${respMeta.label} (target ${safeResponseTarget}m, not yet responded)`;
+  const resolveTooltip = `Resolve: ${resMeta.label} (target ${safeResolveTarget}m)`;
 
   return (
     <div className={cn('flex items-center gap-2', className)}>

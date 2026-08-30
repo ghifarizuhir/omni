@@ -4,8 +4,16 @@ import { randomUUID } from 'node:crypto';
 import { HttpError } from '../util';
 
 const parseObj = <T,>(s: string, fb: T): T => { try { return JSON.parse(s); } catch { return fb; } };
+const VALID_SLA: ReadonlySet<string> = new Set(['healthy', 'warning', 'breached', 'paused', 'met']);
 const normalizeIncident = (inc: Incident): Incident => {
   if (!Array.isArray((inc as { tags?: unknown }).tags)) inc.tags = [];
+  if (!VALID_SLA.has(inc.slaResponseStatus as string)) (inc as Incident).slaResponseStatus = 'healthy';
+  if (!VALID_SLA.has(inc.slaResolveStatus as string)) (inc as Incident).slaResolveStatus = 'healthy';
+  if (typeof inc.slaResponseTarget !== 'number' || !Number.isFinite(inc.slaResponseTarget)) (inc as Incident).slaResponseTarget = 60;
+  if (typeof inc.slaResolveTarget !== 'number' || !Number.isFinite(inc.slaResolveTarget)) (inc as Incident).slaResolveTarget = 240;
+  if (!Array.isArray(inc.affectedCIIds)) (inc as Incident).affectedCIIds = [];
+  if (!Array.isArray(inc.affectedCIPublicIds)) (inc as Incident).affectedCIPublicIds = [];
+  if (!Array.isArray(inc.affectedServiceIds)) (inc as Incident).affectedServiceIds = [];
   return inc;
 };
 
@@ -103,11 +111,7 @@ export const incidentsRepo = {
       take: pagination.limit,
       skip: pagination.offset,
     });
-    const incidents = rows.map(r => {
-      const inc = parseObj<Incident>(r.data, {} as Incident);
-      if (!Array.isArray(inc.tags)) (inc as Incident).tags = [];
-      return inc;
-    });
+    const incidents = rows.map(r => normalizeIncident(parseObj<Incident>(r.data, {} as Incident)));
     // Secondary exact filter for JSON-string contains false positives (small page only)
     if (filters.ciId) {
       return incidents.filter(i => i.affectedCIIds.includes(filters.ciId!) || i.affectedCIPublicIds.includes(filters.ciId!));
@@ -117,9 +121,7 @@ export const incidentsRepo = {
   async get(tenantId: string, publicId: string) {
     const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
     if (!row) return null;
-    const inc = parseObj<Incident>(row.data, {} as Incident);
-    if (!Array.isArray(inc.tags)) (inc as Incident).tags = [];
-    return inc;
+    return normalizeIncident(parseObj<Incident>(row.data, {} as Incident));
   },
   async comments(
     tenantId: string,
