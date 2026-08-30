@@ -70,7 +70,7 @@ const StatusDropdown: React.FC<{
   onChange: (s: IncidentStatus) => void;
 }> = ({ status, onChange }) => {
   const [open, setOpen] = useState(false);
-  const meta = incidentStatusMeta[status];
+  const meta = (incidentStatusMeta as Record<string, { label: string; color: string; bg: string; dot: string }>)[status] ?? incidentStatusMeta.new;
   const transitions: IncidentStatus[] = ['new', 'triaging', 'in_progress', 'pending', 'resolved', 'closed'];
 
   return (
@@ -87,7 +87,7 @@ const StatusDropdown: React.FC<{
       {open && (
         <div className="absolute top-full right-0 mt-1 w-44 bg-white border border-ois-border rounded-lg shadow-lg z-50 overflow-hidden">
           {transitions.map(s => {
-            const m = incidentStatusMeta[s];
+            const m = (incidentStatusMeta as Record<string, { label: string; color: string; bg: string; dot: string }>)[s] ?? incidentStatusMeta.new;
             return (
               <button
                 key={s}

@@ -5,6 +5,8 @@ import { HttpError } from '../util';
 
 const parseObj = <T,>(s: string, fb: T): T => { try { return JSON.parse(s); } catch { return fb; } };
 const VALID_SLA: ReadonlySet<string> = new Set(['healthy', 'warning', 'breached', 'paused', 'met']);
+const VALID_STATUS: ReadonlySet<string> = new Set(['new', 'triaging', 'in_progress', 'pending', 'resolved', 'closed']);
+const VALID_PRIORITY: ReadonlySet<string> = new Set(['P1', 'P2', 'P3', 'P4']);
 const normalizeIncident = (inc: Incident): Incident => {
   if (!Array.isArray((inc as { tags?: unknown }).tags)) inc.tags = [];
   if (!VALID_SLA.has(inc.slaResponseStatus as string)) (inc as Incident).slaResponseStatus = 'healthy';
@@ -14,6 +16,9 @@ const normalizeIncident = (inc: Incident): Incident => {
   if (!Array.isArray(inc.affectedCIIds)) (inc as Incident).affectedCIIds = [];
   if (!Array.isArray(inc.affectedCIPublicIds)) (inc as Incident).affectedCIPublicIds = [];
   if (!Array.isArray(inc.affectedServiceIds)) (inc as Incident).affectedServiceIds = [];
+  if (!VALID_STATUS.has(inc.status as string)) (inc as Incident).status = 'new';
+  if (!VALID_PRIORITY.has(inc.priority as string)) (inc as Incident).priority = 'P3';
+  if (!VALID_PRIORITY.has(inc.severity as string)) (inc as Incident).severity = (inc.priority as Incident['severity']) ?? 'P3';
   return inc;
 };
 

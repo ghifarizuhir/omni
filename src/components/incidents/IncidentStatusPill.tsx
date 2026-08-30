@@ -9,7 +9,7 @@ interface Props {
 }
 
 export const IncidentStatusPill: React.FC<Props> = ({ status, className }) => {
-  const meta = incidentStatusMeta[status];
+  const meta = (incidentStatusMeta as Record<string, { label: string; color: string; bg: string; dot: string }>)[status] ?? incidentStatusMeta.new;
   return (
     <span
       className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium', className)}
