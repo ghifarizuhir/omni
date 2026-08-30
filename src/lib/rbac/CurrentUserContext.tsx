@@ -60,9 +60,14 @@ export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [functionalRoles, setFunctionalRoles] = useState<FunctionalRole[]>([]);
 
   // Load the org tree (plus catalog + releases for the resource helpers) from
-  // the live API on mount. The previous implementation seeded from mocks; the
+  // the live API. The previous implementation seeded from mocks; the
   // mock import is gone as part of M6.1 leakage sweep.
+  // The fetch is deferred until `session` is known so we don't fire
+  // `rbac/*` (which requires `rbac.read`) while the session is still
+  // `null` and risk a transient 401 that leaves `users` empty and the
+  // admin page stuck on “Loading user persona…”.
   useEffect(() => {
+    if (!session) return;
     let cancelled = false;
     const calls = [
       ['users', () => rbacService.users() as Promise<RbacUser[]>] as const,
@@ -90,7 +95,25 @@ export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const roles    = get<FunctionalRole[]>(5) ?? [];
       const cat      = get<CatalogItem[]>(6) ?? [];
       const rels     = get<Release[]>(7) ?? [];
-      setUsers(usersResp);
+      // If the critical `users` call failed but we have a valid session,
+      // synthesize a fallback user so the UI doesn't stay stuck on
+      // “Loading user persona…”. The admin page can still render
+      // (it gates on `session.permissions`, not the org tree).
+      const effectiveUsers = (usersResp.length === 0 && session?.user)
+        ? [{
+            id: session.user.id,
+            name: session.user.name,
+            email: session.user.email,
+            divisionId: null,
+            departmentId: null,
+            teamId: null,
+            level: null,
+            functionalRoles: [],
+            isSuperadmin: session.permissions.includes('system.admin'),
+            active: true,
+          } as RbacUser]
+        : usersResp;
+      setUsers(effectiveUsers);
       setDivisions(divs);
       setDepartments(depts);
       setTeams(tms);
@@ -101,7 +124,7 @@ export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ c
       registerReleases(rels);
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [session]);
 
   // Re-register whenever the in-memory state diverges from the API (e.g. the
   // persona-switcher admin panel mutates `users` locally). Keeps the engine's
@@ -119,10 +142,31 @@ export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ c
   })();
   const [currentUserId, setCurrentUserId] = useState<string>(initialUserId);
 
-  const user = useMemo(
-    () => users.find(u => u.id === currentUserId) ?? null,
-    [users, currentUserId],
-  );
+  // `user` is resolved from the org tree when available, but falls back to
+  // a synthetic user derived from the session so the UI (e.g. /admin)
+  // doesn't stay stuck on “Loading user persona…” when the org tree is
+  // empty or a transient fetch fails. This is what makes the page work
+  // without a manual refresh.
+  const user = useMemo(() => {
+    if (users.length > 0) {
+      return users.find(u => u.id === currentUserId) ?? users.find(u => u.id === (sessionUserId ?? '')) ?? users[0] ?? null;
+    }
+    if (session?.user) {
+      return {
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        divisionId: null,
+        departmentId: null,
+        teamId: null,
+        level: null,
+        functionalRoles: [],
+        isSuperadmin: session.permissions.includes('system.admin'),
+        active: true,
+      } as RbacUser;
+    }
+    return null;
+  }, [users, currentUserId, session, sessionUserId]);
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, currentUserId); } catch {}
@@ -138,6 +182,14 @@ export const CurrentUserProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setCurrentUserId(fallback.id);
     }
   }, [users, currentUserId, sessionUserId]);
+
+  // Keep currentUserId in sync with the session once it loads (covers the
+  // case where initialUserId was computed before `session` was available).
+  useEffect(() => {
+    if (!sessionUserId) return;
+    if (currentUserId) return;
+    setCurrentUserId(sessionUserId);
+  }, [sessionUserId, currentUserId]);
 
   const setUserById = useCallback((id: string) => setCurrentUserId(id), []);
 
