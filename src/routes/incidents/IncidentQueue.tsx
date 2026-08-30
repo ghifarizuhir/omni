@@ -71,7 +71,7 @@ function applyQuickFilter(incidents: Incident[], qf: QuickFilter, currentUserId?
     case 'last_24h':
       return incidents.filter(i => now - new Date(i.createdAt).getTime() < 86_400_000);
     case 'customer_facing':
-      return incidents.filter(i => i.tags.includes('customer-facing'));
+      return incidents.filter(i => (i.tags ?? []).includes('customer-facing'));
     default:
       return incidents;
   }
@@ -243,7 +243,7 @@ export const IncidentQueue: React.FC = () => {
   ).length;
   const p1p2Count = incidents.filter(i => i.priority === 'P1' || i.priority === 'P2').length;
   const last24hCount = incidents.filter(i => now - new Date(i.createdAt).getTime() < 86_400_000).length;
-  const customerFacingCount = incidents.filter(i => i.tags.includes('customer-facing')).length;
+  const customerFacingCount = incidents.filter(i => (i.tags ?? []).includes('customer-facing')).length;
 
   // ── Bulk action handlers ──────────────────────────────────────────────────
 
@@ -253,7 +253,7 @@ export const IncidentQueue: React.FC = () => {
     const rows = selected.map(inc => {
       const assigneeName = mockUsers.find((u: { id: string; name: string }) => u.id === inc.assigneeId)?.name ?? '';
       const serviceName = inc.affectedServiceIds.map(id => mockServices.find((s: { id: string; name: string }) => s.id === id)?.name ?? id).join('; ');
-      return [inc.publicId, `"${inc.title.replace(/"/g, '""')}"`, inc.priority, inc.status, `"${assigneeName}"`, `"${serviceName}"`, inc.createdAt, `"${inc.tags.join(', ')}"`].join(',');
+      return [inc.publicId, `"${inc.title.replace(/"/g, '""')}"`, inc.priority, inc.status, `"${assigneeName}"`, `"${serviceName}"`, inc.createdAt, `"${(inc.tags ?? []).join(', ')}"`].join(',');
     });
     const csv = [headers.join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -347,7 +347,7 @@ export const IncidentQueue: React.FC = () => {
     // Compute new merged tags per incident — the PATCH replaces tags wholesale.
     const payloads = selected.map(inc => ({
       inc,
-      tags: Array.from(new Set([...inc.tags, tag])),
+      tags: Array.from(new Set([...(inc.tags ?? []), tag])),
     }));
     setIncidents(prev => prev.map(i => {
       const p = payloads.find(x => x.inc.id === i.id);
@@ -686,8 +686,8 @@ const IncidentRow: React.FC<IncidentRowProps> = ({
 }) => {
   const assigneeName = getAssigneeName(users, incident.assigneeId);
   const serviceName = getServiceName(services, incident.affectedServiceIds);
-  const visibleTags = incident.tags.slice(0, 2);
-  const extraTags = incident.tags.length - visibleTags.length;
+  const visibleTags = (incident.tags ?? []).slice(0, 2);
+  const extraTags = (incident.tags ?? []).length - visibleTags.length;
 
   const stripeColor = ({ P1: '#B42318', P2: '#DC6803', P3: '#DC6803', P4: '#027A48' } as Record<string, string>)[incident.severity] ?? '#1F4FD4';
 

@@ -620,9 +620,9 @@ export const IncidentDetail: React.FC = () => {
                   <IDCell value={inc.publicId} className="text-xs text-ois-text-subtle" />
                 </div>
                 <h1 className="text-xl font-bold text-ois-text leading-tight">{inc.title}</h1>
-                {inc.tags.length > 0 && (
+                {(inc.tags ?? []).length > 0 && (
                   <div className="flex items-center flex-wrap gap-1.5 mt-2">
-                    {inc.tags.map(tag => (
+                    {(inc.tags ?? []).map(tag => (
                       <span key={tag} className="inline-flex items-center gap-1 text-[11px] font-medium text-ois-text-subtle bg-ois-surface-muted border border-ois-border px-2 py-0.5 rounded-full">
                         <Tag size={9} />{tag}
                       </span>

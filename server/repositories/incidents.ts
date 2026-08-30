@@ -4,6 +4,10 @@ import { randomUUID } from 'node:crypto';
 import { HttpError } from '../util';
 
 const parseObj = <T,>(s: string, fb: T): T => { try { return JSON.parse(s); } catch { return fb; } };
+const normalizeIncident = (inc: Incident): Incident => {
+  if (!Array.isArray((inc as { tags?: unknown }).tags)) inc.tags = [];
+  return inc;
+};
 
 export interface ResolveInput {
   summary: string;
@@ -99,7 +103,11 @@ export const incidentsRepo = {
       take: pagination.limit,
       skip: pagination.offset,
     });
-    const incidents = rows.map(r => parseObj<Incident>(r.data, {} as Incident));
+    const incidents = rows.map(r => {
+      const inc = parseObj<Incident>(r.data, {} as Incident);
+      if (!Array.isArray(inc.tags)) (inc as Incident).tags = [];
+      return inc;
+    });
     // Secondary exact filter for JSON-string contains false positives (small page only)
     if (filters.ciId) {
       return incidents.filter(i => i.affectedCIIds.includes(filters.ciId!) || i.affectedCIPublicIds.includes(filters.ciId!));
@@ -108,7 +116,10 @@ export const incidentsRepo = {
   },
   async get(tenantId: string, publicId: string) {
     const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
-    return row ? parseObj<Incident>(row.data, {} as Incident) : null;
+    if (!row) return null;
+    const inc = parseObj<Incident>(row.data, {} as Incident);
+    if (!Array.isArray(inc.tags)) (inc as Incident).tags = [];
+    return inc;
   },
   async comments(
     tenantId: string,
@@ -148,7 +159,7 @@ export const incidentsRepo = {
   }> {
     const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
     if (!row) throw new Error(`Incident ${publicId} not found`);
-    const before = parseObj<Incident>(row.data, {} as Incident);
+    const before = normalizeIncident(parseObj<Incident>(row.data, {} as Incident));
     const now = new Date();
     const after: Incident = {
       ...before,
@@ -250,7 +261,7 @@ export const incidentsRepo = {
   }> {
     const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
     if (!row) throw new Error(`Incident ${publicId} not found`);
-    const before = parseObj<Incident>(row.data, {} as Incident);
+    const before = normalizeIncident(parseObj<Incident>(row.data, {} as Incident));
     const now = new Date();
     const after: Incident = { ...before, status: input.status as Incident['status'] };
     const timelineId = randomUUID();
@@ -289,7 +300,7 @@ export const incidentsRepo = {
   }> {
     const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
     if (!row) throw new Error(`Incident ${publicId} not found`);
-    const before = parseObj<Incident>(row.data, {} as Incident);
+    const before = normalizeIncident(parseObj<Incident>(row.data, {} as Incident));
     const now = new Date();
     const after: Incident = {
       ...before,
@@ -337,7 +348,7 @@ export const incidentsRepo = {
   }> {
     const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
     if (!row) throw new Error(`Incident ${publicId} not found`);
-    const before = parseObj<Incident>(row.data, {} as Incident);
+    const before = normalizeIncident(parseObj<Incident>(row.data, {} as Incident));
     const now = new Date();
     const after: Incident = {
       ...before,
@@ -385,7 +396,7 @@ export const incidentsRepo = {
   }> {
     const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
     if (!row) throw new Error(`Incident ${publicId} not found`);
-    const before = parseObj<Incident>(row.data, {} as Incident);
+    const before = normalizeIncident(parseObj<Incident>(row.data, {} as Incident));
     const now = new Date();
     const after: Incident = {
       ...before,
@@ -460,7 +471,7 @@ export const incidentsRepo = {
   }> {
     const row = await prisma.incident.findFirst({ where: { tenantId, id: incidentId } });
     if (!row) throw new Error(`Incident ${incidentId} not found`);
-    const before = parseObj<Incident>(row.data, {} as Incident);
+    const before = normalizeIncident(parseObj<Incident>(row.data, {} as Incident));
     const existing = before.watchers ?? [];
     const wasNew = !existing.some(w => w.userId === input.userId);
     const after: Incident = {
@@ -510,7 +521,7 @@ export const incidentsRepo = {
   }> {
     const row = await prisma.incident.findFirst({ where: { tenantId, id: incidentId } });
     if (!row) throw new Error(`Incident ${incidentId} not found`);
-    const before = parseObj<Incident>(row.data, {} as Incident);
+    const before = normalizeIncident(parseObj<Incident>(row.data, {} as Incident));
     const existing = before.watchers ?? [];
     if (!existing.some(w => w.userId === userId)) {
       throw new HttpError(404, 'Watcher not found');
@@ -560,7 +571,7 @@ export const incidentsRepo = {
   }> {
     const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
     if (!row) throw new Error('INCIDENT_NOT_FOUND');
-    const before = parseObj<Incident>(row.data, {} as Incident);
+    const before = normalizeIncident(parseObj<Incident>(row.data, {} as Incident));
     const now = new Date();
     const after: Incident = {
       ...before,
@@ -620,7 +631,7 @@ export const incidentsRepo = {
   }> {
     const row = await prisma.incident.findFirst({ where: { tenantId, publicId } });
     if (!row) throw new Error(`Incident ${publicId} not found`);
-    const before = parseObj<Incident>(row.data, {} as Incident);
+    const before = normalizeIncident(parseObj<Incident>(row.data, {} as Incident));
     const now = new Date();
     const toPriority = input.newPriority ?? 'P2';
     const after: Incident = {

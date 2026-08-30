@@ -156,7 +156,7 @@ export const IncidentAnalytics: React.FC = () => {
         mttr,
         inc.slaResponseStatus,
         inc.slaResolveStatus,
-        `"${inc.tags.join(', ')}"`,
+        `"${(inc.tags ?? []).join(', ')}"`,
       ].join(',');
     });
     const csv = [headers.join(','), ...rows].join('\n');
